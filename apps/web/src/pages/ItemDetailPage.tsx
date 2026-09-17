@@ -113,20 +113,25 @@ export function ItemDetailPage() {
       </div>
 
       <section className="tg-card detail__section">
-        <h2 className="detail__section-title">Inspections</h2>
+        <h2 className="detail__section-title">Inspection report</h2>
+        <p className="detail__blurb tg-muted">
+          What the rubric suggested, what the technician proposed, and what QC signed off —
+          the audit trail against grade-shaving.
+        </p>
         {inspections.length === 0 ? (
           <p className="tg-muted">Not inspected yet.</p>
         ) : (
           <table className="detail__table">
             <thead>
               <tr>
-                <th>Purpose</th><th>Proposed</th><th>Final</th><th>QC</th><th>Outcome</th><th>When</th>
+                <th>Purpose</th><th>Rubric</th><th>Proposed</th><th>Final</th><th>QC</th><th>Outcome</th><th>When</th>
               </tr>
             </thead>
             <tbody>
               {inspections.map((r) => (
                 <tr key={r.id}>
                   <td>{r.purpose}</td>
+                  <td>{r.suggestedGradeCode ?? '—'}</td>
                   <td>{r.proposedGradeCode ?? '—'}</td>
                   <td>{r.finalGradeCode ?? '—'}</td>
                   <td>{r.qcState}</td>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Platform, Pressable, Text, View } from 'react-native'
+import { Platform, Pressable, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -10,6 +10,7 @@ import Constants from 'expo-constants'
 import {
   ActorProvider, api, setApiOrigin, setStorage, useActor, useApi, type Storage,
 } from '@trueglaz/core'
+import { Txt } from './src/components/Txt'
 import { ThemeProvider, useTheme, useThemeMode } from './src/theme/ThemeContext'
 import { CatalogScreen } from './src/screens/CatalogScreen'
 import { ListingDetailScreen } from './src/screens/ListingDetailScreen'
@@ -113,12 +114,12 @@ function ActorBar() {
       }}
     >
       <Pressable onPress={cycleActor}>
-        <Text style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
+        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
           Acting as {actor?.displayName ?? '…'}{actor ? ` · ${actor.role}` : ''} ⇄
-        </Text>
+        </Txt>
       </Pressable>
       <Pressable onPress={() => setMode(mode === 'dark' ? 'light' : mode === 'light' ? 'midnight' : 'dark')}>
-        <Text style={{ color: t.colors.accent, fontSize: t.size.xs }}>Theme: {mode}</Text>
+        <Txt style={{ color: t.colors.accent, fontSize: t.size.xs }}>Theme: {mode}</Txt>
       </Pressable>
     </View>
   )

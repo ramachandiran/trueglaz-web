@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, View } from 'react-native'
 import { api, buildTimeline, money, useApi } from '@trueglaz/core'
+import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Timeline } from '../components/Timeline'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle } from '../components/ui'
@@ -34,15 +35,15 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
       contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4 }}
     >
       <View style={{ gap: t.space.x2 }}>
-        <Text style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>
+        <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>
           {d.internalSku}
-        </Text>
-        <Text style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>
+        </Txt>
+        <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>
           {d.listing.title.split('·')[0].trim()}
-        </Text>
-        <Text style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
+        </Txt>
+        <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
           {money(d.listing.priceMinor, d.listing.currency)}
-        </Text>
+        </Txt>
         <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
           <Badge label={d.listing.gradeCode} tone="accent" />
           {d.gradeLabel && <Badge label={d.gradeLabel} />}
@@ -61,7 +62,7 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
               style={{ backgroundColor: t.colors.bgSunken, borderRadius: t.radius.md, padding: t.space.x3, gap: 4 }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{x.title}</Text>
+                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{x.title}</Txt>
                 <Badge label={x.severity} tone={x.severity === 'optical' ? 'bad' : x.severity === 'functional' ? 'warn' : 'neutral'} />
               </View>
               <Muted size={t.size.xs}>{x.descriptionPublic}</Muted>
@@ -75,7 +76,7 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
           <Timeline steps={steps} />
           {itemId && (
             <Pressable onPress={() => navigation.navigate('Item', { id: itemId })}>
-              <Text style={{ color: t.colors.accent }}>Full item record →</Text>
+              <Txt style={{ color: t.colors.accent }}>Full item record →</Txt>
             </Pressable>
           )}
         </Card>

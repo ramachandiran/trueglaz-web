@@ -1,11 +1,32 @@
 import { useMemo } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 import {
   api, buildTimeline, dateTime, money, progressOf, STATE_BLURBS, STATE_LABELS, useApi,
 } from '@trueglaz/core'
+import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Timeline } from '../components/Timeline'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge } from '../components/ui'
+
+function GradeStat({ label, value, highlight }: { label: string; value?: string | null; highlight?: boolean }) {
+  const t = useTheme()
+  return (
+    <View>
+      <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, letterSpacing: 0.5 }}>
+        {label.toUpperCase()}
+      </Txt>
+      <Txt
+        style={{
+          color: highlight && value ? t.colors.accent : t.colors.text,
+          fontSize: t.size.lg,
+          fontWeight: t.weight.bold as never,
+        }}
+      >
+        {value ?? '—'}
+      </Txt>
+    </View>
+  )
+}
 
 export function ItemDetailScreen({ route }: { route: any }) {
   const t = useTheme()
@@ -32,7 +53,7 @@ export function ItemDetailScreen({ route }: { route: any }) {
   }
   if (!data) return null
 
-  const { item, defects, nextLegalStates, currentBinCode } = data
+  const { item, defects, inspections, nextLegalStates, currentBinCode } = data
   const progress = progressOf(steps)
 
   return (
@@ -41,12 +62,12 @@ export function ItemDetailScreen({ route }: { route: any }) {
       contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4 }}
     >
       <View style={{ gap: t.space.x2 }}>
-        <Text style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>
+        <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>
           {item.internalSku}
-        </Text>
-        <Text style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>
+        </Txt>
+        <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>
           {modelName ?? item.modelFreeText ?? 'Consigned item'}
-        </Text>
+        </Txt>
         <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
           <StateBadge state={item.currentState} />
           {item.assignedGradeCode && <Badge label={item.assignedGradeCode} tone="accent" />}
@@ -75,15 +96,52 @@ export function ItemDetailScreen({ route }: { route: any }) {
               style={{ backgroundColor: t.colors.bgSunken, borderRadius: t.radius.md, padding: t.space.x3, gap: 4 }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                <Text style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>
+                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>
                   {STATE_LABELS[n.toState] ?? n.toState}
-                </Text>
+                </Txt>
                 {n.requiresReason && <Badge label="needs a reason" tone="warn" />}
               </View>
               {n.notes && <Muted size={t.size.xs}>{n.notes}</Muted>}
-              <Text style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontFamily: t.font.mono }}>
+              <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontFamily: t.font.mono }}>
                 {n.allowedRoles.join(', ')}
-              </Text>
+              </Txt>
+            </View>
+          ))
+        )}
+      </Card>
+
+      <Card style={{ gap: t.space.x3 }}>
+        <SectionTitle>Inspection report</SectionTitle>
+        {inspections.length === 0 ? (
+          <Muted>Not inspected yet.</Muted>
+        ) : (
+          inspections.map((r) => (
+            <View key={r.id} style={{ gap: t.space.x2 }}>
+              <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
+                <Badge label={r.purpose} />
+                <Badge
+                  label={`QC ${r.qcState}`}
+                  tone={r.qcState === 'confirmed' ? 'good' : r.qcState === 'overridden' ? 'warn' : 'neutral'}
+                />
+                {r.outcome && (
+                  <Badge
+                    label={r.outcome}
+                    tone={r.outcome === 'graded' ? 'good' : r.outcome === 'quarantined' ? 'bad' : 'warn'}
+                  />
+                )}
+              </View>
+
+              {/* The grade-shaving audit trail: what the rubric said, what the
+                  technician proposed, and what QC finally signed off. */}
+              <View style={{ flexDirection: 'row', gap: t.space.x4 }}>
+                <GradeStat label="Rubric" value={r.suggestedGradeCode} />
+                <GradeStat label="Proposed" value={r.proposedGradeCode} />
+                <GradeStat label="Final" value={r.finalGradeCode} highlight />
+              </View>
+
+              <Muted size={t.size.xs}>
+                Submitted {dateTime(r.submittedAt)}{r.qcAt ? ` · QC ${dateTime(r.qcAt)}` : ''}
+              </Muted>
             </View>
           ))
         )}
@@ -100,7 +158,7 @@ export function ItemDetailScreen({ route }: { route: any }) {
               style={{ backgroundColor: t.colors.bgSunken, borderRadius: t.radius.md, padding: t.space.x3, gap: 4 }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{d.title}</Text>
+                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{d.title}</Txt>
                 <Badge label={d.severity} tone={d.severity === 'optical' ? 'bad' : d.severity === 'functional' ? 'warn' : 'neutral'} />
               </View>
               <Muted size={t.size.xs}>{d.descriptionPublic}</Muted>
@@ -114,9 +172,9 @@ export function ItemDetailScreen({ route }: { route: any }) {
         <Muted size={t.size.xs}>Append-only. The current state is only a cache of this.</Muted>
         {[...data.history].reverse().map((h) => (
           <View key={h.id} style={{ borderBottomWidth: 1, borderBottomColor: t.colors.border, paddingVertical: t.space.x2 }}>
-            <Text style={{ color: t.colors.text, fontFamily: t.font.mono, fontSize: t.size.sm }}>
+            <Txt style={{ color: t.colors.text, fontFamily: t.font.mono, fontSize: t.size.sm }}>
               {h.fromState ? `${h.fromState} → ` : ''}{h.toState}
-            </Text>
+            </Txt>
             <Muted size={t.size.xs}>
               {(h.actorRole ?? 'System')} · {dateTime(h.occurredAt)}{h.reasonCode ? ` · ${h.reasonCode}` : ''}
             </Muted>

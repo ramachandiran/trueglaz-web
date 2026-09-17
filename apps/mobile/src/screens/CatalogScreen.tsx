@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
-import {
-  FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native'
+import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import {
   api, applyFilters, buildModelIndex, countBy, EMPTY_FILTERS, money, resolveModel,
   useApi, activeFilterCount, type Facetable, type Filters, type Sort,
 } from '@trueglaz/core'
+import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Badge, Card, Empty, ErrorNote, Loading, Muted } from '../components/ui'
 
@@ -92,9 +91,9 @@ export function CatalogScreen({ navigation }: { navigation: any }) {
             borderColor: active ? t.colors.accent : t.colors.border,
           }}
         >
-          <Text style={{ color: active ? t.colors.onAccent : t.colors.text }}>
+          <Txt style={{ color: active ? t.colors.onAccent : t.colors.text }}>
             Filters{active ? ` (${active})` : ''}
-          </Text>
+          </Txt>
         </Pressable>
       </View>
 
@@ -124,13 +123,13 @@ export function CatalogScreen({ navigation }: { navigation: any }) {
                     label={listing.gradeCode}
                     tone={(gradeRank.get(listing.gradeCode) ?? 0) >= 9 ? 'good' : 'accent'}
                   />
-                  <Text style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
+                  <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
                     {money(listing.priceMinor, listing.currency)}
-                  </Text>
+                  </Txt>
                 </View>
-                <Text style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>
+                <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>
                   {listing.title.split('·')[0].trim()}
-                </Text>
+                </Txt>
                 {model?.brandId && <Muted size={t.size.xs}>{brandName.get(model.brandId) ?? ''}</Muted>}
                 <Muted>{listing.descriptionGenerated}</Muted>
               </Card>
@@ -151,17 +150,17 @@ export function CatalogScreen({ navigation }: { navigation: any }) {
             }}
           >
             <View style={styles.sheetHead}>
-              <Text style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
+              <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
                 Filters
-              </Text>
+              </Txt>
               <View style={{ flexDirection: 'row', gap: t.space.x3 }}>
                 {active > 0 && (
                   <Pressable onPress={() => setFilters({ ...EMPTY_FILTERS, sort: filters.sort })}>
-                    <Text style={{ color: t.colors.accent }}>Clear {active}</Text>
+                    <Txt style={{ color: t.colors.accent }}>Clear {active}</Txt>
                   </Pressable>
                 )}
                 <Pressable onPress={() => setSheetOpen(false)}>
-                  <Text style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Done</Text>
+                  <Txt style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Done</Txt>
                 </Pressable>
               </View>
             </View>
@@ -243,7 +242,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   const t = useTheme()
   return (
     <View style={{ gap: t.space.x2 }}>
-      <Text
+      <Txt
         style={{
           color: t.colors.textMuted,
           fontSize: t.size.xs,
@@ -252,7 +251,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
         }}
       >
         {title.toUpperCase()}
-      </Text>
+      </Txt>
       {children}
     </View>
   )
@@ -279,9 +278,9 @@ function Chip({
         borderColor: selected ? t.colors.accent : t.colors.border,
       }}
     >
-      <Text style={{ color: selected ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>
+      <Txt style={{ color: selected ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>
         {label}
-      </Text>
+      </Txt>
     </Pressable>
   )
 }

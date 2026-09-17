@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
 
 type Tone = 'neutral' | 'good' | 'warn' | 'bad' | 'accent'
@@ -15,9 +16,9 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone 
   const c = map[tone]
   return (
     <View style={[styles.badge, { backgroundColor: c.bg, borderRadius: t.radius.pill }]}>
-      <Text style={{ color: c.fg, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>
+      <Txt style={{ color: c.fg, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>
         {label}
-      </Text>
+      </Txt>
     </View>
   )
 }
@@ -53,7 +54,7 @@ export function Card({ children, style }: { children: React.ReactNode; style?: o
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   const t = useTheme()
   return (
-    <Text
+    <Txt
       style={{
         color: t.colors.text,
         fontSize: t.size.lg,
@@ -62,13 +63,13 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-    </Text>
+    </Txt>
   )
 }
 
 export function Muted({ children, size }: { children: React.ReactNode; size?: number }) {
   const t = useTheme()
-  return <Text style={{ color: t.colors.textMuted, fontSize: size ?? t.size.sm }}>{children}</Text>
+  return <Txt style={{ color: t.colors.textMuted, fontSize: size ?? t.size.sm }}>{children}</Txt>
 }
 
 export function Loading() {
@@ -84,9 +85,9 @@ export function ErrorNote({ error, onRetry }: { error: Error; onRetry?: () => vo
   const t = useTheme()
   return (
     <Card style={{ borderColor: t.colors.bad, gap: t.space.x2 }}>
-      <Text style={{ color: t.colors.bad, fontWeight: t.weight.bold as never }}>
+      <Txt style={{ color: t.colors.bad, fontWeight: t.weight.bold as never }}>
         Something went wrong
-      </Text>
+      </Txt>
       <Muted>{error.message}</Muted>
       {onRetry && (
         <Pressable
@@ -100,7 +101,7 @@ export function ErrorNote({ error, onRetry }: { error: Error; onRetry?: () => vo
             borderRadius: t.radius.md,
           }}
         >
-          <Text style={{ color: t.colors.text }}>Try again</Text>
+          <Txt style={{ color: t.colors.text }}>Try again</Txt>
         </Pressable>
       )}
     </Card>
@@ -111,7 +112,7 @@ export function Empty({ title, hint }: { title: string; hint?: string }) {
   const t = useTheme()
   return (
     <Card style={{ alignItems: 'center', paddingVertical: t.space.x6 }}>
-      <Text style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{title}</Text>
+      <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{title}</Txt>
       {hint && <View style={{ marginTop: t.space.x2 }}><Muted>{hint}</Muted></View>}
     </Card>
   )

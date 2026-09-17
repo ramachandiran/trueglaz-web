@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { FlatList, Pressable, ScrollView, Text, View } from 'react-native'
+import { FlatList, Pressable, ScrollView, View } from 'react-native'
 import { api, dateTime, HAPPY_PATH, money, STATE_LABELS, useApi } from '@trueglaz/core'
+import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Card, Empty, ErrorNote, Loading, Muted, StateBadge } from '../components/ui'
 
@@ -58,9 +59,9 @@ export function ItemsScreen({ navigation }: { navigation: any }) {
             <Pressable onPress={() => navigation.navigate('Item', { id: item.id })}>
               <Card style={{ gap: t.space.x2 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
-                  <Text style={{ color: t.colors.text, fontFamily: t.font.mono, fontWeight: t.weight.medium as never }}>
+                  <Txt style={{ color: t.colors.text, fontFamily: t.font.mono, fontWeight: t.weight.medium as never }}>
                     {item.internalSku}
-                  </Text>
+                  </Txt>
                   <StateBadge state={item.currentState} />
                 </View>
                 <Muted size={t.size.xs}>
@@ -91,7 +92,7 @@ function Stage({ label, selected, onPress }: { label: string; selected: boolean;
         borderColor: selected ? t.colors.accent : t.colors.border,
       }}
     >
-      <Text style={{ color: selected ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{label}</Text>
+      <Txt style={{ color: selected ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{label}</Txt>
     </Pressable>
   )
 }

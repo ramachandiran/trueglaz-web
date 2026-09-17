@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { View, StyleSheet } from 'react-native'
 import { relative, STATE_BLURBS, type TimelineStep } from '@trueglaz/core'
+import { Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
 
 /**
@@ -63,7 +64,7 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
                 ]}
               >
                 {step.status === 'done' && (
-                  <Text style={[styles.glyph, { color: t.colors.onAccent }]}>✓</Text>
+                  <Txt style={[styles.glyph, { color: t.colors.onAccent }]}>✓</Txt>
                 )}
                 {step.status === 'current' && (
                   <View style={[styles.dot, { backgroundColor: t.colors.onAccent }]} />
@@ -73,7 +74,7 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
             </View>
 
             <View style={styles.body}>
-              <Text
+              <Txt
                 style={[
                   styles.label,
                   {
@@ -84,21 +85,21 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
                 ]}
               >
                 {step.label}
-              </Text>
-              <Text style={[styles.meta, { color: t.colors.textMuted, fontSize: t.size.xs }]}>
+              </Txt>
+              <Txt style={[styles.meta, { color: t.colors.textMuted, fontSize: t.size.xs }]}>
                 {step.status === 'upcoming'
                   ? 'Not yet'
                   : `${relative(step.occurredAt)}${step.actorRole ? ` · by ${step.actorRole}` : ''}`}
-              </Text>
+              </Txt>
               {step.reasonCode && (
-                <Text
+                <Txt
                   style={[
                     styles.reason,
                     { color: t.colors.stepDetour, fontSize: t.size.xs, fontFamily: t.font.mono },
                   ]}
                 >
                   {step.reasonCode}
-                </Text>
+                </Txt>
               )}
             </View>
           </View>
