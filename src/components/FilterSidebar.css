@@ -1,0 +1,121 @@
+.fs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-5);
+  padding: var(--tg-space-5) var(--tg-space-4);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  position: sticky;
+  top: var(--tg-space-4);
+  max-height: calc(100vh - var(--tg-space-6));
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.fs__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tg-space-2);
+}
+
+.fs__title {
+  font-size: var(--tg-text-lg);
+}
+
+.fs__clear {
+  font-size: var(--tg-text-xs);
+  padding: var(--tg-space-1) var(--tg-space-2);
+  color: var(--tg-accent);
+}
+
+.fs__count {
+  margin: calc(var(--tg-space-4) * -1) 0 0;
+  font-size: var(--tg-text-sm);
+}
+
+.fs__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-2);
+}
+
+.fs__section-title {
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.fs__section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-1);
+}
+
+.fs__check {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-1) var(--tg-space-2);
+  border-radius: var(--tg-radius-sm);
+  cursor: pointer;
+  font-size: var(--tg-text-sm);
+  transition: background var(--tg-transition);
+}
+
+.fs__check:hover {
+  background: var(--tg-bg-hover);
+}
+
+.fs__check input {
+  accent-color: var(--tg-accent);
+  cursor: pointer;
+  flex: none;
+}
+
+.fs__check-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs__check-count {
+  flex: none;
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.fs__check--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.fs__check--disabled:hover {
+  background: transparent;
+}
+
+.fs__price {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+}
+
+.fs__price-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.fs__price-dash {
+  color: var(--tg-text-muted);
+  flex: none;
+}
+
+.fs__hint {
+  font-size: var(--tg-text-xs);
+  margin: var(--tg-space-1) 0 0;
+}

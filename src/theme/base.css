@@ -1,0 +1,147 @@
+/* Resets and shared primitives. Every value here is a token — swapping the
+   theme never requires touching this file. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  font-family: var(--tg-font);
+  font-size: var(--tg-text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  line-height: 1.25;
+  font-weight: var(--tg-weight-bold);
+}
+
+a {
+  color: var(--tg-accent);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:where(button, a, input, select, summary):focus-visible {
+  outline: 2px solid var(--tg-accent);
+  outline-offset: 2px;
+  border-radius: var(--tg-radius-sm);
+}
+
+/* --- shared primitives ------------------------------------------------- */
+
+.tg-card {
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  box-shadow: var(--tg-shadow-sm);
+}
+
+.tg-muted {
+  color: var(--tg-text-muted);
+}
+
+.tg-mono {
+  font-family: var(--tg-font-mono);
+  font-size: var(--tg-text-sm);
+}
+
+.tg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-1);
+  padding: 2px var(--tg-space-2);
+  border-radius: var(--tg-radius-pill);
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-medium);
+  white-space: nowrap;
+  background: var(--tg-bg-sunken);
+  color: var(--tg-text-muted);
+}
+.tg-badge--good { background: var(--tg-good-soft); color: var(--tg-good); }
+.tg-badge--warn { background: var(--tg-warn-soft); color: var(--tg-warn); }
+.tg-badge--bad  { background: var(--tg-bad-soft);  color: var(--tg-bad); }
+.tg-badge--accent { background: var(--tg-accent-soft); color: var(--tg-accent); }
+
+.tg-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-2) var(--tg-space-3);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bg-raised);
+  color: var(--tg-text);
+  cursor: pointer;
+  transition: background var(--tg-transition), border-color var(--tg-transition);
+}
+.tg-button:hover { background: var(--tg-bg-hover); }
+.tg-button--primary {
+  background: var(--tg-accent);
+  border-color: var(--tg-accent);
+  color: var(--tg-on-accent);
+}
+.tg-button--primary:hover { background: var(--tg-accent-hover); }
+.tg-button--subtle { border-color: transparent; background: transparent; }
+.tg-button--subtle:hover { background: var(--tg-bg-hover); }
+
+.tg-input,
+.tg-select {
+  width: 100%;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bg-raised);
+  transition: border-color var(--tg-transition);
+}
+.tg-input:focus,
+.tg-select:focus { border-color: var(--tg-accent); }
+
+.tg-skeleton {
+  background: var(--tg-bg-sunken);
+  border-radius: var(--tg-radius-md);
+  animation: tg-pulse 1.4s ease-in-out infinite;
+}
+@keyframes tg-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.tg-visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

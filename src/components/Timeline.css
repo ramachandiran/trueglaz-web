@@ -1,0 +1,203 @@
+/* The lifecycle line. Colours come from the --tg-step-* roles so the timeline
+   can be rethemed independently of the rest of the app. */
+
+.tl {
+  position: relative;
+  --tl-node: 26px;
+}
+
+.tl__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+.tl__step {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tl__node {
+  flex: none;
+  width: var(--tl-node);
+  height: var(--tl-node);
+  border-radius: var(--tg-radius-pill);
+  display: grid;
+  place-items: center;
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  background: var(--tg-bg-raised);
+  border: 2px solid var(--tg-step-upcoming);
+  color: var(--tg-text-muted);
+  transition: border-color var(--tg-transition), background var(--tg-transition);
+}
+
+.tl__step--done .tl__node {
+  border-color: var(--tg-step-done);
+  background: var(--tg-step-done);
+  color: var(--tg-on-accent);
+}
+
+.tl__step--current .tl__node {
+  border-color: var(--tg-step-current);
+  background: var(--tg-step-current);
+  color: var(--tg-on-accent);
+  box-shadow: 0 0 0 4px var(--tg-accent-soft);
+}
+
+.tl__step--detour .tl__node {
+  border-color: var(--tg-step-detour);
+}
+.tl__step--detour.tl__step--done .tl__node,
+.tl__step--detour.tl__step--current .tl__node {
+  background: var(--tg-step-detour);
+  border-color: var(--tg-step-detour);
+}
+
+.tl__label {
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+  color: var(--tg-text);
+}
+
+.tl__step--upcoming .tl__label {
+  color: var(--tg-text-muted);
+  font-weight: var(--tg-weight-normal);
+}
+
+.tl__meta,
+.tl__role,
+.tl__reason {
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+}
+
+.tl--horizontal .tl__label,
+.tl--horizontal .tl__meta,
+.tl--horizontal .tl__role {
+  display: block;
+  max-width: 80px;
+  overflow-wrap: break-word;
+}
+
+.tl__reason {
+  font-family: var(--tg-font-mono);
+  color: var(--tg-step-detour);
+}
+
+.tl__pending {
+  font-style: italic;
+}
+
+/* --- horizontal -------------------------------------------------------- */
+
+.tl--horizontal {
+  padding: var(--tg-space-2) 0 var(--tg-space-4);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  /* Fades the right edge only while the line actually overflows, so a reader
+     can tell there is more of the journey off-screen. */
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent 100%);
+}
+
+.tl--horizontal .tl__steps {
+  gap: 0;
+  min-width: min-content;
+}
+
+.tl--horizontal .tl__step {
+  flex: 1 0 84px;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: var(--tg-space-2);
+  padding-right: var(--tg-space-3);
+}
+
+/* The connecting line, drawn between node centres. */
+.tl--horizontal .tl__step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--tl-node) / 2 - 1px);
+  left: var(--tl-node);
+  width: calc(100% - var(--tl-node));
+  height: 2px;
+  background: var(--tg-step-upcoming);
+}
+
+.tl--horizontal .tl__step--done:not(:last-child)::after {
+  background: var(--tg-step-done);
+}
+
+.tl--horizontal .tl__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* --- vertical ---------------------------------------------------------- */
+
+.tl--vertical .tl__steps {
+  flex-direction: column;
+  gap: var(--tg-space-4);
+}
+
+.tl--vertical .tl__step {
+  align-items: flex-start;
+  gap: var(--tg-space-3);
+}
+
+.tl--vertical .tl__step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--tl-node) / 2 - 1px);
+  top: var(--tl-node);
+  width: 2px;
+  height: calc(100% + var(--tg-space-4) - var(--tl-node));
+  background: var(--tg-step-upcoming);
+}
+
+.tl--vertical .tl__step--done:not(:last-child)::after {
+  background: var(--tg-step-done);
+}
+
+.tl--vertical .tl__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 2px;
+}
+
+/* On narrow screens a horizontal timeline becomes unreadable, so it stacks. */
+@media (max-width: 720px) {
+  .tl--horizontal {
+    overflow-x: visible;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .tl--horizontal .tl__label,
+  .tl--horizontal .tl__meta,
+  .tl--horizontal .tl__role {
+    max-width: none;
+  }
+  .tl--horizontal .tl__steps {
+    flex-direction: column;
+    gap: var(--tg-space-4);
+  }
+  .tl--horizontal .tl__step {
+    flex: none;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--tg-space-3);
+    padding-right: 0;
+  }
+  .tl--horizontal .tl__step:not(:last-child)::after {
+    top: var(--tl-node);
+    left: calc(var(--tl-node) / 2 - 1px);
+    width: 2px;
+    height: calc(100% + var(--tg-space-4) - var(--tl-node));
+  }
+}

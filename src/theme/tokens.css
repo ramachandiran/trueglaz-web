@@ -1,0 +1,169 @@
+/* ===========================================================================
+   THE THEME FILE
+   ---------------------------------------------------------------------------
+   Every colour, radius, font and spacing step in the app resolves to a token
+   declared here. No component hardcodes a colour, so replacing the theme means
+   replacing this one file — not touching a single component.
+
+   To retheme:
+     1. Copy this file, change the values, keep every token NAME.
+     2. Point src/theme/index.css at your copy.
+   `src/theme/themes/midnight.css` is a worked example of exactly that.
+
+   Tokens are grouped: primitives (a raw palette) then semantic roles. Components
+   only ever use the SEMANTIC ones, so a retheme usually means editing the
+   primitives and leaving the roles alone.
+   =========================================================================== */
+
+:root {
+  /* --- primitives: the raw palette ------------------------------------- */
+  --tg-c-ink-950: #0d1117;
+  --tg-c-ink-900: #161b22;
+  --tg-c-ink-800: #21262d;
+  --tg-c-ink-700: #30363d;
+  --tg-c-ink-500: #6e7681;
+  --tg-c-ink-400: #8b949e;
+  --tg-c-ink-300: #b1bac4;
+  --tg-c-ink-200: #d0d7de;
+  --tg-c-ink-100: #e6eaef;
+  --tg-c-ink-50:  #f3f5f8;
+  --tg-c-white:   #ffffff;
+
+  --tg-c-accent-600: #1f6feb;
+  --tg-c-accent-500: #2f81f7;
+  --tg-c-accent-100: #ddeaff;
+
+  --tg-c-good-600: #1a7f37;
+  --tg-c-good-100: #dcfce7;
+  --tg-c-warn-600: #9a6700;
+  --tg-c-warn-100: #fff4d6;
+  --tg-c-bad-600:  #cf222e;
+  --tg-c-bad-100:  #ffebe9;
+
+  /* --- semantic roles: what components actually reference --------------- */
+  --tg-bg:            var(--tg-c-ink-50);
+  --tg-bg-raised:     var(--tg-c-white);
+  --tg-bg-sunken:     var(--tg-c-ink-100);
+  --tg-bg-hover:      var(--tg-c-ink-100);
+
+  --tg-text:          var(--tg-c-ink-950);
+  --tg-text-muted:    var(--tg-c-ink-500);
+  --tg-text-inverted: var(--tg-c-white);
+
+  --tg-border:        var(--tg-c-ink-200);
+  --tg-border-strong: var(--tg-c-ink-300);
+
+  --tg-accent:        var(--tg-c-accent-600);
+  --tg-accent-hover:  var(--tg-c-accent-500);
+  --tg-accent-soft:   var(--tg-c-accent-100);
+  --tg-on-accent:     var(--tg-c-white);
+
+  --tg-good:      var(--tg-c-good-600);
+  --tg-good-soft: var(--tg-c-good-100);
+  --tg-warn:      var(--tg-c-warn-600);
+  --tg-warn-soft: var(--tg-c-warn-100);
+  --tg-bad:       var(--tg-c-bad-600);
+  --tg-bad-soft:  var(--tg-c-bad-100);
+
+  /* Timeline-specific roles, so the lifecycle graph can be rethemed on its own */
+  --tg-step-done:     var(--tg-good);
+  --tg-step-current:  var(--tg-accent);
+  --tg-step-upcoming: var(--tg-border-strong);
+  --tg-step-detour:   var(--tg-warn);
+
+  /* --- typography ------------------------------------------------------- */
+  --tg-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+             "Helvetica Neue", Arial, sans-serif;
+  --tg-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --tg-text-xs: 0.75rem;
+  --tg-text-sm: 0.8125rem;
+  --tg-text-md: 0.9375rem;
+  --tg-text-lg: 1.125rem;
+  --tg-text-xl: 1.5rem;
+  --tg-text-2xl: 2rem;
+
+  --tg-weight-normal: 400;
+  --tg-weight-medium: 500;
+  --tg-weight-bold: 650;
+
+  /* --- shape and space -------------------------------------------------- */
+  --tg-radius-sm: 4px;
+  --tg-radius-md: 8px;
+  --tg-radius-lg: 12px;
+  --tg-radius-pill: 999px;
+
+  --tg-space-1: 4px;
+  --tg-space-2: 8px;
+  --tg-space-3: 12px;
+  --tg-space-4: 16px;
+  --tg-space-5: 24px;
+  --tg-space-6: 32px;
+  --tg-space-7: 48px;
+
+  --tg-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
+  --tg-shadow-md: 0 4px 12px rgb(0 0 0 / 0.08);
+
+  --tg-sidebar-width: 264px;
+  --tg-content-max: 1360px;
+
+  --tg-transition: 140ms ease;
+}
+
+/* Dark mode by preference, unless the page explicitly asks for light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tg-bg:            var(--tg-c-ink-950);
+    --tg-bg-raised:     var(--tg-c-ink-900);
+    --tg-bg-sunken:     var(--tg-c-ink-800);
+    --tg-bg-hover:      var(--tg-c-ink-800);
+
+    --tg-text:          var(--tg-c-ink-100);
+    --tg-text-muted:    var(--tg-c-ink-400);
+
+    --tg-border:        var(--tg-c-ink-700);
+    --tg-border-strong: var(--tg-c-ink-500);
+
+    --tg-accent:        var(--tg-c-accent-500);
+    --tg-accent-hover:  var(--tg-c-accent-600);
+    --tg-accent-soft:   #16304f;
+
+    --tg-good:      #3fb950;
+    --tg-good-soft: #133a1d;
+    --tg-warn:      #d29922;
+    --tg-warn-soft: #3b2f0f;
+    --tg-bad:       #f85149;
+    --tg-bad-soft:  #4a1a1a;
+
+    --tg-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --tg-shadow-md: 0 4px 12px rgb(0 0 0 / 0.5);
+  }
+}
+
+/* Explicit dark, for the in-app toggle. Mirrors the block above. */
+:root[data-theme="dark"] {
+  --tg-bg:            var(--tg-c-ink-950);
+  --tg-bg-raised:     var(--tg-c-ink-900);
+  --tg-bg-sunken:     var(--tg-c-ink-800);
+  --tg-bg-hover:      var(--tg-c-ink-800);
+
+  --tg-text:          var(--tg-c-ink-100);
+  --tg-text-muted:    var(--tg-c-ink-400);
+
+  --tg-border:        var(--tg-c-ink-700);
+  --tg-border-strong: var(--tg-c-ink-500);
+
+  --tg-accent:        var(--tg-c-accent-500);
+  --tg-accent-hover:  var(--tg-c-accent-600);
+  --tg-accent-soft:   #16304f;
+
+  --tg-good:      #3fb950;
+  --tg-good-soft: #133a1d;
+  --tg-warn:      #d29922;
+  --tg-warn-soft: #3b2f0f;
+  --tg-bad:       #f85149;
+  --tg-bad-soft:  #4a1a1a;
+
+  --tg-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --tg-shadow-md: 0 4px 12px rgb(0 0 0 / 0.5);
+}

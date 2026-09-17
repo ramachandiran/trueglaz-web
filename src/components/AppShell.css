@@ -1,0 +1,93 @@
+.shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell__header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--tg-bg-raised);
+  border-bottom: 1px solid var(--tg-border);
+}
+
+.shell__header-inner {
+  max-width: var(--tg-content-max);
+  margin: 0 auto;
+  padding: var(--tg-space-3) var(--tg-space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-5);
+  flex-wrap: wrap;
+}
+
+.shell__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-lg);
+  font-weight: var(--tg-weight-bold);
+  color: var(--tg-text);
+  text-decoration: none;
+}
+.shell__brand:hover { text-decoration: none; }
+
+.shell__logo {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--tg-radius-pill);
+  border: 3px solid var(--tg-accent);
+}
+
+.shell__nav {
+  display: flex;
+  gap: var(--tg-space-1);
+  flex: 1;
+}
+
+.shell__nav-link {
+  padding: var(--tg-space-2) var(--tg-space-3);
+  border-radius: var(--tg-radius-md);
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+  text-decoration: none;
+}
+.shell__nav-link:hover { background: var(--tg-bg-hover); text-decoration: none; }
+.shell__nav-link--active { color: var(--tg-accent); background: var(--tg-accent-soft); }
+
+.shell__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+}
+
+.shell__actor .tg-select,
+.shell__theme {
+  width: auto;
+  font-size: var(--tg-text-sm);
+  padding: var(--tg-space-1) var(--tg-space-2);
+}
+
+.shell__actor-skeleton { width: 160px; height: 32px; }
+
+.shell__main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--tg-content-max);
+  margin: 0 auto;
+  padding: var(--tg-space-5) var(--tg-space-4);
+}
+
+.shell__footer {
+  border-top: 1px solid var(--tg-border);
+  padding: var(--tg-space-4);
+  text-align: center;
+  font-size: var(--tg-text-sm);
+}
+
+@media (max-width: 720px) {
+  .shell__header-inner { gap: var(--tg-space-3); }
+  .shell__nav { order: 3; flex-basis: 100%; }
+}

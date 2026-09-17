@@ -1,0 +1,66 @@
+.catalog {
+  display: grid;
+  grid-template-columns: var(--tg-sidebar-width) minmax(0, 1fr);
+  gap: var(--tg-space-5);
+  align-items: start;
+}
+
+.catalog__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--tg-space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-4);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--tg-transition), box-shadow var(--tg-transition),
+              transform var(--tg-transition);
+}
+.card:hover {
+  text-decoration: none;
+  border-color: var(--tg-accent);
+  box-shadow: var(--tg-shadow-md);
+  transform: translateY(-2px);
+}
+
+.card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tg-space-2);
+}
+
+.card__price {
+  font-size: var(--tg-text-lg);
+  font-weight: var(--tg-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.card__title {
+  font-size: var(--tg-text-md);
+  font-weight: var(--tg-weight-medium);
+}
+
+.card__sub { font-size: var(--tg-text-xs); margin: 0; }
+
+.card__desc {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* The sidebar stops being a sidebar once there is no room for two columns. */
+@media (max-width: 900px) {
+  .catalog { grid-template-columns: 1fr; }
+  .fs { position: static; max-height: none; }
+}

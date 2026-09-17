@@ -1,0 +1,10 @@
+/* Theme entry point.
+ *
+ * To swap the whole look of the app, change the first import to your own token
+ * file. Nothing else in the codebase needs to change — every component reads
+ * semantic tokens only.
+ *
+ *   @import './themes/midnight.css';   <- a worked example
+ */
+@import './tokens.css';
+@import './base.css';
