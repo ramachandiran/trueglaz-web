@@ -1,0 +1,8 @@
+/* Theme entry point.
+ *
+ * tokens.generated.css is produced from packages/core/src/theme/tokens.ts, the
+ * single source of truth shared with the mobile app. Do not edit it by hand —
+ * change the TypeScript and run `npm run tokens`.
+ */
+@import './tokens.generated.css';
+@import './base.css';

@@ -1,12 +1,16 @@
-# TrueGlaz Web
+# TrueGlaz Frontend
 
-Frontend for the TrueGlaz consignment marketplace. Talks to the
-[trueglaz-api](https://github.com/ramachandiran/trueglaz-api) — this is a
-separate project and shares no code with it.
+Web and mobile clients for the TrueGlaz consignment marketplace, sharing one
+core. Talks to the [trueglaz-api](https://github.com/ramachandiran/trueglaz-api)
+— a separate project, no shared code with it.
 
-React 18 · TypeScript · Vite · plain CSS with design tokens. No UI framework,
-deliberately: the theme is meant to be replaced, and component libraries make
-that harder rather than easier.
+```
+packages/core     the logic both apps run: API client, types, lifecycle,
+                  faceting, formatting — and the theme tokens
+apps/web          React 18 + Vite + plain CSS
+apps/mobile       React Native (Expo 51) + React Navigation
+scripts/          generates the web's CSS variables from the shared tokens
+```
 
 ## Run it
 
@@ -14,121 +18,120 @@ The API has to be running first (`./gradlew bootRun` in trueglaz-api, on :8080).
 
 ```bash
 npm install
-npm run dev
+
+npm run dev      # web on http://localhost:5173
+npm run mobile   # Expo — scan the QR with Expo Go, or press w/i/a
+npm run build    # regenerates tokens, then builds the web app
+npm run typecheck
 ```
 
-Open **http://localhost:5173**. Pick an actor from the header dropdown — the API
-has no login yet, so the app states who it is on every call (see *Acting as*
-below).
+On a phone the app cannot reach your machine's `localhost`. Set the LAN address:
 
 ```bash
-npm run build       # typecheck + production bundle into dist/
-npm run typecheck   # types only
+EXPO_PUBLIC_API_ORIGIN=http://192.168.1.50:8080 npm run mobile
 ```
 
-## What's in it
+## What the two apps share
 
-| Route | What it does |
+Everything except presentation. `packages/core` is ~750 lines of platform-free
+TypeScript:
+
+| Module | What it is |
 |---|---|
-| `/` | Catalogue. Left sidebar filters, card grid. |
-| `/listings/:id` | One listing: grade, disclosed defects, price history, lifecycle. |
-| `/items` | Tracking view. Every unit by lifecycle stage. |
-| `/items/:id` | One unit: the timeline, what can happen next, full history. |
+| `lifecycle.ts` | The timeline: happy path, detour splicing, terminal detection |
+| `filters.ts` | Faceting, counts, sorting |
+| `client.ts` | API client, request shaping, error mapping |
+| `types.ts` | Response types |
+| `useApi.ts` | Fetch-on-mount hook |
+| `ActorContext.tsx` | Who the app is acting as |
+| `format.ts` | Money, dates, relative times |
+| `theme/tokens.ts` | **The theme** |
 
-### Filters
+Both apps call the same `buildTimeline`, so an item's journey is computed once
+and drawn twice. Fix a lifecycle rule and both clients get it.
 
-Down the left of the catalogue: search, sort, type (cameras/lenses), brand,
-condition grade and a price range. Every facet shows a live count computed
-against whatever else is selected, so a count of zero genuinely means "picking
-this shows nothing" — those options are disabled rather than hidden, so the list
-does not jump around as you filter.
-
-### The lifecycle timeline
-
-Each item gets its journey as one line: completed stages filled and dated,
-the current stage highlighted, and what is still ahead greyed out.
-
-It is built from the item's append-only `item_state_transition` history rather
-than from `current_state`, so it shows what actually happened. Two details worth
-knowing:
-
-- **It does not lie about the future.** An item that goes off the happy path —
-  quarantined, declined, returned — stops projecting the rest of the sale route.
-  The upcoming stages become the item's real legal next moves, taken from
-  `nextLegalStates`. A quarantined lens shows `Archived` as its only exit, not a
-  fictional path to `Accepted`.
-- **Detours are shown, not hidden.** Anything that happened but is not on the
-  happy path appears inline in amber, with its reason code.
-
-The canonical path lives in `src/lib/lifecycle.ts` as `HAPPY_PATH`.
+Core touches no browser API. The one that leaked — `localStorage` — is now a
+port in `storage.ts`; web supplies a `localStorage` adapter, mobile an
+`AsyncStorage` one.
 
 ## Replacing the theme
 
-**Everything is in `src/theme/tokens.css`.** No component hardcodes a colour,
-font or radius — they all read semantic tokens like `--tg-bg`, `--tg-accent`,
-`--tg-step-done`.
+**Everything is `packages/core/src/theme/tokens.ts`.** One file, both platforms.
 
-To retheme:
+React Native has no CSS custom properties, so the tokens live as TypeScript and
+each platform consumes them its own way:
 
-1. Copy `tokens.css`, change the **values**, keep every token **name**.
-2. Point `src/theme/index.css` at your file.
+- **mobile** imports the object through `useTheme()`
+- **web** runs `npm run tokens`, which generates
+  `apps/web/src/theme/tokens.generated.css`; the stylesheets keep using
+  `var(--tg-*)` and hold no colour of their own
 
-That is the whole procedure. `src/theme/themes/midnight.css` is a worked example
-— warm paper, violet accent, serif type, tighter corners — that changes the
-entire app while touching nothing else. Swap the import in `index.css` to see it.
+To retheme: copy `light`/`dark`, change the **values**, keep every **key**.
+`midnight` in the same file is a worked example — warm paper, violet accent,
+serif, tighter corners — selectable from the theme switcher in both apps.
 
-Tokens come in two layers. Primitives (`--tg-c-*`) are a raw palette; semantic
-roles (`--tg-bg`, `--tg-accent`, …) are what components use. Most rethemes only
-need the primitives. The timeline has its own `--tg-step-*` roles so the
-lifecycle graph can be recoloured independently.
+Never edit `tokens.generated.css`; it is overwritten.
 
-Dark mode follows the system by default and can be overridden from the header;
-a replacement theme inherits that toggle for free.
+## The lifecycle timeline
+
+Each item's journey as one line: completed stages dated, the current stage
+highlighted, what is ahead greyed out. Horizontal on web, vertical on mobile —
+the web app already stacked it below 720px for the same reason.
+
+Built from the append-only `item_state_transition` history rather than
+`current_state`, so it shows what actually happened. Two details:
+
+- **It does not lie about the future.** An item that goes off the happy path —
+  quarantined, declined, returned — stops projecting the rest of the sale route
+  and falls back to its real legal next moves. A quarantined lens shows
+  `Archived` as its only exit, not a fictional path to `Accepted`.
+- **Detours are shown, not hidden.** Anything off the happy path that actually
+  happened appears inline in amber with its reason code.
+
+`HAPPY_PATH` is in `packages/core/src/lifecycle.ts`.
 
 ## Acting as
 
-The API has no authentication — no login, no sessions, no account endpoints.
-It identifies the caller from two headers:
+The API has no authentication — no login, no sessions, no account endpoints. It
+identifies callers from headers:
 
 ```
-X-Actor-Id: <user uuid>
-X-Actor-Role: User | Staff | Technician | Admin | System
+X-Actor-Id: <user uuid>    X-Actor-Role: User | Staff | Technician | Admin | System
 ```
 
-The header dropdown picks one of the seeded users from `GET /dev/actors`. This
-is a stand-in, not a login: roles are self-declared and the API believes them.
-When OTP and sessions land, only `src/state/ActorContext.tsx` and `authHeaders`
-in `src/api/client.ts` need to change.
+Both apps pick a seeded user from `GET /dev/actors`. This is a stand-in, not a
+login: roles are self-declared and the API believes them.
 
-## Two things the API needs
+**This is the thing to fix before shipping mobile.** On web it is a localhost
+demo. A published binary where identity is a self-declared header is a different
+matter — anyone can proxy the traffic and become an admin. When OTP and sessions
+land, only `ActorContext.tsx` and `authHeaders` in `client.ts` change.
 
-Both are worked around here; neither workaround belongs in production.
+## Two API gaps
 
-**1. CORS.** The API sets no CORS headers, so a browser on another origin is
-blocked outright. In development Vite proxies `/api` to `:8080`, which sidesteps
-it. In production either serve both from one origin or add a CORS policy on the
-API.
+**1. CORS.** The API sets no CORS headers. Web works around it with a Vite
+proxy; **native does not need it at all**, having no same-origin policy. In
+production either serve web from one origin or add a CORS policy.
 
 **2. Listings carry no model reference.** `GET /listings` returns a generated
-title but no `productModelId`, `brandId` or `categoryId`, and the endpoint only
-filters on text, a single grade and a price ceiling. So brand and category
-faceting is resolved in the browser by matching the title against the catalogue
-(`ListingService.publishRow` builds it as `"{model name} · {grade}"`), and the
-remaining facets are applied client-side over a large page.
+title but no `productModelId`/`brandId`/`categoryId`, and filters only on text,
+one grade and a price ceiling. Brand and category faceting is resolved in
+`filters.ts` by matching the title against the catalogue, with the rest applied
+client-side. It works at this size and is honest about being guesswork, but it
+will not scale — exposing `productModelId` on the listing payload would remove
+it for both clients at once.
 
-That works for a catalogue this size and is honest about what it is, but it is
-guesswork and it will not scale. Exposing `productModelId` on the listing
-payload and accepting brand/category/multi-grade filters server-side would
-remove it entirely. See `src/lib/filters.ts`.
+## Verification
 
-## Layout
+Web is driven in Chromium against the live API: every route, both timeline
+branches, dark mode, mobile width, zero console errors.
 
-```
-src/
-  api/        client (fetch + actor headers), response types, useApi hook
-  components/ AppShell, FilterSidebar, Timeline, shared UI
-  lib/        lifecycle (the timeline logic), filters (faceting), format
-  pages/      Catalog, ListingDetail, Items, ItemDetail
-  state/      ActorContext (stands in for auth), useTheme
-  theme/      tokens.css  <- the theme, base.css, themes/midnight.css
-```
+Mobile is verified through Expo Web (react-native-web), which renders the real
+component tree and the real navigation: catalogue with live data, the filter
+sheet with live facet counts, the tracking list, and the timeline reading
+"13 of 14 stages" with the same done/current/upcoming split as web. **It has not
+been run on a physical device or simulator** — that needs Expo Go and a phone.
+
+There are no automated tests yet. `packages/core/src/lifecycle.ts` is the piece
+that most deserves them: pure functions over history, and the place where a
+subtle bug would quietly mislead people about where their lens is.

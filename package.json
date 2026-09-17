@@ -1,24 +1,13 @@
 {
-  "name": "trueglaz-web",
+  "name": "trueglaz-frontend",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "workspaces": ["packages/*", "apps/web", "apps/mobile"],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "tokens": "node scripts/generate-css-tokens.mjs",
+    "dev": "npm run dev -w @trueglaz/web",
+    "build": "npm run tokens && npm run build -w @trueglaz/web",
+    "mobile": "npm run start -w @trueglaz/mobile",
+    "typecheck": "npm run typecheck -w @trueglaz/core && npm run typecheck -w @trueglaz/web && npm run typecheck -w @trueglaz/mobile"
   }
 }
