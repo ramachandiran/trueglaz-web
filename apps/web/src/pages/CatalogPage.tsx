@@ -16,11 +16,11 @@ export function CatalogPage() {
 
   // Text search is the one facet the API can genuinely narrow, so it is sent up.
   // Everything else is faceted here — see lib/filters.ts for why.
-  const listings = useApi((a) => api.listings(a, { q: filters.q, size: 200 }), [filters.q])
-  const models = useApi((a) => api.models(a), [])
-  const grades = useApi((a) => api.grades(a), [])
-  const brands = useApi((a) => api.brands(a), [])
-  const categories = useApi((a) => api.categories(a), [])
+  const listings = useApi(() => api.listings({ q: filters.q, size: 200 }), [filters.q])
+  const models = useApi(() => api.models(), [])
+  const grades = useApi(() => api.grades(), [])
+  const brands = useApi(() => api.brands(), [])
+  const categories = useApi(() => api.categories(), [])
 
   const rows: Facetable[] = useMemo(() => {
     if (!listings.data) return []

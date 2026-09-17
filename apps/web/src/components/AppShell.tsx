@@ -1,7 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
-import { api } from '@trueglaz/core'
-import { useApi } from '@trueglaz/core'
-import { useActor } from '@trueglaz/core'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { isAdmin, isOps, isStaff, useSession } from '@trueglaz/core'
 import { useTheme, type ThemeMode } from '../state/useTheme'
 import './AppShell.css'
 
@@ -13,16 +11,24 @@ export function AppShell() {
         <Outlet />
       </main>
       <footer className="shell__footer">
-        <span className="tg-muted">
-          TrueGlaz — every unit graded, every defect disclosed.
-        </span>
+        <span className="tg-muted">TrueGlaz — every unit graded, every defect disclosed.</span>
       </footer>
     </div>
   )
 }
 
+const navClass = ({ isActive }: { isActive: boolean }) =>
+  `shell__nav-link${isActive ? ' shell__nav-link--active' : ''}`
+
+/**
+ * The nav shows only what the signed-in user can actually reach. This is a
+ * courtesy rather than a control — the API refuses the same calls regardless —
+ * but a menu full of links that 403 is its own kind of broken.
+ */
 function Header() {
   const { mode, setMode } = useTheme()
+  const { session, ready, signOut } = useSession()
+  const nav = useNavigate()
 
   return (
     <header className="shell__header">
@@ -34,11 +40,35 @@ function Header() {
 
         <nav className="shell__nav" aria-label="Main">
           <NavLink to="/" end className={navClass}>Browse</NavLink>
-          <NavLink to="/items" className={navClass}>Track items</NavLink>
+          {session && <NavLink to="/orders" className={navClass}>My orders</NavLink>}
+          {session && <NavLink to="/sell" className={navClass}>Sell</NavLink>}
+          {isOps(session) && <NavLink to="/ops" className={navClass}>Ops</NavLink>}
+          {isStaff(session) && <NavLink to="/ops/fulfilment" className={navClass}>Fulfilment</NavLink>}
+          {isAdmin(session) && <NavLink to="/admin" className={navClass}>Money</NavLink>}
         </nav>
 
         <div className="shell__tools">
-          <ActorSwitcher />
+          {ready && (session ? (
+            <div className="shell__account">
+              <span className="shell__who">
+                {session.displayName}
+                {session.roles.length > 0 && (
+                  <span className="shell__roles"> · {session.roles.join(', ')}</span>
+                )}
+              </span>
+              <button
+                className="tg-button tg-button--subtle shell__signout"
+                onClick={async () => { await signOut(); nav('/') }}
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <NavLink to="/sign-in" className="tg-button tg-button--primary shell__signin">
+              Sign in
+            </NavLink>
+          ))}
+
           <select
             className="tg-select shell__theme"
             value={mode}
@@ -53,45 +83,5 @@ function Header() {
         </div>
       </div>
     </header>
-  )
-}
-
-const navClass = ({ isActive }: { isActive: boolean }) =>
-  `shell__nav-link${isActive ? ' shell__nav-link--active' : ''}`
-
-/**
- * Stands in for signing in. The API identifies callers by header, so the app
- * needs a way to say who it is; `GET /dev/actors` lists the seeded users.
- * This whole control disappears when real auth arrives.
- */
-function ActorSwitcher() {
-  const { actor, setActor } = useActor()
-  const { data } = useApi((a) => api.actors(a), [])
-
-  if (!data) return <div className="tg-skeleton shell__actor-skeleton" />
-
-  return (
-    <label className="shell__actor">
-      <span className="tg-visually-hidden">Acting as</span>
-      <select
-        className="tg-select"
-        value={actor?.userId ?? ''}
-        onChange={(e) => {
-          const hint = data.find((h) => h.userId === e.target.value)
-          setActor(
-            hint
-              ? { userId: hint.userId, role: hint.suggestedRoleHeader, displayName: hint.displayName }
-              : null,
-          )
-        }}
-      >
-        <option value="">Signed out</option>
-        {data.map((h) => (
-          <option key={h.userId} value={h.userId}>
-            {h.displayName} · {h.suggestedRoleHeader}
-          </option>
-        ))}
-      </select>
-    </label>
   )
 }

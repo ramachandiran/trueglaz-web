@@ -13,7 +13,7 @@ import './ItemsPage.css'
  */
 export function ItemsPage() {
   const [state, setState] = useState<string | null>(null)
-  const { data, error, loading, reload } = useApi((a) => api.items(a), [])
+  const { data, error, loading, reload } = useApi(() => api.itemQueue(), [])
 
   const byState = useMemo(() => {
     const counts = new Map<string, number>()

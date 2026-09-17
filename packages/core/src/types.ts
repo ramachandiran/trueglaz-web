@@ -91,6 +91,8 @@ export interface NextState {
 
 export interface InspectionReport {
   id: string
+  consignmentItemId: string
+  checklistTemplateId: string
   purpose: string
   technicianUserId: string | null
   qcUserId: string | null
@@ -151,6 +153,277 @@ export interface TransitionRule {
   allowedRoles: string[]
   requiresReason: boolean
   notes: string | null
+}
+
+export interface Session {
+  token: string
+  expiresAt: string
+  userId: string
+  displayName: string
+  email: string | null
+  roles: string[]
+}
+
+export interface Submission {
+  id: string
+  sellerUserId: string
+  state: string
+  pricingMode: string
+  shipBy: string | null
+  submittedAt: string | null
+  preApprovedAt: string | null
+  rejectedReasonCode: string | null
+  expiresAt: string | null
+  createdAt: string
+}
+
+export interface SubmissionView {
+  submission: Submission
+  items: ConsignmentItem[]
+}
+
+export interface InboundShipment {
+  id: string
+  submissionId: string
+  courierCode: string
+  trackingNumber: string
+  state: string
+  shippedAt: string | null
+  deliveredAt: string | null
+}
+
+export interface Intake {
+  id: string
+  inboundShipmentId: string
+  receivedBy: string | null
+  hasDiscrepancy: boolean
+  notes: string | null
+}
+
+export interface StorageBin {
+  id: string
+  code: string
+  zone: string | null
+  isActive: boolean
+}
+
+export interface ChecklistTemplate {
+  id: string
+  categoryId: string | null
+  version: number
+  status: string
+  name: string
+}
+
+export interface ChecklistItem {
+  id: string
+  checklistTemplateId: string
+  code: string
+  prompt: string
+  answerType: string
+  options: string[] | null
+  isMandatory: boolean
+  displayOrder: number
+  helpText: string | null
+}
+
+export interface InspectionAnswer {
+  id: string
+  inspectionReportId: string
+  checklistItemId: string
+  valueBoolean: boolean | null
+  valueNumeric: number | null
+  valueText: string | null
+  valueOption: string | null
+}
+
+export interface Reservation {
+  id: string
+  listingId: string
+  consignmentItemId: string
+  userId: string
+  expiresAt: string
+  releasedAt: string | null
+  orderId: string | null
+}
+
+export interface Order {
+  id: string
+  orderNumber: string
+  buyerUserId: string
+  state: string
+  subtotalMinor: number
+  shippingMinor: number
+  taxMinor: number
+  discountMinor: number
+  totalMinor: number
+  deliveryAddress: Record<string, unknown> | null
+  completedAt: string | null
+  createdAt: string
+}
+
+export interface OrderLine {
+  id: string
+  orderId: string
+  consignmentItemId: string
+  listingId: string
+  sellerUserId: string
+  itemPriceMinor: number
+  gradeCodeAtSale: string
+  feeSnapshotId: string
+  state: string
+  acceptanceWindowEndsAt: string | null
+  acceptedAt: string | null
+  acceptedBy: string | null
+}
+
+export interface Payment {
+  id: string
+  orderId: string
+  gateway: string
+  gatewayRef: string
+  method: string | null
+  amountMinor: number
+  state: string
+  capturedAt: string | null
+}
+
+export interface OrderDetail {
+  order: Order
+  lines: OrderLine[]
+  payments: Payment[]
+}
+
+export interface Payout {
+  id: string
+  sellerUserId: string
+  orderLineId: string
+  payoutAccountId: string | null
+  grossMinor: number
+  taxWithheldMinor: number
+  netMinor: number
+  state: string
+  holdReasonCode: string | null
+  approvedAt: string | null
+  paidAt: string | null
+  transferRef: string | null
+}
+
+export interface PayoutAccount {
+  id: string
+  userId: string
+  method: string
+  accountHolderName: string
+  accountNumberMasked: string | null
+  ifsc: string | null
+  upiVpa: string | null
+  verificationState: string
+  supersededAt: string | null
+}
+
+export interface PriceProposal {
+  id: string
+  consignmentItemId: string
+  gradeCode: string
+  computedAmountMinor: number
+  computedInputs: Record<string, unknown> | null
+  staffAmountMinor: number | null
+  staffOverrideReason: string | null
+  finalAmountMinor: number
+  createdAt: string
+}
+
+export interface FeeSnapshot {
+  id: string
+  consignmentItemId: string
+  salePriceMinor: number
+  commissionMinor: number
+  expectedNetMinor: number
+  capturedAt: string
+}
+
+export interface FeeRule {
+  id: string
+  feeType: string
+  bandMinMinor: number
+  bandMaxMinor: number | null
+  percent: number | null
+  flatMinor: number | null
+}
+
+export interface FeeQuote {
+  salePriceMinor: number
+  commissionMinor: number
+  expectedNetMinor: number
+  rulesApplied: Array<Record<string, unknown>>
+}
+
+export interface SellerApproval {
+  id: string
+  consignmentItemId: string
+  priceProposalId: string
+  feeSnapshotId: string
+  requiredReason: string
+  decision: string
+  counterAmountMinor: number | null
+  counterRound: number
+  expiresAt: string
+  decidedAt: string | null
+}
+
+export interface SellerApprovalView {
+  approval: SellerApproval
+  requiredBecause: string
+  declaredGradeCode: string
+  assignedGradeCode: string | null
+  askingAmountMinor: number
+  floorAmountMinor: number | null
+  proposedAmountMinor: number
+  commissionMinor: number
+  expectedNetMinor: number
+}
+
+export interface ProposalOutcome {
+  proposal: PriceProposal
+  feeSnapshotId: string | null
+  sellerApproval: SellerApproval | null
+  listing: Listing | null
+}
+
+export interface LedgerAccountBalance {
+  code: string
+  type: string
+  ownerUserId: string | null
+  balanceMinor: number
+}
+
+export interface LedgerTransactionView {
+  transaction: {
+    id: string
+    kind: string
+    referenceType: string
+    referenceId: string
+    description: string
+    createdAt?: string
+  }
+  entries: Array<{ accountCode: string; direction: string; amountMinor: number }>
+}
+
+export interface Reconciliation {
+  gateway_clearing: number
+  bank: number
+  escrow_liability_held: number
+  seller_payable_total: number
+  commission_revenue: number
+  shipping_revenue: number
+  payment_processing_expense: number
+}
+
+export interface PlatformSetting {
+  key: string
+  value: string
+  valueType: string
+  description: string
 }
 
 export interface ActorHint {

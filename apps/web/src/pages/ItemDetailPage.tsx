@@ -10,10 +10,10 @@ import './DetailPage.css'
 
 export function ItemDetailPage() {
   const { id = '' } = useParams()
-  const { data, error, loading, reload } = useApi((a) => api.item(a, id), [id])
+  const { data, error, loading, reload } = useApi(() => api.item(id), [id])
   // The item carries a productModelId, not a name, so the catalogue supplies the
   // words a person would recognise.
-  const models = useApi((a) => api.models(a), [])
+  const models = useApi(() => api.models(), [])
 
   const steps = useMemo(
     () => (data ? buildTimeline(data.history, data.item.currentState, data.nextLegalStates) : []),

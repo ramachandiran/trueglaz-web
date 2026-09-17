@@ -141,3 +141,5 @@
 }
 .detail__table td { padding: var(--tg-space-2) var(--tg-space-2) var(--tg-space-2) 0; border-bottom: 1px solid var(--tg-border); }
 .detail__table tr:last-child td { border-bottom: 0; }
+
+.detail__buy { align-self: center; white-space: nowrap; }

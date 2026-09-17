@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { api } from '@trueglaz/core'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { api, isOps, useSession } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { Timeline } from '../components/Timeline'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge } from '../components/ui'
@@ -10,12 +10,20 @@ import './DetailPage.css'
 
 export function ListingDetailPage() {
   const { id = '' } = useParams()
-  const listing = useApi((a) => api.listing(a, id), [id])
+  const nav = useNavigate()
+  const { session } = useSession()
+  const listing = useApi(() => api.listing(id), [id])
 
   const itemId = listing.data?.listing.consignmentItemId
-  // The listing payload has no lifecycle, so the timeline comes from the item
-  // behind it — one physical unit, one history, however many times it is listed.
-  const item = useApi((a) => (itemId ? api.item(a, itemId) : Promise.resolve(null)), [itemId])
+  // The lifecycle lives on the item, and the item record is the seller's — it
+  // carries their asking price, floor and bin location. Staff see the provenance
+  // here; a shopper gets the grade and the disclosed defects, which is what the
+  // listing is actually promising them.
+  const canSeeProvenance = isOps(session)
+  const item = useApi(
+    () => (itemId && canSeeProvenance ? api.item(itemId) : Promise.resolve(null)),
+    [itemId, canSeeProvenance],
+  )
 
   const steps = useMemo(
     () =>
@@ -50,6 +58,18 @@ export function ListingDetailPage() {
               {money(d.listing.priceMinor, d.listing.currency)}
             </span>
           </div>
+          {d.listing.state === 'published' && (
+            <button
+              className="tg-button tg-button--primary detail__buy"
+              onClick={() =>
+                session
+                  ? nav(`/checkout/${d.listing.id}`)
+                  : nav('/sign-in', { state: { from: `/checkout/${d.listing.id}` } })
+              }
+            >
+              Buy this one
+            </button>
+          )}
         </div>
       </header>
 

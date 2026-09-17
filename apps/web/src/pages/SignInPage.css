@@ -1,0 +1,56 @@
+.signin {
+  display: flex;
+  justify-content: center;
+  padding: var(--tg-space-7) var(--tg-space-4);
+}
+
+.signin__card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--tg-space-6);
+}
+
+.signin__title {
+  font-size: var(--tg-text-xl);
+  margin-bottom: var(--tg-space-4);
+}
+
+.signin__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-3);
+}
+
+.signin__blurb { margin: 0 0 var(--tg-space-2); font-size: var(--tg-text-sm); }
+
+.signin__label {
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.signin__code {
+  font-family: var(--tg-font-mono);
+  font-size: var(--tg-text-xl);
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.signin__submit { margin-top: var(--tg-space-2); }
+
+.signin__dev {
+  margin: 0;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  background: var(--tg-warn-soft);
+  color: var(--tg-warn);
+  border-radius: var(--tg-radius-md);
+  font-size: var(--tg-text-sm);
+}
+
+.signin__error {
+  margin: var(--tg-space-3) 0 0;
+  color: var(--tg-bad);
+  font-size: var(--tg-text-sm);
+}
