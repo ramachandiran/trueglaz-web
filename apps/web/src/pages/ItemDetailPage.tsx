@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
+import { InspectionReport } from '../components/InspectionReport'
+import { NextActions } from '../components/NextActions'
 import { Timeline } from '../components/Timeline'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge, StateBadge } from '../components/ui'
 import { buildTimeline, progressOf, STATE_BLURBS, STATE_LABELS } from '@trueglaz/core'
@@ -14,6 +16,9 @@ export function ItemDetailPage() {
   // The item carries a productModelId, not a name, so the catalogue supplies the
   // words a person would recognise.
   const models = useApi(() => api.models(), [])
+  // The recorded answers, joined to their questions by the API. Null until a
+  // technician has opened a checklist.
+  const report = useApi(() => api.itemReport(id), [id])
 
   const steps = useMemo(
     () => (data ? buildTimeline(data.history, data.item.currentState, data.nextLegalStates) : []),
@@ -67,80 +72,72 @@ export function ItemDetailPage() {
           {STATE_BLURBS[item.currentState] ?? `Currently ${STATE_LABELS[item.currentState] ?? item.currentState}.`}
         </p>
         <Timeline steps={steps} orientation="horizontal" />
+
+        {/* The move out of the current state is the only question anyone has
+            while looking at the line, so the buttons live on it. */}
+        <NextActions
+          itemId={id}
+          currentState={item.currentState}
+          nextLegalStates={nextLegalStates}
+          onDone={() => { reload(); report.reload() }}
+        />
       </section>
 
-      <div className="detail__cols">
-        <section className="tg-card detail__section">
-          <h2 className="detail__section-title">What can happen next</h2>
-          {nextLegalStates.length === 0 ? (
-            <p className="tg-muted">This item has reached the end of its journey.</p>
-          ) : (
-            <ul className="detail__list">
-              {nextLegalStates.map((n) => (
-                <li key={n.toState} className="detail__next">
-                  <div className="detail__next-head">
-                    <strong>{STATE_LABELS[n.toState] ?? n.toState}</strong>
-                    {n.requiresReason && <span className="tg-badge tg-badge--warn">needs a reason</span>}
-                  </div>
-                  {n.notes && <p className="tg-muted detail__next-note">{n.notes}</p>}
-                  <p className="detail__roles tg-muted">
-                    {n.allowedRoles.join(', ')}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="tg-card detail__section">
-          <h2 className="detail__section-title">Disclosed defects</h2>
-          {defects.length === 0 ? (
-            <p className="tg-muted">The inspection found nothing to disclose.</p>
-          ) : (
-            <ul className="detail__list">
-              {defects.map((d) => (
-                <li key={d.id} className="detail__defect">
-                  <div className="detail__defect-head">
-                    <strong>{d.title}</strong>
-                    <SeverityBadge severity={d.severity} />
-                  </div>
-                  <p className="tg-muted detail__defect-body">{d.descriptionPublic}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      <section className="tg-card detail__section">
+        <h2 className="detail__section-title">Disclosed defects</h2>
+        {defects.length === 0 ? (
+          <p className="tg-muted">The inspection found nothing to disclose.</p>
+        ) : (
+          <ul className="detail__list detail__list--grid">
+            {defects.map((d) => (
+              <li key={d.id} className="detail__defect">
+                <div className="detail__defect-head">
+                  <strong>{d.title}</strong>
+                  <SeverityBadge severity={d.severity} />
+                </div>
+                <p className="tg-muted detail__defect-body">{d.descriptionPublic}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="tg-card detail__section">
         <h2 className="detail__section-title">Inspection report</h2>
         <p className="detail__blurb tg-muted">
-          What the rubric suggested, what the technician proposed, and what QC signed off —
-          the audit trail against grade-shaving.
+          Every check the technician recorded, in the sections they worked through.
+          This is what the grade is an argument about.
         </p>
-        {inspections.length === 0 ? (
-          <p className="tg-muted">Not inspected yet.</p>
-        ) : (
-          <table className="detail__table">
-            <thead>
-              <tr>
-                <th>Purpose</th><th>Rubric</th><th>Proposed</th><th>Final</th><th>QC</th><th>Outcome</th><th>When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inspections.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.purpose}</td>
-                  <td>{r.suggestedGradeCode ?? '—'}</td>
-                  <td>{r.proposedGradeCode ?? '—'}</td>
-                  <td>{r.finalGradeCode ?? '—'}</td>
-                  <td>{r.qcState}</td>
-                  <td>{r.outcome ?? '—'}</td>
-                  <td className="tg-muted">{dateTime(r.submittedAt ?? r.startedAt)}</td>
+
+        {report.loading && <Loading label="Loading the report" />}
+        {report.data
+          ? <InspectionReport report={report.data} audience="internal" />
+          : !report.loading && <p className="tg-muted">Not inspected yet.</p>}
+
+        {inspections.length > 1 && (
+          <>
+            <h3 className="detail__subheading">Every report on this item</h3>
+            <table className="detail__table">
+              <thead>
+                <tr>
+                  <th>Purpose</th><th>Rubric</th><th>Proposed</th><th>Final</th><th>QC</th><th>Outcome</th><th>When</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {inspections.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.purpose}</td>
+                    <td>{r.suggestedGradeCode ?? '—'}</td>
+                    <td>{r.proposedGradeCode ?? '—'}</td>
+                    <td>{r.finalGradeCode ?? '—'}</td>
+                    <td>{r.qcState}</td>
+                    <td>{r.outcome ?? '—'}</td>
+                    <td className="tg-muted">{dateTime(r.submittedAt ?? r.startedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </section>
 

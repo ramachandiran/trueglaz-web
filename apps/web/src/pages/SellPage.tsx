@@ -5,6 +5,7 @@ import {
   type ConsignmentItem, type SellerApprovalView,
 } from '@trueglaz/core'
 import { Empty, ErrorNote, GradeBadge, Loading, StateBadge } from '../components/ui'
+import { KycPanel } from '../components/KycPanel'
 import './SellPage.css'
 
 type Tab = 'items' | 'approvals' | 'payouts'
@@ -17,7 +18,21 @@ type Tab = 'items' | 'approvals' | 'payouts'
 export function SellPage() {
   const [tab, setTab] = useState<Tab>('items')
   const approvals = useApi(() => api.myApprovals(), [])
+  const kyc = useApi(() => api.myKyc(), [])
   const pending = (approvals.data ?? []).filter((a) => a.approval.decision === 'pending')
+
+  const canSell = kyc.data?.canSell ?? false
+
+  // Until identity clears there is nothing useful on this page, so the check is
+  // the page. Showing tabs over an empty list would only invite a refusal later.
+  if (!kyc.loading && !canSell) {
+    return (
+      <div className="sell">
+        <h1 className="sell__title">Selling</h1>
+        <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
+      </div>
+    )
+  }
 
   return (
     <div className="sell">
@@ -25,6 +40,8 @@ export function SellPage() {
         <h1 className="sell__title">Selling</h1>
         <Link to="/sell/new" className="tg-button tg-button--primary">Consign an item</Link>
       </header>
+
+      <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
 
       <nav className="sell__tabs" aria-label="Seller sections">
         <TabButton active={tab === 'items'} onClick={() => setTab('items')} label="My items" />

@@ -30,6 +30,7 @@
 .ops__reject { color: var(--tg-bad); }
 .ops__reject-box { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; padding: var(--tg-space-3); background: var(--tg-bad-soft); border-radius: var(--tg-radius-md); }
 
+.ops__inbound + .ops__inbound { margin-top: var(--tg-space-2); }
 .ops__inbound {
   display: flex; justify-content: space-between; align-items: center;
   gap: var(--tg-space-3); flex-wrap: wrap;
@@ -77,3 +78,24 @@
 @media (max-width: 720px) {
   .ops__defect-form { grid-template-columns: 1fr; }
 }
+
+.ops__section { display: flex; flex-direction: column; gap: var(--tg-space-2); }
+.ops__section-title {
+  font-size: var(--tg-text-xs); font-weight: var(--tg-weight-bold);
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--tg-text-muted);
+  border-bottom: 1px solid var(--tg-border); padding-bottom: var(--tg-space-1);
+}
+.ops__numeric { display: flex; align-items: center; gap: var(--tg-space-2); }
+.ops__unit { font-size: var(--tg-text-xs); white-space: nowrap; }
+.ops__affects { font-size: var(--tg-text-xs); color: var(--tg-accent); }
+
+/* Several buttons, or a reason picker, sitting on the right of a queue row. */
+.ops__inbound-actions {
+  display: inline-flex;
+  gap: var(--tg-space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Queue rows stack a headline over its fine print, so they cannot centre. */
+.ops__inbound > div { align-self: center; }

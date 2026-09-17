@@ -1,0 +1,93 @@
+.report__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tg-space-3);
+  margin-bottom: var(--tg-space-3);
+}
+
+.report__head-grade {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-3);
+  flex-wrap: wrap;
+}
+
+.report__headline {
+  margin: 0 0 var(--tg-space-3);
+  font-size: var(--tg-text-md);
+}
+
+.report__audit {
+  margin: 0 0 var(--tg-space-4);
+  font-size: var(--tg-text-sm);
+}
+
+.report__section + .report__section {
+  margin-top: var(--tg-space-4);
+}
+
+.report__section-title {
+  margin: 0 0 var(--tg-space-2);
+  font-size: var(--tg-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.report__answers {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--tg-space-2) var(--tg-space-5);
+}
+
+.report__answer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-2) 0;
+  border-bottom: 1px solid var(--tg-border);
+}
+
+.report__label {
+  margin: 0;
+  min-width: 0;
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-sm);
+}
+
+/* A quiet marker: useful when scanning for what moved the grade, and not
+   competing with the answer itself. */
+.report__affects {
+  margin-left: var(--tg-space-1);
+  font-size: 0.66rem;
+  color: var(--tg-text-muted);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+.report__affects::before { content: '· '; }
+
+.report__value {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* A sentence, not a reading: let it wrap rather than squeezing the label. */
+.report__value--prose {
+  white-space: normal;
+  font-weight: 500;
+  flex: 1 1 60%;
+}
+
+.report__value--yes { color: var(--tg-good); }
+.report__value--no { color: var(--tg-warn); }
+
+.report__unit {
+  font-weight: 400;
+  color: var(--tg-text-muted);
+}

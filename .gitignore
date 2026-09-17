@@ -8,3 +8,6 @@ dist/
 .expo/
 apps/mobile/.expo/
 web-build/
+
+# tsc -b writes this next to the config; it is a build cache, not source.
+*.tsbuildinfo

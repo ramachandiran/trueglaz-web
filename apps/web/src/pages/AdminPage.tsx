@@ -1,7 +1,14 @@
 import { useState } from 'react'
-import { api, ApiError, dateTime, money, useApi } from '@trueglaz/core'
+import { api, ApiError, dateOnly, dateTime, money, useApi } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import './OpsPage.css'
+
+const REJECT_REASONS = [
+  { code: 'details_unclear', label: 'Document details unclear' },
+  { code: 'name_mismatch', label: 'Name does not match the document' },
+  { code: 'document_expired', label: 'Document has expired' },
+  { code: 'suspected_forgery', label: 'Suspected forgery' },
+]
 
 /**
  * Money: the payout queue and the books.
@@ -96,6 +103,8 @@ export function AdminPage() {
         )}
       />
 
+      <KycQueue />
+
       <LedgerFeed />
     </div>
   )
@@ -184,5 +193,96 @@ function Stat({ label, value, highlight }: { label: string; value: string; highl
       <span className="ops__stat-label">{label}</span>
       <span className="ops__stat-value">{value}</span>
     </div>
+  )
+}
+
+/**
+ * The identity checks waiting on a human.
+ *
+ * Nothing about a seller's gear moves until this clears — TrueGlaz takes custody
+ * of a stranger's property and later wires them money — so the queue sits with
+ * the money, where the person who signs off payouts already works.
+ */
+function KycQueue() {
+  const queue = useApi(() => api.kycQueue(), [])
+  const [busy, setBusy] = useState<string | null>(null)
+  const [rejecting, setRejecting] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  async function act(userId: string, fn: () => Promise<unknown>) {
+    setBusy(userId); setError(null)
+    try {
+      await fn()
+      setRejecting(null); setReason('')
+      queue.reload()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'That did not work')
+    } finally { setBusy(null) }
+  }
+
+  if (queue.loading) return null
+  if (queue.error) return <ErrorNote error={queue.error} onRetry={queue.reload} />
+  const rows = queue.data ?? []
+
+  return (
+    <section className="tg-card ops__card">
+      <h2 className="ops__subtitle">Identity checks ({rows.length})</h2>
+      <p className="tg-muted ops__fineprint">
+        A seller cannot consign anything until this passes. Only the last four digits of
+        the document are kept — check the name and type, and reject anything that does
+        not read cleanly rather than guessing.
+      </p>
+
+      {error && <p className="ops__error" role="alert">{error}</p>}
+
+      {rows.length === 0 ? (
+        <p className="tg-muted">Nothing waiting. Every submitted check has been decided.</p>
+      ) : rows.map((k) => (
+        <div key={k.userId} className="ops__inbound">
+          <div>
+            <strong>{k.legalName ?? k.displayName}</strong>
+            <span className="tg-muted">
+              {' '}· {k.displayName}{k.email ? ` · ${k.email}` : ''}
+            </span>
+            <div className="tg-muted ops__fineprint">
+              {k.idType?.toUpperCase() ?? '—'} ending {k.idLast4 ?? '????'}
+              {k.gstin && ` · GSTIN ${k.gstin}`}
+              {k.submittedAt && ` · submitted ${dateOnly(k.submittedAt)}`}
+            </div>
+          </div>
+
+          {rejecting === k.userId ? (
+            <span className="ops__inbound-actions">
+              <select className="tg-select" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason">
+                <option value="">Pick a reason…</option>
+                {REJECT_REASONS.map((r) => <option key={r.code} value={r.code}>{r.label}</option>)}
+              </select>
+              <button
+                className="tg-button"
+                disabled={!reason || busy === k.userId}
+                onClick={() => act(k.userId, () => api.rejectKyc(k.userId, reason))}
+              >
+                Confirm rejection
+              </button>
+              <button className="tg-button" onClick={() => { setRejecting(null); setReason('') }}>Cancel</button>
+            </span>
+          ) : (
+            <span className="ops__inbound-actions" aria-busy={busy === k.userId}>
+              <button
+                className="tg-button tg-button--primary"
+                disabled={busy === k.userId}
+                onClick={() => act(k.userId, () => api.verifyKyc(k.userId))}
+              >
+                Verify
+              </button>
+              <button className="tg-button" disabled={busy === k.userId} onClick={() => setRejecting(k.userId)}>
+                Reject
+              </button>
+            </span>
+          )}
+        </div>
+      ))}
+    </section>
   )
 }

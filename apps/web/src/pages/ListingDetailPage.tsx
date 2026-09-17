@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, isOps, useSession } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { Timeline } from '../components/Timeline'
+import { InspectionReport } from '../components/InspectionReport'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge } from '../components/ui'
 import { buildTimeline } from '@trueglaz/core'
 import { dateTime, money } from '@trueglaz/core'
@@ -99,6 +100,18 @@ export function ListingDetailPage() {
           </ul>
         )}
       </section>
+
+      {d.inspectionReport && (
+        <section className="tg-card detail__section">
+          <h2 className="detail__section-title">The full condition report</h2>
+          <p className="detail__blurb tg-muted">
+            Every check a TrueGlaz technician recorded on this exact unit, signed off by a
+            second pair of eyes. Buying used online means trusting someone else's eyes —
+            so here are all of them, not a summary.
+          </p>
+          <InspectionReport report={d.inspectionReport} audience="buyer" />
+        </section>
+      )}
 
       {steps.length > 0 && (
         <section className="tg-card detail__section">

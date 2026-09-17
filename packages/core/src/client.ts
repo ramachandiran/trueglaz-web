@@ -3,8 +3,8 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
-  Order, OrderDetail, OrderLine, Page, Payment, Payout, PayoutAccount, PlatformSetting,
-  PriceProposal, ProductModel, ProposalOutcome, Reconciliation, Reservation, SellerApproval,
+  KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout, PayoutAccount, PlatformSetting,
+  PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
   SellerApprovalView, Session, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
 
@@ -153,6 +153,7 @@ export const api = {
   },
   listing: (id: string) => get<ListingDetail>(`/listings/${id}`),
   grades: () => get<Grade[]>('/grades'),
+  reasonCodes: (domain: string) => get<ReasonCode[]>(`/reason-codes?domain=${encodeURIComponent(domain)}`),
   brands: () => get<Brand[]>('/brands'),
   categories: () => get<Category[]>('/categories'),
   models: () => get<Page<ProductModel>>('/models?size=500'),
@@ -181,6 +182,16 @@ export const api = {
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
   acceptLine: (lineId: string, byWindowExpiry = false) =>
     post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`),
+
+  // -- identity ------------------------------------------------------------
+  myKyc: () => get<KycStatus>('/kyc/mine'),
+  submitKyc: (body: {
+    legalName: string; dob?: string | null; idType: string; idNumber: string; gstin?: string | null
+  }) => post<KycStatus>('/kyc', body),
+  kycQueue: () => get<KycReview[]>('/kyc/queue'),
+  verifyKyc: (userId: string) => post<KycReview>(`/kyc/${userId}/verify`),
+  rejectKyc: (userId: string, reasonCode: string) =>
+    post<KycReview>(`/kyc/${userId}/reject`, { reasonCode }),
 
   // -- seller --------------------------------------------------------------
   createSubmission: (pricingMode: string) => post<Submission>('/submissions', { pricingMode }),
@@ -253,6 +264,9 @@ export const api = {
     }>,
   ) => put<InspectionAnswer[]>(`/inspections/${reportId}/answers`, answers),
   readAnswers: (reportId: string) => get<InspectionAnswer[]>(`/inspections/${reportId}/answers`),
+  /** The item's latest report, rendered for reading. Null until something is inspected. */
+  itemReport: (itemId: string) => get<RenderedReport | null>(`/items/${itemId}/inspection-report`),
+  renderedReport: (reportId: string) => get<RenderedReport>(`/inspections/${reportId}/report`),
   addDefect: (
     reportId: string,
     body: {

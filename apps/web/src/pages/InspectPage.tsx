@@ -56,6 +56,14 @@ export function InspectPage() {
     }).catch(() => { /* nothing saved yet */ })
   }, [report?.id, questions.data])
 
+  const sections = useMemo(() => {
+    const by = new Map<string, ChecklistItem[]>()
+    for (const q of questions.data ?? []) {
+      by.set(q.section || 'General', [...(by.get(q.section || 'General') ?? []), q])
+    }
+    return [...by.entries()]
+  }, [questions.data])
+
   const mandatoryMissing = useMemo(() => {
     if (!questions.data) return []
     return questions.data.filter((q) => q.isMandatory && answers[q.code] === undefined)
@@ -140,17 +148,24 @@ export function InspectPage() {
       <section className="tg-card ops__card">
         <h2 className="ops__subtitle">Checklist</h2>
         {questions.loading && <Loading label="Loading checklist" />}
-        <div className="ops__questions">
-          {(questions.data ?? []).map((q) => (
-            <Question
-              key={q.id}
-              q={q}
-              value={answers[q.code]}
-              disabled={submitted}
-              onChange={(a) => setAnswers({ ...answers, [q.code]: a })}
-            />
-          ))}
-        </div>
+        {/* Grouped the way a technician works through the item, not as one
+            flat list of twenty questions. */}
+        {sections.map(([section, qs]) => (
+          <div key={section} className="ops__section">
+            <h3 className="ops__section-title">{section}</h3>
+            <div className="ops__questions">
+              {qs.map((q) => (
+                <Question
+                  key={q.id}
+                  q={q}
+                  value={answers[q.code]}
+                  disabled={submitted}
+                  onChange={(a) => setAnswers({ ...answers, [q.code]: a })}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
         {!submitted && (
           <div className="ops__actions">
             <button className="tg-button" disabled={busy} onClick={saveAnswers}>Save answers</button>
@@ -265,8 +280,9 @@ function Question({
   return (
     <label className="ops__question">
       <span className="ops__question-prompt">
-        {q.prompt}
+        {q.label}
         {q.isMandatory && <span className="ops__required" aria-label="required"> *</span>}
+        {q.affectsGrade && <span className="ops__affects" title="This answer feeds the suggested grade"> · grades</span>}
       </span>
       {q.answerType === 'boolean' ? (
         <select
@@ -280,19 +296,25 @@ function Question({
           <option value="false">No</option>
         </select>
       ) : q.answerType === 'numeric' ? (
-        <input
-          className="tg-input" type="number" disabled={disabled}
-          value={value?.valueNumeric ?? ''}
-          onChange={(e) => onChange({ valueNumeric: e.target.value === '' ? null : Number(e.target.value) })}
-        />
-      ) : q.answerType === 'option' ? (
+        <span className="ops__numeric">
+          <input
+            className="tg-input" type="number" disabled={disabled}
+            value={value?.valueNumeric ?? ''}
+            onChange={(e) => onChange({ valueNumeric: e.target.value === '' ? null : Number(e.target.value) })}
+          />
+          {q.unit && <span className="ops__unit tg-muted">{q.unit}</span>}
+        </span>
+      ) : q.answerType === 'enum' ? (
         <select
           className="tg-select" disabled={disabled}
           value={value?.valueOption ?? ''}
           onChange={(e) => onChange({ valueOption: e.target.value || null })}
         >
           <option value="">—</option>
-          {(q.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+          {/* The stored value stays as it is; only the reading of it changes. */}
+          {(q.options ?? []).map((o) => (
+            <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>
+          ))}
         </select>
       ) : (
         <input
@@ -301,7 +323,7 @@ function Question({
           onChange={(e) => onChange({ valueText: e.target.value || null })}
         />
       )}
-      {q.helpText && <span className="tg-muted ops__fineprint">{q.helpText}</span>}
+
     </label>
   )
 }

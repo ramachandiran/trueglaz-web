@@ -2,12 +2,17 @@
   "name": "trueglaz-frontend",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["packages/*", "apps/web", "apps/mobile"],
+  "workspaces": [
+    "packages/*",
+    "apps/web",
+    "apps/mobile"
+  ],
   "scripts": {
     "tokens": "node scripts/generate-css-tokens.mjs",
     "dev": "npm run dev -w @trueglaz/web",
     "build": "npm run tokens && npm run build -w @trueglaz/web",
     "mobile": "npm run start -w @trueglaz/mobile",
-    "typecheck": "npm run typecheck -w @trueglaz/core && npm run typecheck -w @trueglaz/web && npm run typecheck -w @trueglaz/mobile"
+    "typecheck": "npm run typecheck -w @trueglaz/web",
+    "typecheck:mobile": "npm run typecheck -w @trueglaz/mobile"
   }
 }

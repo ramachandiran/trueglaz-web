@@ -48,6 +48,8 @@ export interface ListingDetail {
   serialNumber: string | null
   internalSku: string
   defects: Defect[]
+  /** The QC-passed condition report. Null while nothing has been signed off. */
+  inspectionReport: RenderedReport | null
   priceHistory: ListingPriceChange[]
 }
 
@@ -218,13 +220,21 @@ export interface ChecklistTemplate {
 export interface ChecklistItem {
   id: string
   checklistTemplateId: string
+  /** Grouping shown as a heading: Optics, Mechanics, Cosmetics, … */
+  section: string
   code: string
-  prompt: string
+  /** The question itself. The column is `label`, not `prompt`. */
+  label: string
+  /** boolean | enum | numeric | text — `enum`, not `option`. */
   answerType: string
   options: string[] | null
+  /** e.g. "actuations" for a shutter count; shown beside the input. */
+  unit: string | null
   isMandatory: boolean
+  affectsGrade: boolean
+  /** For a yes/no question, the answer that means nothing is wrong. */
+  desirableBoolean: boolean | null
   displayOrder: number
-  helpText: string | null
 }
 
 export interface InspectionAnswer {
@@ -426,10 +436,93 @@ export interface PlatformSetting {
   description: string
 }
 
+export interface KycStatus {
+  status: 'not_started' | 'in_review' | 'verified' | 'rejected' | 'expired' | string
+  canSell: boolean
+  legalName: string | null
+  idType: string | null
+  idLast4: string | null
+  gstin: string | null
+  submittedAt: string | null
+  verifiedAt: string | null
+  expiresAt: string | null
+  rejectedReasonCode: string | null
+}
+
+export interface KycReview {
+  userId: string
+  displayName: string
+  email: string | null
+  status: string
+  legalName: string | null
+  idType: string | null
+  idLast4: string | null
+  gstin: string | null
+  submittedAt: string | null
+  rejectedReasonCode: string | null
+}
+
 export interface ActorHint {
   userId: string
   displayName: string
   email: string | null
   suggestedRoleHeader: string
   useFor: string
+}
+
+/**
+ * One recorded checklist answer, already joined to the question it answers.
+ *
+ * The API does the join because an answer row on its own carries a
+ * checklist_item_id and a typed value column — correct storage, unreadable
+ * screen. `displayValue` is the rendered one; the raw columns are there for
+ * anything that needs to compute rather than print.
+ */
+export interface ReportAnswer {
+  code: string
+  section: string
+  label: string
+  answerType: string
+  unit: string | null
+  affectsGrade: boolean
+  /** For a yes/no question, the answer that means nothing is wrong. */
+  desirableBoolean: boolean | null
+  displayOrder: number
+  displayValue: string | null
+  valueBoolean: boolean | null
+  valueNumeric: number | null
+  valueText: string | null
+  valueOption: string | null
+  answeredAt: string | null
+}
+
+export interface ReportSection {
+  section: string
+  answers: ReportAnswer[]
+}
+
+export interface RenderedReport {
+  reportId: string
+  purpose: string
+  qcState: string
+  outcome: string | null
+  suggestedGradeCode: string | null
+  proposedGradeCode: string | null
+  finalGradeCode: string | null
+  verifiedShutterCount: number | null
+  startedAt: string | null
+  submittedAt: string | null
+  qcAt: string | null
+  templateVersion: number | null
+  answeredCount: number
+  questionCount: number
+  sections: ReportSection[]
+}
+
+export interface ReasonCode {
+  code: string
+  domain: string
+  label: string
+  isActive: boolean
+  displayOrder: number
 }
