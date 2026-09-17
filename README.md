@@ -12,17 +12,79 @@ apps/mobile       React Native (Expo 51) + React Navigation
 scripts/          generates the web's CSS variables from the shared tokens
 ```
 
-## Run it
+## Set it up locally
 
-The API has to be running first (`./gradlew bootRun` in trueglaz-api, on :8080).
+You need **two repositories** side by side and **two terminals**. Requirements:
+Docker (or a JDK 21 + Postgres 16), and Node 18+.
+
+### 1. Start the API
 
 ```bash
-npm install
+git clone https://github.com/ramachandiran/trueglaz-api
+cd trueglaz-api
+git checkout claude/friendly-cray-ilaq8o
 
-npm run dev      # web on http://localhost:5173
-npm run mobile   # Expo — scan the QR with Expo Go, or press w/i/a
-npm run build    # regenerates tokens, then builds the web app
-npm run typecheck
+docker compose up --build        # Postgres + API on :8080, first build is slow
+```
+
+Wait for `Started TrueglazApiApplicationKt`, then in another terminal fill it
+with demo data so the app is not empty:
+
+```bash
+./scripts/seed-demo.sh
+```
+
+### 2. Start the web app
+
+```bash
+git clone https://github.com/ramachandiran/trueglaz-web
+cd trueglaz-web
+git checkout claude/friendly-cray-ilaq8o
+
+npm install
+npm run dev                      # http://localhost:5173
+```
+
+### 3. Sign in
+
+Open **http://localhost:5173** and sign in with any of these. Type the address,
+press **Send code**, and the code appears on screen in a yellow box — **no email
+or SMS is sent**, because no provider is wired yet.
+
+| Sign in as | What it unlocks |
+|---|---|
+| `buyer@trueglaz.demo` | Browse, buy, my orders, accept delivery |
+| `seller@trueglaz.demo` | Consign items, price approvals, payouts |
+| `technician@trueglaz.demo` | Ops → the inspection bench |
+| `qc@trueglaz.demo` | Ops + Fulfilment, QC sign-off, pricing |
+| `admin@trueglaz.demo` | Everything, plus Money (payouts and the ledger) |
+
+A route worth walking: buy something as the buyer, dispatch and deliver it as
+`qc`, accept it back as the buyer, then look at Money as `admin` — escrow drops,
+the seller's payout appears, and every ledger transaction reads *balanced*.
+
+Two things that look like bugs and are not: **QC refuses the technician who
+inspected the item** (a database constraint, so inspect as `technician` and sign
+off as `qc`), and **the Pay button moves no real money** — there is no gateway
+yet, see *Not wired up* below.
+
+### If something does not work
+
+| Symptom | Cause |
+|---|---|
+| `port 5432 already allocated` | You already run Postgres. Change the db port in `trueglaz-api/docker-compose.yml` to `"5433:5432"` — the API talks to it over the compose network, so nothing else needs changing. |
+| No yellow box with a code on sign-in | The API is running without `EXPOSE_DEV_CODE=true`. Compose sets it; a bare `./gradlew bootRun` does not. |
+| Sign-in says "Could not reach the API" | The API is not up on :8080, or still starting — the first Docker build takes a few minutes. |
+| Catalogue is empty | Run `./scripts/seed-demo.sh` in the API repo. |
+| `seed-demo.sh` does nothing | It needs `curl` and `python3` on your PATH. |
+| Everything 401s after a while | Sessions last 30 days, but the database is recreated by `docker compose down -v`. Sign in again. |
+
+### Other commands
+
+```bash
+npm run build      # regenerates theme tokens, then builds the web app
+npm run typecheck  # types across core, web and mobile
+npm run mobile     # Expo (see the mobile section)
 ```
 
 On a phone the app cannot reach your machine's `localhost`. Set the LAN address:
@@ -30,6 +92,18 @@ On a phone the app cannot reach your machine's `localhost`. Set the LAN address:
 ```bash
 EXPO_PUBLIC_API_ORIGIN=http://192.168.1.50:8080 npm run mobile
 ```
+
+## Not wired up
+
+Three things stand between this and a public launch:
+
+- **No payment gateway.** The Pay button calls the capture endpoint directly —
+  no redirect, no signature verification, no webhook. A buyer can currently mark
+  their own order paid without money moving. This is the one to fix first.
+- **No OTP delivery.** Codes are logged and echoed on screen. Production needs
+  an SMS or email provider, and `EXPOSE_DEV_CODE` must be off.
+- **No automated tests.** Everything has been verified by driving the real app
+  in a browser; none of it is repeatable in CI.
 
 ## What the two apps share
 
@@ -43,7 +117,7 @@ TypeScript:
 | `client.ts` | API client, request shaping, error mapping |
 | `types.ts` | Response types |
 | `useApi.ts` | Fetch-on-mount hook |
-| `ActorContext.tsx` | Who the app is acting as |
+| `SessionContext.tsx` | The signed-in session, restored and revalidated on boot |
 | `format.ts` | Money, dates, relative times |
 | `theme/tokens.ts` | **The theme** |
 
@@ -90,30 +164,23 @@ Built from the append-only `item_state_transition` history rather than
 
 `HAPPY_PATH` is in `packages/core/src/lifecycle.ts`.
 
-## Acting as
+## Signing in
 
-The API has no authentication — no login, no sessions, no account endpoints. It
-identifies callers from headers:
+A session is a bearer token from an OTP challenge: request a code for a contact,
+exchange it for a token, send the token on every call. `SessionContext` holds it
+and revalidates against `/auth/me` on boot rather than trusting what is stored —
+it may have expired or been revoked while the tab was closed.
 
-```
-X-Actor-Id: <user uuid>    X-Actor-Role: User | Staff | Technician | Admin | System
-```
+Route guards hide what a role cannot use. That is a courtesy, not a control: the
+API enforces the same rules on every call against `user_role`, so editing your
+way past a guard gains nothing.
 
-Both apps pick a seeded user from `GET /dev/actors`. This is a stand-in, not a
-login: roles are self-declared and the API believes them.
+**The web app no longer sends `X-Actor-Role`.** Roles come back from the server
+and are only used to decide what to show.
 
-**This is the thing to fix before shipping mobile.** On web it is a localhost
-demo. A published binary where identity is a self-declared header is a different
-matter — anyone can proxy the traffic and become an admin. When OTP and sessions
-land, only `ActorContext.tsx` and `authHeaders` in `client.ts` change.
+## One API gap left
 
-## Two API gaps
-
-**1. CORS.** The API sets no CORS headers. Web works around it with a Vite
-proxy; **native does not need it at all**, having no same-origin policy. In
-production either serve web from one origin or add a CORS policy.
-
-**2. Listings carry no model reference.** `GET /listings` returns a generated
+**Listings carry no model reference.** `GET /listings` returns a generated
 title but no `productModelId`/`brandId`/`categoryId`, and filters only on text,
 one grade and a price ceiling. Brand and category faceting is resolved in
 `filters.ts` by matching the title against the catalogue, with the rest applied
