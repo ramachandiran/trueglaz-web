@@ -6,10 +6,25 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
-    "splash": { "resizeMode": "contain", "backgroundColor": "#0d1117" },
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.trueglaz.app" },
-    "android": { "package": "com.trueglaz.app" },
-    "web": { "bundler": "metro" },
-    "extra": { "apiOrigin": "http://localhost:8080" }
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0d1117"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.trueglaz.app"
+    },
+    "android": {
+      "package": "com.trueglaz.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "apiOrigin": "http://localhost:8080"
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

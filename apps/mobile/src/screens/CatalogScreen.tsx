@@ -5,6 +5,7 @@ import {
   useApi, activeFilterCount, type Facetable, type Filters, type Sort,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
+import { mobileFontFamily } from '../theme/fonts'
 import { useTheme } from '../theme/ThemeContext'
 import { Badge, Card, Empty, ErrorNote, Loading, Muted } from '../components/ui'
 
@@ -72,6 +73,7 @@ export function CatalogScreen({ navigation }: { navigation: any }) {
           style={{
             flex: 1,
             color: t.colors.text,
+            fontFamily: mobileFontFamily.regular,
             backgroundColor: t.colors.bgRaised,
             borderWidth: 1,
             borderColor: t.colors.border,

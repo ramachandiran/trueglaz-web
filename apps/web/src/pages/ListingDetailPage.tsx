@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, isOps, useSession } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { Timeline } from '../components/Timeline'
@@ -12,8 +12,9 @@ import './DetailPage.css'
 
 export function ListingDetailPage() {
   const { id = '' } = useParams()
+  const location = useLocation()
   const nav = useNavigate()
-  const { session } = useSession()
+  const { session, ready } = useSession()
   const listing = useApi(() => api.listing(id), [id])
 
   const itemId = listing.data?.listing.consignmentItemId
@@ -34,6 +35,7 @@ export function ListingDetailPage() {
         : [],
     [item.data],
   )
+  const canSeeReport = ready && !!session
 
   if (listing.loading) return <Loading label="Loading listing" />
   if (listing.error) return <ErrorNote error={listing.error} onRetry={listing.reload} />
@@ -42,7 +44,7 @@ export function ListingDetailPage() {
   const d = listing.data
   const title = d.listing.title.split('·')[0].trim()
   const kind = photoKindFor(categoryOf(d.listing.title, d.inspectionReport))
-  const facts = aboutThisItem(d.inspectionReport, d.listing.descriptionGenerated)
+  const facts = canSeeReport ? aboutThisItem(d.inspectionReport, d.listing.descriptionGenerated) : []
 
   return (
     <article className="detail">
@@ -82,11 +84,17 @@ export function ListingDetailPage() {
           <hr className="product__rule" />
 
           <h2 className="product__heading">About this item</h2>
-          <ul className="product__facts">
-            {facts.map((f) => (
-              <li key={f}>{f}</li>
-            ))}
-          </ul>
+          {facts.length > 0 ? (
+            <ul className="product__facts">
+              {facts.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="tg-muted">
+              Sign in to see the inspection-backed details for this unit.
+            </p>
+          )}
 
           <h2 className="product__heading">Disclosed defects</h2>
           {d.defects.length === 0 ? (
@@ -148,7 +156,7 @@ export function ListingDetailPage() {
         </aside>
       </div>
 
-      {d.inspectionReport && (
+      {d.inspectionReport && (canSeeReport ? (
         <section className="tg-card detail__section">
           <h2 className="detail__section-title">The full condition report</h2>
           <p className="detail__blurb tg-muted">
@@ -158,7 +166,21 @@ export function ListingDetailPage() {
           </p>
           <InspectionReport report={d.inspectionReport} audience="buyer" />
         </section>
-      )}
+      ) : (
+        <section className="tg-card detail__section">
+          <h2 className="detail__section-title">The full condition report</h2>
+          <p className="detail__blurb tg-muted">
+            Sign in to see the inspection report for this unit.
+          </p>
+          <Link
+            to="/sign-in"
+            state={{ from: location.pathname + location.search }}
+            className="tg-button tg-button--primary"
+          >
+            Sign in to view report
+          </Link>
+        </section>
+      ))}
 
       {steps.length > 0 && (
         <section className="tg-card detail__section">

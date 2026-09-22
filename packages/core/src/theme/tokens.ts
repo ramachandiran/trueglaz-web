@@ -80,7 +80,7 @@ export interface Theme {
 
 const shared = {
   font: {
-    body: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    body: '"Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
   },
   size: { xs: 12, sm: 13, md: 15, lg: 18, xl: 24, xxl: 32 },

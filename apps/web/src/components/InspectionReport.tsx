@@ -30,8 +30,12 @@ export function InspectionReport({
     <div className="report">
       <div className="report__head">
         <div className="report__head-grade">
-          {grade && <GradeBadge code={grade} />}
-          <span className="tg-muted">
+          {grade && (
+            <div className="report__head-badge">
+              <GradeBadge code={grade} />
+            </div>
+          )}
+          <span className="report__summary">
             {report.answeredCount} of {report.questionCount} checks recorded
             {report.templateVersion != null && ` · checklist v${report.templateVersion}`}
           </span>
@@ -68,22 +72,22 @@ export function InspectionReport({
         report.sections.map((s) => (
           <section key={s.section} className="report__section">
             <h3 className="report__section-title">{s.section}</h3>
-            <dl className="report__answers">
+            <div className="report__rows">
               {s.answers.map((a) => (
-                <div key={a.code} className="report__answer">
-                  <dt className="report__label">
-                    {a.label}
+                <div key={a.code} className="report__row">
+                  <div className="report__label">
+                    <span>{a.label}</span>
                     {a.affectsGrade && (
                       <span className="report__affects" title="This answer feeds the grade">grades</span>
                     )}
-                  </dt>
-                  <dd className={`report__value${a.answerType === 'text' ? ' report__value--prose' : ''}${valueTone(a)}`}>
+                  </div>
+                  <div className={`report__value${a.answerType === 'text' ? ' report__value--prose' : ''}${valueTone(a)}`}>
                     {displayOf(a) ?? <span className="tg-muted">not recorded</span>}
                     {a.displayValue && a.unit && <span className="report__unit"> {a.unit}</span>}
-                  </dd>
+                  </div>
                 </div>
               ))}
-            </dl>
+            </div>
           </section>
         ))
       )}

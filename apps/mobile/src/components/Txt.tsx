@@ -1,5 +1,6 @@
-import { Text, type TextProps } from 'react-native'
+import { StyleSheet, Text, type TextProps } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
+import { resolveMobileBodyFont } from '../theme/fonts'
 
 /**
  * Text that honours the theme's font.
@@ -11,5 +12,18 @@ import { useTheme } from '../theme/ThemeContext'
  */
 export function Txt({ style, ...rest }: TextProps) {
   const t = useTheme()
-  return <Text {...rest} style={[{ fontFamily: t.font.body, color: t.colors.text }, style]} />
+  const flat = StyleSheet.flatten(style)
+  const usesThemeBodyFont = !flat?.fontFamily || flat.fontFamily === t.font.body
+  const resolvedFamily = usesThemeBodyFont ? resolveMobileBodyFont(flat?.fontWeight) : flat.fontFamily
+
+  return (
+    <Text
+      {...rest}
+      style={[
+        { fontFamily: resolveMobileBodyFont(undefined), color: t.colors.text },
+        flat,
+        usesThemeBodyFont ? { fontFamily: resolvedFamily, fontWeight: undefined } : null,
+      ]}
+    />
+  )
 }

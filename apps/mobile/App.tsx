@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Platform, Pressable, View } from 'react-native'
+import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -11,6 +12,7 @@ import {
   ActorProvider, api, setApiOrigin, setStorage, useActor, useApi, type Storage,
 } from '@trueglaz/core'
 import { Txt } from './src/components/Txt'
+import { mobileFontAssets, mobileFontFamily } from './src/theme/fonts'
 import { ThemeProvider, useTheme, useThemeMode } from './src/theme/ThemeContext'
 import { CatalogScreen } from './src/screens/CatalogScreen'
 import { ListingDetailScreen } from './src/screens/ListingDetailScreen'
@@ -50,6 +52,8 @@ function BrowseStack() {
       screenOptions={{
         headerStyle: { backgroundColor: t.colors.bgRaised },
         headerTintColor: t.colors.text,
+        headerTitleStyle: { fontFamily: mobileFontFamily.bold },
+        headerBackTitleStyle: { fontFamily: mobileFontFamily.regular },
         contentStyle: { backgroundColor: t.colors.bg },
       }}
     >
@@ -67,6 +71,8 @@ function TrackStack() {
       screenOptions={{
         headerStyle: { backgroundColor: t.colors.bgRaised },
         headerTintColor: t.colors.text,
+        headerTitleStyle: { fontFamily: mobileFontFamily.bold },
+        headerBackTitleStyle: { fontFamily: mobileFontFamily.regular },
         contentStyle: { backgroundColor: t.colors.bg },
       }}
     >
@@ -148,6 +154,7 @@ function Shell() {
           headerShown: false,
           tabBarActiveTintColor: t.colors.accent,
           tabBarInactiveTintColor: t.colors.textMuted,
+          tabBarLabelStyle: { fontFamily: mobileFontFamily.medium },
           tabBarStyle: {
             backgroundColor: t.colors.bgRaised,
             borderTopColor: t.colors.border,
@@ -164,6 +171,10 @@ function Shell() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts(mobileFontAssets)
+
+  if (!fontsLoaded) return null
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>

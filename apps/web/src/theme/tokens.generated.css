@@ -20,7 +20,7 @@
   --tg-brand: #233e50;
   --tg-on-brand: #fffef3;
   --tg-on-brand-muted: #a9bdcb;
-  --tg-brand-alt: #2e5168;
+  --tg-brand-alt: #233e50;
   --tg-cta: #a45c1b;
   --tg-cta-hover: #8f4f16;
   --tg-on-cta: #fffef3;
@@ -34,7 +34,7 @@
   --tg-step-current: #233e50;
   --tg-step-upcoming: #bfbba4;
   --tg-step-detour: #8a5a12;
-  --tg-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --tg-font: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --tg-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --tg-text-xs: 0.75rem;
   --tg-text-sm: 0.8125rem;

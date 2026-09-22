@@ -5,6 +5,10 @@
   justify-content: space-between;
   gap: var(--tg-space-3);
   margin-bottom: var(--tg-space-3);
+  padding: var(--tg-space-3) var(--tg-space-4);
+  background: var(--tg-bg-sunken);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
 }
 
 .report__head-grade {
@@ -12,6 +16,33 @@
   align-items: center;
   gap: var(--tg-space-3);
   flex-wrap: wrap;
+}
+
+.report__head-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: var(--tg-radius-pill);
+  background: linear-gradient(180deg, var(--tg-accent-soft), color-mix(in srgb, var(--tg-accent-soft) 60%, var(--tg-bg-raised)));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tg-accent) 18%, transparent);
+}
+
+.report__head-badge .tg-badge {
+  font-size: var(--tg-text-sm);
+  padding: 4px 10px;
+}
+
+.report__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-1);
+  padding: 6px 10px;
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-bg-raised);
+  color: var(--tg-text);
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+  box-shadow: inset 0 0 0 1px var(--tg-border);
 }
 
 .report__headline {
@@ -36,27 +67,31 @@
   color: var(--tg-text-muted);
 }
 
-.report__answers {
-  margin: 0;
+.report__rows {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--tg-space-2) var(--tg-space-5);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--tg-space-5);
+  border-top: 1px solid var(--tg-border);
 }
 
-.report__answer {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+.report__row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(0, 1fr);
   gap: var(--tg-space-3);
   padding: var(--tg-space-2) 0;
   border-bottom: 1px solid var(--tg-border);
+  align-items: start;
 }
 
 .report__label {
   margin: 0;
   min-width: 0;
-  color: var(--tg-text-muted);
   font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+}
+
+.report__label > span:first-child {
+  color: var(--tg-text);
 }
 
 /* A quiet marker: useful when scanning for what moved the grade, and not
@@ -68,7 +103,6 @@
   opacity: 0.75;
   white-space: nowrap;
 }
-.report__affects::before { content: '· '; }
 
 .report__value {
   margin: 0;
@@ -81,7 +115,7 @@
 .report__value--prose {
   white-space: normal;
   font-weight: 500;
-  flex: 1 1 60%;
+  text-align: left;
 }
 
 .report__value--yes { color: var(--tg-good); }
@@ -90,4 +124,30 @@
 .report__unit {
   font-weight: 400;
   color: var(--tg-text-muted);
+}
+
+@media (max-width: 900px) {
+  .report__rows {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .report__head {
+    padding: var(--tg-space-3);
+  }
+
+  .report__row {
+    grid-template-columns: 1fr;
+    gap: var(--tg-space-1);
+  }
+
+  .report__label {
+    font-size: var(--tg-text-xs);
+  }
+
+  .report__value {
+    white-space: normal;
+    text-align: left;
+  }
 }

@@ -153,7 +153,6 @@ const EMPTY_ADDRESS = {
 function Addresses() {
   const list = useApi(() => api.myAddresses(), [])
   const [form, setForm] = useState(EMPTY_ADDRESS)
-  const [adding, setAdding] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -168,51 +167,41 @@ function Addresses() {
   }
 
   const rows = list.data ?? []
+  const current = rows.find((a) => a.isDefault) ?? rows[0] ?? null
 
   return (
     <section className="tg-card profile__section" id="addresses">
-      <h2 className="profile__section-title">Delivery addresses</h2>
+      <h2 className="profile__section-title">Delivery address</h2>
       <p className="tg-muted profile__blurb">
-        Checkout offers your default first. An order copies the address you chose onto
-        itself, so editing one here never rewrites an order already placed.
+        Checkout uses the one address you keep here. An order copies it onto
+        itself, so changing this later never rewrites an order already placed.
       </p>
 
       {list.loading && <Loading label="Loading addresses" />}
       {error && <p className="profile__error" role="alert">{error}</p>}
 
-      {rows.length > 0 && (
+      {current && (
         <ul className="profile__addresses">
-          {rows.map((a) => (
-            <li key={a.id} className={`profile__address${a.isDefault ? ' profile__address--default' : ''}`}>
-              <div>
-                <strong>{a.label || a.recipientName}</strong>
-                {a.isDefault && <span className="tg-badge tg-badge--good profile__default">Default</span>}
-                <p className="tg-muted profile__address-body">
-                  {a.recipientName} · {a.line1}{a.line2 ? `, ${a.line2}` : ''}, {a.city}
-                  {a.state ? `, ${a.state}` : ''} {a.pincode}
-                  {a.phoneE164 ? ` · ${a.phoneE164}` : ''}
-                </p>
-              </div>
-              <div className="profile__address-actions">
-                {!a.isDefault && (
-                  <button className="tg-button" disabled={busy} onClick={() => act(() => api.makeDefaultAddress(a.id))}>
-                    Use by default
-                  </button>
-                )}
-                <button className="tg-button tg-button--subtle" disabled={busy} onClick={() => act(() => api.removeAddress(a.id))}>
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
+          <li className="profile__address profile__address--default">
+            <div>
+              <strong>{current.label || current.recipientName}</strong>
+              <span className="tg-badge tg-badge--good profile__default">Saved address</span>
+              <p className="tg-muted profile__address-body">
+                {current.recipientName} · {current.line1}{current.line2 ? `, ${current.line2}` : ''}, {current.city}
+                {current.state ? `, ${current.state}` : ''} {current.pincode}
+                {current.phoneE164 ? ` · ${current.phoneE164}` : ''}
+              </p>
+            </div>
+            <div className="profile__address-actions">
+              <button className="tg-button tg-button--subtle" disabled={busy} onClick={() => act(() => api.removeAddress(current.id))}>
+                Remove
+              </button>
+            </div>
+          </li>
         </ul>
       )}
 
-      {!adding ? (
-        <button className="tg-button" onClick={() => setAdding(true)}>
-          {rows.length === 0 ? 'Add an address' : 'Add another address'}
-        </button>
-      ) : (
+      {!current && (
         <div className="profile__address-form">
           <div className="profile__grid">
             <Field label="Label" hint="Home, office — whatever you'll recognise" value={form.label} onChange={(v) => setForm({ ...form, label: v })} />
@@ -229,13 +218,12 @@ function Addresses() {
               className="tg-button tg-button--primary"
               disabled={busy || !form.recipientName.trim() || !form.line1.trim() || !form.city.trim() || !form.pincode.trim()}
               onClick={async () => {
-                await act(() => api.addAddress({ ...form, isDefault: rows.length === 0 }))
-                setForm(EMPTY_ADDRESS); setAdding(false)
+                await act(() => api.addAddress({ ...form, isDefault: true }))
+                setForm(EMPTY_ADDRESS)
               }}
             >
               {busy ? 'Saving…' : 'Save address'}
             </button>
-            <button className="tg-button" onClick={() => { setAdding(false); setForm(EMPTY_ADDRESS) }}>Cancel</button>
           </div>
         </div>
       )}
