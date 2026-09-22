@@ -29,11 +29,22 @@ h1, h2, h3, h4 {
   font-weight: var(--tg-weight-bold);
 }
 
+/*
+ * Links in prose are underlined, not merely coloured.
+ *
+ * The brand accent is a deep slate blue and body text is the same hue darkened,
+ * so colour alone separates them by almost nothing — a link would be invisible
+ * to anyone not looking for it, and to anyone who does not see colour at all.
+ * Every link that is really a button, a card or a nav item already turns this
+ * off in its own rule, so only running text is affected.
+ */
 a {
   color: var(--tg-accent);
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 1px;
 }
-a:hover { text-decoration: underline; }
+a:hover { text-decoration-thickness: 2px; }
 
 button,
 input,
