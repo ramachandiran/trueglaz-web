@@ -94,5 +94,5 @@
 
 /* The signed-in side of the header is the account menu now; its styles live
    with that component. */
-.shell__signin { font-size: var(--tg-text-sm); text-decoration: none; }
+.shell__signin { font-size: var(--tg-text-sm); text-decoration: none; white-space: nowrap; }
 .shell__signin:hover { text-decoration: none; }
