@@ -319,16 +319,21 @@ export interface Payout {
   transferRef: string | null
 }
 
-export interface PayoutAccount {
-  id: string
-  userId: string
+/**
+ * Where a seller's money goes.
+ *
+ * Only the last four digits of an account number are ever sent — the API does
+ * not keep the rest, which is the point rather than an omission.
+ */
+export interface PayoutAccountView {
   method: string
   accountHolderName: string
-  accountNumberMasked: string | null
+  accountLast4: string | null
   ifsc: string | null
   upiVpa: string | null
   verificationState: string
-  supersededAt: string | null
+  verifiedAt: string | null
+  createdAt: string | null
 }
 
 export interface PriceProposal {
@@ -525,4 +530,52 @@ export interface ReasonCode {
   label: string
   isActive: boolean
   displayOrder: number
+}
+
+export interface Profile {
+  userId: string
+  displayName: string
+  email: string | null
+  phone: string | null
+  roles: string[]
+  accountState: string
+  memberSince: string | null
+  sellerActivatedAt: string | null
+  kycStatus: string
+  canSell: boolean
+  payoutAccount: PayoutAccountView | null
+  addressCount: number
+}
+
+export interface Address {
+  id: string
+  userId: string
+  label: string | null
+  recipientName: string
+  line1: string
+  line2: string | null
+  city: string
+  state: string
+  pincode: string
+  countryCode: string | null
+  phoneE164: string | null
+  isDefault: boolean
+}
+
+/** A one-time code was sent somewhere. `devCode` only exists on a dev server. */
+export interface CodeSent {
+  sent: boolean
+  contact: string
+  expiresAt: string
+  devCode: string | null
+}
+
+export interface SessionInfo {
+  id: string
+  current: boolean
+  userAgent: string | null
+  ipAddress: string | null
+  signedInAt: string | null
+  lastSeenAt: string | null
+  expiresAt: string
 }

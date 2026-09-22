@@ -92,13 +92,7 @@
   .shell__nav { order: 3; flex-basis: 100%; }
 }
 
-.shell__account { display: flex; align-items: center; gap: var(--tg-space-2); }
-.shell__who { font-size: var(--tg-text-sm); color: var(--tg-text); white-space: nowrap; }
-.shell__roles { color: var(--tg-text-muted); font-size: var(--tg-text-xs); }
-.shell__signout { font-size: var(--tg-text-sm); color: var(--tg-accent); }
+/* The signed-in side of the header is the account menu now; its styles live
+   with that component. */
 .shell__signin { font-size: var(--tg-text-sm); text-decoration: none; }
 .shell__signin:hover { text-decoration: none; }
-
-@media (max-width: 720px) {
-  .shell__who { display: none; }
-}

@@ -76,3 +76,28 @@
   .checkout__summary { position: static; order: -1; }
   .checkout__grid { grid-template-columns: 1fr; }
 }
+
+/* Saved addresses, offered before the form rather than beside it: picking one
+   should be the short path, not another thing to read past. */
+.checkout__saved {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-2);
+  margin-bottom: var(--tg-space-4);
+}
+
+.checkout__saved-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-3);
+  background: var(--tg-bg-sunken);
+  border: 1px solid transparent;
+  border-radius: var(--tg-radius-md);
+  cursor: pointer;
+  font-size: var(--tg-text-sm);
+}
+.checkout__saved-option--picked { border-color: var(--tg-accent); background: var(--tg-accent-soft); }
+.checkout__saved-option > span { display: flex; flex-direction: column; gap: var(--tg-space-1); }
+.checkout__saved-default { align-self: flex-start; }
+.checkout__saved-body { font-size: var(--tg-text-sm); }

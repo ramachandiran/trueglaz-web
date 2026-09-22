@@ -3,7 +3,8 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
-  KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout, PayoutAccount, PlatformSetting,
+  Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
+  PayoutAccountView, PlatformSetting, Profile, SessionInfo,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
   SellerApprovalView, Session, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
@@ -70,7 +71,12 @@ const url = (p: string) => `${origin}/api/v1${p}`
 
 /** Carries the server's own explanation, which is usually the useful part. */
 export class ApiError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(
+    readonly status: number,
+    message: string,
+    /** A machine-readable reason, where the status alone is ambiguous. */
+    readonly code?: string,
+  ) {
     super(message)
     this.name = 'ApiError'
   }
@@ -92,21 +98,26 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
     throw new ApiError(0, `Could not reach the API at ${url(endpoint)}.`)
   }
 
-  if (res.status === 401 && session) {
-    // The token is gone or expired. Drop it and let the app react once.
-    void saveSession(null)
-    onExpired?.()
-  }
-
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`
+    let code: string | undefined
     try {
       const body = await res.json()
       if (body?.message) detail = body.message
+      if (body?.code) code = body.code
     } catch {
       /* non-JSON error body; the status line is all we have */
     }
-    throw new ApiError(res.status, detail)
+
+    // Two very different things answer 401: the session is gone, and the
+    // one-time code you just typed was wrong. Signing someone out for a typo
+    // loses whatever they were in the middle of, so only the first clears it.
+    if (res.status === 401 && session && code !== 'code_invalid') {
+      void saveSession(null)
+      onExpired?.()
+    }
+
+    throw new ApiError(res.status, detail, code)
   }
 
   if (res.status === 204) return undefined as T
@@ -117,6 +128,9 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
 const get = <T,>(p: string) => request<T>(p)
 const post = <T,>(p: string, body?: unknown) =>
   request<T>(p, { method: 'POST', body: JSON.stringify(body ?? {}) })
+const patch = <T,>(p: string, body?: unknown) =>
+  request<T>(p, { method: 'PATCH', body: JSON.stringify(body ?? {}) })
+const del = <T,>(p: string) => request<T>(p, { method: 'DELETE' })
 const put = <T,>(p: string, body?: unknown) =>
   request<T>(p, { method: 'PUT', body: JSON.stringify(body ?? {}) })
 
@@ -221,14 +235,45 @@ export const api = {
       counterAmountMinor: counterAmountMinor ?? null,
     }),
   myPayouts: () => get<Payout[]>('/payouts/mine'),
-  myPayoutAccount: () => get<PayoutAccount | null>('/payout-accounts/mine'),
-  addPayoutAccount: (body: {
+  myPayoutAccount: () => get<PayoutAccountView | null>('/profile/payout-account'),
+
+  // -- my account ----------------------------------------------------------
+  profile: () => get<Profile>('/profile'),
+  updateProfile: (displayName: string) => patch<Profile>('/profile', { displayName }),
+
+  /** Sends a code to the NEW contact: what needs proving is that you can read mail there. */
+  requestContactCode: (contact: string) => post<CodeSent>('/profile/contact/request-code', { contact }),
+  confirmContact: (contact: string, code: string) =>
+    post<Profile>('/profile/contact/confirm', { contact, code }),
+
+  /** Sends a code to the contact already on file, before money is redirected. */
+  requestPayoutCode: () => post<CodeSent>('/profile/payout-account/request-code'),
+  savePayoutAccount: (body: {
+    code: string
     method: string
     accountHolderName: string
     accountNumber?: string | null
     ifsc?: string | null
     upiVpa?: string | null
-  }) => post<PayoutAccount>('/payout-accounts', body),
+  }) => post<PayoutAccountView>('/profile/payout-account', body),
+
+  myAddresses: () => get<Address[]>('/profile/addresses'),
+  addAddress: (body: {
+    label?: string | null
+    recipientName: string
+    line1: string
+    line2?: string | null
+    city: string
+    state?: string
+    pincode: string
+    phone?: string | null
+    isDefault?: boolean
+  }) => post<Address[]>('/profile/addresses', body),
+  makeDefaultAddress: (id: string) => post<Address[]>(`/profile/addresses/${id}/default`),
+  removeAddress: (id: string) => del<Address[]>(`/profile/addresses/${id}`),
+
+  mySessions: () => get<SessionInfo[]>('/profile/sessions'),
+  signOutOtherSessions: () => post<{ revoked: number }>('/profile/sessions/revoke-others'),
 
   // -- ops -----------------------------------------------------------------
   pendingSubmissions: () => get<Submission[]>('/ops/submissions/pending'),

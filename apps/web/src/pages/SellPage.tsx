@@ -224,32 +224,11 @@ function Approvals({ state }: { state: ReturnType<typeof useApi<SellerApprovalVi
 function Payouts() {
   const payouts = useApi(() => api.myPayouts(), [])
   const account = useApi(() => api.myPayoutAccount(), [])
-  const [form, setForm] = useState({ method: 'upi', accountHolderName: '', upiVpa: '', accountNumber: '', ifsc: '' })
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const total = useMemo(
     () => (payouts.data ?? []).filter((p) => p.state === 'paid').reduce((sum, p) => sum + p.netMinor, 0),
     [payouts.data],
   )
-
-  async function save() {
-    setBusy(true); setError(null)
-    try {
-      await api.addPayoutAccount({
-        method: form.method,
-        accountHolderName: form.accountHolderName,
-        upiVpa: form.method === 'upi' ? form.upiVpa : null,
-        accountNumber: form.method === 'bank' ? form.accountNumber : null,
-        ifsc: form.method === 'bank' ? form.ifsc : null,
-      })
-      account.reload()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not save that')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   return (
     <div className="sell__list">
@@ -259,38 +238,23 @@ function Payouts() {
         {account.data ? (
           <p className="sell__account">
             <strong>{account.data.method.toUpperCase()}</strong>
-            {' · '}{account.data.upiVpa ?? account.data.accountNumberMasked ?? account.data.accountHolderName}
+            {' · '}
+            {account.data.upiVpa ?? (account.data.accountLast4 ? `account ending ${account.data.accountLast4}` : account.data.accountHolderName)}
             {' · '}
             <span className={`tg-badge ${account.data.verificationState === 'verified' ? 'tg-badge--good' : 'tg-badge--warn'}`}>
               {account.data.verificationState}
             </span>
+            {' '}
+            <Link to="/profile#bank">Change</Link>
           </p>
         ) : (
           !account.loading && (
-            <>
-              <p className="tg-muted sell__fineprint">
-                Payouts are held until an account is on file and verified.
-              </p>
-              <div className="sell__account-form">
-                <select className="tg-select" value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} aria-label="Payout method">
-                  <option value="upi">UPI</option>
-                  <option value="bank">Bank transfer</option>
-                </select>
-                <input className="tg-input" placeholder="Account holder name" value={form.accountHolderName} onChange={(e) => setForm({ ...form, accountHolderName: e.target.value })} />
-                {form.method === 'upi' ? (
-                  <input className="tg-input" placeholder="UPI id" value={form.upiVpa} onChange={(e) => setForm({ ...form, upiVpa: e.target.value })} />
-                ) : (
-                  <>
-                    <input className="tg-input" placeholder="Account number" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} />
-                    <input className="tg-input" placeholder="IFSC" value={form.ifsc} onChange={(e) => setForm({ ...form, ifsc: e.target.value })} />
-                  </>
-                )}
-                <button className="tg-button tg-button--primary" disabled={busy || !form.accountHolderName} onClick={save}>
-                  {busy ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-              {error && <p className="sell__error" role="alert">{error}</p>}
-            </>
+            <p className="tg-muted sell__fineprint">
+              Payouts are held until an account is on file and verified.{' '}
+              <Link to="/profile#bank">Add your bank or UPI details</Link> — it takes a code
+              sent to your email, because nobody should be able to redirect your money
+              with a stolen session alone.
+            </p>
           )
         )}
       </section>

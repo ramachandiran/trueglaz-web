@@ -10,6 +10,8 @@ interface Ctx {
   ready: boolean
   signIn: (session: Session) => Promise<void>
   signOut: () => Promise<void>
+  /** Re-reads who we are, for when the person has just changed their own name or email. */
+  refresh: () => Promise<void>
 }
 
 const SessionCtx = createContext<Ctx>({
@@ -17,6 +19,7 @@ const SessionCtx = createContext<Ctx>({
   ready: false,
   signIn: async () => {},
   signOut: async () => {},
+  refresh: async () => {},
 })
 
 /**
@@ -72,7 +75,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSession(null)
   }, [])
 
-  const value = useMemo<Ctx>(() => ({ session, ready, signIn, signOut }), [session, ready, signIn, signOut])
+  const refresh = useCallback(async () => {
+    try {
+      const me = await api.me()
+      setSession((current) => {
+        if (!current) return current
+        const next = { ...current, ...me }
+        void saveSession(next)
+        return next
+      })
+    } catch { /* a dead session is handled by the 401 path above */ }
+  }, [])
+
+  const value = useMemo<Ctx>(
+    () => ({ session, ready, signIn, signOut, refresh }),
+    [session, ready, signIn, signOut, refresh],
+  )
   return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>
 }
 

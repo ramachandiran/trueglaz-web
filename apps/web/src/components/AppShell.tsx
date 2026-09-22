@@ -1,6 +1,7 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 import { isAdmin, isOps, isStaff, useSession } from '@trueglaz/core'
 import { useTheme, type ThemeMode } from '../state/useTheme'
+import { AccountMenu } from './AccountMenu'
 import './AppShell.css'
 
 export function AppShell() {
@@ -27,8 +28,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
  */
 function Header() {
   const { mode, setMode } = useTheme()
-  const { session, ready, signOut } = useSession()
-  const nav = useNavigate()
+  const { session, ready } = useSession()
 
   return (
     <header className="shell__header">
@@ -49,20 +49,7 @@ function Header() {
 
         <div className="shell__tools">
           {ready && (session ? (
-            <div className="shell__account">
-              <span className="shell__who">
-                {session.displayName}
-                {session.roles.length > 0 && (
-                  <span className="shell__roles"> · {session.roles.join(', ')}</span>
-                )}
-              </span>
-              <button
-                className="tg-button tg-button--subtle shell__signout"
-                onClick={async () => { await signOut(); nav('/') }}
-              >
-                Sign out
-              </button>
-            </div>
+            <AccountMenu />
           ) : (
             <NavLink to="/sign-in" className="tg-button tg-button--primary shell__signin">
               Sign in

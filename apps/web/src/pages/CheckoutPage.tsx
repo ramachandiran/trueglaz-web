@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, money, useApi, useSession } from '@trueglaz/core'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { api, ApiError, money, useApi, useSession, type Address } from '@trueglaz/core'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './CheckoutPage.css'
 
@@ -34,6 +34,24 @@ export function CheckoutPage() {
     recipientName: session?.displayName ?? '',
     line1: '', line2: '', city: '', state: '', pincode: '', countryCode: 'IN',
   })
+
+  // Saved addresses, so a returning buyer is not retyping their own street.
+  const saved = useApi(() => api.myAddresses(), [])
+  const [pickedAddressId, setPickedAddressId] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+
+  // The default fills the form once, and only while the person has not started
+  // typing — overwriting what someone is in the middle of entering would be
+  // worse than an empty form.
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (prefilled.current || saved.loading) return
+    const fallback = saved.data?.find((a) => a.isDefault) ?? saved.data?.[0]
+    if (!fallback) return
+    prefilled.current = true
+    setPickedAddressId(fallback.id)
+    setAddress((current) => (current.line1 ? current : fromSaved(fallback)))
+  }, [saved.loading, saved.data])
 
   // Hold the item as soon as the page opens.
   //
@@ -120,6 +138,7 @@ export function CheckoutPage() {
   const d = listing.data
 
   const addressValid = address.recipientName && address.line1 && address.city && address.pincode
+  const hasSaved = (saved.data?.length ?? 0) > 0
 
   return (
     <div className="checkout">
@@ -150,6 +169,35 @@ export function CheckoutPage() {
               The address is copied onto the order, not linked — editing it later
               never rewrites an order already placed.
             </p>
+
+            {hasSaved && !editing && (
+              <div className="checkout__saved">
+                {(saved.data ?? []).map((a) => (
+                  <label key={a.id} className={`checkout__saved-option${pickedAddressId === a.id ? ' checkout__saved-option--picked' : ''}`}>
+                    <input
+                      type="radio"
+                      name="saved-address"
+                      checked={pickedAddressId === a.id}
+                      onChange={() => { setPickedAddressId(a.id); setAddress(fromSaved(a)) }}
+                    />
+                    <span>
+                      <strong>{a.label || a.recipientName}</strong>
+                      {a.isDefault && <span className="tg-badge tg-badge--good checkout__saved-default">Default</span>}
+                      <span className="tg-muted checkout__saved-body">
+                        {a.line1}{a.line2 ? `, ${a.line2}` : ''}, {a.city} {a.pincode}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+                <div>
+                  <button className="tg-button tg-button--subtle" onClick={() => { setEditing(true); setPickedAddressId(null) }}>
+                    Send it somewhere else
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {(!hasSaved || editing) && (
             <div className="checkout__grid">
               <Field label="Recipient" value={address.recipientName} onChange={(v) => setAddress({ ...address, recipientName: v })} required />
               <Field label="Address line 1" value={address.line1} onChange={(v) => setAddress({ ...address, line1: v })} required wide />
@@ -158,6 +206,13 @@ export function CheckoutPage() {
               <Field label="State" value={address.state} onChange={(v) => setAddress({ ...address, state: v })} />
               <Field label="PIN code" value={address.pincode} onChange={(v) => setAddress({ ...address, pincode: v })} required />
             </div>
+            )}
+            {!hasSaved && (
+              <p className="tg-muted checkout__note">
+                Save this one to <Link to="/profile#addresses">your addresses</Link> to skip
+                typing it next time.
+              </p>
+            )}
             <button
               className="tg-button tg-button--primary checkout__cta"
               disabled={busy || !addressValid || !reservationId}
@@ -238,4 +293,17 @@ function Field({
       <input className="tg-input" value={value} required={required} onChange={(e) => onChange(e.target.value)} />
     </label>
   )
+}
+
+/** A saved address in the shape the order snapshot wants. */
+function fromSaved(a: Address) {
+  return {
+    recipientName: a.recipientName,
+    line1: a.line1,
+    line2: a.line2 ?? '',
+    city: a.city,
+    state: a.state ?? '',
+    pincode: a.pincode,
+    countryCode: a.countryCode ?? 'IN',
+  }
 }

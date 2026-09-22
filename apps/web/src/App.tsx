@@ -12,6 +12,7 @@ import { ListingDetailPage } from './pages/ListingDetailPage'
 import { NewSubmissionPage } from './pages/NewSubmissionPage'
 import { OpsPage } from './pages/OpsPage'
 import { OrdersPage } from './pages/OrdersPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { SellPage } from './pages/SellPage'
 import { SignInPage } from './pages/SignInPage'
 
@@ -28,6 +29,7 @@ export function App() {
           {/* Buyer */}
           <Route path="/checkout/:listingId" element={<Guard need="signed-in"><CheckoutPage /></Guard>} />
           <Route path="/orders" element={<Guard need="signed-in"><OrdersPage /></Guard>} />
+          <Route path="/profile" element={<Guard need="signed-in"><ProfilePage /></Guard>} />
 
           {/* Seller */}
           <Route path="/sell" element={<Guard need="signed-in"><SellPage /></Guard>} />
