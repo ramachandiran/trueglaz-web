@@ -39,6 +39,19 @@ export interface ColorTokens {
   brand: string
   onBrand: string
   onBrandMuted: string
+  /** The second header band, under the main bar. */
+  brandAlt: string
+
+  /**
+   * The one warm colour: buy buttons, and nothing else.
+   *
+   * A marketplace's primary action has to win against a header in the same
+   * family as everything else on the page. Kept deliberately scarce — the
+   * moment it appears twice on a screen it stops meaning "this is the button".
+   */
+  cta: string
+  ctaHover: string
+  onCta: string
 
   good: string
   goodSoft: string
@@ -111,6 +124,11 @@ export const light: Theme = {
     brand: '#233e50',
     onBrand: '#fffef3',
     onBrandMuted: '#a9bdcb',
+    brandAlt: '#2e5168',
+
+    cta: '#a45c1b',
+    ctaHover: '#8f4f16',
+    onCta: '#fffef3',
 
     good: '#2e7d53',
     goodSoft: '#ddefe3',
@@ -155,6 +173,11 @@ export const dark: Theme = {
     brand: '#1b3243',
     onBrand: '#f3f1e4',
     onBrandMuted: '#93a8b8',
+    brandAlt: '#233c4f',
+
+    cta: '#b4681f',
+    ctaHover: '#c87a2c',
+    onCta: '#fffef3',
 
     good: '#52b583',
     goodSoft: '#123528',
@@ -201,6 +224,11 @@ export const midnight: Theme = {
     brand: '#233e50',
     onBrand: '#fffef3',
     onBrandMuted: '#a9bdcb',
+    brandAlt: '#2e5168',
+
+    cta: '#a45c1b',
+    ctaHover: '#8f4f16',
+    onCta: '#fffef3',
 
     good: '#2b7449',
     goodSoft: '#dff2e5',

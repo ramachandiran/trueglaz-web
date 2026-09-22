@@ -1,0 +1,33 @@
+.photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--tg-bg-sunken);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  color: var(--tg-border-strong);
+  overflow: hidden;
+}
+
+.photo--thumb { width: 54px; height: 54px; }
+.photo--tile { width: 180px; height: 180px; }
+.photo--hero { width: 100%; aspect-ratio: 4 / 3; }
+
+.photo__art { width: 62%; height: auto; }
+.photo--thumb .photo__art { width: 74%; }
+
+.photo__note {
+  position: absolute;
+  bottom: var(--tg-space-2);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tg-text-muted);
+  opacity: 0.7;
+}
+.photo--thumb .photo__note { display: none; }
+
+@media (max-width: 720px) {
+  .photo--tile { width: 120px; height: 120px; }
+}

@@ -1,5 +1,5 @@
 import type { Brand, Category, Grade } from '@trueglaz/core'
-import { activeFilterCount, EMPTY_FILTERS, type Filters, type Sort } from '@trueglaz/core'
+import { activeFilterCount, EMPTY_FILTERS, type Filters } from '@trueglaz/core'
 import { money } from '@trueglaz/core'
 import './FilterSidebar.css'
 
@@ -14,12 +14,11 @@ interface Props {
     brand: Map<string, number>
     grade: Map<string, number>
   }
-  resultCount: number
   priceBounds: { min: number; max: number }
 }
 
 export function FilterSidebar({
-  filters, onChange, categories, brands, grades, counts, resultCount, priceBounds,
+  filters, onChange, categories, brands, grades, counts, priceBounds,
 }: Props) {
   const active = activeFilterCount(filters)
 
@@ -46,34 +45,9 @@ export function FilterSidebar({
         )}
       </div>
 
-      <p className="fs__count tg-muted">
-        {resultCount} {resultCount === 1 ? 'item' : 'items'}
-      </p>
 
-      <Section title="Search">
-        <input
-          type="search"
-          className="tg-input"
-          placeholder="Model, e.g. 35mm"
-          value={filters.q}
-          onChange={(e) => onChange({ ...filters, q: e.target.value })}
-        />
-      </Section>
-
-      <Section title="Sort">
-        <select
-          className="tg-select"
-          value={filters.sort}
-          onChange={(e) => onChange({ ...filters, sort: e.target.value as Sort })}
-          aria-label="Sort results"
-        >
-          <option value="newest">Newest first</option>
-          <option value="price-asc">Price: low to high</option>
-          <option value="price-desc">Price: high to low</option>
-          <option value="grade-desc">Condition: best first</option>
-        </select>
-      </Section>
-
+      {/* Search lives in the header and sort above the results; repeating them
+          here would be two controls for one thing, and two places to look. */}
       <Section title="Type">
         {categories.map((c) => (
           <Check

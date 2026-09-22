@@ -5,62 +5,117 @@
   align-items: start;
 }
 
-.catalog__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--tg-space-4);
-}
-
-.card {
+/* The bar above the results: how many, of what, in what order. */
+.results__bar {
   display: flex;
-  flex-direction: column;
-  gap: var(--tg-space-2);
-  padding: var(--tg-space-4);
-  color: inherit;
-  text-decoration: none;
-  transition: border-color var(--tg-transition), box-shadow var(--tg-transition),
-              transform var(--tg-transition);
-}
-.card:hover {
-  text-decoration: none;
-  border-color: var(--tg-accent);
-  box-shadow: var(--tg-shadow-md);
-  transform: translateY(-2px);
-}
-
-.card__top {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: var(--tg-space-3);
+  padding-bottom: var(--tg-space-3);
+  margin-bottom: var(--tg-space-3);
+  border-bottom: 1px solid var(--tg-border);
+}
+.results__count { margin: 0; font-size: var(--tg-text-sm); }
+.results__term { color: var(--tg-text); font-weight: var(--tg-weight-bold); }
+.results__sort {
+  display: inline-flex;
+  align-items: center;
   gap: var(--tg-space-2);
+  font-size: var(--tg-text-sm);
 }
 
-.card__price {
+/*
+ * Results are rows, not tiles.
+ *
+ * Every unit here is one physical object with its own history, so the thing a
+ * buyer compares is the condition write-up — which needs a line of text, not a
+ * caption under a square.
+ */
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 200px;
+  gap: var(--tg-space-4);
+  padding: var(--tg-space-4) 0;
+  border-bottom: 1px solid var(--tg-border);
+}
+.result:first-child { padding-top: 0; }
+
+.result__photo-link { display: block; text-decoration: none; }
+
+.result__body { display: flex; flex-direction: column; gap: var(--tg-space-2); min-width: 0; }
+
+.result__title {
   font-size: var(--tg-text-lg);
-  font-weight: var(--tg-weight-bold);
-  font-variant-numeric: tabular-nums;
-}
-
-.card__title {
-  font-size: var(--tg-text-md);
   font-weight: var(--tg-weight-medium);
+  color: var(--tg-accent);
+  text-decoration: none;
+}
+.result__title:hover { text-decoration: underline; }
+
+.result__brand { margin: 0; font-size: var(--tg-text-sm); }
+
+.result__grade {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-sm);
 }
 
-.card__sub { font-size: var(--tg-text-xs); margin: 0; }
-
-.card__desc {
+.result__desc {
   margin: 0;
   font-size: var(--tg-text-sm);
-  color: var(--tg-text-muted);
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* The sidebar stops being a sidebar once there is no room for two columns. */
+.result__promise { margin: 0; font-size: var(--tg-text-xs); }
+
+.result__buy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--tg-space-2);
+}
+
+.result__price {
+  font-size: var(--tg-text-xl);
+  font-weight: var(--tg-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.result__ship { font-size: var(--tg-text-xs); }
+
+.result__cta {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  font-size: var(--tg-text-sm);
+}
+.result__cta:hover { text-decoration: none; }
+
 @media (max-width: 900px) {
   .catalog { grid-template-columns: 1fr; }
   .fs { position: static; max-height: none; }
 }
+
+@media (max-width: 720px) {
+  .result { grid-template-columns: auto minmax(0, 1fr); }
+  .result__buy { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+  .result__cta { width: auto; }
+}
+
+.results__sort > span { white-space: nowrap; }

@@ -17,14 +17,14 @@
   border-bottom: 1px solid var(--tg-brand);
 }
 
-.shell__header-inner {
+/* Row one: the brand, the search, and you. */
+.shell__bar {
   max-width: var(--tg-content-max);
   margin: 0 auto;
-  padding: var(--tg-space-3) var(--tg-space-4);
+  padding: var(--tg-space-2) var(--tg-space-4);
   display: flex;
   align-items: center;
-  gap: var(--tg-space-5);
-  flex-wrap: wrap;
+  gap: var(--tg-space-4);
 }
 
 .shell__brand {
@@ -35,6 +35,7 @@
   font-weight: var(--tg-weight-bold);
   color: var(--tg-on-brand);
   text-decoration: none;
+  white-space: nowrap;
 }
 .shell__brand:hover { text-decoration: none; }
 
@@ -45,30 +46,21 @@
   border: 3px solid var(--tg-on-brand);
 }
 
-.shell__nav {
+/* A stacked label, the way a shop puts the small word above the big one. */
+.shell__tool {
   display: flex;
-  gap: var(--tg-space-1);
-  flex: 1;
-}
-
-.shell__nav-link {
-  padding: var(--tg-space-2) var(--tg-space-3);
+  flex-direction: column;
+  padding: var(--tg-space-1) var(--tg-space-2);
+  border: 1px solid transparent;
   border-radius: var(--tg-radius-md);
-  color: var(--tg-on-brand-muted);
-  font-size: var(--tg-text-sm);
-  font-weight: var(--tg-weight-medium);
-  text-decoration: none;
-  transition: background var(--tg-transition), color var(--tg-transition);
-}
-.shell__nav-link:hover {
-  background: rgb(255 255 255 / 0.10);
   color: var(--tg-on-brand);
   text-decoration: none;
+  line-height: 1.15;
+  white-space: nowrap;
 }
-.shell__nav-link--active {
-  color: var(--tg-on-brand);
-  background: rgb(255 255 255 / 0.16);
-}
+.shell__tool:hover { text-decoration: none; border-color: rgb(255 255 255 / 0.3); }
+.shell__tool-top { font-size: var(--tg-text-xs); color: var(--tg-on-brand-muted); }
+.shell__tool-main { font-size: var(--tg-text-sm); font-weight: var(--tg-weight-bold); }
 
 .shell__tools {
   display: flex;
@@ -107,6 +99,34 @@
 }
 
 /* Bookends the page with the bar at the top. */
+/* Row two: the shelves. Scrolls sideways rather than wrapping, so a long list
+   of brands never pushes the page content down. */
+.strip {
+  background: var(--tg-brand-alt);
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-1);
+  padding: 0 var(--tg-space-4);
+  max-width: var(--tg-content-max);
+  margin: 0 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.strip::-webkit-scrollbar { display: none; }
+.strip__spacer { flex: 1; min-width: var(--tg-space-4); }
+
+.strip__link {
+  padding: var(--tg-space-2) var(--tg-space-3);
+  color: var(--tg-on-brand);
+  font-size: var(--tg-text-sm);
+  text-decoration: none;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: var(--tg-radius-sm);
+}
+.strip__link:hover { text-decoration: none; border-color: rgb(255 255 255 / 0.35); }
+.strip__link--active { font-weight: var(--tg-weight-bold); border-color: rgb(255 255 255 / 0.35); }
+
 .shell__footer {
   background: var(--tg-brand);
   color: var(--tg-on-brand-muted);
@@ -117,8 +137,9 @@
 .shell__footer .tg-muted { color: var(--tg-on-brand-muted); }
 
 @media (max-width: 720px) {
-  .shell__header-inner { gap: var(--tg-space-3); }
-  .shell__nav { order: 3; flex-basis: 100%; }
+  .shell__bar { flex-wrap: wrap; gap: var(--tg-space-2); }
+  .search { order: 3; flex-basis: 100%; }
+  .shell__tool { display: none; }
 }
 
 /* The signed-in side of the header is the account menu now; its styles live
@@ -139,3 +160,39 @@
   color: var(--tg-brand);
   opacity: 0.9;
 }
+
+/* The search box: the widest thing in the header, because on a shop it is the
+   thing people reach for first. */
+.search {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  border-radius: var(--tg-radius-md);
+  overflow: hidden;
+  background: var(--tg-bg-raised);
+}
+
+.search__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  font: inherit;
+  font-size: var(--tg-text-md);
+  color: var(--tg-text);
+  background: var(--tg-bg-raised);
+}
+.search__input:focus { outline: 2px solid var(--tg-cta); outline-offset: -2px; }
+.search__input::-webkit-search-cancel-button { cursor: pointer; }
+
+.search__go {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  border: none;
+  background: var(--tg-cta);
+  color: var(--tg-on-cta);
+  cursor: pointer;
+  transition: background var(--tg-transition);
+}
+.search__go:hover { background: var(--tg-cta-hover); }

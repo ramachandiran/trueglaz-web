@@ -143,3 +143,113 @@
 .detail__table tr:last-child td { border-bottom: 0; }
 
 .detail__buy { align-self: center; white-space: nowrap; }
+
+/* ---------------------------------------------------------------------------
+   The product page: gallery, the case for the item, and the box you buy from.
+   --------------------------------------------------------------------------- */
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tg-space-2);
+  margin-bottom: var(--tg-space-3);
+  font-size: var(--tg-text-sm);
+}
+.crumbs a { text-decoration: none; }
+.crumbs a:hover { text-decoration: underline; }
+
+.product {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr) 300px;
+  gap: var(--tg-space-5);
+  align-items: start;
+  padding-bottom: var(--tg-space-5);
+  border-bottom: 1px solid var(--tg-border);
+}
+
+.product__gallery { display: flex; flex-direction: column; gap: var(--tg-space-2); }
+.product__thumbs { display: flex; gap: var(--tg-space-2); }
+.product__photo-note { margin: var(--tg-space-2) 0 0; font-size: var(--tg-text-xs); }
+
+.product__main { display: flex; flex-direction: column; min-width: 0; }
+.product__title { margin: 0; font-size: var(--tg-text-xl); line-height: 1.2; }
+.product__sku { margin: var(--tg-space-1) 0 var(--tg-space-3); font-size: var(--tg-text-xs); }
+
+.product__grade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-sm);
+}
+.product__grade-def { margin: var(--tg-space-2) 0 0; font-size: var(--tg-text-sm); }
+
+.product__rule { border: none; border-top: 1px solid var(--tg-border); margin: var(--tg-space-4) 0; }
+
+.product__heading {
+  margin: 0 0 var(--tg-space-2);
+  font-size: var(--tg-text-md);
+  font-weight: var(--tg-weight-bold);
+}
+.product__heading + * { margin-top: 0; }
+.product__facts {
+  margin: 0 0 var(--tg-space-4);
+  padding-left: var(--tg-space-5);
+  font-size: var(--tg-text-sm);
+  line-height: 1.7;
+}
+
+/* The buy box stays with you down a long condition report — which is exactly
+   the page where a buyer makes up their mind near the bottom. */
+.buybox {
+  position: sticky;
+  top: var(--tg-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-4);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+  box-shadow: var(--tg-shadow-sm);
+}
+
+.buybox__price {
+  margin: 0;
+  font-size: var(--tg-text-xxl);
+  font-weight: var(--tg-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.buybox__ship { margin: 0; font-size: var(--tg-text-xs); }
+.buybox__stock { margin: var(--tg-space-2) 0 0; color: var(--tg-good); font-weight: var(--tg-weight-medium); }
+.buybox__gone { margin: var(--tg-space-2) 0 0; font-size: var(--tg-text-sm); }
+
+/* Doubled up: `.tg-button` sets its own background, and a single class here
+   loses to it — which is how the one button on the page that must be
+   unmistakable ended up looking like every other one. */
+.tg-button.buybox__cta {
+  background: var(--tg-cta);
+  border-color: var(--tg-cta);
+  color: var(--tg-on-cta);
+  font-weight: var(--tg-weight-bold);
+  padding: var(--tg-space-3);
+  justify-content: center;
+}
+.tg-button.buybox__cta:hover { background: var(--tg-cta-hover); border-color: var(--tg-cta-hover); }
+
+.buybox__hold { margin: 0; font-size: var(--tg-text-xs); }
+
+.buybox__terms { margin: 0; display: flex; flex-direction: column; gap: var(--tg-space-2); }
+.buybox__terms > div { display: flex; gap: var(--tg-space-2); font-size: var(--tg-text-xs); }
+.buybox__terms dt { flex: none; width: 80px; color: var(--tg-text-muted); }
+.buybox__terms dd { margin: 0; }
+
+@media (max-width: 1080px) {
+  .product { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+  .buybox { grid-column: 1 / -1; position: static; }
+}
+@media (max-width: 720px) {
+  .product { grid-template-columns: 1fr; }
+}
