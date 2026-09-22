@@ -88,16 +88,19 @@ export const light: Theme = {
   name: 'light',
   ...shared,
   colors: {
+    // The paper is the surface, not a tint showing through the gaps. Pure white
+    // cards on top of it made #FFFEF3 read as a yellow wash by comparison; with
+    // both the same, cards are defined by their edge and lift instead.
     bg: '#fffef3',
-    bgRaised: '#ffffff',
-    bgSunken: '#f3f1e1',
-    bgHover: '#f3f1e1',
+    bgRaised: '#fffef3',
+    bgSunken: '#f2efdd',
+    bgHover: '#f2efdd',
 
     text: '#1a2e3b',
     textMuted: '#50697a',
     textInverted: '#fffef3',
 
-    border: '#e5e1cd',
+    border: '#e2ddc4',
     borderStrong: '#c7c2a9',
 
     accent: '#233e50',

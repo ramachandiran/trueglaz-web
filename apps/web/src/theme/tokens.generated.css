@@ -5,13 +5,13 @@
 
 :root {
   --tg-bg: #fffef3;
-  --tg-bg-raised: #ffffff;
-  --tg-bg-sunken: #f3f1e1;
-  --tg-bg-hover: #f3f1e1;
+  --tg-bg-raised: #fffef3;
+  --tg-bg-sunken: #f2efdd;
+  --tg-bg-hover: #f2efdd;
   --tg-text: #1a2e3b;
   --tg-text-muted: #50697a;
   --tg-text-inverted: #fffef3;
-  --tg-border: #e5e1cd;
+  --tg-border: #e2ddc4;
   --tg-border-strong: #c7c2a9;
   --tg-accent: #233e50;
   --tg-accent-hover: #33596f;
