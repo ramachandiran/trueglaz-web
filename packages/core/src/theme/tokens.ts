@@ -30,6 +30,16 @@ export interface ColorTokens {
   accentSoft: string
   onAccent: string
 
+  /**
+   * The brand colour used as a surface — the header and footer that frame every
+   * page. Separate from `accent` because an accent has to stay legible ON the
+   * page, which forces it light in dark mode; the brand bar is the page there,
+   * and should not follow.
+   */
+  brand: string
+  onBrand: string
+  onBrandMuted: string
+
   good: string
   goodSoft: string
   warn: string
@@ -95,6 +105,10 @@ export const light: Theme = {
     accentSoft: '#dde6ec',
     onAccent: '#fffef3',
 
+    brand: '#233e50',
+    onBrand: '#fffef3',
+    onBrandMuted: '#a9bdcb',
+
     good: '#2e7d53',
     goodSoft: '#ddefe3',
     warn: '#8a5a12',
@@ -134,6 +148,10 @@ export const dark: Theme = {
     accentHover: '#9ac3dc',
     accentSoft: '#1c3746',
     onAccent: '#0c171e',
+
+    brand: '#1b3243',
+    onBrand: '#f3f1e4',
+    onBrandMuted: '#93a8b8',
 
     good: '#52b583',
     goodSoft: '#123528',
@@ -176,6 +194,10 @@ export const midnight: Theme = {
     accentHover: '#33596f',
     accentSoft: '#e0e6ea',
     onAccent: '#fffef3',
+
+    brand: '#233e50',
+    onBrand: '#fffef3',
+    onBrandMuted: '#a9bdcb',
 
     good: '#2b7449',
     goodSoft: '#dff2e5',

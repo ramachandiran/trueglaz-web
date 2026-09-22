@@ -1,5 +1,6 @@
 .account { position: relative; }
 
+/* The trigger sits on the brand bar; the menu it opens sits on the page. */
 .account__trigger {
   display: inline-flex;
   align-items: center;
@@ -8,36 +9,49 @@
   border: 1px solid transparent;
   border-radius: var(--tg-radius-pill);
   background: transparent;
-  color: inherit;
+  color: var(--tg-on-brand);
   font: inherit;
   font-size: var(--tg-text-sm);
   cursor: pointer;
   transition: background var(--tg-transition), border-color var(--tg-transition);
 }
-.account__trigger:hover { background: var(--tg-bg-hover); }
+.account__trigger:hover { background: rgb(255 255 255 / 0.10); }
 .account__trigger[aria-expanded='true'] {
-  background: var(--tg-bg-hover);
-  border-color: var(--tg-border);
+  background: rgb(255 255 255 / 0.16);
+  border-color: rgb(255 255 255 / 0.22);
 }
 
+/* Inverted against the bar it sits on: the page colour, lettered in the brand. */
 .account__avatar {
   display: grid;
   place-items: center;
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--tg-accent);
-  color: var(--tg-on-accent);
+  background: var(--tg-on-brand);
+  color: var(--tg-brand);
   font-size: 0.7rem;
   font-weight: var(--tg-weight-bold);
   letter-spacing: 0.02em;
 }
-.account__avatar--lg { width: 40px; height: 40px; font-size: var(--tg-text-sm); }
+
+/* Inside the open menu the page has taken over again, so it flips back. */
+.account__avatar--lg {
+  width: 40px;
+  height: 40px;
+  font-size: var(--tg-text-sm);
+  background: var(--tg-brand);
+  color: var(--tg-on-brand);
+}
 
 .account__name { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account__caret { font-size: 0.6rem; opacity: 0.7; }
 
+/* The menu drops off the brand bar onto the page, so it has to take the page's
+   colours back — inheriting the bar's cream text would leave it unreadable on
+   its own white background. */
 .account__menu {
+  color: var(--tg-text);
   position: absolute;
   top: calc(100% + var(--tg-space-2));
   right: 0;
@@ -80,7 +94,7 @@
   border: none;
   border-radius: var(--tg-radius-md);
   background: transparent;
-  color: inherit;
+  color: var(--tg-text);
   font: inherit;
   font-size: var(--tg-text-sm);
   text-align: left;
