@@ -16,10 +16,19 @@ export function OpsPage() {
   const { session } = useSession()
   const [queue, setQueue] = useState<Queue>('intake')
 
-  const pending = useApi(() => api.pendingSubmissions(), [])
+  // Intake and pricing are staff work. A technician asking for them gets a 403,
+  // so they are not asked for: an error where a queue should be reads as the
+  // page being broken, not as a role they do not hold.
+  const staff = isStaff(session)
+  const pending = useApi(() => (staff ? api.pendingSubmissions() : Promise.resolve([])), [staff])
   const received = useApi(() => api.itemQueue('RECEIVED'), [])
   const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
-  const graded = useApi(() => api.itemQueue('GRADED'), [])
+  const graded = useApi(() => (staff ? api.itemQueue('GRADED') : Promise.resolve([])), [staff])
+
+  // The session arrives after the first render, so the open queue is derived
+  // rather than stored — a technician must never land on a tab that is not there.
+  const allowed: Queue[] = staff ? ['intake', 'inspect', 'price'] : ['inspect']
+  const active = allowed.includes(queue) ? queue : allowed[0]
 
   const counts = {
     intake: pending.data?.length ?? 0,
@@ -32,14 +41,14 @@ export function OpsPage() {
       <h1 className="ops__title">Operations</h1>
 
       <nav className="ops__tabs" aria-label="Work queues">
-        {isStaff(session) && <Tab active={queue === 'intake'} onClick={() => setQueue('intake')} label="Intake" count={counts.intake} />}
-        <Tab active={queue === 'inspect'} onClick={() => setQueue('inspect')} label="Inspection" count={counts.inspect} />
-        {isStaff(session) && <Tab active={queue === 'price'} onClick={() => setQueue('price')} label="Pricing" count={counts.price} />}
+        {staff && <Tab active={active === 'intake'} onClick={() => setQueue('intake')} label="Intake" count={counts.intake} />}
+        <Tab active={active === 'inspect'} onClick={() => setQueue('inspect')} label="Inspection" count={counts.inspect} />
+        {staff && <Tab active={active === 'price'} onClick={() => setQueue('price')} label="Pricing" count={counts.price} />}
       </nav>
 
-      {queue === 'intake' && <IntakeQueue state={pending} />}
-      {queue === 'inspect' && <InspectQueue received={received} inProgress={inInspection} />}
-      {queue === 'price' && <PricingQueue state={graded} />}
+      {active === 'intake' && <IntakeQueue state={pending} />}
+      {active === 'inspect' && <InspectQueue received={received} inProgress={inInspection} />}
+      {active === 'price' && <PricingQueue state={graded} />}
     </div>
   )
 }
