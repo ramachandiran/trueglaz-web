@@ -11,9 +11,9 @@ const KEY = 'trueglaz.theme'
 export function useTheme() {
   const [mode, setMode] = useState<ThemeMode>(() => {
     try {
-      return (localStorage.getItem(KEY) as ThemeMode) ?? 'system'
+      return (localStorage.getItem(KEY) as ThemeMode) ?? 'light'
     } catch {
-      return 'system'
+      return 'light'
     }
   })
 
