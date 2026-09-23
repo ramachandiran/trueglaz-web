@@ -68,3 +68,18 @@
 .want__grade { display: inline-flex; align-items: center; gap: var(--tg-space-2); font-size: var(--tg-text-sm); }
 .want__note { margin: 0; font-size: var(--tg-text-sm); font-style: italic; }
 .want__asked { margin: auto 0 0; font-size: var(--tg-text-xs); }
+
+/* Decided asks — withdrawn, turned down, found. Present but not in the way. */
+.wanted__earlier {
+  margin-top: 4px;
+}
+
+.wanted__earlier > summary {
+  cursor: pointer;
+  padding: 6px 0;
+  font-size: 0.9rem;
+}
+
+.wanted__earlier[open] > summary {
+  margin-bottom: 4px;
+}

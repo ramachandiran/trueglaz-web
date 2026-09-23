@@ -598,6 +598,8 @@ export interface WantedRequest {
   minGradeLabel: string | null
   maxPriceMinor: number | null
   note: string | null
+  /** When the buyer asked. A date is not identity; who asked is never sent. */
+  createdAt: string | null
   publishedAt: string | null
 }
 

@@ -74,7 +74,7 @@ function BoardCard({ request }: { request: WantedRequest }) {
         )}
       </div>
       {request.note && <p className="want__note">“{request.note}”</p>}
-      <p className="want__asked tg-muted">Asked {dateOnly(request.publishedAt)}</p>
+      <p className="want__asked tg-muted">Asked {dateOnly(request.createdAt)}</p>
     </li>
   )
 }
@@ -91,8 +91,25 @@ function MySlots({ mine }: { mine: ReturnType<typeof useApi<import('@trueglaz/co
   const [error, setError] = useState<string | null>(null)
 
   if (mine.loading) return <Loading label="Loading your requests" />
+  // Without this the section simply vanished on a failed load — no message, no
+  // retry, just a page that looks like it forgot you had asked for anything.
+  if (mine.error) {
+    return (
+      <section className="tg-card wanted__mine" aria-label="Your requests">
+        <h2 className="wanted__section-title">Your requests</h2>
+        <ErrorNote error={mine.error} onRetry={mine.reload} />
+      </section>
+    )
+  }
   const data = mine.data
   if (!data) return null
+
+  // Withdrawn, rejected and fulfilled asks hold no slot, so listing them beside
+  // the live ones made "both of your 2 slots are in use" sit above four rows and
+  // read as a bug. They are still worth showing — a buyer wants to know why one
+  // was turned down — just not as though they were still in play.
+  const live = data.requests.filter((r) => r.state === 'submitted' || r.state === 'published')
+  const decided = data.requests.filter((r) => r.state !== 'submitted' && r.state !== 'published')
 
   async function submit() {
     setBusy(true); setError(null)
@@ -138,12 +155,23 @@ function MySlots({ mine }: { mine: ReturnType<typeof useApi<import('@trueglaz/co
 
       {error && <p className="wanted__error" role="alert">{error}</p>}
 
-      {data.requests.length > 0 && (
+      {live.length > 0 && (
         <ul className="wanted__list">
-          {data.requests.map((r) => (
+          {live.map((r) => (
             <MyRow key={r.id} request={r} busy={busy} onWithdraw={() => withdraw(r.id)} />
           ))}
         </ul>
+      )}
+
+      {decided.length > 0 && (
+        <details className="wanted__earlier">
+          <summary className="tg-muted">Earlier asks ({decided.length})</summary>
+          <ul className="wanted__list">
+            {decided.map((r) => (
+              <MyRow key={r.id} request={r} busy={busy} onWithdraw={() => withdraw(r.id)} />
+            ))}
+          </ul>
+        </details>
       )}
 
       {data.slotsLeft === 0 ? (
