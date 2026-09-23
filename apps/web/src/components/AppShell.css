@@ -196,3 +196,21 @@
   transition: background var(--tg-transition);
 }
 .search__go:hover { background: var(--tg-cta-hover); }
+
+.shell__sell-button {
+  padding: var(--tg-space-2) var(--tg-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-cta);
+  color: var(--tg-on-cta);
+  text-decoration: none;
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-bold);
+  cursor: pointer;
+  transition: background var(--tg-transition);
+  white-space: nowrap;
+}
+.shell__sell-button:hover {
+  background: var(--tg-cta-hover);
+  text-decoration: none;
+}

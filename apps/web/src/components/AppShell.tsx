@@ -1,6 +1,5 @@
 import { Link, NavLink, Outlet, useSearchParams } from 'react-router-dom'
 import { api, isAdmin, isOps, isStaff, useApi, useSession } from '@trueglaz/core'
-import { useTheme, type ThemeMode } from '../state/useTheme'
 import { AccountMenu } from './AccountMenu'
 import { HeaderSearch } from './HeaderSearch'
 import './AppShell.css'
@@ -25,7 +24,6 @@ export function AppShell() {
  * but a menu full of links that 403 is its own kind of broken.
  */
 function Header() {
-  const { mode, setMode } = useTheme()
   const { session, ready } = useSession()
 
   return (
@@ -37,6 +35,12 @@ function Header() {
         </NavLink>
 
         <HeaderSearch />
+
+        {session && (
+          <NavLink to="/sell" className="shell__sell-button">
+            Sell your gear
+          </NavLink>
+        )}
 
         <div className="shell__tools">
           {session && (
@@ -54,17 +58,6 @@ function Header() {
             </NavLink>
           ))}
 
-          <select
-            className="tg-select shell__theme"
-            value={mode}
-            onChange={(e) => setMode(e.target.value as ThemeMode)}
-            aria-label="Colour theme"
-          >
-            <option value="system">Auto</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-            <option value="midnight">Midnight</option>
-          </select>
         </div>
       </div>
 
@@ -109,7 +102,6 @@ function CategoryStrip() {
         </Link>
       ))}
       <span className="strip__spacer" />
-      {session && <NavLink to="/sell" className={stripClass}>Sell your gear</NavLink>}
       {isOps(session) && <NavLink to="/ops" className={stripClass}>Ops</NavLink>}
       {isStaff(session) && <NavLink to="/ops/fulfilment" className={stripClass}>Fulfilment</NavLink>}
       {isAdmin(session) && <NavLink to="/admin" className={stripClass}>Money</NavLink>}

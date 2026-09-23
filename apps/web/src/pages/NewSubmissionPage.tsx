@@ -21,7 +21,6 @@ export function NewSubmissionPage() {
   const existing = useApi(() => (id ? api.submission(id) : Promise.resolve(null)), [id])
 
   const [submissionId, setSubmissionId] = useState<string | null>(id ?? null)
-  const [pricingMode, setPricingMode] = useState('guided')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,7 +37,7 @@ export function NewSubmissionPage() {
 
   async function ensureSubmission(): Promise<string> {
     if (submissionId) return submissionId
-    const s = await api.createSubmission(pricingMode)
+    const s = await api.createSubmission('guided')
     setSubmissionId(s.id)
     return s.id
   }
@@ -89,31 +88,6 @@ export function NewSubmissionPage() {
   return (
     <div className="sell">
       <h1 className="sell__title">Consign an item</h1>
-
-      <section className="tg-card sell__panel">
-        <h2 className="sell__panel-title">How should we price it?</h2>
-        <div className="sell__modes">
-          <Mode
-            selected={pricingMode === 'guided'}
-            disabled={!!submissionId}
-            onClick={() => setPricingMode('guided')}
-            title="Guided"
-            blurb="We price it from comparable sales and list it straight away, as long as it meets your floor."
-          />
-          <Mode
-            selected={pricingMode === 'manual'}
-            disabled={!!submissionId}
-            onClick={() => setPricingMode('manual')}
-            title="Manual"
-            blurb="We propose a price and wait for you to agree, every time."
-          />
-        </div>
-        {submissionId && (
-          <p className="tg-muted sell__fineprint">
-            Pricing mode is fixed once the submission exists.
-          </p>
-        )}
-      </section>
 
       <section className="tg-card sell__panel">
         <h2 className="sell__panel-title">What are you sending?</h2>
@@ -223,18 +197,4 @@ function FeePreview({ salePriceMinor }: { salePriceMinor: number }) {
   )
 }
 
-function Mode({
-  selected, disabled, onClick, title, blurb,
-}: { selected: boolean; disabled: boolean; onClick: () => void; title: string; blurb: string }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`sell__mode${selected ? ' sell__mode--selected' : ''}`}
-    >
-      <strong>{title}</strong>
-      <span className="tg-muted">{blurb}</span>
-    </button>
-  )
-}
+
