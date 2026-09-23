@@ -579,3 +579,47 @@ export interface SessionInfo {
   lastSeenAt: string | null
   expiresAt: string
 }
+
+/** A published want. Carries the thing, never the person who wants it. */
+export interface WantedRequest {
+  id: string
+  wanted: string
+  productModelId: string | null
+  minGradeCode: string | null
+  minGradeLabel: string | null
+  maxPriceMinor: number | null
+  note: string | null
+  publishedAt: string | null
+}
+
+export interface MyRequest {
+  id: string
+  wanted: string
+  state: 'submitted' | 'published' | 'rejected' | 'withdrawn' | 'fulfilled' | string
+  minGradeCode: string | null
+  minGradeLabel: string | null
+  maxPriceMinor: number | null
+  note: string | null
+  rejectedReasonCode: string | null
+  createdAt: string | null
+  publishedAt: string | null
+}
+
+export interface MyRequests {
+  limit: number
+  openCount: number
+  slotsLeft: number
+  requests: MyRequest[]
+}
+
+export interface ReviewRequest {
+  id: string
+  wanted: string
+  state: string
+  fromCatalogue: boolean
+  minGradeCode: string | null
+  maxPriceMinor: number | null
+  note: string | null
+  rejectedReasonCode: string | null
+  createdAt: string | null
+}

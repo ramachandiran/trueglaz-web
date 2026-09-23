@@ -1,0 +1,70 @@
+.wanted { display: flex; flex-direction: column; gap: var(--tg-space-5); max-width: 1000px; }
+
+.wanted__head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--tg-space-3); }
+.wanted__title { margin: 0; font-size: var(--tg-text-xl); flex-basis: 100%; }
+.wanted__lede { margin: 0; flex: 1; max-width: 62ch; font-size: var(--tg-text-md); }
+.wanted__sell { text-decoration: none; white-space: nowrap; }
+.wanted__sell:hover { text-decoration: none; }
+
+.wanted__section-title { margin: 0; font-size: var(--tg-text-lg); }
+
+.wanted__mine { padding: var(--tg-space-4); display: flex; flex-direction: column; gap: var(--tg-space-3); }
+.wanted__mine-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tg-space-2);
+}
+.wanted__slots { font-size: var(--tg-text-sm); }
+.wanted__fineprint { margin: 0; font-size: var(--tg-text-sm); }
+.wanted__error { margin: 0; color: var(--tg-bad); font-size: var(--tg-text-sm); }
+
+.wanted__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--tg-space-2); }
+.wanted__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-3);
+  background: var(--tg-bg-sunken);
+  border-radius: var(--tg-radius-md);
+}
+.wanted__state { margin-left: var(--tg-space-2); }
+.wanted__row-meta { margin: var(--tg-space-1) 0 0; font-size: var(--tg-text-sm); }
+
+.wanted__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--tg-space-3) var(--tg-space-4);
+  padding-top: var(--tg-space-2);
+}
+.wanted__field { display: flex; flex-direction: column; gap: var(--tg-space-1); min-width: 0; }
+.wanted__field--wide { grid-column: 1 / -1; }
+.wanted__label {
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tg-text-muted);
+}
+.wanted__hint { font-size: var(--tg-text-xs); }
+.wanted__actions { grid-column: 1 / -1; display: flex; gap: var(--tg-space-2); flex-wrap: wrap; }
+
+/* The board itself: each want is a card, because each is one person's ask. */
+.wanted__board {
+  list-style: none;
+  margin: var(--tg-space-3) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--tg-space-3);
+}
+
+.want { padding: var(--tg-space-4); display: flex; flex-direction: column; gap: var(--tg-space-2); }
+.want__title { margin: 0; font-size: var(--tg-text-md); }
+.want__terms { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tg-space-2) var(--tg-space-3); }
+.want__budget { font-weight: var(--tg-weight-bold); font-variant-numeric: tabular-nums; }
+.want__grade { display: inline-flex; align-items: center; gap: var(--tg-space-2); font-size: var(--tg-text-sm); }
+.want__note { margin: 0; font-size: var(--tg-text-sm); font-style: italic; }
+.want__asked { margin: auto 0 0; font-size: var(--tg-text-xs); }

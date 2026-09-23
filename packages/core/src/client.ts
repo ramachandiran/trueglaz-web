@@ -4,7 +4,7 @@ import type {
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
-  PayoutAccountView, PlatformSetting, Profile, SessionInfo,
+  MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
   SellerApprovalView, Session, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
@@ -350,6 +350,22 @@ export const api = {
       reasonCode: reasonCode ?? null,
       note: note ?? null,
     }),
+
+  // -- wanted: what buyers are asking for ----------------------------------
+  wantedBoard: () => get<WantedRequest[]>('/requests'),
+  myRequests: () => get<MyRequests>('/requests/mine'),
+  askFor: (body: {
+    productModelId?: string | null
+    modelFreeText?: string | null
+    minGradeCode?: string | null
+    maxPriceMinor?: number | null
+    note?: string | null
+  }) => post<MyRequests>('/requests', body),
+  withdrawRequest: (id: string) => post<MyRequests>(`/requests/${id}/withdraw`),
+  requestQueue: () => get<ReviewRequest[]>('/requests/queue'),
+  publishRequest: (id: string) => post<ReviewRequest>(`/requests/${id}/publish`),
+  rejectRequest: (id: string, reasonCode: string) =>
+    post<ReviewRequest>(`/requests/${id}/reject`, { reasonCode }),
 
   // -- admin ---------------------------------------------------------------
   payoutQueue: (state?: string) =>
