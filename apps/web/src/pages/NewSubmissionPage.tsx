@@ -36,9 +36,14 @@ export function NewSubmissionPage() {
     underWarranty: '' as '' | 'yes' | 'no',
     hasBill: false,
     hasBox: false,
-    declaredGradeCode: 'TG-8',
+    hasAccessories: false,
+    // No default grade: a pre-filled one is a claim the seller never made.
+    declaredGradeCode: '',
     asking: '',
     floor: '',
+    // "Nothing" is a real answer, and the only way to tell it apart from an
+    // unanswered question is to record that they answered.
+    packagingAnswered: false,
   })
 
   const added = existing.data?.items ?? []
@@ -58,24 +63,26 @@ export function NewSubmissionPage() {
         // The model is typed; the API links it to a catalogue row when the
         // brand, type and name line up, so guided pricing still has something
         // to price against.
-        modelFreeText: item.modelFreeText || null,
+        modelFreeText: item.modelFreeText.trim(),
         categoryId: item.categoryId,
         brandId: item.brandId,
-        description: item.description || null,
-        reasonToSell: item.reasonToSell || null,
-        underWarranty: item.underWarranty === '' ? null : item.underWarranty === 'yes',
+        description: item.description.trim(),
+        reasonToSell: item.reasonToSell.trim(),
+        underWarranty: item.underWarranty === 'yes',
         hasBill: item.hasBill,
         hasBox: item.hasBox,
-        serialNumber: item.serialNumber || null,
+        hasAccessories: item.hasAccessories,
+        serialNumber: item.serialNumber.trim(),
         declaredGradeCode: item.declaredGradeCode,
         askingAmountMinor: Math.round(Number(item.asking) * 100),
-        floorAmountMinor: item.floor ? Math.round(Number(item.floor) * 100) : null,
+        floorAmountMinor: Math.round(Number(item.floor) * 100),
       })
       // The type and brand stay: a second item is usually more of the same.
       setItem({
         ...item,
         modelFreeText: '', description: '', reasonToSell: '', serialNumber: '',
-        underWarranty: '', hasBill: false, hasBox: false, asking: '', floor: '',
+        underWarranty: '', hasBill: false, hasBox: false, hasAccessories: false,
+        packagingAnswered: false, declaredGradeCode: '', asking: '', floor: '',
       })
       existing.reload()
       if (!id) nav(`/sell/${sid}`, { replace: true })
@@ -114,11 +121,36 @@ export function NewSubmissionPage() {
   const askingNum = Number(item.asking)
   const floorNum = Number(item.floor)
   const floorTooHigh = !!item.floor && !!item.asking && floorNum > askingNum
+
+  // Every question has to be answered before this goes anywhere. The API
+  // refuses a half-filled item too — this is so the seller finds out here,
+  // with the form still in front of them, rather than from a 400.
+  const missing = [
+    !item.categoryId && 'the type',
+    !item.brandId && 'the brand',
+    item.modelFreeText.trim().length <= 1 && 'the model',
+    !item.description.trim() && 'a description',
+    !item.reasonToSell.trim() && 'your reason for selling',
+    !item.serialNumber.trim() && 'the serial number',
+    item.underWarranty === '' && 'the warranty answer',
+    !item.packagingAnswered && 'what comes with it',
+    !item.declaredGradeCode && 'the condition',
+    !(askingNum > 0) && 'an asking price',
+    !(floorNum > 0) && 'a floor',
+  ].filter(Boolean) as string[]
+
   const canAdd =
-    askingNum > 0 &&
     !!item.categoryId &&
     !!item.brandId &&
     item.modelFreeText.trim().length > 1 &&
+    item.description.trim().length > 0 &&
+    item.reasonToSell.trim().length > 0 &&
+    item.serialNumber.trim().length > 0 &&
+    item.underWarranty !== '' &&
+    item.packagingAnswered &&
+    !!item.declaredGradeCode &&
+    askingNum > 0 &&
+    floorNum > 0 &&
     !floorTooHigh
 
   return (
@@ -137,6 +169,11 @@ export function NewSubmissionPage() {
 
       <section className="tg-card sell__panel">
         <h2 className="sell__panel-title">What are you sending?</h2>
+        <p className="tg-muted sell__fineprint">
+          Everything here is required. We take physical custody of your gear and
+          later send you money for it, so there is nothing on this form we can
+          usefully guess at.
+        </p>
 
         <fieldset className="sell__fieldset">
           <legend className="sell__field-label">Type</legend>
@@ -238,27 +275,59 @@ export function NewSubmissionPage() {
                 <input
                   type="checkbox"
                   checked={item.hasBill}
-                  onChange={(e) => setItem({ ...item, hasBill: e.target.checked })}
+                  onChange={(e) => setItem({ ...item, hasBill: e.target.checked, packagingAnswered: true })}
                 />
                 Original bill
               </label>
-              <label className={`sell__choice${item.hasBox ? ' sell__choice--on' : ''}`}>
+              <label className={`sell__choice${item.hasBox && !item.hasAccessories ? ' sell__choice--on' : ''}`}>
                 <input
                   type="checkbox"
-                  checked={item.hasBox}
-                  onChange={(e) => setItem({ ...item, hasBox: e.target.checked })}
+                  checked={item.hasBox && !item.hasAccessories}
+                  // Ticking the plain box clears the accessories claim: the two
+                  // are alternatives, not a box you tick twice.
+                  onChange={(e) =>
+                    setItem({ ...item, hasBox: e.target.checked, hasAccessories: false, packagingAnswered: true })}
                 />
                 Original box
               </label>
-              <label className={`sell__choice${!item.hasBill && !item.hasBox ? ' sell__choice--on' : ''}`}>
+              <label className={`sell__choice${item.hasAccessories ? ' sell__choice--on' : ''}`}>
                 <input
                   type="checkbox"
-                  checked={!item.hasBill && !item.hasBox}
-                  onChange={() => setItem({ ...item, hasBill: false, hasBox: false })}
+                  checked={item.hasAccessories}
+                  // Accessories come in the box, so this implies it.
+                  onChange={(e) =>
+                    setItem({
+                      ...item,
+                      hasAccessories: e.target.checked,
+                      hasBox: e.target.checked || item.hasBox,
+                      packagingAnswered: true,
+                    })}
                 />
-                Neither
+                Original box with accessories
+              </label>
+              <label
+                className={`sell__choice${
+                  item.packagingAnswered && !item.hasBill && !item.hasBox ? ' sell__choice--on' : ''
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={item.packagingAnswered && !item.hasBill && !item.hasBox}
+                  onChange={() =>
+                    setItem({
+                      ...item,
+                      hasBill: false,
+                      hasBox: false,
+                      hasAccessories: false,
+                      packagingAnswered: true,
+                    })}
+                />
+                None of these
               </label>
             </div>
+            <span className="tg-muted sell__hint">
+              Caps, hood, strap and charger are what a buyer means by accessories.
+            </span>
           </fieldset>
 
           <label className="sell__field">
@@ -268,6 +337,7 @@ export function NewSubmissionPage() {
               value={item.declaredGradeCode}
               onChange={(e) => setItem({ ...item, declaredGradeCode: e.target.value })}
             >
+              <option value="">Choose a condition…</option>
               {(grades.data ?? []).filter((g) => g.isActive).sort((a, b) => b.rank - a.rank).map((g) => (
                 <option key={g.code} value={g.code}>{g.code} · {g.label}</option>
               ))}
@@ -301,7 +371,8 @@ export function NewSubmissionPage() {
 
         <p className="tg-muted sell__fineprint">
           The floor is the lowest you'd accept. If our valuation lands below it we
-          ask you first instead of listing. Leave it blank and we won't have a line to hold.
+          ask you first instead of listing — it is your only say over what your gear
+          goes for, which is why we ask for it rather than leaving it to us.
         </p>
         {floorTooHigh && <p className="sell__error">Your floor is above your asking price.</p>}
         {askingNum > 0 && <FeePreview salePriceMinor={Math.round(askingNum * 100)} />}
@@ -309,6 +380,9 @@ export function NewSubmissionPage() {
         <button className="tg-button tg-button--primary" disabled={busy || !canAdd} onClick={addItem}>
           {busy ? 'Adding…' : 'Add to submission'}
         </button>
+        {missing.length > 0 && (
+          <p className="tg-muted sell__hint">Still needed: {missing.join(', ')}.</p>
+        )}
         {error && <p className="sell__error" role="alert">{error}</p>}
       </section>
 

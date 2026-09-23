@@ -218,15 +218,18 @@ export const api = {
       modelFreeText?: string | null
       categoryId: string
       brandId: string
-      description?: string | null
-      reasonToSell?: string | null
-      underWarranty?: boolean | null
-      hasBill?: boolean
-      hasBox?: boolean
-      serialNumber?: string | null
+      // The API refuses an item with any of these blank: they are what a buyer
+      // reads and what we check the serial against, so they are not optional.
+      description: string
+      reasonToSell: string
+      underWarranty: boolean
+      hasBill: boolean
+      hasBox: boolean
+      hasAccessories: boolean
+      serialNumber: string
       declaredGradeCode: string
       askingAmountMinor: number
-      floorAmountMinor?: number | null
+      floorAmountMinor: number
       declaredValueMinor?: number | null
       includedAccessories?: string[] | null
     },

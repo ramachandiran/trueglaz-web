@@ -63,10 +63,11 @@ export interface ConsignmentItem {
   brandId: string | null
   description: string | null
   reasonToSell: string | null
-  /** Null means the seller did not say, which is not the same as no. */
   underWarranty: boolean | null
   hasBill: boolean
   hasBox: boolean
+  /** The original box still has its accessories in it. Implies hasBox. */
+  hasAccessories: boolean
   serialNumber: string | null
   internalSku: string
   declaredGradeCode: string
