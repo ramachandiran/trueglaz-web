@@ -150,11 +150,51 @@ const EMPTY_ADDRESS = {
   label: '', recipientName: '', line1: '', line2: '', city: '', state: '', pincode: '', phone: '',
 }
 
+const INDIAN_STATES = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  'Andaman and Nicobar Islands',
+  'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi',
+  'Jammu and Kashmir',
+  'Ladakh',
+  'Lakshadweep',
+  'Puducherry',
+] as const
+
 function Addresses() {
   const list = useApi(() => api.myAddresses(), [])
   const [form, setForm] = useState(EMPTY_ADDRESS)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
 
   async function act(fn: () => Promise<Address[]>) {
     setBusy(true); setError(null)
@@ -168,6 +208,52 @@ function Addresses() {
 
   const rows = list.data ?? []
   const current = rows.find((a) => a.isDefault) ?? rows[0] ?? null
+  const validationError = validateAddressForm(form)
+
+  async function saveAddress() {
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setBusy(true)
+    setError(null)
+    try {
+      if (current) {
+        await api.removeAddress(current.id)
+      }
+      await api.addAddress({
+        ...form,
+        label: form.label.trim() || null,
+        line2: form.line2.trim() || null,
+        phone: form.phone.trim() || null,
+        isDefault: true,
+      })
+      setForm(EMPTY_ADDRESS)
+      setEditing(false)
+      list.reload()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'That did not work')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function startEdit() {
+    if (!current) return
+    setError(null)
+    setEditing(true)
+    setForm({
+      label: current.label ?? '',
+      recipientName: current.recipientName,
+      line1: current.line1,
+      line2: current.line2 ?? '',
+      city: current.city,
+      state: current.state ?? '',
+      pincode: current.pincode,
+      phone: current.phoneE164 ?? '',
+    })
+  }
 
   return (
     <section className="tg-card profile__section" id="addresses">
@@ -193,6 +279,9 @@ function Addresses() {
               </p>
             </div>
             <div className="profile__address-actions">
+              <button className="tg-button" disabled={busy} onClick={startEdit}>
+                Edit
+              </button>
               <button className="tg-button tg-button--subtle" disabled={busy} onClick={() => act(() => api.removeAddress(current.id))}>
                 Remove
               </button>
@@ -201,7 +290,7 @@ function Addresses() {
         </ul>
       )}
 
-      {!current && (
+      {(!current || editing) && (
         <div className="profile__address-form">
           <div className="profile__grid">
             <Field label="Label" hint="Home, office — whatever you'll recognise" value={form.label} onChange={(v) => setForm({ ...form, label: v })} />
@@ -209,21 +298,28 @@ function Addresses() {
             <Field label="Address line 1" wide value={form.line1} onChange={(v) => setForm({ ...form, line1: v })} />
             <Field label="Address line 2" wide value={form.line2} onChange={(v) => setForm({ ...form, line2: v })} />
             <Field label="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
-            <Field label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
+            <SelectField
+              label="State"
+              value={form.state}
+              onChange={(v) => setForm({ ...form, state: v })}
+              options={INDIAN_STATES}
+            />
             <Field label="PIN code" value={form.pincode} onChange={(v) => setForm({ ...form, pincode: v })} />
             <Field label="Phone" hint="For the courier" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
           </div>
           <div className="profile__actions">
             <button
               className="tg-button tg-button--primary"
-              disabled={busy || !form.recipientName.trim() || !form.line1.trim() || !form.city.trim() || !form.pincode.trim()}
-              onClick={async () => {
-                await act(() => api.addAddress({ ...form, isDefault: true }))
-                setForm(EMPTY_ADDRESS)
-              }}
+              disabled={busy || !!validationError}
+              onClick={saveAddress}
             >
-              {busy ? 'Saving…' : 'Save address'}
+              {busy ? 'Saving…' : current ? 'Save changes' : 'Save address'}
             </button>
+            {editing && (
+              <button className="tg-button" onClick={() => { setEditing(false); setForm(EMPTY_ADDRESS); setError(null) }}>
+                Cancel
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -568,4 +664,61 @@ function Field({
       {hint && <span className="tg-muted profile__hint">{hint}</span>}
     </label>
   )
+}
+
+function SelectField({
+  label, value, onChange, options,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: readonly string[]
+}) {
+  return (
+    <label className="profile__field">
+      <span className="profile__label">{label}</span>
+      <select className="tg-select" value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Select a state</option>
+        {options.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function validateAddressForm(form: typeof EMPTY_ADDRESS): string | null {
+  if (!form.recipientName.trim() || !form.line1.trim() || !form.city.trim() || !form.state.trim() || !form.pincode.trim()) {
+    return 'Recipient, address line 1, city, state, and PIN code are required.'
+  }
+
+  if (!/^[A-Za-z0-9 .,'&()/-]*$/.test(form.label)) {
+    return 'Label has unsupported special characters.'
+  }
+
+  if (!/^[A-Za-z .'-]+$/.test(form.recipientName.trim())) {
+    return 'Recipient name can only contain letters, spaces, apostrophes, periods, and hyphens.'
+  }
+
+  if (!/^[A-Za-z0-9 ,./#'()-]+$/.test(form.line1.trim())) {
+    return 'Address line 1 has unsupported special characters.'
+  }
+
+  if (form.line2.trim() && !/^[A-Za-z0-9 ,./#'()-]+$/.test(form.line2.trim())) {
+    return 'Address line 2 has unsupported special characters.'
+  }
+
+  if (!/^[A-Za-z .'-]+$/.test(form.city.trim())) {
+    return 'City can only contain letters, spaces, apostrophes, periods, and hyphens.'
+  }
+
+  if (!/^\d{6}$/.test(form.pincode.trim())) {
+    return 'PIN code must be exactly 6 digits.'
+  }
+
+  if (form.phone.trim() && !/^\+?[0-9 ]{10,15}$/.test(form.phone.trim())) {
+    return 'Phone must be 10 to 15 digits, with an optional leading +.'
+  }
+
+  return null
 }
