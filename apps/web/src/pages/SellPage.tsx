@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, useApi, HAPPY_PATH, STATE_LABELS,
   type SellerApprovalView,
@@ -17,6 +17,7 @@ type Tab = 'items' | 'approvals' | 'payouts'
  * blocks money moving — an item sits unlisted until the seller answers.
  */
 export function SellPage() {
+  const nav = useNavigate()
   const [tab, setTab] = useState<Tab>('items')
   const approvals = useApi(() => api.myApprovals(), [])
   const kyc = useApi(() => api.myKyc(), [])
@@ -48,6 +49,14 @@ export function SellPage() {
 
       <section className="sell__main" aria-label="Seller sections">
         <div className="sell__head">
+          <button
+            type="button"
+            onClick={() => nav('/')}
+            className="sell__back"
+            aria-label="Return to catalog"
+          >
+            ← Back to catalog
+          </button>
           <div>
             <p className="sell__eyebrow tg-muted">Your selling workspace</p>
             <h2 className="sell__main-title">Manage inventory, approvals, and payouts</h2>

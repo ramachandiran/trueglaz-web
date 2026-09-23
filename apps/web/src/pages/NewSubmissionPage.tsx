@@ -123,7 +123,17 @@ export function NewSubmissionPage() {
 
   return (
     <div className="consign">
-      <h1 className="sell__title">Consign an item</h1>
+      <div className="consign__header">
+        <button
+          type="button"
+          onClick={() => nav('/sell')}
+          className="consign__back"
+          aria-label="Go back to selling dashboard"
+        >
+          ←
+        </button>
+        <h1 className="sell__title">Consign an item</h1>
+      </div>
 
       <section className="tg-card sell__panel">
         <h2 className="sell__panel-title">What are you sending?</h2>
