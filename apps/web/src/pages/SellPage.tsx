@@ -59,6 +59,13 @@ export function SellPage() {
           )}
         </div>
 
+        {/* The one thing a seller cannot work out for themselves is what anybody
+            actually wants, so the board is offered before the tabs. */}
+        <p className="sell__wanted tg-muted">
+          Not sure what to send in? <Link to="/wanted">See what buyers are asking for</Link> —
+          every one of them is somebody waiting.
+        </p>
+
         <nav className="sell__tabs" aria-label="Seller sections">
           <TabButton active={tab === 'items'} onClick={() => setTab('items')} label="My items" />
           <TabButton

@@ -207,3 +207,5 @@
     padding: var(--tg-space-4);
   }
 }
+
+.sell__wanted { margin: 0 0 var(--tg-space-4); font-size: var(--tg-text-sm); }
