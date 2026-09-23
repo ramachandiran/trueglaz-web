@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  api, ApiError, dateOnly, money, useApi, useSession,
+  api, ApiError, dateOnly, money, relative, useApi, useSession,
   type MyRequest, type WantedRequest,
 } from '@trueglaz/core'
 import { Empty, ErrorNote, GradeBadge, Loading } from '../components/ui'
@@ -74,7 +74,10 @@ function BoardCard({ request }: { request: WantedRequest }) {
         )}
       </div>
       {request.note && <p className="want__note">“{request.note}”</p>}
-      <p className="want__asked tg-muted">Asked {dateOnly(request.createdAt)}</p>
+      <p className="want__asked tg-muted">
+        Asked {dateOnly(request.createdAt)}
+        {request.expiresAt && <> · <Expiry at={request.expiresAt} /></>}
+      </p>
     </li>
   )
 }
@@ -149,8 +152,8 @@ function MySlots({ mine }: { mine: ReturnType<typeof useApi<import('@trueglaz/co
       </div>
 
       <p className="tg-muted wanted__fineprint">
-        Two at a time, so the board stays a list of things people actually want. Withdraw
-        one and the slot comes straight back.
+        Two at a time, and each lasts {data.expiryDays} days, so the board stays a list of
+        things people actually want. Withdraw one and the slot comes straight back.
       </p>
 
       {error && <p className="wanted__error" role="alert">{error}</p>}
@@ -193,7 +196,8 @@ function MySlots({ mine }: { mine: ReturnType<typeof useApi<import('@trueglaz/co
               onChange={(e) => setForm({ ...form, modelFreeText: e.target.value })}
             />
             <span className="tg-muted wanted__hint">
-              The make and model is enough. A person reads this before it goes up.
+              The make and model is enough. A person reads this before it goes up,
+              and it stays on the board for {data.expiryDays} days.
             </span>
           </label>
 
@@ -270,6 +274,7 @@ function MyRow({ request, busy, onWithdraw }: {
           {request.maxPriceMinor != null && `up to ${money(request.maxPriceMinor)} · `}
           {request.minGradeLabel && `${request.minGradeLabel} or better · `}
           asked {dateOnly(request.createdAt)}
+          {open && request.expiresAt && <> · <Expiry at={request.expiresAt} /></>}
           {request.state === 'rejected' && request.rejectedReasonCode && (
             <> · turned down: {request.rejectedReasonCode.replace(/_/g, ' ')}</>
           )}
@@ -282,6 +287,24 @@ function MyRow({ request, busy, onWithdraw }: {
   )
 }
 
+/**
+ * How long an ask has left.
+ *
+ * A board of wants is only worth reading if every row is someone still waiting,
+ * so the clock is on the card rather than hidden in the data — a seller
+ * deciding what to consign against it should be able to see how long they have,
+ * and one running out in a day or two says so louder.
+ */
+function Expiry({ at }: { at: string }) {
+  const daysLeft = Math.ceil((new Date(at).getTime() - Date.now()) / 86_400_000)
+  if (daysLeft <= 0) return <span className="want__expiry want__expiry--soon">expires today</span>
+  return (
+    <span className={`want__expiry${daysLeft <= 3 ? ' want__expiry--soon' : ''}`}>
+      expires {relative(at)}
+    </span>
+  )
+}
+
 function label(state: string): string {
   switch (state) {
     case 'submitted': return 'Waiting on review'
@@ -289,6 +312,7 @@ function label(state: string): string {
     case 'rejected': return 'Not published'
     case 'withdrawn': return 'Withdrawn'
     case 'fulfilled': return 'Found'
+    case 'expired': return 'Expired'
     default: return state
   }
 }

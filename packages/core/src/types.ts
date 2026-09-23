@@ -601,12 +601,14 @@ export interface WantedRequest {
   /** When the buyer asked. A date is not identity; who asked is never sent. */
   createdAt: string | null
   publishedAt: string | null
+  /** When it drops off the board, two weeks after it went up. */
+  expiresAt: string | null
 }
 
 export interface MyRequest {
   id: string
   wanted: string
-  state: 'submitted' | 'published' | 'rejected' | 'withdrawn' | 'fulfilled' | string
+  state: 'submitted' | 'published' | 'rejected' | 'withdrawn' | 'fulfilled' | 'expired' | string
   minGradeCode: string | null
   minGradeLabel: string | null
   maxPriceMinor: number | null
@@ -614,12 +616,15 @@ export interface MyRequest {
   rejectedReasonCode: string | null
   createdAt: string | null
   publishedAt: string | null
+  expiresAt: string | null
 }
 
 export interface MyRequests {
   limit: number
   openCount: number
   slotsLeft: number
+  /** How long an ask lasts, so the form can say so before they write it. */
+  expiryDays: number
   requests: MyRequest[]
 }
 

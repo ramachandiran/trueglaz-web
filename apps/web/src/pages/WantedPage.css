@@ -83,3 +83,13 @@
 .wanted__earlier[open] > summary {
   margin-bottom: 4px;
 }
+
+/* How long an ask has left. Quiet until it is nearly up. */
+.want__expiry {
+  white-space: nowrap;
+}
+
+.want__expiry--soon {
+  color: var(--tg-cta);
+  font-weight: 600;
+}
