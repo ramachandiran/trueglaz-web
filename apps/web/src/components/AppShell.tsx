@@ -108,6 +108,7 @@ function CategoryStrip() {
           {b.name}
         </Link>
       ))}
+      <NavLink to="/wanted" className={stripClass}>Wanted</NavLink>
       <span className="strip__spacer" />
       {session && <NavLink to="/sell" className={stripClass}>Sell your gear</NavLink>}
       {isOps(session) && <NavLink to="/ops" className={stripClass}>Ops</NavLink>}

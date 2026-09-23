@@ -4,7 +4,7 @@ import { api, ApiError, dateOnly, money, useApi, isStaff, useSession } from '@tr
 import { Empty, ErrorNote, Loading, StateBadge } from '../components/ui'
 import './OpsPage.css'
 
-type Queue = 'intake' | 'inspect' | 'price'
+type Queue = 'intake' | 'inspect' | 'price' | 'wanted'
 
 /**
  * The operations floor, organised by what is waiting rather than by entity.
@@ -24,16 +24,18 @@ export function OpsPage() {
   const received = useApi(() => api.itemQueue('RECEIVED'), [])
   const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
   const graded = useApi(() => (staff ? api.itemQueue('GRADED') : Promise.resolve([])), [staff])
+  const wanted = useApi(() => (staff ? api.requestQueue() : Promise.resolve([])), [staff])
 
   // The session arrives after the first render, so the open queue is derived
   // rather than stored — a technician must never land on a tab that is not there.
-  const allowed: Queue[] = staff ? ['intake', 'inspect', 'price'] : ['inspect']
+  const allowed: Queue[] = staff ? ['intake', 'inspect', 'price', 'wanted'] : ['inspect']
   const active = allowed.includes(queue) ? queue : allowed[0]
 
   const counts = {
     intake: pending.data?.length ?? 0,
     inspect: (received.data?.length ?? 0) + (inInspection.data?.length ?? 0),
     price: graded.data?.length ?? 0,
+    wanted: wanted.data?.length ?? 0,
   }
 
   return (
@@ -44,11 +46,13 @@ export function OpsPage() {
         {staff && <Tab active={active === 'intake'} onClick={() => setQueue('intake')} label="Intake" count={counts.intake} />}
         <Tab active={active === 'inspect'} onClick={() => setQueue('inspect')} label="Inspection" count={counts.inspect} />
         {staff && <Tab active={active === 'price'} onClick={() => setQueue('price')} label="Pricing" count={counts.price} />}
+        {staff && <Tab active={active === 'wanted'} onClick={() => setQueue('wanted')} label="Requests" count={counts.wanted} />}
       </nav>
 
       {active === 'intake' && <IntakeQueue state={pending} />}
       {active === 'inspect' && <InspectQueue received={received} inProgress={inInspection} />}
       {active === 'price' && <PricingQueue state={graded} />}
+      {active === 'wanted' && <RequestQueue state={wanted} />}
     </div>
   )
 }
@@ -334,6 +338,100 @@ function PricingQueue({ state }: { state: ReturnType<typeof useApi<any>> }) {
             Pricing takes the fee snapshot. It is what the payout will read, whatever the fee table says later.
           </p>
         </article>
+      ))}
+    </div>
+  )
+}
+
+const REJECT_REASONS = [
+  { code: 'too_vague', label: 'Too vague to act on' },
+  { code: 'not_our_category', label: "Not something TrueGlaz deals in" },
+  { code: 'unrealistic_budget', label: 'Budget far below what these sell for' },
+  { code: 'duplicate_request', label: 'Already asked for by this buyer' },
+  { code: 'contact_details', label: 'Contains contact details or an off-platform offer' },
+  { code: 'inappropriate', label: 'Inappropriate wording' },
+]
+
+/**
+ * What buyers have asked for, waiting to go on the public board.
+ *
+ * This is the only place on the site where a member of the public writes words
+ * that other people will read, so nothing reaches the board unread — an
+ * unmoderated noticeboard on a marketplace becomes a channel for off-platform
+ * deals within a week.
+ */
+function RequestQueue({ state }: { state: ReturnType<typeof useApi<any>> }) {
+  const [busy, setBusy] = useState<string | null>(null)
+  const [rejecting, setRejecting] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  async function act(id: string, fn: () => Promise<unknown>) {
+    setBusy(id); setError(null)
+    try {
+      await fn()
+      setRejecting(null); setReason('')
+      state.reload()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'That did not work')
+    } finally { setBusy(null) }
+  }
+
+  if (state.loading) return <Loading label="Loading requests" />
+  if (state.error) return <ErrorNote error={state.error} onRetry={state.reload} />
+  const rows = state.data ?? []
+  if (rows.length === 0) {
+    return <Empty title="Nothing waiting" hint="Every request a buyer has sent in has been decided." />
+  }
+
+  return (
+    <div className="ops__list">
+      {error && <p className="ops__error" role="alert">{error}</p>}
+      {rows.map((r: any) => (
+        <section key={r.id} className="tg-card ops__card">
+          <div className="ops__inbound">
+            <div>
+              <strong>{r.wanted}</strong>
+              {r.fromCatalogue && <span className="tg-badge tg-badge--accent">from the catalogue</span>}
+              <div className="tg-muted ops__fineprint">
+                {r.maxPriceMinor != null && `up to ${money(r.maxPriceMinor)} · `}
+                {r.minGradeCode && `${r.minGradeCode} or better · `}
+                asked {dateOnly(r.createdAt)}
+              </div>
+              {r.note && <p className="ops__fineprint">“{r.note}”</p>}
+            </div>
+
+            {rejecting === r.id ? (
+              <span className="ops__inbound-actions">
+                <select className="tg-select" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason">
+                  <option value="">Pick a reason…</option>
+                  {REJECT_REASONS.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}
+                </select>
+                <button
+                  className="tg-button"
+                  disabled={!reason || busy === r.id}
+                  onClick={() => act(r.id, () => api.rejectRequest(r.id, reason))}
+                >
+                  Confirm
+                </button>
+                <button className="tg-button" onClick={() => { setRejecting(null); setReason('') }}>Cancel</button>
+              </span>
+            ) : (
+              <span className="ops__inbound-actions">
+                <button
+                  className="tg-button tg-button--primary"
+                  disabled={busy === r.id}
+                  onClick={() => act(r.id, () => api.publishRequest(r.id))}
+                >
+                  Put on the board
+                </button>
+                <button className="tg-button" disabled={busy === r.id} onClick={() => setRejecting(r.id)}>
+                  Turn down
+                </button>
+              </span>
+            )}
+          </div>
+        </section>
       ))}
     </div>
   )

@@ -14,6 +14,7 @@ import { OpsPage } from './pages/OpsPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SellPage } from './pages/SellPage'
+import { WantedPage } from './pages/WantedPage'
 import { SignInPage } from './pages/SignInPage'
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
           {/* Public storefront */}
           <Route path="/" element={<CatalogPage />} />
           <Route path="/listings/:id" element={<ListingDetailPage />} />
+          <Route path="/wanted" element={<WantedPage />} />
           <Route path="/sign-in" element={<SignInPage />} />
 
           {/* Buyer */}
