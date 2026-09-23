@@ -54,6 +54,15 @@ export function hasRole(s: Session | null, ...roles: string[]): boolean {
   return roles.some((r) => s.roles.includes(r))
 }
 
+/**
+ * Whether this person has a selling side at all.
+ *
+ * Not a role: an ordinary buyer and an ordinary seller both hold none. It is
+ * the KYC gate's own output, so nobody is ever asked to declare which they are
+ * — and nobody can answer it wrong.
+ */
+export const isSeller = (s: Session | null) => !!s?.sellerActivatedAt
+
 export const isStaff = (s: Session | null) => hasRole(s, 'staff')
 export const isTechnician = (s: Session | null) => hasRole(s, 'technician')
 export const isAdmin = (s: Session | null) => !!s?.roles.includes('admin')
@@ -150,9 +159,23 @@ export const api = {
     post<{
       token: string
       expiresAt: string
-      user: { userId: string; displayName: string; email: string | null; roles: string[] }
+      user: {
+        userId: string
+        displayName: string
+        email: string | null
+        roles: string[]
+        sellerActivatedAt: string | null
+      }
     }>('/auth/verify', { contact, code }),
-  me: () => get<{ userId: string; displayName: string; email: string | null; roles: string[] }>('/auth/me'),
+  me: () => get<{
+    userId: string
+    displayName: string
+    email: string | null
+    roles: string[]
+    // Restoring a session on boot rebuilds it from here, so this has to be
+    // declared or a later refactor drops the selling side on every reload.
+    sellerActivatedAt: string | null
+  }>('/auth/me'),
   logout: () => post<{ ok: boolean }>('/auth/logout'),
 
   // -- catalogue (public) --------------------------------------------------

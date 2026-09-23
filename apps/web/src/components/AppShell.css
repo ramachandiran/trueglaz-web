@@ -214,3 +214,62 @@
   background: var(--tg-cta-hover);
   text-decoration: none;
 }
+
+/* ---------------------------------------------------------------------------
+   Buying / Selling.
+
+   A view, not an identity: it sits in the brand bar so it is findable, and
+   reads as one control rather than two buttons so nobody mistakes it for a
+   pair of destinations. The track is darker than the bar it sits on, which is
+   what makes the selected half look lifted rather than merely coloured.
+   --------------------------------------------------------------------------- */
+.switch {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--tg-radius-pill);
+  background: color-mix(in srgb, var(--tg-brand) 72%, #000);
+  flex-shrink: 0;
+}
+
+.switch__tab {
+  border: 0;
+  cursor: pointer;
+  padding: var(--tg-space-2) var(--tg-space-4);
+  border-radius: var(--tg-radius-pill);
+  background: transparent;
+  color: var(--tg-on-brand-muted);
+  font: inherit;
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-bold);
+  white-space: nowrap;
+  transition: background var(--tg-transition), color var(--tg-transition);
+}
+
+.switch__tab:hover {
+  color: var(--tg-on-brand);
+}
+
+.switch__tab--on,
+.switch__tab--on:hover {
+  background: var(--tg-on-brand);
+  color: var(--tg-brand);
+}
+
+.switch__tab:focus-visible {
+  outline: 2px solid var(--tg-on-brand);
+  outline-offset: 2px;
+}
+
+/* On a phone the switch is a mode, so it gets its own line rather than being
+   squeezed between the search box and an avatar. */
+@media (max-width: 720px) {
+  .switch {
+    order: 3;
+    width: 100%;
+  }
+  .switch__tab {
+    flex-grow: 1;
+    padding-block: var(--tg-space-3);
+  }
+}

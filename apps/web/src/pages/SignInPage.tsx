@@ -53,6 +53,7 @@ export function SignInPage() {
         displayName: res.user.displayName,
         email: res.user.email,
         roles: res.user.roles,
+        sellerActivatedAt: res.user.sellerActivatedAt,
       })
       nav(from, { replace: true })
     } catch (err) {

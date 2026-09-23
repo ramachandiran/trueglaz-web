@@ -173,6 +173,13 @@ export interface Session {
   displayName: string
   email: string | null
   roles: string[]
+  /**
+   * When identity cleared and this person became a seller, or null.
+   *
+   * Set by passing KYC, never self-declared, which is why the app can show a
+   * selling side off the back of it without ever asking anyone what they are.
+   */
+  sellerActivatedAt: string | null
 }
 
 export interface Submission {
