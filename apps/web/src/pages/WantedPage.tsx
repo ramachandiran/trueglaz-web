@@ -19,6 +19,11 @@ export function WantedPage() {
   const { session } = useSession()
   const board = useApi(() => api.wantedBoard(), [])
   const mine = useApi(() => (session ? api.myRequests() : Promise.resolve(null)), [session?.userId])
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredBoard = (board.data ?? []).filter((r) =>
+    r.wanted.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div className="wanted">
@@ -34,9 +39,20 @@ export function WantedPage() {
       {session && <MySlots mine={mine} />}
 
       <section aria-label="Open requests">
-        <h2 className="wanted__section-title">
-          On the board{board.data ? ` (${board.data.length})` : ''}
-        </h2>
+        <div className="wanted__board-header">
+          <h2 className="wanted__section-title">
+            On the board{board.data ? ` (${board.data.length})` : ''}
+          </h2>
+          <div className="wanted__search-box">
+            <input
+              className="tg-input"
+              type="search"
+              placeholder="Search for items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
 
         {board.loading && <Loading label="Loading the board" />}
         {board.error && <ErrorNote error={board.error} onRetry={board.reload} />}
@@ -48,10 +64,22 @@ export function WantedPage() {
           />
         )}
 
-        {(board.data?.length ?? 0) > 0 && (
-          <ul className="wanted__board">
-            {(board.data ?? []).map((r) => <BoardCard key={r.id} request={r} />)}
-          </ul>
+        {(filteredBoard.length ?? 0) > 0 && (
+          <>
+            <p className="wanted__search-results tg-muted">
+              {filteredBoard.length} of {board.data?.length} {(board.data?.length ?? 0) === 1 ? 'request' : 'requests'}
+            </p>
+            <ul className="wanted__board">
+              {filteredBoard.map((r) => <BoardCard key={r.id} request={r} />)}
+            </ul>
+          </>
+        )}
+
+        {searchTerm && filteredBoard.length === 0 && (
+          <Empty
+            title="No matches found"
+            hint={`No one is looking for "${searchTerm}" right now.`}
+          />
         )}
       </section>
     </div>

@@ -8,6 +8,34 @@
 
 .wanted__section-title { margin: 0; font-size: var(--tg-text-lg); }
 
+.wanted__board-header {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-3);
+  margin-bottom: var(--tg-space-3);
+}
+
+.wanted__board-header .wanted__section-title {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wanted__search-box {
+  flex: 1;
+  min-width: 0;
+}
+
+.wanted__search-box .tg-input {
+  width: 100%;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  font-size: var(--tg-text-md);
+}
+
+.wanted__search-results {
+  margin: var(--tg-space-2) 0 var(--tg-space-3);
+  font-size: var(--tg-text-sm);
+}
+
 .wanted__mine { padding: var(--tg-space-4); display: flex; flex-direction: column; gap: var(--tg-space-3); }
 .wanted__mine-head {
   display: flex;
@@ -87,9 +115,11 @@
 /* How long an ask has left. Quiet until it is nearly up. */
 .want__expiry {
   white-space: nowrap;
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-xs);
 }
 
 .want__expiry--soon {
-  color: var(--tg-cta);
-  font-weight: 600;
+  color: var(--tg-warn);
+  font-weight: var(--tg-weight-bold);
 }
