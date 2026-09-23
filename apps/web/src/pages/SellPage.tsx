@@ -217,27 +217,42 @@ function MyItems() {
       ) : visibleRows.length === 0 ? (
         <Empty title="Nothing matches that status" hint="Try a different status or switch back to All statuses." />
       ) : (
-        <div className="sell__list">
+        <div className="sell__widgets">
           {visibleRows.map(({ item, title, kind, category }) => (
-            <Link key={item.id} to={`/items/${item.id}`} className="sell__row tg-card">
-              <div className="sell__row-main">
+            <Link key={item.id} to={`/items/${item.id}`} className="sell__widget tg-card">
+              <div className="sell__widget-image">
                 <GearPhoto kind={kind} size="thumb" alt={title} />
-                <div className="sell__row-copy">
-                  <strong className="sell__row-title">{title}</strong>
-                  <div className="sell__row-meta tg-muted">
-                    <span className="tg-mono">{item.internalSku}</span>
-                    {category && <span>{category.name}</span>}
+              </div>
+              <div className="sell__widget-content">
+                <div className="sell__widget-header">
+                  <strong className="sell__widget-title">{title}</strong>
+                  <div className="sell__widget-badges">
+                    <StateBadge state={item.currentState} />
+                    {item.assignedGradeCode && <GradeBadge code={item.assignedGradeCode} />}
                   </div>
                 </div>
-                <div className="sell__row-status">
-                  <StateBadge state={item.currentState} />
-                  {item.assignedGradeCode && <GradeBadge code={item.assignedGradeCode} />}
-                </div>
+                <p className="tg-muted sell__widget-meta">
+                  <span className="tg-mono">{item.internalSku}</span>
+                  {category && <span>{category.name}</span>}
+                </p>
               </div>
-              <div className="sell__row-meta tg-muted">
-                <span>Declared {item.declaredGradeCode}</span>
-                <span>Asking {money(item.askingAmountMinor)}</span>
-                {item.floorAmountMinor != null && <span>Floor {money(item.floorAmountMinor)}</span>}
+              <div className="sell__widget-footer">
+                <div className="sell__widget-prices">
+                  <div className="sell__widget-price-item">
+                    <span className="tg-muted">Declared</span>
+                    <strong>{item.declaredGradeCode}</strong>
+                  </div>
+                  <div className="sell__widget-price-item">
+                    <span className="tg-muted">Asking</span>
+                    <strong>{money(item.askingAmountMinor)}</strong>
+                  </div>
+                  {item.floorAmountMinor != null && (
+                    <div className="sell__widget-price-item">
+                      <span className="tg-muted">Floor</span>
+                      <strong>{money(item.floorAmountMinor)}</strong>
+                    </div>
+                  )}
+                </div>
               </div>
             </Link>
           ))}

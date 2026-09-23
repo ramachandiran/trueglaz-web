@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError, money, singularCategory, useApi } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
@@ -15,6 +15,7 @@ import './SellPage.css'
 export function NewSubmissionPage() {
   const { id } = useParams()
   const nav = useNavigate()
+  const tooltipRef = useRef<HTMLDivElement>(null)
 
   const models = useApi(() => api.models(), [])
   const grades = useApi(() => api.grades(), [])
@@ -24,7 +25,22 @@ export function NewSubmissionPage() {
 
   const [submissionId, setSubmissionId] = useState<string | null>(id ?? null)
   const [busy, setBusy] = useState(false)
+  const [showGradeTooltip, setShowGradeTooltip] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    if (!showGradeTooltip) return
+
+    function handleClickOutside(e: MouseEvent) {
+      if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+        setShowGradeTooltip(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showGradeTooltip])
 
   const [item, setItem] = useState({
     categoryId: '',
@@ -330,8 +346,19 @@ export function NewSubmissionPage() {
             </span>
           </fieldset>
 
-          <label className="sell__field">
-            <span className="sell__field-label">Condition, in your view</span>
+          <div ref={tooltipRef} className="sell__field-container">
+            <label className="sell__field">
+              <div className="sell__field-header">
+                <span className="sell__field-label">Condition, in your view</span>
+                <button
+                  type="button"
+                  className="sell__info-icon"
+                  onClick={() => setShowGradeTooltip(!showGradeTooltip)}
+                  aria-label="Show condition grades"
+                >
+                  ℹ️
+                </button>
+              </div>
             <select
               className="tg-select"
               value={item.declaredGradeCode}
@@ -342,10 +369,31 @@ export function NewSubmissionPage() {
                 <option key={g.code} value={g.code}>{g.code} · {g.label}</option>
               ))}
             </select>
+            {showGradeTooltip && (
+              <div className="sell__grade-tooltip">
+                <table className="sell__grade-table">
+                  <thead>
+                    <tr>
+                      <th>Grade</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(grades.data ?? []).filter((g) => g.isActive).sort((a, b) => b.rank - a.rank).map((g) => (
+                      <tr key={g.code}>
+                        <td className="sell__grade-code">{g.code}</td>
+                        <td>{g.label}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <span className="tg-muted sell__hint">
               Ours is what the listing carries — a technician grades it on arrival.
             </span>
-          </label>
+            </label>
+          </div>
 
           <label className="sell__field">
             <span className="sell__field-label">Asking price (₹)</span>
