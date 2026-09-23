@@ -209,3 +209,72 @@
 }
 
 .sell__wanted { margin: 0 0 var(--tg-space-4); font-size: var(--tg-text-sm); }
+
+/* ---------------------------------------------------------------------------
+   The consignment form. Radios and checkboxes as pressable chips rather than
+   bare inputs: they are the fields a seller answers fastest, and a chip says
+   "pick one of these" more clearly than a dot does.
+   --------------------------------------------------------------------------- */
+.sell__fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.sell__fieldset > .sell__field-label { padding: 0; }
+
+.sell__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tg-space-2);
+  margin-top: var(--tg-space-1);
+}
+
+.sell__choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-2) var(--tg-space-3);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-pill);
+  font-size: var(--tg-text-sm);
+  cursor: pointer;
+  transition: border-color var(--tg-transition), background var(--tg-transition);
+}
+.sell__choice:hover { border-color: var(--tg-border-strong); }
+.sell__choice--on {
+  border-color: var(--tg-accent);
+  background: var(--tg-accent-soft);
+  font-weight: var(--tg-weight-medium);
+}
+
+.sell__textarea { resize: vertical; font: inherit; line-height: 1.5; }
+
+.sell__hint { font-size: var(--tg-text-xs); }
+
+.sell__matched {
+  font-size: var(--tg-text-xs);
+  color: var(--tg-good);
+}
+
+.sell__photos {
+  padding: var(--tg-space-3);
+  border: 1px dashed var(--tg-border-strong);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bg-sunken);
+}
+
+/*
+ * The consignment form is one column, not the seller dashboard.
+ *
+ * It borrows `.sell__panel` and `.sell__field` for their looks, but `.sell`
+ * itself is now a sidebar-plus-main grid, and a page that dropped its children
+ * straight into it had them landing in alternate columns — the form squeezed
+ * into the 264px rail while the pricing card sat beside it.
+ */
+.consign {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-4);
+  max-width: 860px;
+}

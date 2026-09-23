@@ -216,6 +216,13 @@ export const api = {
     body: {
       productModelId?: string | null
       modelFreeText?: string | null
+      categoryId: string
+      brandId: string
+      description?: string | null
+      reasonToSell?: string | null
+      underWarranty?: boolean | null
+      hasBill?: boolean
+      hasBox?: boolean
       serialNumber?: string | null
       declaredGradeCode: string
       askingAmountMinor: number

@@ -59,6 +59,14 @@ export interface ConsignmentItem {
   sellerUserId: string
   productModelId: string | null
   modelFreeText: string | null
+  categoryId: string | null
+  brandId: string | null
+  description: string | null
+  reasonToSell: string | null
+  /** Null means the seller did not say, which is not the same as no. */
+  underWarranty: boolean | null
+  hasBill: boolean
+  hasBox: boolean
   serialNumber: string | null
   internalSku: string
   declaredGradeCode: string

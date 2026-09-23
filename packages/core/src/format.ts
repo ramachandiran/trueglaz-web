@@ -41,3 +41,18 @@ export function relative(iso?: string | null): string {
   }
   return rtf.format(secs, 'second')
 }
+
+/**
+ * The singular of a category name.
+ *
+ * A naive trailing-s strip turns "Lenses" into "Lense". The list is short and
+ * known, so it is spelled out rather than guessed at.
+ */
+export function singularCategory(name: string): string {
+  const known: Record<string, string> = {
+    Lenses: 'Lens',
+    Cameras: 'Camera',
+    Accessories: 'Accessory',
+  }
+  return known[name] ?? name.replace(/s$/, '')
+}

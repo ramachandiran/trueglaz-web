@@ -7,7 +7,7 @@ import { GearPhoto, photoKindFor } from '../components/GearPhoto'
 import { GradeBadge, Empty, ErrorNote, Loading } from '../components/ui'
 import {
   applyFilters, buildModelIndex, countBy, EMPTY_FILTERS,
-  resolveModel, type Facetable, type Filters, type Sort,
+  resolveModel, singularCategory, type Facetable, type Filters, type Sort,
 } from '@trueglaz/core'
 import { money } from '@trueglaz/core'
 import './CatalogPage.css'
@@ -166,7 +166,7 @@ export function CatalogPage() {
                     </Link>
                     <p className="result__brand tg-muted">
                       {model?.brandId ? brandById.get(model.brandId) ?? '' : 'Unlisted model'}
-                      {category && ` · ${singular(category.name)}`}
+                      {category && ` · ${singularCategory(category.name)}`}
                     </p>
 
                     <div className="result__grade">
@@ -199,10 +199,4 @@ export function CatalogPage() {
 
     </div>
   )
-}
-
-/** "Lenses" is not a "Lense". Small list, explicit answer. */
-function singular(name: string): string {
-  const known: Record<string, string> = { Lenses: 'Lens', Cameras: 'Camera', Accessories: 'Accessory' }
-  return known[name] ?? name.replace(/s$/, '')
 }
