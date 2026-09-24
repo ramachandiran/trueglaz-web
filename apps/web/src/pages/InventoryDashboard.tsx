@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, money, useApi, useSession, isStaff } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading, StateBadge } from '../components/ui'
 import './InventoryDashboard.css'
@@ -13,6 +14,7 @@ type View = 'all' | 'pending-approval' | 'listed' | 'graded' | 'in-inspection'
  */
 export function InventoryDashboard() {
   const { session } = useSession()
+  const nav = useNavigate()
   const [view, setView] = useState<View>('all')
   const [search, setSearch] = useState('')
 
@@ -130,7 +132,11 @@ export function InventoryDashboard() {
                   <td>{money(item.askingAmountMinor || 0)}</td>
                   <td>{money(item.floorAmountMinor || 0)}</td>
                   <td>
-                    <button className="tg-button tg-button--secondary inv__action-btn" title="View item details">
+                    <button
+                      className="tg-button tg-button--secondary inv__action-btn"
+                      title="View item details"
+                      onClick={() => nav(`/ops/items?id=${item.id}`)}
+                    >
                       View
                     </button>
                   </td>
