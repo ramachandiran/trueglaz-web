@@ -135,7 +135,7 @@ export function InventoryDashboard() {
                     <button
                       className="tg-button tg-button--secondary inv__action-btn"
                       title="View item details"
-                      onClick={() => nav(`/ops/items?id=${item.id}`)}
+                      onClick={() => nav(`/items/${item.id}`)}
                     >
                       View
                     </button>
