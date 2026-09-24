@@ -12,6 +12,24 @@
   flex-wrap: wrap;
 }
 
+.detail__back {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--tg-accent);
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+  text-decoration: none;
+  transition: opacity 150ms;
+  align-self: center;
+  margin: 0 0 var(--tg-space-3);
+}
+
+.detail__back:hover {
+  opacity: 0.8;
+}
+
 .detail__eyebrow { margin: 0 0 var(--tg-space-1); }
 
 .detail__title {

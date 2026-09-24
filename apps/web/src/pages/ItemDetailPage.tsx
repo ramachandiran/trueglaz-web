@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { InspectionReport } from '../components/InspectionReport'
@@ -12,6 +12,7 @@ import './DetailPage.css'
 
 export function ItemDetailPage() {
   const { id = '' } = useParams()
+  const nav = useNavigate()
   const { data, error, loading, reload } = useApi(() => api.item(id), [id])
   // The item carries a productModelId, not a name, so the catalogue supplies the
   // words a person would recognise.
@@ -40,6 +41,9 @@ export function ItemDetailPage() {
   return (
     <article className="detail">
       <header className="detail__head">
+        <button className="detail__back" onClick={() => nav(-1)} title="Go back">
+          ← Back
+        </button>
         <div>
           <p className="detail__eyebrow tg-mono tg-muted">{item.internalSku}</p>
           <h1 className="detail__title">
