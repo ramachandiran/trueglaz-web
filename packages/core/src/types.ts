@@ -646,3 +646,79 @@ export interface ReviewRequest {
   rejectedReasonCode: string | null
   createdAt: string | null
 }
+
+/**
+ * One unit as the admin sees it: every fact the platform holds about it,
+ * flattened onto one row. Nullable almost throughout, because a DRAFT item has
+ * no listing, no sale and no bin, and a null says so more honestly than a zero.
+ */
+export interface InventoryRow {
+  id: string
+  internalSku: string
+  serialNumber: string | null
+  currentState: string
+
+  categoryName: string | null
+  brandName: string | null
+  modelName: string | null
+  modelFreeText: string | null
+  fromCatalogue: boolean
+  description: string | null
+  reasonToSell: string | null
+
+  declaredGradeCode: string | null
+  assignedGradeCode: string | null
+  underWarranty: boolean | null
+  hasBill: boolean
+  hasBox: boolean
+  hasAccessories: boolean
+
+  askingAmountMinor: number | null
+  floorAmountMinor: number | null
+  declaredValueMinor: number | null
+  listingPriceMinor: number | null
+  commissionMinor: number | null
+  expectedNetMinor: number | null
+
+  sellerUserId: string | null
+  sellerName: string | null
+  sellerEmail: string | null
+
+  submissionId: string | null
+  submissionState: string | null
+  pricingMode: string | null
+  courierCode: string | null
+  trackingNumber: string | null
+  shipmentState: string | null
+
+  binCode: string | null
+  binZone: string | null
+  isQuarantineBin: boolean | null
+
+  inspectionQcState: string | null
+  inspectionOutcome: string | null
+  technicianName: string | null
+  qcName: string | null
+  shutterCount: number | null
+  defectCount: number
+  disclosedDefectCount: number
+
+  listingState: string | null
+  listingTitle: string | null
+
+  orderNumber: string | null
+  orderState: string | null
+  orderLineState: string | null
+  buyerUserId: string | null
+  buyerName: string | null
+
+  payoutState: string | null
+  payoutNetMinor: number | null
+  payoutPaidAt: string | null
+
+  consignmentExpiresAt: string | null
+  listedAt: string | null
+  soldAt: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}

@@ -1,6 +1,8 @@
-import { useState } from 'react'
-import { api, ApiError, dateOnly, dateTime, money, useApi } from '@trueglaz/core'
+import { useMemo, useState } from 'react'
+import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow } from '@trueglaz/core'
+import { InventoryTable } from '../components/InventoryTable'
 import { Empty, ErrorNote, Loading } from '../components/ui'
+import './AdminPage.css'
 import './OpsPage.css'
 
 const REJECT_REASONS = [
@@ -11,13 +13,20 @@ const REJECT_REASONS = [
 ]
 
 /**
- * Money: the payout queue and the books.
+ * The admin dashboard.
  *
- * Reconciliation is the headline because it is the one number that says whether
- * the ledger still adds up — escrow should hold exactly what has been paid for
- * but not yet accepted, and nothing else.
+ * Every other queue in the app answers one question for one role — what to
+ * inspect, what to price, what to pack. This answers the one nobody else is
+ * asked: what does the platform have, all of it, and what is each unit doing.
+ *
+ * Two halves. The inventory is the whole shelf, filterable by any column and
+ * openable to the entire record of a unit. The books are underneath it, because
+ * reconciliation is the number that says whether any of the rest can be
+ * believed — escrow should hold exactly what has been paid for and not yet
+ * accepted, and nothing else.
  */
 export function AdminPage() {
+  const inventory = useApi(() => api.inventory(), [])
   const recon = useApi(() => api.reconciliation(), [])
   const pending = useApi(() => api.payoutQueue('pending'), [])
   const onHold = useApi(() => api.payoutQueue('on_hold'), [])
@@ -38,9 +47,22 @@ export function AdminPage() {
   }
 
   return (
-    <div className="ops">
-      <h1 className="ops__title">Money</h1>
+    <div className="ops admin">
+      <h1 className="ops__title">Dashboard</h1>
       {error && <p className="ops__error" role="alert">{error}</p>}
+
+      <Widgets inventory={inventory.data} recon={recon.data} />
+
+      <section className="tg-card ops__card">
+        <h2 className="ops__subtitle">Inventory</h2>
+        <p className="tg-muted ops__fineprint">
+          Every unit the platform has ever taken in. Filter on any column, or open a row
+          for everything known about that one.
+        </p>
+        {inventory.loading && <Loading label="Loading inventory" />}
+        {inventory.error && <ErrorNote error={inventory.error} onRetry={inventory.reload} />}
+        {inventory.data && <InventoryTable rows={inventory.data} />}
+      </section>
 
       <section className="tg-card ops__card">
         <h2 className="ops__subtitle">Escrow reconciliation</h2>
@@ -106,6 +128,79 @@ export function AdminPage() {
       <KycQueue />
 
       <LedgerFeed />
+    </div>
+  )
+}
+
+/**
+ * The numbers worth knowing before scrolling.
+ *
+ * Counted from the inventory rather than asked for separately, so a tile and
+ * the table beneath it can never disagree — a dashboard whose headline says
+ * eleven above a list of nine is worse than no headline.
+ */
+function Widgets({ inventory, recon }: {
+  inventory: InventoryRow[] | null
+  recon: { escrow_liability_held: number; seller_payable_total: number } | null
+}) {
+  const w = useMemo(() => {
+    const rows = inventory ?? []
+    const inState = (...states: string[]) => rows.filter((r) => states.includes(r.currentState))
+
+    const onSale = inState('LISTED', 'RESERVED')
+    const inCustody = inState('RECEIVED', 'IN_INSPECTION', 'GRADED', 'PRICE_PROPOSED', 'AWAITING_SELLER_APPROVAL', 'LISTED', 'RESERVED', 'UNSOLD_REVIEW')
+    const inbound = inState('SUBMITTED', 'PRE_APPROVED', 'IN_TRANSIT_INBOUND')
+    const sold = inState('SOLD', 'DISPATCHED', 'DELIVERED', 'ACCEPTED', 'ARCHIVED')
+
+    // What an admin has to act on personally, as opposed to merely watch.
+    const attention = rows.filter((r) =>
+      r.currentState === 'QUARANTINED' ||
+      r.currentState === 'AWAITING_SELLER_APPROVAL' ||
+      r.currentState === 'RETURN_REQUESTED' ||
+      r.currentState === 'INSPECTION_FAILED' ||
+      r.payoutState === 'pending' || r.payoutState === 'on_hold')
+
+    const sum = (xs: InventoryRow[], f: (r: InventoryRow) => number | null) =>
+      xs.reduce((t, r) => t + (f(r) ?? 0), 0)
+
+    return {
+      total: rows.length,
+      onSale: onSale.length,
+      onSaleValue: sum(onSale, (r) => r.listingPriceMinor ?? r.askingAmountMinor),
+      inCustody: inCustody.length,
+      inbound: inbound.length,
+      sold: sold.length,
+      soldValue: sum(sold, (r) => r.listingPriceMinor),
+      attention: attention.length,
+    }
+  }, [inventory])
+
+  return (
+    <div className="admin__widgets">
+      <Widget label="Units, all time" value={String(w.total)} note={`${w.inbound} on their way in`} />
+      <Widget label="On sale now" value={String(w.onSale)} note={money(w.onSaleValue)} />
+      <Widget label="In our custody" value={String(w.inCustody)} note="received, graded or listed" />
+      <Widget label="Sold" value={String(w.sold)} note={money(w.soldValue)} />
+      <Widget
+        label="Needs a decision"
+        value={String(w.attention)}
+        note="quarantine, approvals, returns, payouts"
+        tone={w.attention > 0 ? 'warn' : undefined}
+      />
+      <Widget label="Held in escrow" value={recon ? money(recon.escrow_liability_held) : '—'} note="paid for, not yet accepted" />
+      <Widget label="Owed to sellers" value={recon ? money(recon.seller_payable_total) : '—'} note="after commission" />
+    </div>
+  )
+}
+
+function Widget({ label, value, note, tone }: {
+  label: string; value: string; note?: string; tone?: 'warn'
+}) {
+  return (
+    <div className={`admin__widget${tone ? ` admin__widget--${tone}` : ''}`}>
+      <span className="admin__widget-label">{label}</span>
+      <strong className="admin__widget-value">{value}</strong>
+      {note && <span className="admin__widget-note tg-muted">{note}</span>}
     </div>
   )
 }

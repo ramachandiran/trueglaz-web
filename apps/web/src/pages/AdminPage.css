@@ -1,0 +1,63 @@
+/* ---------------------------------------------------------------------------
+   The admin dashboard's headline numbers.
+
+   A row of tiles that wraps rather than scrolls: an admin reads these at a
+   glance before deciding whether to scroll at all, and a number that has slid
+   off the side is a number nobody saw.
+   --------------------------------------------------------------------------- */
+.admin__widgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  gap: var(--tg-space-3);
+  margin-bottom: var(--tg-space-5);
+}
+
+.admin__widget {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--tg-space-4);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+}
+
+/* Only the tile that wants doing gets colour. A dashboard where everything is
+   highlighted has highlighted nothing. */
+.admin__widget--warn {
+  border-color: var(--tg-warn);
+  background: var(--tg-warn-soft);
+}
+
+.admin__widget-label {
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.admin__widget--warn .admin__widget-label,
+.admin__widget--warn .admin__widget-value {
+  color: var(--tg-warn);
+}
+
+.admin__widget-value {
+  font-size: 1.75rem;
+  line-height: 1.15;
+  font-weight: var(--tg-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin__widget-note {
+  font-size: var(--tg-text-xs);
+}
+
+@media (max-width: 600px) {
+  .admin__widgets {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+  .admin__widget-value {
+    font-size: 1.4rem;
+  }
+}

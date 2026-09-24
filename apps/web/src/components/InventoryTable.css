@@ -1,0 +1,218 @@
+/* ---------------------------------------------------------------------------
+   The inventory table.
+
+   Wide by design — an admin is scanning across a unit's whole life — so it
+   scrolls sideways inside its card rather than forcing the page to. The header
+   and its filter row stay put while the body moves, because a filter you have
+   to scroll back to is a filter you stop using.
+   --------------------------------------------------------------------------- */
+.stock__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-3);
+  margin-bottom: var(--tg-space-3);
+}
+
+.stock__count {
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+}
+
+.stock__clear {
+  padding: var(--tg-space-1) var(--tg-space-3);
+  font-size: var(--tg-text-xs);
+}
+
+.stock__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+}
+
+.stock__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tg-text-sm);
+  white-space: nowrap;
+}
+
+.stock__head th,
+.stock__filters th {
+  position: sticky;
+  background: var(--tg-bg-sunken);
+  text-align: left;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  border-bottom: 1px solid var(--tg-border);
+}
+
+.stock__head th { top: 0; z-index: 2; }
+.stock__filters th { top: 38px; z-index: 1; }
+
+.stock__sort {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tg-text-muted);
+}
+
+.stock__sort:hover { color: var(--tg-text); }
+
+.stock__select {
+  width: 100%;
+  min-width: 110px;
+  padding: 3px var(--tg-space-2);
+  font-size: var(--tg-text-xs);
+}
+
+.stock__nofilter {
+  display: block;
+  color: var(--tg-border-strong);
+  font-size: var(--tg-text-xs);
+}
+
+.stock__row {
+  cursor: pointer;
+  border-bottom: 1px solid var(--tg-bg-sunken);
+}
+
+.stock__row:hover { background: var(--tg-bg-hover); }
+.stock__row--open { background: var(--tg-bg-hover); }
+
+.stock__row > td {
+  padding: var(--tg-space-2) var(--tg-space-3);
+  vertical-align: middle;
+}
+
+.stock__sku {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.stock__caret {
+  color: var(--tg-text-muted);
+  font-size: 0.7rem;
+}
+
+.stock__item {
+  display: block;
+  font-weight: var(--tg-weight-medium);
+}
+
+.stock__sub {
+  display: block;
+  font-size: var(--tg-text-xs);
+}
+
+.stock__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock__when { font-size: var(--tg-text-xs); }
+
+.stock__empty {
+  padding: var(--tg-space-5);
+  text-align: center;
+}
+
+/* -- one unit, opened ------------------------------------------------------ */
+.dossier {
+  margin-top: var(--tg-space-4);
+  padding: var(--tg-space-4);
+  background: var(--tg-bg-sunken);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  white-space: normal;
+}
+
+.dossier__sku { font-size: var(--tg-text-xs); }
+
+.dossier__actions {
+  display: flex;
+  gap: var(--tg-space-2);
+  flex-shrink: 0;
+}
+
+.dossier__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tg-space-3);
+  margin-bottom: var(--tg-space-4);
+}
+
+.dossier__title {
+  margin: 0 0 2px;
+  font-size: var(--tg-text-lg);
+}
+
+.dossier__open {
+  padding: var(--tg-space-2) var(--tg-space-3);
+  font-size: var(--tg-text-xs);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dossier__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: var(--tg-space-4);
+  align-items: start;
+}
+
+.dossier__group {
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  padding: var(--tg-space-3);
+}
+
+.dossier__group-title {
+  margin: 0 0 var(--tg-space-2);
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.dossier__facts {
+  margin: 0;
+  display: grid;
+  gap: var(--tg-space-2);
+}
+
+.dossier__fact {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  gap: var(--tg-space-2);
+  align-items: baseline;
+  font-size: var(--tg-text-sm);
+}
+
+/* Prose wants the width, not a label column. */
+.dossier__fact--wide { grid-template-columns: 1fr; }
+.dossier__fact--wide dt { margin-bottom: 2px; }
+
+.dossier__fact dt {
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-xs);
+}
+
+.dossier__fact dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

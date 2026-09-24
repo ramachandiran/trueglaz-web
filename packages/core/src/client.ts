@@ -2,7 +2,7 @@ import { getStorage } from './storage'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
-  Intake, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
+  Intake, InventoryRow, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
   MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
@@ -408,4 +408,7 @@ export const api = {
   ledgerAccounts: () => get<LedgerAccountBalance[]>('/ledger/accounts'),
   ledgerTransactions: (limit = 50) => get<LedgerTransactionView[]>(`/ledger/transactions?limit=${limit}`),
   reconciliation: () => get<Reconciliation>('/ledger/reconciliation'),
+
+  /** Every unit with everything known about it, one row each. Admin only. */
+  inventory: () => get<InventoryRow[]>('/admin/inventory'),
 }

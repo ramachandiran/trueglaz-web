@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api, money, useApi, useSession, isStaff } from '@trueglaz/core'
-import { Empty, ErrorNote, Loading } from '../components/ui'
+import { Empty, ErrorNote, Loading, StateBadge } from '../components/ui'
 import './InventoryDashboard.css'
 
 type View = 'all' | 'pending-approval' | 'listed' | 'graded' | 'in-inspection'
@@ -17,13 +17,27 @@ export function InventoryDashboard() {
   const [search, setSearch] = useState('')
 
   // Load all items based on current view/filter
-  const allItems = useApi(() => api.itemQueue('ALL'), [])
+  // No state at all means every state. 'ALL' was read as a state name, matched
+  // nothing, and left the landing tab showing "0 of 0 items".
+  const allItems = useApi(() => api.itemQueue(), [])
   const pendingApproval = useApi(() => api.itemQueue('GRADED'), [])
   const listedItems = useApi(() => api.itemQueue('LISTED'), [])
   const gradedItems = useApi(() => api.itemQueue('GRADED'), [])
   const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
 
   const staff = isStaff(session)
+
+  // The queue returns a consignment_item as stored, which holds ids rather than
+  // names — so Brand printed a raw uuid and Model an em dash for anything
+  // linked to the catalogue. Both are looked up here.
+  const brands = useApi(() => api.brands(), [])
+  const models = useApi(() => api.models(), [])
+  const brandName = (id?: string | null) =>
+    (brands.data ?? []).find((b) => b.id === id)?.name ?? null
+  const modelName = (item: any) =>
+    (models.data?.content ?? []).find((m: any) => m.id === item.productModelId)?.name
+      ?? item.modelFreeText
+      ?? null
 
   // Map views to their data source
   const stateMap: Record<View, ReturnType<typeof useApi<any>>> = {
@@ -38,11 +52,12 @@ export function InventoryDashboard() {
   const items = state.data ?? []
 
   // Filter by search term
-  const filtered = items.filter((item: any) =>
-    item.internalSku?.toLowerCase().includes(search.toLowerCase()) ||
-    item.modelFreeText?.toLowerCase().includes(search.toLowerCase()) ||
-    item.brandId?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = items.filter((item: any) => {
+    const q = search.trim().toLowerCase()
+    if (!q) return true
+    return [item.internalSku, item.serialNumber, modelName(item), brandName(item.brandId)]
+      .some((v) => v?.toLowerCase().includes(q))
+  })
 
   return (
     <div className="inv">
@@ -67,7 +82,7 @@ export function InventoryDashboard() {
         <input
           type="text"
           className="tg-input inv__search"
-          placeholder="Search by SKU, model, or brand…"
+          placeholder="Search by SKU, serial, model or brand…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           aria-label="Search inventory"
@@ -104,13 +119,13 @@ export function InventoryDashboard() {
               {filtered.map((item: any) => (
                 <tr key={item.id}>
                   <td className="inv__sku tg-mono">{item.internalSku}</td>
-                  <td>{item.modelFreeText || '—'}</td>
-                  <td>{item.brandId || '—'}</td>
-                  <td>{item.declaredGradeCode || '—'}</td>
+                  <td>{modelName(item) ?? '—'}</td>
+                  <td>{brandName(item.brandId) ?? '—'}</td>
+                  <td>{item.assignedGradeCode ?? item.declaredGradeCode ?? '—'}</td>
                   <td>
-                    <span className={`inv__state inv__state--${item.state?.toLowerCase().replace(/_/g, '-') || 'unknown'}`}>
-                      {item.state || 'Unknown'}
-                    </span>
+                    {/* The field is currentState; `state` was always undefined,
+                        so every row read "Unknown". */}
+                    <StateBadge state={item.currentState} />
                   </td>
                   <td>{money(item.askingAmountMinor || 0)}</td>
                   <td>{money(item.floorAmountMinor || 0)}</td>
