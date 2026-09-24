@@ -25,11 +25,35 @@ export function InventoryDashboard() {
   // Load all items based on current view/filter
   // No state at all means every state. 'ALL' was read as a state name, matched
   // nothing, and left the landing tab showing "0 of 0 items".
-  const allItems = useApi(() => api.itemQueue(), [])
   const pendingApproval = useApi(() => api.itemQueue('GRADED'), [])
   const listedItems = useApi(() => api.itemQueue('LISTED'), [])
   const gradedItems = useApi(() => api.itemQueue('GRADED'), [])
   const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
+  const received = useApi(() => api.itemQueue('RECEIVED'), [])
+  const inTransit = useApi(() => api.itemQueue('IN_TRANSIT'), [])
+
+  // Combine all items from different states for "All items" view
+  const allItemsData = {
+    loading: pendingApproval.loading || listedItems.loading || gradedItems.loading || inInspection.loading || received.loading || inTransit.loading,
+    error: pendingApproval.error || listedItems.error || gradedItems.error || inInspection.error || received.error || inTransit.error,
+    data: [
+      ...(pendingApproval.data ?? []),
+      ...(listedItems.data ?? []),
+      ...(gradedItems.data ?? []),
+      ...(inInspection.data ?? []),
+      ...(received.data ?? []),
+      ...(inTransit.data ?? []),
+    ].filter((item, index, self) => self.findIndex(i => i.id === item.id) === index), // Remove duplicates
+    reload: () => {
+      pendingApproval.reload()
+      listedItems.reload()
+      gradedItems.reload()
+      inInspection.reload()
+      received.reload()
+      inTransit.reload()
+    },
+  }
+  const allItems = allItemsData
 
   const staff = isStaff(session)
 
