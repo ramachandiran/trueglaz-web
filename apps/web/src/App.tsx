@@ -1,11 +1,14 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { isAdmin, isOps, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
 import { Guard } from './components/Guard'
+import { Loading } from './components/ui'
 import { AdminPage } from './pages/AdminPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { FulfilmentPage } from './pages/FulfilmentPage'
 import { InspectPage } from './pages/InspectPage'
+import { InventoryDashboard } from './pages/InventoryDashboard'
 import { ItemDetailPage } from './pages/ItemDetailPage'
 import { ItemsPage } from './pages/ItemsPage'
 import { ListingDetailPage } from './pages/ListingDetailPage'
@@ -17,13 +20,35 @@ import { SellPage } from './pages/SellPage'
 import { WantedPage } from './pages/WantedPage'
 import { SignInPage } from './pages/SignInPage'
 
+/**
+ * Smart home page that redirects based on user role.
+ * - Ops/staff → Inventory dashboard
+ * - Admin → Money page
+ * - Everyone else → Public catalog
+ */
+function SmartHome() {
+  const { session, ready } = useSession()
+
+  if (!ready) return <Loading label="Loading" />
+
+  if (session) {
+    if (isAdmin(session)) return <Navigate to="/admin" replace />
+    if (isOps(session)) return <Navigate to="/inventory" replace />
+  }
+
+  return <CatalogPage />
+}
+
 export function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
+          {/* Smart home: redirects ops/staff to inventory dashboard */}
+          <Route path="/" element={<SmartHome />} />
+          
           {/* Public storefront */}
-          <Route path="/" element={<CatalogPage />} />
+          <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/listings/:id" element={<ListingDetailPage />} />
           <Route path="/wanted" element={<WantedPage />} />
           <Route path="/sign-in" element={<SignInPage />} />
@@ -40,6 +65,7 @@ export function App() {
           <Route path="/items/:id" element={<Guard need="signed-in"><ItemDetailPage /></Guard>} />
 
           {/* Operations */}
+          <Route path="/inventory" element={<Guard need="ops"><InventoryDashboard /></Guard>} />
           <Route path="/ops" element={<Guard need="ops"><OpsPage /></Guard>} />
           <Route path="/ops/inspect/:itemId" element={<Guard need="ops"><InspectPage /></Guard>} />
           <Route path="/ops/items" element={<Guard need="ops"><ItemsPage /></Guard>} />

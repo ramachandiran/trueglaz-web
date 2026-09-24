@@ -36,6 +36,7 @@ function Header() {
   // switch — an invitation instead. That is what keeps this honest: the choice
   // exists only once it is real, so it can never be answered wrongly.
   const seller = isSeller(session)
+  const isOpsUser = isOps(session)
   const side: MarketView = seller ? view : 'buying'
 
   return (
@@ -48,7 +49,7 @@ function Header() {
 
         <HeaderSearch />
 
-        {session && (seller ? (
+        {!isOpsUser && session && (seller ? (
           <MarketSwitch
             view={side}
             onChange={(next) => {
@@ -69,7 +70,7 @@ function Header() {
         ))}
 
         <div className="shell__tools">
-          {session && (
+          {session && !isOpsUser && (
             <NavLink to="/orders" className="shell__tool">
               <span className="shell__tool-top">Returns &amp;</span>
               <span className="shell__tool-main">Orders</span>
@@ -96,7 +97,7 @@ function Header() {
           </select>        </div>
       </div>
 
-      {side === 'selling' ? <SellingStrip session={session} /> : <CategoryStrip />}
+      {isOpsUser ? <OpsStrip session={session} /> : (side === 'selling' ? <SellingStrip session={session} /> : <CategoryStrip />)}
     </header>
   )
 }
@@ -218,10 +219,26 @@ function SellingStrip({ session }: { session: Session | null }) {
 function OpsLinks({ session }: { session: Session | null }) {
   return (
     <>
-      {isOps(session) && <NavLink to="/ops" className={stripClass}>Ops</NavLink>}
+      {isOps(session) && (
+        <>
+          <NavLink to="/inventory" className={stripClass}>Inventory</NavLink>
+          <NavLink to="/ops" className={stripClass}>Queues</NavLink>
+        </>
+      )}
       {isStaff(session) && <NavLink to="/ops/fulfilment" className={stripClass}>Fulfilment</NavLink>}
       {isAdmin(session) && <NavLink to="/admin" className={stripClass}>Money</NavLink>}
     </>
+  )
+}
+
+/**
+ * Navigation bar for ops/staff users.
+ */
+function OpsStrip({ session }: { session: Session | null }) {
+  return (
+    <nav className="strip" aria-label="Operations">
+      <OpsLinks session={session} />
+    </nav>
   )
 }
 
