@@ -268,6 +268,9 @@
 
 .sell__error { color: var(--tg-bad); font-size: var(--tg-text-sm); margin: 0; }
 
+.sell__success { background: var(--tg-good-soft); border: 1px solid var(--tg-good); padding: var(--tg-space-3); border-radius: var(--tg-radius-md); }
+.sell__success-text { color: var(--tg-good); font-size: var(--tg-text-sm); margin: 0; font-weight: 500; }
+
 .sell__modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--tg-space-3); }
 .sell__mode {
   display: flex; flex-direction: column; gap: var(--tg-space-1);

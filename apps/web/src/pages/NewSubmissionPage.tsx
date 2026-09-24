@@ -23,7 +23,6 @@ export function NewSubmissionPage() {
   const [busy, setBusy] = useState(false)
   const [showGradeTooltip, setShowGradeTooltip] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [localItems, setLocalItems] = useState<typeof item[]>([])
 
   // Close tooltip when clicking outside
   useEffect(() => {
@@ -59,54 +58,29 @@ export function NewSubmissionPage() {
     packagingAnswered: false,
   })
 
-  const added = localItems
-
   async function addItem() {
     setBusy(true); setError(null)
     try {
-      // Add item to local array
-      setLocalItems([...localItems, { ...item }])
-      // Reset form for next item
-      setItem({
-        categoryId: item.categoryId, // Keep category and brand for next item
+      // Create submission, add item, and submit immediately
+      const submission = await api.createSubmission('guided')
+      await api.addItem(submission.id, {
+        modelFreeText: item.modelFreeText.trim(),
+        categoryId: item.categoryId,
         brandId: item.brandId,
-        modelFreeText: '', description: '', reasonToSell: '', serialNumber: '',
-        underWarranty: '', hasBill: false, hasBox: false, hasAccessories: false,
-        packagingAnswered: false, declaredGradeCode: '', asking: '', floor: '',
+        description: item.description.trim(),
+        reasonToSell: item.reasonToSell.trim(),
+        underWarranty: item.underWarranty === 'yes',
+        hasBill: item.hasBill,
+        hasBox: item.hasBox,
+        hasAccessories: item.hasAccessories,
+        serialNumber: item.serialNumber.trim(),
+        declaredGradeCode: item.declaredGradeCode,
+        askingAmountMinor: Math.round(Number(item.asking) * 100),
+        floorAmountMinor: Math.round(Number(item.floor) * 100),
       })
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not add that item')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function send() {
-    if (localItems.length === 0) return
-    setBusy(true); setError(null)
-    try {
-      // Create submission and add all items
-      const s = await api.createSubmission('guided')
-      for (const i of localItems) {
-        await api.addItem(s.id, {
-          modelFreeText: i.modelFreeText.trim(),
-          categoryId: i.categoryId,
-          brandId: i.brandId,
-          description: i.description.trim(),
-          reasonToSell: i.reasonToSell.trim(),
-          underWarranty: i.underWarranty === 'yes',
-          hasBill: i.hasBill,
-          hasBox: i.hasBox,
-          hasAccessories: i.hasAccessories,
-          serialNumber: i.serialNumber.trim(),
-          declaredGradeCode: i.declaredGradeCode,
-          askingAmountMinor: Math.round(Number(i.asking) * 100),
-          floorAmountMinor: Math.round(Number(i.floor) * 100),
-        })
-      }
-      // Submit the submission
-      await api.submitSubmission(s.id)
-      nav('/sell')
+      await api.submitSubmission(submission.id)
+      // Redirect to /sell with query param to show banner
+      nav('/sell?submitted=true')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not submit')
     } finally {
@@ -406,35 +380,13 @@ export function NewSubmissionPage() {
         {askingNum > 0 && <FeePreview salePriceMinor={Math.round(askingNum * 100)} />}
 
         <button className="tg-button tg-button--primary" disabled={busy || !canAdd} onClick={addItem}>
-          {busy ? 'Adding…' : 'Add to submission'}
+          {busy ? 'Submitting…' : 'Add to submission'}
         </button>
         {missing.length > 0 && (
           <p className="tg-muted sell__hint">Still needed: {missing.join(', ')}.</p>
         )}
         {error && <p className="sell__error" role="alert">{error}</p>}
       </section>
-
-      {added.length > 0 && (
-        <aside className="tg-card sell__panel consign__sidebar">
-          <h2 className="sell__panel-title">In this submission ({added.length})</h2>
-          <ul className="sell__added">
-            {added.map((i, idx) => (
-              <li key={idx}>
-                <span className="tg-mono">{i.modelFreeText}</span>
-                <span>{i.brandId}</span>
-                <span>{i.declaredGradeCode}</span>
-                <span>{money(Math.round(Number(i.asking) * 100))}</span>
-              </li>
-            ))}
-          </ul>
-          <button className="tg-button tg-button--primary" disabled={busy} onClick={send}>
-            {busy ? 'Sending…' : 'Send for pre-approval'}
-          </button>
-          <p className="tg-muted sell__fineprint">
-            We'll review it and send you a shipping label. Nothing is committed until you post it.
-          </p>
-        </aside>
-      )}
       </div>
     </div>
   )

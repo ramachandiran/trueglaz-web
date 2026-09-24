@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, useApi, HAPPY_PATH, STATE_LABELS,
   type SellerApprovalView,
@@ -18,9 +18,11 @@ type Tab = 'items' | 'approvals' | 'payouts'
  */
 export function SellPage() {
   const [tab, setTab] = useState<Tab>('items')
+  const [searchParams] = useSearchParams()
   const approvals = useApi(() => api.myApprovals(), [])
   const kyc = useApi(() => api.myKyc(), [])
   const pending = (approvals.data ?? []).filter((a) => a.approval.decision === 'pending')
+  const submitted = searchParams.get('submitted') === 'true'
 
   const canSell = kyc.data?.canSell ?? false
 
@@ -58,6 +60,12 @@ export function SellPage() {
             </p>
           )}
         </div>
+
+        {submitted && (
+          <div className="tg-card sell__success">
+            <p className="sell__success-text">✓ Item submitted and waiting for approval</p>
+          </div>
+        )}
 
         {/* The one thing a seller cannot work out for themselves is what anybody
             actually wants, so the board is offered before the tabs. */}
