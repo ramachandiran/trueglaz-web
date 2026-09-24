@@ -40,10 +40,13 @@ export function ItemDetailPage() {
 
   return (
     <article className="detail">
-      <header className="detail__head">
+      <div className="detail__back-row">
         <button className="detail__back" onClick={() => nav(-1)} title="Go back">
           ← Back
         </button>
+      </div>
+
+      <header className="detail__head">
         <div>
           <p className="detail__eyebrow tg-mono tg-muted">{item.internalSku}</p>
           <h1 className="detail__title">
