@@ -163,3 +163,20 @@
   font-size: var(--tg-text-xs);
   white-space: nowrap;
 }
+
+/* Pagination */
+.inv__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-4);
+  border-top: 1px solid var(--tg-border);
+}
+
+.inv__page-info {
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+  min-width: 120px;
+  text-align: center;
+}

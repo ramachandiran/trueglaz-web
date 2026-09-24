@@ -17,6 +17,10 @@ export function InventoryDashboard() {
   const nav = useNavigate()
   const [view, setView] = useState<View>('all')
   const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+
+  const itemsPerPage = 10
 
   // Load all items based on current view/filter
   // No state at all means every state. 'ALL' was read as a state name, matched
@@ -61,6 +65,29 @@ export function InventoryDashboard() {
       .some((v) => v?.toLowerCase().includes(q))
   })
 
+  // Update lastUpdated when data is loaded
+  if (!state.loading && items.length > 0) {
+    setLastUpdated(new Date())
+  }
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const validPage = Math.min(Math.max(1, currentPage), totalPages || 1)
+  const startIndex = (validPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedItems = filtered.slice(startIndex, endIndex)
+
+  // Reset to page 1 when search or view changes
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    setCurrentPage(1)
+  }
+
+  const handleViewChange = (newView: View) => {
+    setView(newView)
+    setCurrentPage(1)
+  }
+
   return (
     <div className="inv">
       <div className="inv__header">
@@ -72,11 +99,11 @@ export function InventoryDashboard() {
 
       {/* Filter tabs */}
       <nav className="inv__filters" aria-label="Inventory views">
-        <FilterTab active={view === 'all'} onClick={() => setView('all')} label="All items" />
-        {staff && <FilterTab active={view === 'pending-approval'} onClick={() => setView('pending-approval')} label="Pending approval" />}
-        <FilterTab active={view === 'listed'} onClick={() => setView('listed')} label="Listed" />
-        <FilterTab active={view === 'graded'} onClick={() => setView('graded')} label="Graded" />
-        <FilterTab active={view === 'in-inspection'} onClick={() => setView('in-inspection')} label="In inspection" />
+        <FilterTab active={view === 'all'} onClick={() => handleViewChange('all')} label="All items" />
+        {staff && <FilterTab active={view === 'pending-approval'} onClick={() => handleViewChange('pending-approval')} label="Pending approval" />}
+        <FilterTab active={view === 'listed'} onClick={() => handleViewChange('listed')} label="Listed" />
+        <FilterTab active={view === 'graded'} onClick={() => handleViewChange('graded')} label="Graded" />
+        <FilterTab active={view === 'in-inspection'} onClick={() => handleViewChange('in-inspection')} label="In inspection" />
       </nav>
 
       {/* Search bar */}
@@ -86,11 +113,11 @@ export function InventoryDashboard() {
           className="tg-input inv__search"
           placeholder="Search by SKU, serial, model or brand…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           aria-label="Search inventory"
         />
         <span className="inv__search-info tg-muted">
-          {filtered.length} of {items.length} items
+          {filtered.length} of {items.length} items • Last updated {lastUpdated.toLocaleTimeString()}
         </span>
       </div>
 
@@ -118,7 +145,7 @@ export function InventoryDashboard() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item: any) => (
+              {paginatedItems.map((item: any) => (
                 <tr key={item.id}>
                   <td className="inv__sku tg-mono">{item.internalSku}</td>
                   <td>{modelName(item) ?? '—'}</td>
@@ -144,6 +171,27 @@ export function InventoryDashboard() {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination controls */}
+          <div className="inv__pagination">
+            <button
+              className="tg-button"
+              disabled={validPage === 1}
+              onClick={() => setCurrentPage(validPage - 1)}
+            >
+              ← Previous
+            </button>
+            <span className="inv__page-info">
+              Page {validPage} of {totalPages || 1}
+            </span>
+            <button
+              className="tg-button"
+              disabled={validPage === totalPages}
+              onClick={() => setCurrentPage(validPage + 1)}
+            >
+              Next →
+            </button>
+          </div>
         </div>
       )}
     </div>
