@@ -96,8 +96,6 @@ function Header() {
             <option value="midnight">Midnight</option>
           </select>        </div>
       </div>
-
-      {isOpsUser ? <OpsStrip session={session} /> : (side === 'selling' ? <SellingStrip session={session} /> : <CategoryStrip />)}
     </header>
   )
 }
