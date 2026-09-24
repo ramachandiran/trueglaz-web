@@ -397,48 +397,22 @@
   display: flex;
   flex-direction: column;
   gap: var(--tg-space-4);
-  max-width: 860px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-.consign__header {
-  display: flex;
-  align-items: center;
-  gap: var(--tg-space-3);
-}
-
-.consign__back {
+.consign__layout {
   display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--tg-border);
-  border-radius: var(--tg-radius-md);
-  background: transparent;
-  color: var(--tg-text);
-  font-size: var(--tg-text-lg);
-  cursor: pointer;
-  transition: all var(--tg-transition);
-}
-.consign__back:hover {
-  background: var(--tg-bg-hover);
-  border-color: var(--tg-border-strong);
+  grid-template-columns: 1fr 320px;
+  gap: var(--tg-space-4);
+  align-items: start;
 }
 
-.sell__back {
-  padding: var(--tg-space-2) var(--tg-space-3);
-  border: 1px solid var(--tg-border);
-  border-radius: var(--tg-radius-md);
-  background: transparent;
-  color: var(--tg-text);
-  font-size: var(--tg-text-sm);
-  cursor: pointer;
-  transition: all var(--tg-transition);
-  white-space: nowrap;
-}
-.sell__back:hover {
-  background: var(--tg-bg-hover);
-  border-color: var(--tg-border-strong);
+.consign__sidebar {
+  position: sticky;
+  top: var(--tg-space-4);
+  max-height: calc(100vh - var(--tg-space-8));
+  overflow-y: auto;
 }
 
 .sell__field-header {

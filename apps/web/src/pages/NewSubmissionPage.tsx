@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { api, ApiError, money, singularCategory, useApi } from '@trueglaz/core'
-import { ErrorNote, Loading } from '../components/ui'
 import './SellPage.css'
 
 /**
@@ -13,7 +12,6 @@ import './SellPage.css'
  * interchangeable boxes.
  */
 export function NewSubmissionPage() {
-  const { id } = useParams()
   const nav = useNavigate()
   const tooltipRef = useRef<HTMLDivElement>(null)
 
@@ -21,12 +19,11 @@ export function NewSubmissionPage() {
   const grades = useApi(() => api.grades(), [])
   const categories = useApi(() => api.categories(), [])
   const brands = useApi(() => api.brands(), [])
-  const existing = useApi(() => (id ? api.submission(id) : Promise.resolve(null)), [id])
 
-  const [submissionId, setSubmissionId] = useState<string | null>(id ?? null)
   const [busy, setBusy] = useState(false)
   const [showGradeTooltip, setShowGradeTooltip] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [localItems, setLocalItems] = useState<typeof item[]>([])
 
   // Close tooltip when clicking outside
   useEffect(() => {
@@ -62,46 +59,21 @@ export function NewSubmissionPage() {
     packagingAnswered: false,
   })
 
-  const added = existing.data?.items ?? []
-
-  async function ensureSubmission(): Promise<string> {
-    if (submissionId) return submissionId
-    const s = await api.createSubmission('guided')
-    setSubmissionId(s.id)
-    return s.id
-  }
+  const added = localItems
 
   async function addItem() {
     setBusy(true); setError(null)
     try {
-      const sid = await ensureSubmission()
-      await api.addItem(sid, {
-        // The model is typed; the API links it to a catalogue row when the
-        // brand, type and name line up, so guided pricing still has something
-        // to price against.
-        modelFreeText: item.modelFreeText.trim(),
-        categoryId: item.categoryId,
-        brandId: item.brandId,
-        description: item.description.trim(),
-        reasonToSell: item.reasonToSell.trim(),
-        underWarranty: item.underWarranty === 'yes',
-        hasBill: item.hasBill,
-        hasBox: item.hasBox,
-        hasAccessories: item.hasAccessories,
-        serialNumber: item.serialNumber.trim(),
-        declaredGradeCode: item.declaredGradeCode,
-        askingAmountMinor: Math.round(Number(item.asking) * 100),
-        floorAmountMinor: Math.round(Number(item.floor) * 100),
-      })
-      // The type and brand stay: a second item is usually more of the same.
+      // Add item to local array
+      setLocalItems([...localItems, { ...item }])
+      // Reset form for next item
       setItem({
-        ...item,
+        categoryId: item.categoryId, // Keep category and brand for next item
+        brandId: item.brandId,
         modelFreeText: '', description: '', reasonToSell: '', serialNumber: '',
         underWarranty: '', hasBill: false, hasBox: false, hasAccessories: false,
         packagingAnswered: false, declaredGradeCode: '', asking: '', floor: '',
       })
-      existing.reload()
-      if (!id) nav(`/sell/${sid}`, { replace: true })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not add that item')
     } finally {
@@ -110,10 +82,30 @@ export function NewSubmissionPage() {
   }
 
   async function send() {
-    if (!submissionId) return
+    if (localItems.length === 0) return
     setBusy(true); setError(null)
     try {
-      await api.submitSubmission(submissionId)
+      // Create submission and add all items
+      const s = await api.createSubmission('guided')
+      for (const i of localItems) {
+        await api.addItem(s.id, {
+          modelFreeText: i.modelFreeText.trim(),
+          categoryId: i.categoryId,
+          brandId: i.brandId,
+          description: i.description.trim(),
+          reasonToSell: i.reasonToSell.trim(),
+          underWarranty: i.underWarranty === 'yes',
+          hasBill: i.hasBill,
+          hasBox: i.hasBox,
+          hasAccessories: i.hasAccessories,
+          serialNumber: i.serialNumber.trim(),
+          declaredGradeCode: i.declaredGradeCode,
+          askingAmountMinor: Math.round(Number(i.asking) * 100),
+          floorAmountMinor: Math.round(Number(i.floor) * 100),
+        })
+      }
+      // Submit the submission
+      await api.submitSubmission(s.id)
       nav('/sell')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not submit')
@@ -121,9 +113,6 @@ export function NewSubmissionPage() {
       setBusy(false)
     }
   }
-
-  if (id && existing.loading) return <Loading label="Loading submission" />
-  if (id && existing.error) return <ErrorNote error={existing.error} onRetry={existing.reload} />
 
   // Shown while typing so a seller can see their words landed on a catalogue
   // row — which is the difference between a guided price and waiting for staff.
@@ -171,20 +160,11 @@ export function NewSubmissionPage() {
 
   return (
     <div className="consign">
-      <div className="consign__header">
-        <button
-          type="button"
-          onClick={() => nav('/sell')}
-          className="consign__back"
-          aria-label="Go back to selling dashboard"
-        >
-          ←
-        </button>
-        <h1 className="sell__title">Consign an item</h1>
-      </div>
+      <h1 className="sell__title">Consign an item</h1>
 
-      <section className="tg-card sell__panel">
-        <h2 className="sell__panel-title">What are you sending?</h2>
+      <div className="consign__layout">
+        <section className="tg-card sell__panel">
+          <h2 className="sell__panel-title">What are you sending?</h2>
         <p className="tg-muted sell__fineprint">
           Everything here is required. We take physical custody of your gear and
           later send you money for it, so there is nothing on this form we can
@@ -435,15 +415,15 @@ export function NewSubmissionPage() {
       </section>
 
       {added.length > 0 && (
-        <section className="tg-card sell__panel">
+        <aside className="tg-card sell__panel consign__sidebar">
           <h2 className="sell__panel-title">In this submission ({added.length})</h2>
           <ul className="sell__added">
-            {added.map((i) => (
-              <li key={i.id}>
-                <span className="tg-mono">{i.internalSku}</span>
-                <span>{i.modelFreeText ?? 'Catalogue model'}</span>
+            {added.map((i, idx) => (
+              <li key={idx}>
+                <span className="tg-mono">{i.modelFreeText}</span>
+                <span>{i.brandId}</span>
                 <span>{i.declaredGradeCode}</span>
-                <span>{money(i.askingAmountMinor)}</span>
+                <span>{money(Math.round(Number(i.asking) * 100))}</span>
               </li>
             ))}
           </ul>
@@ -453,8 +433,9 @@ export function NewSubmissionPage() {
           <p className="tg-muted sell__fineprint">
             We'll review it and send you a shipping label. Nothing is committed until you post it.
           </p>
-        </section>
+        </aside>
       )}
+      </div>
     </div>
   )
 }
