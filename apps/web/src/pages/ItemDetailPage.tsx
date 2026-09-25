@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { InspectionReport } from '../components/InspectionReport'
+import { ShipmentLegs } from '../components/ShipmentLegs'
 import { NextActions } from '../components/NextActions'
 import { Timeline } from '../components/Timeline'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge, StateBadge } from '../components/ui'
@@ -107,6 +108,15 @@ export function ItemDetailPage() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="tg-card detail__section">
+        <h2 className="detail__section-title">Shipments</h2>
+        <p className="detail__blurb tg-muted">
+          Every leg this unit has travelled — in from the seller, out to a buyer, and home
+          again if it came back. A unit may travel any of them more than once.
+        </p>
+        <ShipmentLegs itemId={id!} />
       </section>
 
       <section className="tg-card detail__section">

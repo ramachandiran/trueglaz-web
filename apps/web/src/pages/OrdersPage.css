@@ -35,3 +35,21 @@
 .orders__accept-note { font-size: var(--tg-text-sm); margin: var(--tg-space-2) 0 0; }
 
 .orders__error { color: var(--tg-bad); font-size: var(--tg-text-sm); margin: var(--tg-space-2) 0; }
+
+/* The invoice link. Present from the moment the order is paid for. */
+.orders__invoice {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-3);
+  margin: 0 0 var(--tg-space-3);
+  flex-wrap: wrap;
+}
+
+.orders__invoice-link {
+  padding: var(--tg-space-2) var(--tg-space-3);
+  font-size: var(--tg-text-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.orders__invoice-meta { font-size: var(--tg-text-xs); }

@@ -2,11 +2,11 @@ import { getStorage } from './storage'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
-  Intake, InventoryRow, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
+  Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
   MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
-  SellerApprovalView, Session, StorageBin, Submission, SubmissionView, TransitionRule,
+  SellerApprovalView, Session, ShipmentLeg, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
 
 /**
@@ -432,4 +432,27 @@ export const api = {
 
   /** Every unit with everything known about it, one row each. Admin only. */
   inventory: () => get<InventoryRow[]>('/admin/inventory'),
+
+  // -- invoices and shipments ----------------------------------------------
+  /** Everything addressed to me: purchases, and commission if I sell. */
+  myInvoices: () => get<Invoice[]>('/invoices'),
+  invoice: (id: string) => get<InvoiceDetail>(`/invoices/${id}`),
+  /**
+   * The printable copy, as a blob.
+   *
+   * Not a plain link: the session token travels in a header, and a browser
+   * following an <a href> sends none of them, so the document came back 401.
+   * Fetching it here and handing back a blob keeps authentication where it is
+   * rather than inventing a second way in through the URL.
+   */
+  invoiceDocument: async (id: string): Promise<Blob> => {
+    const res = await fetch(url(`/invoices/${id}/download`), {
+      headers: session ? { Authorization: `Bearer ${session.token}` } : {},
+    })
+    if (!res.ok) throw new ApiError(res.status, `Could not fetch that invoice (${res.status})`)
+    return res.blob()
+  },
+  itemShipments: (itemId: string) => get<ShipmentLeg[]>(`/items/${itemId}/shipments`),
+  shipToSeller: (itemId: string, body: { courierCode: string; trackingNumber?: string | null; notes?: string | null }) =>
+    post(`/items/${itemId}/ship-to-seller`, body),
 }

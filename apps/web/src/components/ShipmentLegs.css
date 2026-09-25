@@ -1,0 +1,64 @@
+/* ---------------------------------------------------------------------------
+   A unit's journey. Read top to bottom, like the thing happening.
+   --------------------------------------------------------------------------- */
+.legs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--tg-space-4);
+}
+
+.legs__none { margin: 0; }
+
+.legs__leg {
+  position: relative;
+  padding-left: var(--tg-space-5);
+}
+
+/* The line joining the legs, drawn behind the dots. */
+.legs__leg:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 16px;
+  bottom: calc(var(--tg-space-4) * -1);
+  width: 2px;
+  background: var(--tg-border);
+}
+
+.legs__dot {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--tg-border-strong);
+  background: var(--tg-bg);
+}
+
+.legs__leg--done .legs__dot {
+  border-color: var(--tg-good);
+  background: var(--tg-good);
+}
+
+.legs__head {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  margin-bottom: 2px;
+}
+
+.legs__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tg-space-3);
+  font-size: var(--tg-text-xs);
+}
+
+.legs__notes {
+  margin: var(--tg-space-2) 0 0;
+  font-size: var(--tg-text-sm);
+  font-style: italic;
+}

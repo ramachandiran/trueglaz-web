@@ -722,3 +722,56 @@ export interface InventoryRow {
   createdAt: string | null
   updatedAt: string | null
 }
+
+/** A tax document: what the buyer paid, or what the seller was charged. */
+export interface Invoice {
+  id: string
+  invoiceNumber: string
+  kind: 'sale' | 'commission' | string
+  state: string
+  currency: string | null
+  subtotalMinor: number
+  taxMinor: number
+  totalMinor: number
+  orderId: string | null
+  consignmentItemId: string | null
+  placeOfSupply: string | null
+  issuedAt: string | null
+  zohoInvoiceId: string | null
+  zohoSyncedAt: string | null
+  zohoError: string | null
+}
+
+export interface InvoiceLine {
+  description: string
+  hsnSac: string | null
+  quantity: number
+  unitPriceMinor: number
+  amountMinor: number
+  taxRatePercent: number
+  taxMinor: number
+}
+
+export interface InvoiceDetail {
+  invoice: Invoice
+  partyName: string | null
+  lines: InvoiceLine[]
+}
+
+/**
+ * One leg a unit has travelled. Named from the item's point of view, because
+ * "to_buyer" only means something if you already know who is speaking.
+ */
+export interface ShipmentLeg {
+  id: string
+  direction: 'seller_to_trueglaz' | 'trueglaz_to_buyer' | 'trueglaz_to_seller' | string
+  label: string
+  courierCode: string
+  trackingNumber: string | null
+  state: string
+  insuredValueMinor: number | null
+  dispatchedAt: string | null
+  deliveredAt: string | null
+  createdAt: string | null
+  notes: string | null
+}
