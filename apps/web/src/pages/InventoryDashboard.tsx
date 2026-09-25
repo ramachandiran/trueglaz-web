@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, money, useApi, useSession, isStaff } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading, StateBadge } from '../components/ui'
@@ -25,12 +25,12 @@ export function InventoryDashboard() {
   // Load all items based on current view/filter
   // No state at all means every state. 'ALL' was read as a state name, matched
   // nothing, and left the landing tab showing "0 of 0 items".
-  const pendingApproval = useApi(() => api.itemQueue('GRADED'), [])
+  const pendingApproval = useApi(() => api.itemQueue('AWAITING_SELLER_APPROVAL'), [])
   const listedItems = useApi(() => api.itemQueue('LISTED'), [])
   const gradedItems = useApi(() => api.itemQueue('GRADED'), [])
   const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
   const received = useApi(() => api.itemQueue('RECEIVED'), [])
-  const inTransit = useApi(() => api.itemQueue('IN_TRANSIT'), [])
+  const inTransit = useApi(() => api.itemQueue('IN_TRANSIT_INBOUND'), [])
 
   // Combine all items from different states for "All items" view
   const allItemsData = {
@@ -89,10 +89,11 @@ export function InventoryDashboard() {
       .some((v) => v?.toLowerCase().includes(q))
   })
 
-  // Update lastUpdated when data is loaded
-  if (!state.loading && items.length > 0) {
-    setLastUpdated(new Date())
-  }
+  useEffect(() => {
+    if (!state.loading && items.length > 0) {
+      setLastUpdated(new Date())
+    }
+  }, [state.loading, items.length, view])
 
   // Pagination calculations
   const totalPages = Math.ceil(filtered.length / itemsPerPage)
