@@ -78,6 +78,21 @@ export function setApiOrigin(value: string) {
 }
 const url = (p: string) => `${origin}/api/v1${p}`
 
+/**
+ * What to say when nothing answered.
+ *
+ * Relative calls go through whatever server delivered the page, so the address
+ * in the URL is that server, not the API — say so, rather than pointing someone
+ * at a port the API was never on.
+ */
+function unreachable(endpoint: string): string {
+  if (origin) return `Could not reach the API at ${origin}. Is it running?`
+  if (typeof location === 'undefined') return `No answer for ${url(endpoint)}.`
+  return `No answer from ${location.origin}, the server this page came from. ` +
+    'The API is reached through it, so check that it is still running and that ' +
+    'this tab is on the port it is using.'
+}
+
 /** Carries the server's own explanation, which is usually the useful part. */
 export class ApiError extends Error {
   constructor(
@@ -104,7 +119,13 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
       },
     })
   } catch {
-    throw new ApiError(0, `Could not reach the API at ${url(endpoint)}.`)
+    // fetch only rejects when the request never got an answer at all: nothing
+    // listening, DNS gone, the connection dropped. That is a different fault
+    // from the API returning an error, and naming it precisely matters —
+    // the old message read "Could not reach the API at http://localhost:5174/…"
+    // when the API was on 8080 and the thing that had gone away was the dev
+    // server the page itself came from.
+    throw new ApiError(0, unreachable(endpoint))
   }
 
   if (!res.ok) {
