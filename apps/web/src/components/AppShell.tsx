@@ -150,4 +150,3 @@ function MarketSwitch({ view, onChange }: {
     </div>
   )
 }
-
