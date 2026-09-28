@@ -6,7 +6,7 @@ import type {
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
   MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
-  SellerApprovalView, Session, ShipmentLeg, StorageBin, Submission, SubmissionView, TransitionRule,
+  SellerApprovalView, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
 
 /**
@@ -210,6 +210,8 @@ export const api = {
     return get<Page<Listing>>(`/listings?${qs}`)
   },
   listing: (id: string) => get<ListingDetail>(`/listings/${id}`),
+  /** What has recently gone, and for how much. Public; carries no identities. */
+  recentlySold: (limit = 6) => get<SoldListing[]>(`/listings/recently-sold?limit=${limit}`),
   grades: () => get<Grade[]>('/grades'),
   reasonCodes: (domain: string) => get<ReasonCode[]>(`/reason-codes?domain=${encodeURIComponent(domain)}`),
   brands: () => get<Brand[]>('/brands'),

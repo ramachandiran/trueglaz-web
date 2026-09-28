@@ -759,6 +759,20 @@ export interface InvoiceDetail {
 }
 
 /**
+ * A sale, as the public may see it: the gear and what it went for, never who
+ * bought it. Sold prices are the most useful thing a used-gear buyer can see,
+ * and the one thing no listing page can tell them.
+ */
+export interface SoldListing {
+  id: string
+  title: string
+  gradeCode: string
+  gradeLabel: string | null
+  priceMinor: number
+  soldAt: string | null
+}
+
+/**
  * One leg a unit has travelled. Named from the item's point of view, because
  * "to_buyer" only means something if you already know who is speaking.
  */

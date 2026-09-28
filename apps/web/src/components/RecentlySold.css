@@ -1,0 +1,72 @@
+/* ---------------------------------------------------------------------------
+   Recently sold.
+
+   Sits under the buy box in the same column, and is deliberately quieter than
+   it: the buy box is what the page is for, and this is the context beside it.
+   No card, no border box — a rule and a list, so it reads as a footnote rather
+   than as a second thing competing for the click.
+   --------------------------------------------------------------------------- */
+.sold {
+  margin-top: var(--tg-space-5);
+  padding-top: var(--tg-space-4);
+  border-top: 1px solid var(--tg-border);
+}
+
+.sold__title {
+  margin: 0 0 2px;
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.sold__blurb {
+  margin: 0 0 var(--tg-space-3);
+  font-size: var(--tg-text-xs);
+}
+
+.sold__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--tg-space-3);
+}
+
+.sold__row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: var(--tg-text-sm);
+}
+
+.sold__link {
+  color: var(--tg-text);
+  text-decoration: none;
+}
+
+.sold__link:hover .sold__name {
+  text-decoration: underline;
+}
+
+.sold__name {
+  display: block;
+  line-height: 1.35;
+}
+
+.sold__meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--tg-space-2);
+}
+
+/* The number is the point of the panel, so it is the only thing set in the
+   body colour; everything around it is muted. */
+.sold__price {
+  font-variant-numeric: tabular-nums;
+}
+
+.sold__when {
+  font-size: var(--tg-text-xs);
+}

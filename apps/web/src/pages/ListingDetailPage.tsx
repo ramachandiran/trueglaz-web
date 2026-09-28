@@ -5,6 +5,7 @@ import { useApi } from '@trueglaz/core'
 import { Timeline } from '../components/Timeline'
 import { InspectionReport } from '../components/InspectionReport'
 import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { RecentlySold } from '../components/RecentlySold'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge } from '../components/ui'
 import { buildTimeline, type RenderedReport } from '@trueglaz/core'
 import { dateTime, money } from '@trueglaz/core'
@@ -153,6 +154,8 @@ export function ListingDetailPage() {
             <div><dt>Your money</dt><dd>Held in escrow until you accept the parcel</dd></div>
             <div><dt>Returns</dt><dd>If it is not as graded, it goes back</dd></div>
           </dl>
+
+          <RecentlySold excludeId={d.listing.id} />
         </aside>
       </div>
 
