@@ -33,6 +33,7 @@ function Header() {
   const { view, setView } = useMarketView()
   const nav = useNavigate()
   const { pathname } = useLocation()
+  const isAuthPage = pathname === '/sign-in'
 
   // Someone with no selling side has nothing to switch to, so there is no
   // switch — an invitation instead. That is what keeps this honest: the choice
@@ -42,15 +43,15 @@ function Header() {
   const side: MarketView = seller ? view : 'buying'
 
   return (
-    <header className="shell__header">
+    <header className={`shell__header${isAuthPage ? ' shell__header--auth' : ''}`}>
       <div className="shell__bar">
         <NavLink to="/" className="shell__brand" aria-label="TrueGlaz — home">
           <Logo className="shell__logo" />
         </NavLink>
 
-        <HeaderSearch />
+        {!isAuthPage && <HeaderSearch />}
 
-        {!isOpsUser && session && (seller ? (
+        {!isAuthPage && !isOpsUser && session && (seller ? (
           <MarketSwitch
             view={side}
             onChange={(next) => {
@@ -70,15 +71,15 @@ function Header() {
           </NavLink>
         ))}
 
-        <div className="shell__tools">
-          {session && !isOpsUser && (
+        <div className={`shell__tools${isAuthPage ? ' shell__tools--auth' : ''}`}>
+          {!isAuthPage && session && !isOpsUser && (
             <NavLink to="/orders" className="shell__tool">
               <span className="shell__tool-top">Returns &amp;</span>
               <span className="shell__tool-main">Orders</span>
             </NavLink>
           )}
 
-          {ready && (session ? (
+          {!isAuthPage && ready && (session ? (
             <AccountMenu />
           ) : (
             <NavLink to="/sign-in" className="tg-button shell__signin">
@@ -95,7 +96,8 @@ function Header() {
             <option value="light">Light</option>
             <option value="dark">Dark</option>
             <option value="midnight">Midnight</option>
-          </select>        </div>
+          </select>
+        </div>
       </div>
     </header>
   )

@@ -17,6 +17,14 @@
   border-bottom: 1px solid var(--tg-brand);
 }
 
+.shell__header--auth .shell__bar {
+  justify-content: space-between;
+}
+
+.shell__tools--auth {
+  margin-left: auto;
+}
+
 /* Row one: the brand, the search, and you. */
 .shell__bar {
   max-width: var(--tg-content-max);

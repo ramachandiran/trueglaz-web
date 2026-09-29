@@ -4,25 +4,127 @@
   padding: var(--tg-space-7) var(--tg-space-4);
 }
 
-.signin__card {
+.signin__content {
   width: 100%;
-  max-width: 420px;
-  padding: var(--tg-space-6);
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 440px);
+  gap: clamp(var(--tg-space-5), 5vw, var(--tg-space-8));
+  align-items: center;
 }
 
-/* The card is the first thing a signed-out visitor sees up close, so the
-   lockup stands above the heading rather than being folded into it. */
+.signin__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-4);
+}
+
+.signin__eyebrow {
+  margin: 0;
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tg-brand);
+}
+
 .signin__logo {
-  height: 26px;
+  height: 38px;
   width: auto;
   display: block;
   color: var(--tg-text);
-  margin-bottom: var(--tg-space-4);
+}
+
+.signin__logo--card {
+  margin: 0 auto var(--tg-space-4);
+  height: 30px;
+}
+
+.signin__headline {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.signin__lede {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-lg);
+  line-height: 1.6;
+}
+
+.signin__feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--tg-space-3);
+  margin-top: var(--tg-space-2);
+}
+
+.signin__feature {
+  padding: var(--tg-space-4);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+}
+
+.signin__feature-index {
+  display: inline-block;
+  margin-bottom: var(--tg-space-2);
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  letter-spacing: 0.08em;
+  color: var(--tg-brand);
+}
+
+.signin__feature h2 {
+  margin: 0 0 var(--tg-space-2);
+  font-size: var(--tg-text-lg);
+}
+
+.signin__feature p {
+  margin: 0;
+  color: var(--tg-text-muted);
+  line-height: 1.55;
+}
+
+.signin__proofs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--tg-space-3);
+  margin-top: var(--tg-space-1);
+}
+
+.signin__proofs > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-1);
+  padding-top: var(--tg-space-3);
+  border-top: 1px solid var(--tg-border);
+}
+
+.signin__proofs strong {
+  font-size: var(--tg-text-sm);
+}
+
+.signin__proofs span {
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-sm);
+  line-height: 1.5;
+}
+
+.signin__card {
+  width: 100%;
+  max-width: 420px;
+  justify-self: end;
+  padding: var(--tg-space-6);
 }
 
 .signin__title {
   font-size: var(--tg-text-xl);
-  margin-bottom: var(--tg-space-4);
+  margin: 0 0 var(--tg-space-4);
+  text-align: center;
 }
 
 .signin__form {
@@ -64,3 +166,22 @@
   color: var(--tg-bad);
   font-size: var(--tg-text-sm);
 }
+
+@media (max-width: 900px) {
+  .signin__content {
+    grid-template-columns: 1fr;
+  }
+
+  .signin__card {
+    justify-self: stretch;
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .signin__feature-grid,
+  .signin__proofs {
+    grid-template-columns: 1fr;
+  }
+}
+
