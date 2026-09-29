@@ -10,7 +10,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 440px);
   gap: clamp(var(--tg-space-5), 5vw, var(--tg-space-8));
-  align-items: center;
+  align-items: start;
+  padding-top: var(--tg-space-1);
 }
 
 .signin__details {
@@ -118,6 +119,8 @@
   width: 100%;
   max-width: 420px;
   justify-self: end;
+  align-self: start;
+  margin-top: 0;
   padding: var(--tg-space-6);
 }
 

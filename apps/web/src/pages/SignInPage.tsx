@@ -69,7 +69,6 @@ export function SignInPage() {
       <div className="signin__content">
         <section className="signin__details" aria-label="Why TrueGlaz">
           <p className="signin__eyebrow">Built for trust</p>
-          <Logo className="signin__logo" />
           <h1 className="signin__headline">TrueGlaz makes buying and selling used gear clear, safe, and worth the next round.</h1>
           <p className="signin__lede">
             We bring together grading, disclosure, and accountability so both sides know exactly what they are getting before the deal closes.

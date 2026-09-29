@@ -116,9 +116,9 @@ export const light: Theme = {
     border: '#e2ddc4',
     borderStrong: '#c7c2a9',
 
-    accent: '#233e50',
-    accentHover: '#33596f',
-    accentSoft: '#dde6ec',
+    accent: '#FF6B35',
+    accentHover: '#e65d2b',
+    accentSoft: '#ffe1d4',
     onAccent: '#fffef3',
 
     brand: '#233e50',
@@ -126,8 +126,8 @@ export const light: Theme = {
     onBrandMuted: '#a9bdcb',
     brandAlt: '#2e5168',
 
-    cta: '#a45c1b',
-    ctaHover: '#8f4f16',
+    cta: '#FF6B35',
+    ctaHover: '#e65d2b',
     onCta: '#fffef3',
 
     good: '#2e7d53',
@@ -165,18 +165,18 @@ export const dark: Theme = {
     border: '#2b4252',
     borderStrong: '#547082',
 
-    accent: '#7fb0ce',
-    accentHover: '#9ac3dc',
-    accentSoft: '#1c3746',
-    onAccent: '#0c171e',
+    accent: '#FF6B35',
+    accentHover: '#e65d2b',
+    accentSoft: '#40251a',
+    onAccent: '#fffef3',
 
     brand: '#1b3243',
     onBrand: '#f3f1e4',
     onBrandMuted: '#93a8b8',
     brandAlt: '#233c4f',
 
-    cta: '#b4681f',
-    ctaHover: '#c87a2c',
+    cta: '#FF6B35',
+    ctaHover: '#e65d2b',
     onCta: '#fffef3',
 
     good: '#52b583',
@@ -216,9 +216,9 @@ export const midnight: Theme = {
     border: '#ddd6c1',
     borderStrong: '#bfb599',
 
-    accent: '#233e50',
-    accentHover: '#33596f',
-    accentSoft: '#e0e6ea',
+    accent: '#FF6B35',
+    accentHover: '#e65d2b',
+    accentSoft: '#ffe1d4',
     onAccent: '#fffef3',
 
     brand: '#233e50',
@@ -226,8 +226,8 @@ export const midnight: Theme = {
     onBrandMuted: '#a9bdcb',
     brandAlt: '#2e5168',
 
-    cta: '#a45c1b',
-    ctaHover: '#8f4f16',
+    cta: '#FF6B35',
+    ctaHover: '#e65d2b',
     onCta: '#fffef3',
 
     good: '#2b7449',
