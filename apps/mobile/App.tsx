@@ -39,7 +39,7 @@ setStorage(nativeStorage)
 setApiOrigin(
   process.env.EXPO_PUBLIC_API_ORIGIN ??
     (Constants.expoConfig?.extra as { apiOrigin?: string } | undefined)?.apiOrigin ??
-    'http://localhost:8080',
+    'http://localhost:5174',
 )
 
 const Stack = createNativeStackNavigator()

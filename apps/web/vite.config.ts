@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const API = process.env.VITE_API_ORIGIN ?? 'http://localhost:8080'
+const API = process.env.VITE_API_ORIGIN ?? 'http://localhost:5174'
 
 // In development the browser talks to Vite and Vite talks to the API, so the app
 // only ever makes same-origin requests and CORS never enters into it. In

@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "tokens": "node scripts/generate-css-tokens.mjs",
-    "dev": "npm run dev -w @trueglaz/web",
+    "dev": "npm run dev -w @trueglaz/web -- --host 0.0.0.0",
     "build": "npm run tokens && npm run build -w @trueglaz/web",
     "mobile": "npm run start -w @trueglaz/mobile",
     "typecheck": "npm run typecheck -w @trueglaz/web",
