@@ -4,6 +4,7 @@ import { api } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { srcSet } from '../components/Gallery'
 import { GradeBadge, Empty, ErrorNote, Loading } from '../components/ui'
 import {
   applyFilters, buildModelIndex, countBy, EMPTY_FILTERS,
@@ -80,6 +81,14 @@ export function CatalogPage() {
   }, [q, catSlug, brandName, mountName, sortParam, categories.data, brands.data, mounts.data])
 
   const visible = useMemo(() => applyFilters(rows, filters, gradeRank), [rows, filters, gradeRank])
+
+  // One batched lookup for the whole grid. Keyed on the ids actually shown, so
+  // narrowing a filter does not refetch what is already in hand.
+  const itemIds = useMemo(
+    () => visible.map((v) => v.listing.consignmentItemId).filter((x): x is string => !!x),
+    [visible],
+  )
+  const covers = useApi(() => api.covers(itemIds), [itemIds.join(',')])
 
   const heading = useMemo(() => {
     if (q) return `"${q}"`
@@ -173,7 +182,24 @@ export function CatalogPage() {
               return (
                 <li key={listing.id} className="result">
                   <Link to={`/listings/${listing.id}`} className="result__photo-link" tabIndex={-1} aria-hidden="true">
-                    <GearPhoto kind={photoKindFor(category?.name)} />
+                    {(() => {
+                      const cover = listing.consignmentItemId
+                        ? covers.data?.[listing.consignmentItemId]
+                        : undefined
+                      return cover ? (
+                        <span className="result__photo">
+                          <img
+                            src={cover.sizes[400] ?? cover.url}
+                            srcSet={srcSet(cover)}
+                            sizes="(max-width: 720px) 40vw, 200px"
+                            alt=""
+                            loading="lazy"
+                          />
+                        </span>
+                      ) : (
+                        <GearPhoto kind={photoKindFor(category?.name)} />
+                      )
+                    })()}
                   </Link>
 
                   <div className="result__body">

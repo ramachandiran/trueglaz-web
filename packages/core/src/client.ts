@@ -6,7 +6,7 @@ import type {
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
   MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
-  HomeView, Mount, SellerApprovalView, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
+  HomeView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
 
 /**
@@ -213,6 +213,46 @@ export const api = {
   /** What has recently gone, and for how much. Public; carries no identities. */
   /** The whole shop front in one call. Public; carries no identities. */
   home: () => get<HomeView>('/home'),
+
+  /** The photographs on a unit that the caller is allowed to see. */
+  itemMedia: (itemId: string) => get<MediaView[]>(`/items/${itemId}/media`),
+
+  /** One cover photograph per unit, batched — the catalogue draws many tiles. */
+  covers: (itemIds: string[]) =>
+    itemIds.length === 0
+      ? Promise.resolve({} as Record<string, MediaView>)
+      : get<Record<string, MediaView>>(`/media/covers?itemIds=${itemIds.join(',')}`),
+
+  /**
+   * Upload a photograph.
+   *
+   * Three steps, hidden here because every caller wants the same three: ask the
+   * API for somewhere to put the bytes, PUT them straight at it, then have the
+   * API check what actually landed.
+   *
+   * The middle step deliberately does not go through `request` — it carries no
+   * Authorization header and no JSON, and in production it is not even our
+   * origin. The upload target is signed; that is what authorises it.
+   */
+  uploadPhoto: async (
+    file: File,
+    target: { ownerType: 'item' | 'order'; ownerId: string; role: string; defectId?: string },
+  ): Promise<MediaView> => {
+    const intent = await post<UploadIntent>('/media/intent', {
+      ...target,
+      contentType: file.type || 'image/jpeg',
+      bytes: file.size,
+    })
+
+    const put = await fetch(intent.url, {
+      method: intent.method,
+      headers: intent.headers,
+      body: file,
+    })
+    if (!put.ok) throw new ApiError(put.status, 'The upload did not go through — please try again')
+
+    return post<MediaView>('/media/seal', { ticket: intent.ticket })
+  },
   recentlySold: (limit = 6) => get<SoldListing[]>(`/listings/recently-sold?limit=${limit}`),
   grades: () => get<Grade[]>('/grades'),
   reasonCodes: (domain: string) => get<ReasonCode[]>(`/reason-codes?domain=${encodeURIComponent(domain)}`),

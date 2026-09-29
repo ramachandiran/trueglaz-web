@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { api, money, relative, useApi } from '@trueglaz/core'
-import type { HomeListing, HomeSale } from '@trueglaz/core'
+import type { HomeListing, HomeSale, MediaView } from '@trueglaz/core'
 import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { srcSet } from '../components/Gallery'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './HomePage.css'
 
@@ -184,7 +185,7 @@ function GearCard({ listing, showSaving }: { listing: HomeListing; showSaving?: 
   return (
     <li className="card">
       <Link to={`/listings/${listing.id}`} className="card__link">
-        <GearPhoto kind={photoKindFor(listing.categorySlug)} alt={name} />
+        <Cover cover={listing.cover} categorySlug={listing.categorySlug} alt={name} />
         <span className="card__name">{name}</span>
       </Link>
       <span className="card__brand tg-muted">{listing.brandName ?? 'Unlisted model'}</span>
@@ -210,7 +211,7 @@ function SoldCard({ sale }: { sale: HomeSale }) {
   return (
     <li className="card card--sold">
       <Link to={`/listings/${sale.id}`} className="card__link">
-        <GearPhoto kind={photoKindFor(sale.categorySlug)} alt={name} />
+        <Cover cover={sale.cover} categorySlug={sale.categorySlug} alt={name} />
         <span className="card__name">{name}</span>
       </Link>
       <span className="card__grade">
@@ -220,6 +221,34 @@ function SoldCard({ sale }: { sale: HomeSale }) {
       <strong className="card__price">{money(sale.priceMinor)}</strong>
       {sale.soldAt && <span className="card__when tg-muted">Sold {relative(sale.soldAt)}</span>}
     </li>
+  )
+}
+
+/**
+ * The photograph on a tile, or the drawn stand-in for one.
+ *
+ * A rail is the one place a missing photograph is least forgivable — a row of
+ * identical grey placeholders reads as a broken page rather than as a shop that
+ * has not finished its photography.
+ */
+function Cover({ cover, categorySlug, alt }: {
+  cover: MediaView | null
+  categorySlug: string | null
+  alt: string
+}) {
+  if (!cover) return <GearPhoto kind={photoKindFor(categorySlug)} alt={alt} />
+  return (
+    <span className="card__photo">
+      <img
+        src={cover.sizes[400] ?? cover.url}
+        srcSet={srcSet(cover)}
+        /* A tile is never wider than about 260px, so telling the browser that
+           stops it reaching for the 1200px rendition on a high-DPI phone. */
+        sizes="(max-width: 720px) 70vw, 260px"
+        alt={alt}
+        loading="lazy"
+      />
+    </span>
   )
 }
 

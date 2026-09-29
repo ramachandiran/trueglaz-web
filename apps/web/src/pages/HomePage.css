@@ -104,6 +104,23 @@
   line-height: 1.3;
 }
 
+/* Same box as the drawn placeholder, so a rail of mixed tiles lines up. */
+.card__photo {
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--tg-radius-md);
+  overflow: hidden;
+  border: 1px solid var(--tg-border);
+  background: var(--tg-bg-raised);
+}
+
+.card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .card__brand {
   font-size: var(--tg-text-xs);
 }

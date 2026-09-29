@@ -4,7 +4,8 @@ import { api, isOps, useSession } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { Timeline } from '../components/Timeline'
 import { InspectionReport } from '../components/InspectionReport'
-import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { photoKindFor } from '../components/GearPhoto'
+import { Gallery } from '../components/Gallery'
 import { RecentlySold } from '../components/RecentlySold'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge } from '../components/ui'
 import { buildTimeline, type RenderedReport } from '@trueglaz/core'
@@ -19,6 +20,12 @@ export function ListingDetailPage() {
   const listing = useApi(() => api.listing(id), [id])
 
   const itemId = listing.data?.listing.consignmentItemId
+  // Public listing photographs need no session; the endpoint filters by role,
+  // so a signed-out visitor gets the shop window and nothing else.
+  const photos = useApi(
+    () => (itemId ? api.itemMedia(itemId) : Promise.resolve([])),
+    [itemId],
+  )
   // The lifecycle lives on the item, and the item record is the seller's — it
   // carries their asking price, floor and bin location. Staff see the provenance
   // here; a shopper gets the grade and the disclosed defects, which is what the
@@ -60,16 +67,11 @@ export function ListingDetailPage() {
       </nav>
 
       <div className="product">
-        <div className="product__gallery">
-          <GearPhoto kind={kind} size="hero" alt={title} />
-          <div className="product__thumbs">
-            {[0, 1, 2].map((i) => <GearPhoto key={i} kind={kind} size="thumb" />)}
-          </div>
-          <p className="product__photo-note tg-muted">
-            Photographs of this exact unit are coming. Until then the condition report
-            below is the whole truth about it.
-          </p>
-        </div>
+        <Gallery
+          photos={(photos.data ?? []).filter((m) => m.role === 'listing')}
+          kind={kind}
+          alt={title}
+        />
 
         <div className="product__main">
           <h1 className="product__title">{title}</h1>

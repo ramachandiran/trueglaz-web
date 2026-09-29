@@ -770,6 +770,25 @@ export interface InvoiceDetail {
  * bought it. Sold prices are the most useful thing a used-gear buyer can see,
  * and the one thing no listing page can tell them.
  */
+/** A stored photograph, and where to fetch each size of it. */
+export interface MediaView {
+  id: string
+  role: string
+  width: number | null
+  height: number | null
+  url: string
+  /** Width in pixels to the URL that serves it, ready for a srcset. */
+  sizes: Record<number, string>
+}
+
+/** Where to PUT the bytes, and the ticket that seals them afterwards. */
+export interface UploadIntent {
+  url: string
+  method: string
+  headers: Record<string, string>
+  ticket: string
+}
+
 /** A piece of gear for sale, with what it saves against buying new. */
 export interface HomeListing {
   id: string
@@ -783,6 +802,7 @@ export interface HomeListing {
   brandName: string | null
   categorySlug: string | null
   publishedAt: string | null
+  cover: MediaView | null
 }
 
 /** A way into the catalogue, with how much is behind it. */
@@ -818,6 +838,7 @@ export interface HomeSale {
   priceMinor: number
   soldAt: string | null
   categorySlug: string | null
+  cover: MediaView | null
 }
 
 /** Everything the shop front shows, in one answer. */

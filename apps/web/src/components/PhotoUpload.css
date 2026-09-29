@@ -1,0 +1,83 @@
+/* ---------------------------------------------------------------------------
+   Choosing and uploading photographs.
+   --------------------------------------------------------------------------- */
+.shots {
+  display: grid;
+  gap: var(--tg-space-3);
+}
+
+.shots__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--tg-space-2);
+}
+
+.shots__item {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--tg-radius-md);
+  overflow: hidden;
+  border: 1px solid var(--tg-border);
+  background: var(--tg-bg-sunken, var(--tg-bg-raised));
+}
+
+.shots__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.shots__input {
+  font-size: var(--tg-text-sm);
+  max-width: 100%;
+}
+
+.shots__hint {
+  margin: 0;
+  font-size: var(--tg-text-xs);
+}
+
+.shots__busy {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-accent);
+}
+
+/* Per file, because that is how they failed: a seller who picked eight photos
+   and got one rejection needs to know which one. */
+.shots__errors {
+  list-style: none;
+  margin: 0;
+  padding: var(--tg-space-3);
+  display: grid;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-sm);
+  border: 1px solid var(--tg-bad, var(--tg-border));
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bad-soft, transparent);
+}
+
+/* A chosen-but-not-yet-uploaded photo, which can still be taken back out. */
+.shots__item--removable { position: relative; }
+
+.shots__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--tg-radius-pill);
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.shots__remove:hover { background: rgba(0, 0, 0, 0.8); }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError, money, singularCategory, useApi } from '@trueglaz/core'
+import { PhotoPicker } from '../components/PhotoPicker'
 import './SellPage.css'
 
 /**
@@ -58,12 +59,17 @@ export function NewSubmissionPage() {
     packagingAnswered: false,
   })
 
+  // Held rather than uploaded on pick: the unit does not exist until the form
+  // is sent, so there is nothing to attach them to until then.
+  const [photos, setPhotos] = useState<File[]>([])
+  const [uploading, setUploading] = useState<string | null>(null)
+
   async function addItem() {
     setBusy(true); setError(null)
     try {
       // Create submission, add item, and submit immediately
       const submission = await api.createSubmission('guided')
-      await api.addItem(submission.id, {
+      const created = await api.addItem(submission.id, {
         modelFreeText: item.modelFreeText.trim(),
         categoryId: item.categoryId,
         brandId: item.brandId,
@@ -78,6 +84,18 @@ export function NewSubmissionPage() {
         askingAmountMinor: Math.round(Number(item.asking) * 100),
         floorAmountMinor: Math.round(Number(item.floor) * 100),
       })
+      // Photographs before the submission is sent, so a unit never reaches the
+      // queue without the pictures the seller meant to send with it.
+      for (let i = 0; i < photos.length; i++) {
+        setUploading(`Uploading photo ${i + 1} of ${photos.length}…`)
+        await api.uploadPhoto(photos[i], {
+          ownerType: 'item',
+          ownerId: created.id,
+          role: 'seller_submission',
+        })
+      }
+      setUploading(null)
+
       await api.submitSubmission(submission.id)
       // Redirect to /sell with query param to show banner
       nav('/sell?submitted=true')
@@ -361,13 +379,11 @@ export function NewSubmissionPage() {
 
           <div className="sell__field sell__field--wide">
             <span className="sell__field-label">Photos</span>
-            <div className="sell__photos">
-              <p className="tg-muted sell__hint">
-                Not yet — there is nowhere to put them until we settle where uploads are
-                stored. When that lands, at least one photo will be required: a picture
-                taken before it ships is the only record of what left your hands.
-              </p>
-            </div>
+            <p className="tg-muted sell__hint">
+              Take them before it ships. These are the only record of what left your
+              hands, and they are what we check the unit against when it arrives.
+            </p>
+            <PhotoPicker files={photos} onChange={setPhotos} />
           </div>
         </div>
 
@@ -379,6 +395,7 @@ export function NewSubmissionPage() {
         {floorTooHigh && <p className="sell__error">Your floor is above your asking price.</p>}
         {askingNum > 0 && <FeePreview salePriceMinor={Math.round(askingNum * 100)} />}
 
+        {uploading && <p className="sell__hint" role="status">{uploading}</p>}
         <button className="tg-button tg-button--primary" disabled={busy || !canAdd} onClick={addItem}>
           {busy ? 'Submitting…' : 'Add to submission'}
         </button>

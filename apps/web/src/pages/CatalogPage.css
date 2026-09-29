@@ -119,3 +119,22 @@
 }
 
 .results__sort > span { white-space: nowrap; }
+
+/* A real photograph in the tile's photo slot. Matches the drawn placeholder's
+   box so a grid of mixed tiles stays on its grid. */
+.result__photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--tg-radius-md);
+  overflow: hidden;
+  border: 1px solid var(--tg-border);
+  background: var(--tg-bg-raised);
+}
+
+.result__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
