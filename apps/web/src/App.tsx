@@ -5,6 +5,7 @@ import { Guard } from './components/Guard'
 import { Loading } from './components/ui'
 import { AdminPage } from './pages/AdminPage'
 import { CatalogPage } from './pages/CatalogPage'
+import { HomePage } from './pages/HomePage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { FulfilmentPage } from './pages/FulfilmentPage'
 import { InspectPage } from './pages/InspectPage'
@@ -36,7 +37,7 @@ function SmartHome() {
     if (isOps(session)) return <Navigate to="/inventory" replace />
   }
 
-  return <CatalogPage />
+  return <HomePage />
 }
 
 export function App() {

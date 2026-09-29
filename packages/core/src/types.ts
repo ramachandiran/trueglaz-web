@@ -141,6 +141,13 @@ export interface Brand {
   isActive: boolean
 }
 
+/** A lens mount — what decides whether a lens will physically fit a body. */
+export interface Mount {
+  id: string
+  name: string
+  brandId: string | null
+}
+
 export interface Category {
   id: string
   name: string
@@ -763,6 +770,67 @@ export interface InvoiceDetail {
  * bought it. Sold prices are the most useful thing a used-gear buyer can see,
  * and the one thing no listing page can tell them.
  */
+/** A piece of gear for sale, with what it saves against buying new. */
+export interface HomeListing {
+  id: string
+  title: string
+  gradeCode: string
+  gradeLabel: string | null
+  priceMinor: number
+  msrpMinor: number | null
+  savedMinor: number | null
+  savedPct: number | null
+  brandName: string | null
+  categorySlug: string | null
+  publishedAt: string | null
+}
+
+/** A way into the catalogue, with how much is behind it. */
+export interface HomeFacet {
+  name: string
+  slug: string | null
+  liveCount: number
+}
+
+/** What a model has done here: how many went, and what is left. */
+export interface HomeModel {
+  brandName: string
+  modelName: string
+  soldCount: number
+  liveCount: number
+  fromPriceMinor: number | null
+}
+
+/** An open ask from the Wanted board. */
+export interface HomeWanted {
+  id: string
+  wanted: string
+  minGradeCode: string | null
+  maxPriceMinor: number | null
+}
+
+/** A sale, as the public may see it: the gear and the price, never the people. */
+export interface HomeSale {
+  id: string
+  title: string
+  gradeCode: string
+  gradeLabel: string | null
+  priceMinor: number
+  soldAt: string | null
+  categorySlug: string | null
+}
+
+/** Everything the shop front shows, in one answer. */
+export interface HomeView {
+  justIn: HomeListing[]
+  bestSavings: HomeListing[]
+  recentlySold: HomeSale[]
+  brands: HomeFacet[]
+  mounts: HomeFacet[]
+  topModels: HomeModel[]
+  wanted: HomeWanted[]
+}
+
 export interface SoldListing {
   id: string
   title: string

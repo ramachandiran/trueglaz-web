@@ -1,0 +1,258 @@
+/* ---------------------------------------------------------------------------
+   The shop front.
+
+   Rows of gear rather than a grid behind filters. The page is a column of
+   sections, each one a rail that scrolls sideways when it does not fit — a
+   wrapping row reads as a grid that has gone wrong, and a grid is what the
+   catalogue is for.
+   --------------------------------------------------------------------------- */
+.home {
+  display: grid;
+  gap: var(--tg-space-7);
+  padding: var(--tg-space-5) var(--tg-space-4) var(--tg-space-7);
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.home__intro {
+  max-width: 62ch;
+}
+
+.home__headline {
+  font-size: var(--tg-text-xxl);
+  margin: 0 0 var(--tg-space-2);
+}
+
+.home__sub {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.home__section {
+  display: grid;
+  gap: var(--tg-space-4);
+  min-width: 0;
+}
+
+/* The link sits on the heading's baseline at the far end, so the eye finds the
+   way out of a row in the same place every time. */
+.home__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--tg-space-2) var(--tg-space-3);
+}
+
+.home__title {
+  font-size: var(--tg-text-lg);
+  margin: 0;
+}
+
+.home__blurb {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+  flex: 1 1 24ch;
+}
+
+.home__all {
+  font-size: var(--tg-text-sm);
+  white-space: nowrap;
+}
+
+/* --- rails ---------------------------------------------------------------- */
+
+.rail {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--tg-space-2);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(190px, 1fr);
+  gap: var(--tg-space-4);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  /* Room for the card's focus ring, which a clipped overflow would cut off. */
+  padding-inline: 2px;
+  margin-inline: -2px;
+}
+
+.rail > * {
+  scroll-snap-align: start;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.card__link {
+  display: grid;
+  gap: var(--tg-space-2);
+  color: var(--tg-text);
+  text-decoration: none;
+  margin-bottom: var(--tg-space-1);
+}
+
+.card__link:hover .card__name {
+  text-decoration: underline;
+}
+
+.card__name {
+  font-weight: var(--tg-weight-medium);
+  line-height: 1.3;
+}
+
+.card__brand {
+  font-size: var(--tg-text-xs);
+}
+
+.card__grade {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-xs);
+  margin: var(--tg-space-1) 0 2px;
+}
+
+.card__price {
+  font-size: var(--tg-text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The saving is the reason that row exists, so it is the one thing on a card
+   allowed to use the accent colour. */
+.card__saving {
+  font-size: var(--tg-text-xs);
+  color: var(--tg-accent);
+  font-weight: var(--tg-weight-medium);
+}
+
+.card__when {
+  font-size: var(--tg-text-xs);
+}
+
+/* Sold gear is history, not stock: it is legible but visibly not for sale. */
+.card--sold .photo {
+  opacity: 0.55;
+}
+
+/* --- ways in -------------------------------------------------------------- */
+
+.tile__link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--tg-space-3) var(--tg-space-4);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+  color: var(--tg-text);
+  text-decoration: none;
+  height: 100%;
+  transition: border-color var(--tg-transition), background var(--tg-transition);
+}
+
+.tile__link:hover {
+  border-color: var(--tg-accent);
+  text-decoration: none;
+}
+
+.tile__label {
+  font-weight: var(--tg-weight-bold);
+}
+
+.tile__count {
+  font-size: var(--tg-text-xs);
+}
+
+/* --- demand by model ------------------------------------------------------ */
+
+.home__models {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--tg-border);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  overflow: hidden;
+}
+
+.model {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--tg-space-2) var(--tg-space-4);
+  padding: var(--tg-space-3) var(--tg-space-4);
+  background: var(--tg-bg-raised);
+  font-size: var(--tg-text-sm);
+}
+
+.model__name {
+  flex: 1 1 22ch;
+}
+
+.model__stat {
+  font-variant-numeric: tabular-nums;
+}
+
+.model__cta,
+.model__gone {
+  white-space: nowrap;
+  font-size: var(--tg-text-sm);
+}
+
+/* --- the Wanted teaser ---------------------------------------------------- */
+
+.home__wanted {
+  padding: var(--tg-space-5);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+}
+
+.home__asks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--tg-space-2);
+}
+
+.ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--tg-space-2) var(--tg-space-3);
+  font-size: var(--tg-text-sm);
+}
+
+.ask__what {
+  font-weight: var(--tg-weight-medium);
+}
+
+.ask__terms {
+  font-size: var(--tg-text-xs);
+}
+
+.home__wanted-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tg-space-3);
+}
+
+@media (max-width: 720px) {
+  .home {
+    gap: var(--tg-space-6);
+    padding: var(--tg-space-4) var(--tg-space-3) var(--tg-space-7);
+  }
+
+  .home__headline { font-size: var(--tg-text-xl); }
+
+  /* Narrower cards, so a second one peeks in at the edge and the row reads as
+     something you can push sideways. */
+  .rail { grid-auto-columns: minmax(150px, 70%); }
+}

@@ -9,6 +9,9 @@ import {
   applyFilters, buildModelIndex, countBy, EMPTY_FILTERS,
   resolveModel, singularCategory, type Facetable, type Filters, type Sort,
 } from '@trueglaz/core'
+
+/** The sorts the results header offers, and so the only ones a link may ask for. */
+const SORTS: Sort[] = ['newest', 'price-asc', 'price-desc', 'grade-desc']
 import { money } from '@trueglaz/core'
 import './CatalogPage.css'
 
@@ -22,6 +25,7 @@ export function CatalogPage() {
   const models = useApi(() => api.models(), [])
   const grades = useApi(() => api.grades(), [])
   const brands = useApi(() => api.brands(), [])
+  const mounts = useApi(() => api.mounts(), [])
   const categories = useApi(() => api.categories(), [])
 
   const rows: Facetable[] = useMemo(() => {
@@ -50,19 +54,30 @@ export function CatalogPage() {
   const q = params.get('q') ?? ''
   const catSlug = params.get('cat')
   const brandName = params.get('brand')
+  // The home page's rows link in here, so the params they write have to mean
+  // something: a mount by name, and a sort the results header already offers.
+  const mountName = params.get('mount')
+  const sortParam = params.get('sort')
 
   useEffect(() => {
     const category = categories.data?.find((c) => c.slug === catSlug)
     const brand = brands.data?.find(
       (b) => b.name.toLowerCase() === (brandName ?? '').toLowerCase(),
     )
+    const mount = mounts.data?.find(
+      (m) => m.name.toLowerCase() === (mountName ?? '').toLowerCase(),
+    )
     setFilters((current) => ({
       ...current,
       q,
       categoryIds: category ? [category.id] : [],
       brandIds: brand ? [brand.id] : [],
+      mountIds: mount ? [mount.id] : [],
+      // An unrecognised sort is ignored rather than defaulted over, so a stale
+      // link cannot silently reorder the shelf.
+      sort: SORTS.includes(sortParam as Sort) ? (sortParam as Sort) : current.sort,
     }))
-  }, [q, catSlug, brandName, categories.data, brands.data])
+  }, [q, catSlug, brandName, mountName, sortParam, categories.data, brands.data, mounts.data])
 
   const visible = useMemo(() => applyFilters(rows, filters, gradeRank), [rows, filters, gradeRank])
 
@@ -71,8 +86,9 @@ export function CatalogPage() {
     const category = categories.data?.find((c) => c.slug === catSlug)
     if (category) return category.name
     if (brandName) return brandName
+    if (mountName) return `${mountName} mount`
     return 'All gear'
-  }, [q, catSlug, brandName, categories.data])
+  }, [q, catSlug, brandName, mountName, categories.data])
 
   // Facet counts reflect everything else that is selected, so a count of zero
   // genuinely means "picking this shows nothing".

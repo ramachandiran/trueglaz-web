@@ -4,6 +4,8 @@ export interface Filters {
   q: string
   categoryIds: string[]
   brandIds: string[]
+  /** Which lens mount the body or glass uses — the "will it fit" facet. */
+  mountIds: string[]
   grades: string[]
   minPriceMinor: number | null
   maxPriceMinor: number | null
@@ -16,6 +18,7 @@ export const EMPTY_FILTERS: Filters = {
   q: '',
   categoryIds: [],
   brandIds: [],
+  mountIds: [],
   grades: [],
   minPriceMinor: null,
   maxPriceMinor: null,
@@ -27,6 +30,7 @@ export function activeFilterCount(f: Filters): number {
     (f.q ? 1 : 0) +
     f.categoryIds.length +
     f.brandIds.length +
+    f.mountIds.length +
     f.grades.length +
     (f.minPriceMinor !== null ? 1 : 0) +
     (f.maxPriceMinor !== null ? 1 : 0)
@@ -77,6 +81,9 @@ export function applyFilters(
       return false
     }
     if (f.brandIds.length && !(model && f.brandIds.includes(model.brandId ?? ''))) {
+      return false
+    }
+    if (f.mountIds.length && !(model && f.mountIds.includes(model.mountId ?? ''))) {
       return false
     }
     if (f.grades.length && !f.grades.includes(listing.gradeCode)) return false
