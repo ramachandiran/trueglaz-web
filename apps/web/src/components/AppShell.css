@@ -30,20 +30,27 @@
 .shell__brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--tg-space-2);
-  font-size: var(--tg-text-lg);
-  font-weight: var(--tg-weight-bold);
+  /* The logo carries the name now, so the brand link is the artwork and
+     nothing else; the colour is inherited by its currentColor fill. */
   color: var(--tg-on-brand);
   text-decoration: none;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 .shell__brand:hover { text-decoration: none; }
 
 .shell__logo {
-  width: 18px;
-  height: 18px;
-  border-radius: var(--tg-radius-pill);
-  border: 3px solid var(--tg-on-brand);
+  /* Sized by height, not width: the lockup keeps its own aspect ratio, so
+     giving it a height lets the wordmark be as long as the artwork says. */
+  height: 22px;
+  width: auto;
+  display: block;
+}
+
+/* Below the wordmark's comfortable reading size the bar is better served by
+   the mark alone, but the header has no room for a second asset — so the
+   lockup simply shrinks, and the search field takes the width it frees. */
+@media (max-width: 720px) {
+  .shell__logo { height: 18px; }
 }
 
 /* A stacked label, the way a shop puts the small word above the big one. */
@@ -131,8 +138,20 @@
   background: var(--tg-brand);
   color: var(--tg-on-brand-muted);
   padding: var(--tg-space-4);
-  text-align: center;
   font-size: var(--tg-text-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tg-space-3);
+}
+
+/* The mark, not the lockup: the line beside it already says the name, and
+   saying it twice in one footer reads as a mistake. */
+.shell__footer-mark {
+  height: 18px;
+  width: auto;
+  flex-shrink: 0;
+  color: var(--tg-on-brand-muted);
 }
 .shell__footer .tg-muted { color: var(--tg-on-brand-muted); }
 

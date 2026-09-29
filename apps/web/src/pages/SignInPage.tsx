@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError, useSession } from '@trueglaz/core'
+import { Logo } from '../components/Logo'
 import './SignInPage.css'
 
 /**
@@ -66,7 +67,8 @@ export function SignInPage() {
   return (
     <div className="signin">
       <div className="signin__card tg-card">
-        <h1 className="signin__title">Sign in to TrueGlaz</h1>
+        <Logo className="signin__logo" />
+        <h1 className="signin__title">Sign in</h1>
 
         {step === 'contact' ? (
           <form onSubmit={sendCode} className="signin__form">

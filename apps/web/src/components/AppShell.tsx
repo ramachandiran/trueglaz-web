@@ -4,6 +4,7 @@ import { useMarketView, type MarketView } from '../state/useMarketView'
 import { useTheme, type ThemeMode } from '../state/useTheme'
 import { AccountMenu } from './AccountMenu'
 import { HeaderSearch } from './HeaderSearch'
+import { Logo, LogoMark } from './Logo'
 import './AppShell.css'
 
 export function AppShell() {
@@ -14,6 +15,7 @@ export function AppShell() {
         <Outlet />
       </main>
       <footer className="shell__footer">
+        <LogoMark className="shell__footer-mark" />
         <span className="tg-muted">TrueGlaz — every unit graded, every defect disclosed.</span>
       </footer>
     </div>
@@ -42,9 +44,8 @@ function Header() {
   return (
     <header className="shell__header">
       <div className="shell__bar">
-        <NavLink to="/" className="shell__brand">
-          <span className="shell__logo" aria-hidden="true" />
-          TrueGlaz
+        <NavLink to="/" className="shell__brand" aria-label="TrueGlaz — home">
+          <Logo className="shell__logo" />
         </NavLink>
 
         <HeaderSearch />

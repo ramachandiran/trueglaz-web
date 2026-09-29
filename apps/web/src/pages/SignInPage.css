@@ -10,6 +10,16 @@
   padding: var(--tg-space-6);
 }
 
+/* The card is the first thing a signed-out visitor sees up close, so the
+   lockup stands above the heading rather than being folded into it. */
+.signin__logo {
+  height: 26px;
+  width: auto;
+  display: block;
+  color: var(--tg-text);
+  margin-bottom: var(--tg-space-4);
+}
+
 .signin__title {
   font-size: var(--tg-text-xl);
   margin-bottom: var(--tg-space-4);
