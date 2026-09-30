@@ -136,6 +136,72 @@
   margin-bottom: var(--tg-space-4);
 }
 
+
+/* -- refer & earn ---------------------------------------------------------- */
+
+.profile__referral {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--tg-space-4);
+  padding: var(--tg-space-4);
+  background: var(--tg-accent-soft);
+  border-radius: var(--tg-radius-md);
+}
+.profile__referral-code { display: flex; flex-direction: column; gap: var(--tg-space-2); min-width: 0; }
+.profile__referral-value {
+  margin: 0;
+  font-family: var(--tg-font-mono);
+  font-size: var(--tg-text-xl);
+  font-weight: var(--tg-weight-bold);
+  letter-spacing: 0.16em;
+  /* Eight characters plus wide tracking overflows a phone at the xxl size the
+     code deserves on a desktop, and a referral code that wraps mid-string is
+     one somebody mistypes. */
+  overflow-wrap: anywhere;
+}
+.profile__referral-actions { display: flex; flex-wrap: wrap; gap: var(--tg-space-2); }
+
+.profile__stats {
+  display: grid;
+  /* auto-fit on the container, not a viewport breakpoint: this card also sits
+     in narrower columns, where the window width says nothing useful. */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--tg-space-4);
+  margin-top: var(--tg-space-4);
+}
+.profile__stat { display: flex; flex-direction: column; gap: var(--tg-space-1); min-width: 0; }
+.profile__stat-value {
+  margin: 0;
+  font-size: var(--tg-text-xl);
+  font-weight: var(--tg-weight-bold);
+}
+
+.profile__referral-note { margin: var(--tg-space-4) 0 0; }
+.profile__referral-toggle { margin-top: var(--tg-space-3); }
+
+.profile__points {
+  list-style: none;
+  margin: var(--tg-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-1);
+  font-size: var(--tg-text-sm);
+}
+.profile__point {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-2) var(--tg-space-3);
+  background: var(--tg-bg-sunken);
+  border-radius: var(--tg-radius-sm);
+}
+.profile__point-amount { font-weight: var(--tg-weight-bold); color: var(--tg-good); }
+.profile__point-when { font-size: var(--tg-text-xs); white-space: nowrap; }
+
 @media (max-width: 720px) {
   .profile {
     gap: var(--tg-space-4);
@@ -152,4 +218,9 @@
   .profile__jump {
     gap: var(--tg-space-2);
   }
+}
+
+@media (max-width: 720px) {
+  .profile__referral { align-items: stretch; }
+  .profile__referral-actions .tg-button { flex: 1 1 auto; }
 }

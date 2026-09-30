@@ -61,3 +61,47 @@
     font-size: 1.4rem;
   }
 }
+
+/* -- platform settings ----------------------------------------------------- */
+
+/* Self-contained rather than borrowing .sell__table, which only happens to be
+   loaded because another page imports it. */
+.admin__settings {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tg-text-sm);
+  margin-top: var(--tg-space-4);
+}
+.admin__settings th {
+  text-align: left;
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tg-text-muted);
+  padding-bottom: var(--tg-space-2);
+  border-bottom: 1px solid var(--tg-border);
+}
+.admin__settings td { border-bottom: 1px solid var(--tg-border); padding: var(--tg-space-3) var(--tg-space-3) var(--tg-space-3) 0; }
+.admin__settings td { vertical-align: top; padding-top: var(--tg-space-3); }
+.admin__setting-desc {
+  margin-top: var(--tg-space-1);
+  /* The descriptions are full sentences; without a measure they stretch the
+     key column across half the table and squash the input out of reach. */
+  max-width: 52ch;
+  line-height: 1.5;
+}
+.admin__setting-input {
+  max-width: 12ch;
+  font-family: var(--tg-font-mono);
+}
+.admin__setting-ok {
+  margin-left: var(--tg-space-2);
+  color: var(--tg-good);
+  font-size: var(--tg-text-xs);
+}
+
+@media (max-width: 900px) {
+  /* The table has five columns of real content; below this it stops being a
+     table and starts being a horizontal scroll nobody finds. */
+  .admin__settings { display: block; overflow-x: auto; }
+}

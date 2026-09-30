@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow } from '@trueglaz/core'
+import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, type PlatformSetting } from '@trueglaz/core'
 import { InventoryTable } from '../components/InventoryTable'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { KycDocuments } from '../components/KycDocuments'
@@ -128,6 +128,8 @@ export function AdminPage() {
 
       <KycQueue />
 
+      <Settings />
+
       <LedgerFeed />
     </div>
   )
@@ -203,6 +205,115 @@ function Widget({ label, value, note, tone }: {
       <strong className="admin__widget-value">{value}</strong>
       {note && <span className="admin__widget-note tg-muted">{note}</span>}
     </div>
+  )
+}
+
+/* -- platform settings ----------------------------------------------------- */
+
+/** Which keys are worth putting at the top of the list. */
+const SETTING_ORDER = ['referral_bonus_points', 'commission_gst_percent', 'reservation_timeout_minutes']
+
+/**
+ * The numbers the platform runs on, editable here.
+ *
+ * Not a free-form key/value editor: the server validates each value against
+ * that row's own type and bounds and refuses a key that does not already
+ * exist, because nothing reads a setting it was not written to read. Every
+ * change is recorded with who made it.
+ */
+function Settings() {
+  const rows = useApi(() => api.adminSettings(), [])
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState<string | null>(null)
+  const [saved, setSaved] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save(row: PlatformSetting) {
+    const next = (drafts[row.key] ?? row.value).trim()
+    if (next === row.value) return
+    setBusy(row.key); setError(null); setSaved(null)
+    try {
+      await api.setSetting(row.key, next)
+      setDrafts((d) => { const { [row.key]: _drop, ...rest } = d; return rest })
+      setSaved(row.key)
+      rows.reload()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'That did not work')
+    } finally { setBusy(null) }
+  }
+
+  const all = rows.data ?? []
+  const sorted = [...all].sort((a, b) => {
+    const ia = SETTING_ORDER.indexOf(a.key)
+    const ib = SETTING_ORDER.indexOf(b.key)
+    if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+    return a.key.localeCompare(b.key)
+  })
+
+  return (
+    <section className="tg-card ops__card">
+      <h2 className="ops__subtitle">Platform settings</h2>
+      <p className="tg-muted ops__fineprint">
+        These take effect on the next read — no deploy. Each one is checked against
+        its own bounds before it is stored, and every change is recorded.
+      </p>
+
+      {rows.loading && !rows.data && <Loading label="Loading settings" />}
+      {error && <p className="ops__error" role="alert">{error}</p>}
+
+      {sorted.length > 0 && (
+        <table className="admin__settings">
+          <thead>
+            <tr>
+              <th>Setting</th>
+              <th>Value</th>
+              <th>Allowed</th>
+              <th>Last changed</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((row) => {
+              const draft = drafts[row.key] ?? row.value
+              const dirty = draft.trim() !== row.value
+              return (
+                <tr key={row.key}>
+                  <td>
+                    <strong>{row.key}</strong>
+                    <p className="tg-muted ops__fineprint admin__setting-desc">{row.description}</p>
+                  </td>
+                  <td>
+                    <input
+                      className="tg-input admin__setting-input"
+                      value={draft}
+                      aria-label={row.key}
+                      onChange={(e) => setDrafts({ ...drafts, [row.key]: e.target.value })}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void save(row) } }}
+                    />
+                  </td>
+                  <td className="tg-muted">
+                    {row.valueType}
+                    {(row.minValue != null || row.maxValue != null) &&
+                      ` · ${row.minValue ?? '−∞'} to ${row.maxValue ?? '∞'}`}
+                  </td>
+                  <td className="tg-muted">{row.updatedAt ? dateTime(row.updatedAt) : '—'}</td>
+                  <td>
+                    <button
+                      className="tg-button tg-button--primary"
+                      disabled={!dirty || busy === row.key}
+                      onClick={() => save(row)}
+                    >
+                      {busy === row.key ? 'Saving…' : 'Save'}
+                    </button>
+                    {saved === row.key && !dirty && <span className="admin__setting-ok">Saved</span>}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
+    </section>
   )
 }
 

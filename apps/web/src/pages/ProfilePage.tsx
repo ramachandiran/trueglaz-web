@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, dateTime, useApi, useSession,
-  type Address, type CodeSent, type Profile, type SessionInfo,
+  type Address, type BonusPointLine, type CodeSent, type Profile, type SessionInfo,
 } from '@trueglaz/core'
 import { KycPanel } from '../components/KycPanel'
 import { ErrorNote, Loading } from '../components/ui'
@@ -55,6 +55,7 @@ export function ProfilePage() {
 
       <nav className="profile__jump" aria-label="Sections">
         <a href="#details">Personal details</a>
+        <a href="#referral">Refer &amp; earn</a>
         <a href="#addresses">Addresses</a>
         <a href="#bank">Bank details</a>
         <a href="#identity">Identity</a>
@@ -62,6 +63,7 @@ export function ProfilePage() {
       </nav>
 
       <PersonalDetails me={me} onSaved={profile.reload} />
+      <Referral />
       <Addresses />
       <BankDetails me={me} onSaved={profile.reload} />
 
@@ -76,6 +78,149 @@ export function ProfilePage() {
 
       <Security me={me} onChanged={profile.reload} />
     </div>
+  )
+}
+
+/* -- refer & earn ----------------------------------------------------------- */
+
+/** How a bonus point row explains itself. */
+const POINT_REASONS: Record<string, string> = {
+  referral_referrer: 'Someone used your code',
+  referral_redeemer: 'You used a referral code',
+  adjustment: 'Adjustment by TrueGlaz',
+}
+
+function Referral() {
+  const mine = useApi(() => api.myReferral(), [])
+  const history = useApi(() => api.myPoints(), [])
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+
+  async function copy(code: string) {
+    setError(null)
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard access is refused outside a secure context and in some
+      // browsers. The code is on screen either way, so say so rather than
+      // pretending nothing happened.
+      setError('Could not copy — select the code and copy it by hand')
+    }
+  }
+
+  async function regenerate() {
+    if (!window.confirm('The code you have now will stop working. Anyone you already shared it with would need the new one. Continue?')) return
+    setBusy(true); setError(null)
+    try {
+      await api.regenerateReferral()
+      mine.reload()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'That did not work')
+    } finally { setBusy(false) }
+  }
+
+  // Same rule as everywhere else on this page: only the first load takes over,
+  // so a regenerate does not flash a spinner over the card it just changed.
+  if (mine.loading && !mine.data) {
+    return (
+      <section className="tg-card profile__section" id="referral">
+        <h2 className="profile__section-title">Refer &amp; earn</h2>
+        <Loading label="Loading your code" />
+      </section>
+    )
+  }
+  if (!mine.data) {
+    return (
+      <section className="tg-card profile__section" id="referral">
+        <h2 className="profile__section-title">Refer &amp; earn</h2>
+        {mine.error
+          ? <ErrorNote error={mine.error} onRetry={mine.reload} />
+          : <p className="tg-muted profile__blurb">Your code is not available right now.</p>}
+      </section>
+    )
+  }
+
+  const r = mine.data
+  const lines: BonusPointLine[] = history.data ?? []
+
+  return (
+    <section className="tg-card profile__section" id="referral">
+      <h2 className="profile__section-title">Refer &amp; earn</h2>
+      <p className="tg-muted profile__blurb">
+        Share your code. When someone uses it on a purchase, you both get{' '}
+        {r.pointsPerClaim} bonus points. Each person can use your code once.
+      </p>
+
+      <div className="profile__referral">
+        <div className="profile__referral-code">
+          <span className="profile__label">Your code</span>
+          <p className="profile__referral-value">{r.code}</p>
+        </div>
+        <div className="profile__referral-actions">
+          <button className="tg-button tg-button--primary" onClick={() => copy(r.code)}>
+            {copied ? 'Copied' : 'Copy code'}
+          </button>
+          <button className="tg-button tg-button--subtle" disabled={busy} onClick={regenerate}>
+            {busy ? 'Working…' : 'Get a new code'}
+          </button>
+        </div>
+      </div>
+
+      <div className="profile__stats">
+        <div className="profile__stat">
+          <span className="profile__label">Your points</span>
+          <p className="profile__stat-value">{r.pointsBalance}</p>
+        </div>
+        <div className="profile__stat">
+          <span className="profile__label">People who used your code</span>
+          <p className="profile__stat-value">{r.timesUsed}</p>
+        </div>
+        <div className="profile__stat">
+          <span className="profile__label">Worth per referral</span>
+          <p className="profile__stat-value">{r.pointsPerClaim}</p>
+        </div>
+      </div>
+
+      <p className="tg-muted profile__hint profile__referral-note">
+        {r.claimedCode
+          ? `You used the code ${r.claimedCode} on a purchase. Everyone gets one.`
+          : 'Got a code from a friend? Enter it at checkout and you will both be credited.'}
+      </p>
+
+      {r.pointsBalance > 0 && (
+        <>
+          <button
+            className="tg-button tg-button--subtle profile__referral-toggle"
+            onClick={() => { setShowHistory((v) => !v); if (!showHistory) history.reload() }}
+          >
+            {showHistory ? 'Hide history' : 'Show points history'}
+          </button>
+
+          {showHistory && (
+            <ul className="profile__points">
+              {lines.length === 0 && <li className="tg-muted">Nothing yet.</li>}
+              {lines.map((l, i) => (
+                <li key={i} className="profile__point">
+                  <span>{POINT_REASONS[l.reason] ?? l.reason}</span>
+                  <span className="profile__point-amount">
+                    {l.amount > 0 ? `+${l.amount}` : l.amount}
+                  </span>
+                  <span className="tg-muted profile__point-when">
+                    {l.createdAt ? dateOnly(l.createdAt) : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+
+      {error && <p className="profile__error" role="alert">{error}</p>}
+    </section>
   )
 }
 

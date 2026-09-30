@@ -30,6 +30,17 @@ export function CheckoutPage() {
   const [error, setError] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
 
+  // A referral code is checked before the order is placed rather than after.
+  // The server claims it inside the checkout transaction, so a bad code would
+  // otherwise take the whole order down with it.
+  const referral = useApi(() => api.myReferral(), [])
+  const [codeInput, setCodeInput] = useState('')
+  const [appliedCode, setAppliedCode] = useState<string | null>(null)
+  const [codeWorth, setCodeWorth] = useState<number | null>(null)
+  const [codeError, setCodeError] = useState<string | null>(null)
+  const [checkingCode, setCheckingCode] = useState(false)
+  const [codeDropped, setCodeDropped] = useState(false)
+
   const [address, setAddress] = useState({
     recipientName: session?.displayName ?? '',
     line1: '', line2: '', city: '', state: '', pincode: '', countryCode: 'IN',
@@ -97,14 +108,54 @@ export function CheckoutPage() {
     [listing.data],
   )
 
+  async function applyCode() {
+    const code = codeInput.trim().toUpperCase()
+    if (!code) return
+    setCheckingCode(true); setCodeError(null)
+    try {
+      const { pointsEach } = await api.previewReferral(code)
+      setAppliedCode(code)
+      setCodeWorth(pointsEach)
+      setCodeInput(code)
+    } catch (e) {
+      setAppliedCode(null)
+      setCodeWorth(null)
+      setCodeError(e instanceof ApiError ? e.message : 'Could not check that code')
+    } finally {
+      setCheckingCode(false)
+    }
+  }
+
+  function clearCode() {
+    setAppliedCode(null); setCodeWorth(null); setCodeError(null); setCodeInput('')
+  }
+
   async function placeOrder() {
     if (!reservationId) return
-    setBusy(true); setError(null)
+    setBusy(true); setError(null); setCodeDropped(false)
     try {
-      const order = await api.checkout(reservationId, address)
+      const order = await api.checkout(reservationId, address, appliedCode)
       setOrderId(order.id)
       setStep('pay')
     } catch (e) {
+      // The code was valid a moment ago, so this is rare. When it happens, the
+      // purchase matters more than the bonus: retry without the code rather
+      // than making somebody lose the item over 500 points. No string matching
+      // — if the second attempt fails too, the code was never the problem and
+      // its error is the one worth showing.
+      if (appliedCode) {
+        try {
+          const order = await api.checkout(reservationId, address, null)
+          setOrderId(order.id)
+          setAppliedCode(null)
+          setCodeDropped(true)
+          setStep('pay')
+          return
+        } catch (retry) {
+          setError(retry instanceof ApiError ? retry.message : 'Could not place the order')
+          return
+        }
+      }
       setError(e instanceof ApiError ? e.message : 'Could not place the order')
     } finally {
       setBusy(false)
@@ -213,6 +264,47 @@ export function CheckoutPage() {
                 typing it next time.
               </p>
             )}
+            <div className="checkout__referral">
+              <h3 className="checkout__subheading">Referral code</h3>
+              {referral.data?.claimedCode ? (
+                <p className="tg-muted checkout__note">
+                  You already used the code {referral.data.claimedCode}. Everyone gets one.
+                </p>
+              ) : appliedCode ? (
+                <p className="checkout__referral-ok">
+                  {appliedCode} applied — you and whoever gave it to you each get{' '}
+                  {codeWorth} bonus points.{' '}
+                  <button className="checkout__referral-remove" onClick={clearCode}>Remove</button>
+                </p>
+              ) : (
+                <>
+                  <p className="tg-muted checkout__note">
+                    Got one from a friend? You will both be credited when the order goes through.
+                  </p>
+                  <div className="checkout__referral-row">
+                    <input
+                      className="tg-input checkout__referral-input"
+                      value={codeInput}
+                      placeholder="ABCD2345"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      aria-label="Referral code"
+                      onChange={(e) => { setCodeInput(e.target.value.toUpperCase()); setCodeError(null) }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void applyCode() } }}
+                    />
+                    <button
+                      className="tg-button"
+                      disabled={checkingCode || codeInput.trim().length < 4}
+                      onClick={applyCode}
+                    >
+                      {checkingCode ? 'Checking…' : 'Apply'}
+                    </button>
+                  </div>
+                  {codeError && <p className="checkout__referral-bad" role="alert">{codeError}</p>}
+                </>
+              )}
+            </div>
+
             <button
               className="tg-button tg-button--primary checkout__cta"
               disabled={busy || !addressValid || !reservationId}
@@ -230,6 +322,12 @@ export function CheckoutPage() {
               Your money is held in escrow. Nothing reaches the seller until you
               have the item and accept it.
             </p>
+            {codeDropped && (
+              <p className="checkout__referral-bad">
+                Your referral code could not be applied, so the order was placed
+                without it. Nothing was charged for it.
+              </p>
+            )}
             <button className="tg-button tg-button--primary checkout__cta" disabled={busy} onClick={payNow}>
               {busy ? 'Processing…' : `Pay ${money(total)}`}
             </button>

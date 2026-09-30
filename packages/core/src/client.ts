@@ -4,8 +4,8 @@ import type {
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
-  MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, WantedRequest,
-  PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
+  MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
+  BonusPointLine, PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, ReferralView, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
 
@@ -280,8 +280,18 @@ export const api = {
   // -- buyer ---------------------------------------------------------------
   reserve: (listingId: string) => post<Reservation>(`/listings/${listingId}/reserve`),
   releaseReservation: (id: string) => post<Reservation>(`/reservations/${id}/release`),
-  checkout: (reservationId: string, deliveryAddress: Record<string, unknown>) =>
-    post<Order>(`/reservations/${reservationId}/checkout`, { deliveryAddress }),
+  checkout: (
+    reservationId: string,
+    deliveryAddress: Record<string, unknown>,
+    referralCode?: string | null,
+  ) =>
+    post<Order>(`/reservations/${reservationId}/checkout`, {
+      deliveryAddress,
+      // Omitted rather than sent empty: the server treats a blank code as
+      // "no code", but a request that says nothing is clearer than one that
+      // says nothing twice.
+      ...(referralCode ? { referralCode } : {}),
+    }),
   pay: (
     orderId: string,
     body: {
@@ -296,6 +306,19 @@ export const api = {
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
   acceptLine: (lineId: string, byWindowExpiry = false) =>
     post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`),
+
+  // -- admin settings ------------------------------------------------------
+  adminSettings: () => get<PlatformSetting[]>('/admin/settings'),
+  setSetting: (key: string, value: string) =>
+    put<PlatformSetting>(`/admin/settings/${encodeURIComponent(key)}`, { value }),
+  settingHistory: () => get<SettingChange[]>('/admin/settings/history'),
+
+  // -- referrals -----------------------------------------------------------
+  myReferral: () => get<ReferralView>('/profile/referral'),
+  regenerateReferral: () => post<ReferralView>('/profile/referral/regenerate'),
+  myPoints: () => get<BonusPointLine[]>('/profile/referral/points'),
+  previewReferral: (code: string) =>
+    post<{ valid: boolean; pointsEach: number }>('/profile/referral/preview', { code }),
 
   // -- identity ------------------------------------------------------------
   myKyc: () => get<KycStatus>('/kyc/mine'),

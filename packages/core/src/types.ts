@@ -462,6 +462,20 @@ export interface PlatformSetting {
   value: string
   valueType: string
   description: string
+  /** Bounds the server validates against. Absent means unbounded either way. */
+  minValue?: string | null
+  maxValue?: string | null
+  updatedBy?: string | null
+  updatedAt?: string | null
+}
+
+/** One change to a setting, kept because these numbers decide money. */
+export interface SettingChange {
+  key: string
+  oldValue: string | null
+  newValue: string
+  changedBy: string | null
+  changedAt: string | null
 }
 
 export interface KycStatus {
@@ -899,4 +913,22 @@ export interface ShipmentLeg {
   deliveredAt: string | null
   createdAt: string | null
   notes: string | null
+}
+
+/** Somebody's own referral code, and what it has earned them. */
+export interface ReferralView {
+  code: string
+  timesUsed: number
+  pointsBalance: number
+  /** What a claim is worth right now, both sides. An admin can change it. */
+  pointsPerClaim: number
+  /** The code this person themselves claimed, if any. Nobody gets two. */
+  claimedCode: string | null
+}
+
+/** One movement of bonus points. Signed, so spending them later is negative. */
+export interface BonusPointLine {
+  amount: number
+  reason: string
+  createdAt: string | null
 }
