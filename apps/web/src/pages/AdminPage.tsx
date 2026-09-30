@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow } from '@trueglaz/core'
 import { InventoryTable } from '../components/InventoryTable'
 import { Empty, ErrorNote, Loading } from '../components/ui'
+import { KycDocuments } from '../components/KycDocuments'
 import './AdminPage.css'
 import './OpsPage.css'
 
@@ -298,6 +299,20 @@ function Stat({ label, value, highlight }: { label: string; value: string; highl
  * of a stranger's property and later wires them money — so the queue sits with
  * the money, where the person who signs off payouts already works.
  */
+/**
+ * The documents for one check, fetched when the queue draws it.
+ *
+ * Per row rather than with the queue: the links are short-lived signed URLs to
+ * the private bucket, so fetching them all up front would mint a set that
+ * expires while somebody works through the list.
+ */
+function KycDocsFor({ userId }: { userId: string }) {
+  const docs = useApi(() => api.kycDocuments(userId), [userId])
+  if (docs.loading) return null
+  if (docs.error) return <ErrorNote error={docs.error} onRetry={docs.reload} />
+  return <KycDocuments docs={docs.data ?? []} />
+}
+
 function KycQueue() {
   const queue = useApi(() => api.kycQueue(), [])
   const [busy, setBusy] = useState<string | null>(null)
@@ -324,9 +339,10 @@ function KycQueue() {
     <section className="tg-card ops__card">
       <h2 className="ops__subtitle">Identity checks ({rows.length})</h2>
       <p className="tg-muted ops__fineprint">
-        A seller cannot consign anything until this passes. Only the last four digits of
-        the document are kept — check the name and type, and reject anything that does
-        not read cleanly rather than guessing.
+        A seller cannot consign anything until this passes. Open the documents and
+        check the name on them against the name typed here — reject anything that does
+        not read cleanly rather than guessing. Only the last four digits of the number
+        are kept, so the document is the only thing you can check the rest against.
       </p>
 
       {error && <p className="ops__error" role="alert">{error}</p>}
@@ -344,7 +360,11 @@ function KycQueue() {
               {k.idType?.toUpperCase() ?? '—'} ending {k.idLast4 ?? '????'}
               {k.gstin && ` · GSTIN ${k.gstin}`}
               {k.submittedAt && ` · submitted ${dateOnly(k.submittedAt)}`}
+              {' · '}
+              {k.documentCount} document{k.documentCount === 1 ? '' : 's'}
             </div>
+
+            <KycDocsFor userId={k.userId} />
           </div>
 
           {rejecting === k.userId ? (

@@ -39,16 +39,33 @@ export function SellPage() {
           </Link>
         </div>
 
-        <div className="sell__aside-card tg-card">
-          <h2 className="sell__aside-title">Identity check</h2>
-          <p className="tg-muted sell__blurb">
-            You need to be verified before you can consign anything or reach seller tools.
-          </p>
-          <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
-        </div>
+        {/* Verified sellers keep the check in the sidebar as a small status
+            line. An unverified one gets it as the page: the panel now asks for
+            photographs of a document, and two upload slots in a 230px column
+            is a form nobody can fill in. */}
+        {canSell && (
+          <div className="sell__aside-card tg-card">
+            <h2 className="sell__aside-title">Identity check</h2>
+            <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
+          </div>
+        )}
       </aside>
 
       <section className="sell__main" aria-label="Seller sections">
+        {/* Not gated on `kyc.loading`: useApi keeps `data` across a reload but
+            flips `loading`, so testing it here unmounted the whole panel every
+            time a photograph finished uploading — taking the half-filled form
+            with it. The panel shows its own loading state instead. */}
+        {!canSell && (
+          <div className="sell__gate tg-card">
+            <h2 className="sell__aside-title">Identity check</h2>
+            <p className="tg-muted sell__blurb">
+              You need to be verified before you can consign anything or reach seller tools.
+            </p>
+            <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
+          </div>
+        )}
+
         <div className="sell__head">
           <div>
             <p className="sell__eyebrow tg-muted">Your selling workspace</p>

@@ -17,7 +17,7 @@ import './PhotoUpload.css'
 export function PhotoUpload({
   ownerType, ownerId, role, defectId, max = 12, existing = [], onUploaded, hint,
 }: {
-  ownerType: 'item' | 'order'
+  ownerType: 'item' | 'order' | 'kyc'
   ownerId: string
   role: string
   defectId?: string

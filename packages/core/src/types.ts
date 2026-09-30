@@ -488,6 +488,8 @@ export interface KycReview {
   gstin: string | null
   submittedAt: string | null
   rejectedReasonCode: string | null
+  /** Zero means there is nothing to review, and the API will refuse to pass it. */
+  documentCount: number
 }
 
 export interface ActorHint {
@@ -779,6 +781,13 @@ export interface MediaView {
   url: string
   /** Width in pixels to the URL that serves it, ready for a srcset. */
   sizes: Record<number, string>
+}
+
+/** One identity document on a KYC check. */
+export interface KycDocumentView {
+  docType: string
+  uploadedAt: string | null
+  media: MediaView
 }
 
 /** Where to PUT the bytes, and the ticket that seals them afterwards. */

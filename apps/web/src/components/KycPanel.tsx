@@ -1,7 +1,15 @@
 import { useState } from 'react'
-import { api, ApiError, dateOnly, useApi, type KycStatus } from '@trueglaz/core'
+import { api, ApiError, dateOnly, useApi, useSession, type KycStatus } from '@trueglaz/core'
+import { PhotoUpload } from './PhotoUpload'
 import { Loading } from './ui'
 import './KycPanel.css'
+
+/**
+ * Which sides we ask for. Mirrors `MediaRole.requiredFor` on the server — the
+ * server is the one that enforces it, this only decides what to put on screen
+ * so nobody is refused for a document they were never asked for.
+ */
+const TWO_SIDED = new Set(['aadhaar', 'driving_licence', 'voter_id'])
 
 const ID_TYPES = [
   { value: 'pan', label: 'PAN' },
@@ -25,8 +33,15 @@ export function KycPanel({ kyc, onChanged }: {
   const [form, setForm] = useState({ legalName: '', dob: '', idType: 'pan', idNumber: '', gstin: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { session } = useSession()
+  // Uploaded straight away rather than held: unlike a consignment, the thing
+  // they attach to already exists — the API creates the check on first upload.
+  const docs = useApi(() => api.myKycDocuments(), [])
 
-  if (kyc.loading) return <Loading label="Checking your identity status" />
+  // Only while there is nothing to show. A reload sets `loading` without
+  // clearing `data`, and swapping the form out mid-flow would discard whatever
+  // the seller had already typed.
+  if (kyc.loading && !kyc.data) return <Loading label="Checking your identity status" />
   const status = kyc.data?.status ?? 'not_started'
 
   async function submit() {
@@ -71,6 +86,15 @@ export function KycPanel({ kyc, onChanged }: {
       </section>
     )
   }
+
+  const uid = session?.userId
+  const existing = (role: string) =>
+    (docs.data ?? []).filter((d) => d.docType === role).map((d) => d.media)
+  // The server refuses a submission without these; the button simply agrees
+  // rather than letting someone press it and be told off.
+  const ready =
+    existing('id_front').length > 0 &&
+    (!TWO_SIDED.has(form.idType) || existing('id_back').length > 0)
 
   const rejected = status === 'rejected'
   const expired = status === 'expired'
@@ -122,9 +146,45 @@ export function KycPanel({ kyc, onChanged }: {
         </label>
       </div>
 
+      <div className="kyc__docs">
+        <h3 className="kyc__docs-title">Photograph your document</h3>
+        <p className="tg-muted kyc__hint">
+          {TWO_SIDED.has(form.idType)
+            ? 'Both sides, with all four corners in frame and the text readable.'
+            : 'The side with your photograph and number, with all four corners in frame.'}
+          {' '}We keep these only as long as the check is valid.
+        </p>
+
+        {uid && (
+          <div className="kyc__uploads">
+            <div className="kyc__upload">
+              <span className="kyc__label">Front</span>
+              <PhotoUpload
+                ownerType="kyc" ownerId={uid} role="id_front" max={3}
+                existing={existing('id_front')}
+                onUploaded={() => { docs.reload(); kyc.reload() }}
+                hint="JPEG or PNG, 15 MB."
+              />
+            </div>
+
+            {TWO_SIDED.has(form.idType) && (
+              <div className="kyc__upload">
+                <span className="kyc__label">Back</span>
+                <PhotoUpload
+                  ownerType="kyc" ownerId={uid} role="id_back" max={3}
+                  existing={existing('id_back')}
+                  onUploaded={() => { docs.reload(); kyc.reload() }}
+                  hint="JPEG or PNG, 15 MB."
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <button
         className="tg-button tg-button--primary"
-        disabled={busy || !form.legalName.trim() || form.idNumber.trim().length < 4}
+        disabled={busy || !form.legalName.trim() || form.idNumber.trim().length < 4 || !ready}
         onClick={submit}
       >
         {busy ? 'Submitting…' : rejected || expired ? 'Submit again' : 'Submit for verification'}

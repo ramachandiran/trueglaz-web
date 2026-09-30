@@ -6,7 +6,7 @@ import type {
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
   MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
-  HomeView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
+  HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
 
 /**
@@ -214,6 +214,10 @@ export const api = {
   /** The whole shop front in one call. Public; carries no identities. */
   home: () => get<HomeView>('/home'),
 
+  /** Someone's identity documents. Theirs, or ops — nobody else. */
+  kycDocuments: (userId: string) => get<KycDocumentView[]>(`/kyc/${userId}/documents`),
+  myKycDocuments: () => get<KycDocumentView[]>('/kyc/mine/documents'),
+
   /** The photographs on a unit that the caller is allowed to see. */
   itemMedia: (itemId: string) => get<MediaView[]>(`/items/${itemId}/media`),
 
@@ -236,7 +240,7 @@ export const api = {
    */
   uploadPhoto: async (
     file: File,
-    target: { ownerType: 'item' | 'order'; ownerId: string; role: string; defectId?: string },
+    target: { ownerType: 'item' | 'order' | 'kyc'; ownerId: string; role: string; defectId?: string },
   ): Promise<MediaView> => {
     const intent = await post<UploadIntent>('/media/intent', {
       ...target,

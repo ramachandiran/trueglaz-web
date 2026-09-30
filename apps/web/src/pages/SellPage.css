@@ -498,3 +498,11 @@
     transform: translateY(0);
   }
 }
+
+/* The identity check, while it is still the only thing that matters on this
+   page. Full width because it asks for photographs of a document, and the
+   sidebar is too narrow to lay two upload slots out in. */
+.sell__gate {
+  margin-bottom: var(--tg-space-5);
+  padding: var(--tg-space-5);
+}

@@ -11,10 +11,45 @@
 }
 .kyc__verified { display: flex; align-items: center; gap: var(--tg-space-3); flex-wrap: wrap; font-size: var(--tg-text-sm); }
 
-.kyc__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--tg-space-3); max-width: 640px; }
+/* auto-fit, not a fixed pair of columns: this panel renders in the Sell page's
+   narrow sidebar as well as at full width, and a viewport media query cannot
+   see that — at 1440px wide with a 250px container it kept two columns and
+   pushed the fields out of their own card. */
+.kyc__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--tg-space-3);
+  max-width: 640px;
+}
 .kyc__field { display: flex; flex-direction: column; gap: var(--tg-space-1); }
 .kyc__field--wide { grid-column: 1 / -1; }
 .kyc__label { font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
 .kyc__error { color: var(--tg-bad); font-size: var(--tg-text-sm); margin: 0; }
 
 @media (max-width: 720px) { .kyc__grid { grid-template-columns: 1fr; } }
+
+/* Long labels are what actually overflowed; wrapping them is cheaper than
+   making every container wider. */
+.kyc__label { overflow-wrap: anywhere; }
+
+/* --- documents ------------------------------------------------------------ */
+.kyc__docs {
+  display: grid;
+  gap: var(--tg-space-2);
+  padding-top: var(--tg-space-4);
+  margin-top: var(--tg-space-2);
+  border-top: 1px solid var(--tg-border);
+}
+
+.kyc__docs-title { margin: 0; font-size: var(--tg-text-md); }
+
+.kyc__hint { margin: 0; font-size: var(--tg-text-sm); }
+
+.kyc__uploads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--tg-space-4);
+  margin-top: var(--tg-space-2);
+}
+
+.kyc__upload { display: grid; gap: var(--tg-space-2); align-content: start; }
