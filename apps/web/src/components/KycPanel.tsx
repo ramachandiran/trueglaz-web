@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, ApiError, dateOnly, useApi, useSession, type KycStatus } from '@trueglaz/core'
+import { EkycPanel } from './EkycPanel'
 import { PhotoUpload } from './PhotoUpload'
 import { Loading } from './ui'
 import './KycPanel.css'
@@ -13,7 +14,6 @@ const TWO_SIDED = new Set(['aadhaar', 'driving_licence', 'voter_id'])
 
 const ID_TYPES = [
   { value: 'pan', label: 'PAN' },
-  { value: 'aadhaar', label: 'Aadhaar' },
   { value: 'passport', label: 'Passport' },
   { value: 'driving_licence', label: 'Driving licence' },
   { value: 'voter_id', label: 'Voter ID' },
@@ -30,6 +30,10 @@ export function KycPanel({ kyc, onChanged }: {
   kyc: ReturnType<typeof useApi<KycStatus>>
   onChanged: () => void
 }) {
+  // Aadhaar first, because it is the one path that finishes in a minute rather
+  // than whenever somebody gets to the queue. The document route stays for
+  // anyone whose Aadhaar has no mobile on it, or who would rather not use it.
+  const [route, setRoute] = useState<'aadhaar' | 'document'>('aadhaar')
   const [form, setForm] = useState({ legalName: '', dob: '', idType: 'pan', idNumber: '', gstin: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -111,6 +115,29 @@ export function KycPanel({ kyc, onChanged }: {
         </p>
       )}
 
+      <div className="kyc__routes" role="tablist" aria-label="How to verify">
+        <button
+          type="button" role="tab" aria-selected={route === 'aadhaar'}
+          className={`kyc__route${route === 'aadhaar' ? ' kyc__route--on' : ''}`}
+          onClick={() => setRoute('aadhaar')}
+        >
+          <strong>Aadhaar</strong>
+          <span className="tg-muted">One-time code. Verified in a minute.</span>
+        </button>
+        <button
+          type="button" role="tab" aria-selected={route === 'document'}
+          className={`kyc__route${route === 'document' ? ' kyc__route--on' : ''}`}
+          onClick={() => setRoute('document')}
+        >
+          <strong>Another document</strong>
+          <span className="tg-muted">PAN, passport, licence. Checked by a person.</span>
+        </button>
+      </div>
+
+      {route === 'aadhaar' ? (
+        <EkycPanel kyc={kyc} onVerified={onChanged} />
+      ) : (
+      <>
       <p className="tg-muted kyc__why">
         We take physical custody of your gear and later send you money, so we have
         to know who you are first. We keep only the <strong>last four digits</strong> of
@@ -191,6 +218,8 @@ export function KycPanel({ kyc, onChanged }: {
       </button>
 
       {error && <p className="kyc__error" role="alert">{error}</p>}
+      </>
+      )}
     </section>
   )
 }

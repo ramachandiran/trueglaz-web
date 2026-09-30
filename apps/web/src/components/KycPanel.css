@@ -53,3 +53,35 @@
 }
 
 .kyc__upload { display: grid; gap: var(--tg-space-2); align-content: start; }
+
+/* --- choosing a route ----------------------------------------------------- */
+.kyc__routes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--tg-space-3);
+  margin-bottom: var(--tg-space-4);
+}
+
+.kyc__route {
+  display: grid;
+  gap: 2px;
+  padding: var(--tg-space-3) var(--tg-space-4);
+  text-align: left;
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--tg-transition);
+}
+
+.kyc__route span { font-size: var(--tg-text-xs); }
+.kyc__route:hover { border-color: var(--tg-border-strong); }
+
+/* Two marks, not one: a border colour alone is the selection state most likely
+   to disappear in a theme where the accent is low contrast. */
+.kyc__route--on {
+  border-color: var(--tg-accent);
+  box-shadow: inset 0 0 0 1px var(--tg-accent);
+}

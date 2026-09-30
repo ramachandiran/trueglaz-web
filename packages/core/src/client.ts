@@ -6,7 +6,7 @@ import type {
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
   MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
-  HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
+  EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
 
 /**
@@ -213,6 +213,13 @@ export const api = {
   /** What has recently gone, and for how much. Public; carries no identities. */
   /** The whole shop front in one call. Public; carries no identities. */
   home: () => get<HomeView>('/home'),
+
+  /** Ask UIDAI to send a code to the mobile registered against this Aadhaar. */
+  startEkyc: (aadhaarNumber: string) =>
+    post<EkycStarted>('/kyc/ekyc/start', { aadhaarNumber }),
+
+  /** Exchange the code for the identity. Verifies on the spot — no queue. */
+  verifyEkyc: (otp: string) => post<KycStatus>('/kyc/ekyc/verify', { otp }),
 
   /** Someone's identity documents. Theirs, or ops — nobody else. */
   kycDocuments: (userId: string) => get<KycDocumentView[]>(`/kyc/${userId}/documents`),

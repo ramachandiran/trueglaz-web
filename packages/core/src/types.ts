@@ -468,6 +468,12 @@ export interface KycStatus {
   status: 'not_started' | 'in_review' | 'verified' | 'rejected' | 'expired' | string
   canSell: boolean
   legalName: string | null
+  /** `uidai` when the name came from the issuer rather than from typing. */
+  nameSource: string | null
+  /** Masked mobile a code was sent to, while one is outstanding. */
+  ekycMobileHint: string | null
+  /** True while an Aadhaar code is waiting to be entered. */
+  ekycPending: boolean
   idType: string | null
   idLast4: string | null
   gstin: string | null
@@ -781,6 +787,13 @@ export interface MediaView {
   url: string
   /** Width in pixels to the URL that serves it, ready for a srcset. */
   sizes: Record<number, string>
+}
+
+/** Where an Aadhaar code was sent, masked. */
+export interface EkycStarted {
+  mobileHint: string | null
+  /** Development only — a real deployment never echoes the code. */
+  devCode: string | null
 }
 
 /** One identity document on a KYC check. */

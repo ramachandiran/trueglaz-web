@@ -1,0 +1,34 @@
+/* ---------------------------------------------------------------------------
+   Aadhaar eKYC. Two steps, one at a time — showing both at once invites
+   somebody to type a code before one has been sent.
+   --------------------------------------------------------------------------- */
+.ekyc { display: grid; gap: var(--tg-space-3); max-width: 420px; }
+
+.ekyc__field { display: flex; flex-direction: column; gap: var(--tg-space-1); }
+.ekyc__label { font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
+
+/* Tabular figures and a little tracking: a twelve-digit number is read back
+   against a card, and proportional digits make that harder than it needs to be. */
+.ekyc__number,
+.ekyc__otp {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  font-size: var(--tg-text-lg);
+}
+
+.ekyc__otp { max-width: 9ch; }
+
+.ekyc__hint { margin: 0; font-size: var(--tg-text-xs); }
+.ekyc__sent { margin: 0; font-size: var(--tg-text-sm); }
+
+/* Unmistakably a development affordance, so nobody ships it by not noticing. */
+.ekyc__dev {
+  margin: 0;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  font-size: var(--tg-text-sm);
+  border: 1px dashed var(--tg-accent);
+  border-radius: var(--tg-radius-md);
+}
+
+.ekyc__actions { display: flex; flex-wrap: wrap; gap: var(--tg-space-2); }
+.ekyc__error { margin: 0; font-size: var(--tg-text-sm); color: var(--tg-bad); }
