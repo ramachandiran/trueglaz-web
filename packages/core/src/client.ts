@@ -315,6 +315,9 @@ export const api = {
 
   // -- referrals -----------------------------------------------------------
   myReferral: () => get<ReferralView>('/profile/referral'),
+  // Checkout's version: asked on every visit, so it must not mint a code for
+  // somebody who only ever looked at a buy page.
+  myClaimedReferral: () => get<{ claimedCode: string | null }>('/profile/referral/claimed'),
   regenerateReferral: () => post<ReferralView>('/profile/referral/regenerate'),
   myPoints: () => get<BonusPointLine[]>('/profile/referral/points'),
   previewReferral: (code: string) =>

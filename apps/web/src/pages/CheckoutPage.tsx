@@ -33,7 +33,7 @@ export function CheckoutPage() {
   // A referral code is checked before the order is placed rather than after.
   // The server claims it inside the checkout transaction, so a bad code would
   // otherwise take the whole order down with it.
-  const referral = useApi(() => api.myReferral(), [])
+  const referral = useApi(() => api.myClaimedReferral(), [])
   const [codeInput, setCodeInput] = useState('')
   const [appliedCode, setAppliedCode] = useState<string | null>(null)
   const [codeWorth, setCodeWorth] = useState<number | null>(null)
