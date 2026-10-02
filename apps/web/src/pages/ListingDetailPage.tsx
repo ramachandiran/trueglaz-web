@@ -71,6 +71,7 @@ export function ListingDetailPage() {
           photos={(photos.data ?? []).filter((m) => m.role === 'listing')}
           kind={kind}
           alt={title}
+          modelSlug={d.modelSlug}
         />
 
         <div className="product__main">

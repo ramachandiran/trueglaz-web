@@ -3,7 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { FilterSidebar } from '../components/FilterSidebar'
-import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { photoKindFor } from '../components/GearPhoto'
+import { ModelPhoto } from '../components/ModelPhoto'
 import { srcSet } from '../components/Gallery'
 import { GradeBadge, Empty, ErrorNote, Loading } from '../components/ui'
 import {
@@ -197,7 +198,14 @@ export function CatalogPage() {
                           />
                         </span>
                       ) : (
-                        <GearPhoto kind={photoKindFor(category?.name)} />
+                        // No photograph of this unit, so the model's stock
+                        // picture stands in — labelled, because a studio shot
+                        // says nothing about the condition being sold.
+                        <ModelPhoto
+                          slug={model?.slug}
+                          kind={photoKindFor(category?.name)}
+                          alt=""
+                        />
                       )
                     })()}
                   </Link>

@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { api, money, relative, useApi } from '@trueglaz/core'
 import type { HomeListing, HomeSale, MediaView } from '@trueglaz/core'
-import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { photoKindFor } from '../components/GearPhoto'
+import { ModelPhoto } from '../components/ModelPhoto'
 import { srcSet } from '../components/Gallery'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './HomePage.css'
@@ -185,7 +186,7 @@ function GearCard({ listing, showSaving }: { listing: HomeListing; showSaving?: 
   return (
     <li className="card">
       <Link to={`/listings/${listing.id}`} className="card__link">
-        <Cover cover={listing.cover} categorySlug={listing.categorySlug} alt={name} />
+        <Cover cover={listing.cover} categorySlug={listing.categorySlug} alt={name} modelSlug={listing.modelSlug} />
         <span className="card__name">{name}</span>
       </Link>
       <span className="card__brand tg-muted">{listing.brandName ?? 'Unlisted model'}</span>
@@ -231,12 +232,17 @@ function SoldCard({ sale }: { sale: HomeSale }) {
  * identical grey placeholders reads as a broken page rather than as a shop that
  * has not finished its photography.
  */
-function Cover({ cover, categorySlug, alt }: {
+function Cover({ cover, categorySlug, alt, modelSlug }: {
   cover: MediaView | null
   categorySlug: string | null
   alt: string
+  modelSlug?: string | null
 }) {
-  if (!cover) return <GearPhoto kind={photoKindFor(categorySlug)} alt={alt} />
+  // A photograph of the actual unit first, always. The model's stock picture
+  // only stands in when there is none, and says so when it does.
+  if (!cover) {
+    return <ModelPhoto slug={modelSlug} kind={photoKindFor(categorySlug)} alt={alt} />
+  }
   return (
     <span className="card__photo">
       <img

@@ -1,0 +1,200 @@
+{
+  "note": "imageUrl and credit are blank on purpose. A brand's product photography is theirs; fill these in only for images you have the right to publish on a resale marketplace.",
+  "canvas": {
+    "size": 1200,
+    "background": "#ffffff",
+    "format": "webp"
+  },
+  "models": [
+    {
+      "slug": "canon-eos-r5",
+      "name": "EOS R5",
+      "brand": "Canon",
+      "category": "Cameras",
+      "file": "canon-eos-r5.webp",
+      "sourcePage": "https://www.canon.co.in/cameras",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "canon-eos-r6-mark-ii",
+      "name": "EOS R6 Mark II",
+      "brand": "Canon",
+      "category": "Cameras",
+      "file": "canon-eos-r6-mark-ii.webp",
+      "sourcePage": "https://www.canon.co.in/cameras",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "fujifilm-x-s20",
+      "name": "X-S20",
+      "brand": "Fujifilm",
+      "category": "Cameras",
+      "file": "fujifilm-x-s20.webp",
+      "sourcePage": "https://fujifilm-x.com/en-us/products/",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "fujifilm-x-t5",
+      "name": "X-T5",
+      "brand": "Fujifilm",
+      "category": "Cameras",
+      "file": "fujifilm-x-t5.webp",
+      "sourcePage": "https://fujifilm-x.com/en-us/products/",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "nikon-z-f",
+      "name": "Z f",
+      "brand": "Nikon",
+      "category": "Cameras",
+      "file": "nikon-z-f.webp",
+      "sourcePage": "https://www.nikon.co.in/en_IN/products",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "nikon-z6-ii",
+      "name": "Z6 II",
+      "brand": "Nikon",
+      "category": "Cameras",
+      "file": "nikon-z6-ii.webp",
+      "sourcePage": "https://www.nikon.co.in/en_IN/products",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "panasonic-lumix-s5-ii",
+      "name": "Lumix S5 II",
+      "brand": "Panasonic",
+      "category": "Cameras",
+      "file": "panasonic-lumix-s5-ii.webp",
+      "sourcePage": "https://www.panasonic.com/global/consumer/lumix.html",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "sony-a7-iv",
+      "name": "a7 IV",
+      "brand": "Sony",
+      "category": "Cameras",
+      "file": "sony-a7-iv.webp",
+      "sourcePage": "https://www.sony.co.in/electronics/interchangeable-lens-cameras",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "sony-a7c-ii",
+      "name": "a7C II",
+      "brand": "Sony",
+      "category": "Cameras",
+      "file": "sony-a7c-ii.webp",
+      "sourcePage": "https://www.sony.co.in/electronics/interchangeable-lens-cameras",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "canon-rf-24-70mm-f2-8l-is-usm",
+      "name": "RF 24-70mm f/2.8L IS USM",
+      "brand": "Canon",
+      "category": "Lenses",
+      "file": "canon-rf-24-70mm-f2-8l-is-usm.webp",
+      "sourcePage": "https://www.canon.co.in/cameras",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "canon-rf-50mm-f1-2l-usm",
+      "name": "RF 50mm f/1.2L USM",
+      "brand": "Canon",
+      "category": "Lenses",
+      "file": "canon-rf-50mm-f1-2l-usm.webp",
+      "sourcePage": "https://www.canon.co.in/cameras",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "fujifilm-xf-16-55mm-f2-8-r-lm-wr",
+      "name": "XF 16-55mm f/2.8 R LM WR",
+      "brand": "Fujifilm",
+      "category": "Lenses",
+      "file": "fujifilm-xf-16-55mm-f2-8-r-lm-wr.webp",
+      "sourcePage": "https://fujifilm-x.com/en-us/products/",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "fujifilm-xf-56mm-f1-2-r",
+      "name": "XF 56mm f/1.2 R",
+      "brand": "Fujifilm",
+      "category": "Lenses",
+      "file": "fujifilm-xf-56mm-f1-2-r.webp",
+      "sourcePage": "https://fujifilm-x.com/en-us/products/",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "nikon-z-24-70mm-f2-8-s",
+      "name": "Z 24-70mm f/2.8 S",
+      "brand": "Nikon",
+      "category": "Lenses",
+      "file": "nikon-z-24-70mm-f2-8-s.webp",
+      "sourcePage": "https://www.nikon.co.in/en_IN/products",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "nikon-z-50mm-f1-8-s",
+      "name": "Z 50mm f/1.8 S",
+      "brand": "Nikon",
+      "category": "Lenses",
+      "file": "nikon-z-50mm-f1-8-s.webp",
+      "sourcePage": "https://www.nikon.co.in/en_IN/products",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "sigma-24-70mm-f2-8-dg-dn-art",
+      "name": "24-70mm f/2.8 DG DN Art",
+      "brand": "Sigma",
+      "category": "Lenses",
+      "file": "sigma-24-70mm-f2-8-dg-dn-art.webp",
+      "sourcePage": "https://www.sigma-global.com/en/lenses/",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "sigma-35mm-f1-4-dg-hsm-art",
+      "name": "35mm f/1.4 DG HSM Art",
+      "brand": "Sigma",
+      "category": "Lenses",
+      "file": "sigma-35mm-f1-4-dg-hsm-art.webp",
+      "sourcePage": "https://www.sigma-global.com/en/lenses/",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "sony-fe-70-200mm-f2-8-gm-ii",
+      "name": "FE 70-200mm f/2.8 GM II",
+      "brand": "Sony",
+      "category": "Lenses",
+      "file": "sony-fe-70-200mm-f2-8-gm-ii.webp",
+      "sourcePage": "https://www.sony.co.in/electronics/interchangeable-lens-cameras",
+      "imageUrl": "",
+      "credit": ""
+    },
+    {
+      "slug": "tamron-28-75mm-f2-8-di-iii-vxd-g2",
+      "name": "28-75mm f/2.8 Di III VXD G2",
+      "brand": "Tamron",
+      "category": "Lenses",
+      "file": "tamron-28-75mm-f2-8-di-iii-vxd-g2.webp",
+      "sourcePage": "https://www.tamron.com/global/consumer/lenses/",
+      "imageUrl": "",
+      "credit": ""
+    }
+  ]
+}

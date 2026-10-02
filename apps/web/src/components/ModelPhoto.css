@@ -1,0 +1,47 @@
+.model-photo {
+  position: relative;
+  display: block;
+  /* 4:3 to match .card__photo and .photo--hero, not the square the file is.
+     A row of cards where one photograph is 4:3 and the next is square sits at
+     two different heights, and the titles underneath stop lining up. The image
+     is centred on white inside it, and because the canvas is white too the
+     extra width is invisible. */
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--tg-radius-md);
+  border: 1px solid var(--tg-border);
+  background: #fff;
+}
+
+.model-photo img {
+  width: 100%;
+  height: 100%;
+  /* contain, not cover: a stock image is already cropped and padded, and
+     cover would eat the padding and clip the gear. */
+  object-fit: contain;
+  display: block;
+}
+
+.model-photo__badge {
+  position: absolute;
+  left: var(--tg-space-2);
+  bottom: var(--tg-space-2);
+  padding: 2px 8px;
+  border-radius: var(--tg-radius-pill);
+  font-size: var(--tg-text-xs);
+  /* Always on a white canvas, so this pair is fixed rather than themed —
+     a dark-mode token here would vanish against the image. */
+  background: rgba(23, 23, 23, 0.72);
+  color: #fff;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+/* Square and fixed, matching .photo--thumb, which these sit beside. */
+.model-photo--thumb {
+  width: 54px;
+  height: 54px;
+  aspect-ratio: auto;
+  border-radius: var(--tg-radius-sm);
+}
+.model-photo--hero { border-radius: var(--tg-radius-lg); }

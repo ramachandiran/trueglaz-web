@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { MediaView } from '@trueglaz/core'
-import { GearPhoto } from './GearPhoto'
+import { ModelPhoto } from './ModelPhoto'
 import './Gallery.css'
 
 /**
@@ -11,23 +11,30 @@ import './Gallery.css'
  * under the lights. The fallback keeps its own promise: the condition report is
  * the whole truth until the pictures land.
  */
-export function Gallery({ photos, kind, alt }: {
+export function Gallery({ photos, kind, alt, modelSlug }: {
   photos: MediaView[]
   kind: 'camera' | 'lens' | 'gear'
   alt: string
+  /** The catalogue model, for the stock picture shown when there are no photos. */
+  modelSlug?: string | null
 }) {
   const [active, setActive] = useState(0)
 
   if (photos.length === 0) {
     return (
       <div className="product__gallery">
-        <GearPhoto kind={kind} size="hero" alt={alt} />
-        <div className="product__thumbs">
-          {[0, 1, 2].map((i) => <GearPhoto key={i} kind={kind} size="thumb" />)}
-        </div>
+        {/* The stock picture shows what the model looks like; it is not and
+            cannot be a picture of this unit, and the note below says so in
+            as many words. On a page whose entire product is an honest grade,
+            an unlabelled studio shot would be the one dishonest thing on it. */}
+        <ModelPhoto slug={modelSlug} kind={kind} size="hero" alt={alt} />
         <p className="product__photo-note tg-muted">
-          Photographs of this exact unit are coming. Until then the condition report
-          below is the whole truth about it.
+          {modelSlug
+            ? 'That is a stock picture of this model, not of this unit. Photographs of ' +
+              'the actual item are coming; until then the condition report below is the ' +
+              'whole truth about it.'
+            : 'Photographs of this exact unit are coming. Until then the condition report ' +
+              'below is the whole truth about it.'}
         </p>
       </div>
     )

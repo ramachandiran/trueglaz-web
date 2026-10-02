@@ -51,6 +51,8 @@ export interface ListingDetail {
   /** The QC-passed condition report. Null while nothing has been signed off. */
   inspectionReport: RenderedReport | null
   priceHistory: ListingPriceChange[]
+  /** For the stock-image fallback. Null when the unit matched no model. */
+  modelSlug: string | null
 }
 
 export interface ConsignmentItem {
@@ -839,6 +841,8 @@ export interface HomeListing {
   categorySlug: string | null
   publishedAt: string | null
   cover: MediaView | null
+  /** For the stock-image fallback. Null when the unit matched no model. */
+  modelSlug: string | null
 }
 
 /** A way into the catalogue, with how much is behind it. */
