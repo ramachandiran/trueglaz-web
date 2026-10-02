@@ -37,6 +37,15 @@
   font-size: var(--tg-text-sm);
   line-height: 1.65;
 }
+.sell__kyc-points {
+  margin: 0;
+  padding-left: var(--tg-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-sm);
+  line-height: 1.5;
+}
 .sell__cta { align-self: flex-start; }
 
 .sell__main {
@@ -298,6 +307,17 @@
 .sell__table td { padding: var(--tg-space-2) var(--tg-space-2) var(--tg-space-2) 0; border-bottom: 1px solid var(--tg-border); }
 
 .sell__locked { padding: var(--tg-space-5); }
+.sell__locked-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  width: 100%;
+}
+
+.sell__locked-center > .kyc {
+  width: min(100%, 760px);
+}
 
 @media (max-width: 900px) {
   .sell {

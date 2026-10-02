@@ -25,22 +25,30 @@ export function SellPage() {
   const submitted = searchParams.get('submitted') === 'true'
 
   const canSell = kyc.data?.canSell ?? false
+  // Locked once we know the answer. Read from `data`, not `loading`: useApi
+  // keeps `data` across a reload but flips `loading`, and gating on it
+  // unmounted the KYC panel every time a photograph finished uploading —
+  // taking the half-filled form with it. `data` is null only before the first
+  // answer and after an error, which is when `loading` has to decide.
+  const sellingLocked = !canSell && (kyc.data !== null || !kyc.loading)
 
   return (
     <div className="sell">
       <aside className="sell__sidebar">
-        <div className="sell__aside-card tg-card">
-          <h1 className="sell__title">Selling</h1>
-          <p className="tg-muted sell__blurb">
-            Track what you’ve consigned, answer price approvals, and follow payouts from one place.
-          </p>
-          <Link to="/sell/new" className="tg-button tg-button--primary sell__cta">
-            Consign an item
-          </Link>
-        </div>
+        {!sellingLocked && (
+          <div className="sell__aside-card tg-card">
+            <h1 className="sell__title">Selling</h1>
+            <p className="tg-muted sell__blurb">
+              Track what you’ve consigned, answer price approvals, and follow payouts from one place.
+            </p>
+            <Link to="/sell/new" className="tg-button tg-button--primary sell__cta">
+              Consign an item
+            </Link>
+          </div>
+        )}
 
         {/* Verified sellers keep the check in the sidebar as a small status
-            line. An unverified one gets it as the page: the panel now asks for
+            line. An unverified one gets it as the page: the panel asks for
             photographs of a document, and two upload slots in a 230px column
             is a form nobody can fill in. */}
         {canSell && (
@@ -49,68 +57,72 @@ export function SellPage() {
             <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
           </div>
         )}
+
+        {sellingLocked && (
+          <section className="sell__aside-card tg-card">
+            <h2 className="sell__aside-title">Why identity verification matters</h2>
+            <p className="tg-muted sell__blurb">
+              We take custody of your gear and send you money when it sells, so we need to know who we are dealing with.
+            </p>
+            <ul className="sell__kyc-points">
+              <li>Protects sellers and buyers from fraud.</li>
+              <li>Ensures payouts go to the right person.</li>
+              <li>Helps us meet financial and marketplace requirements.</li>
+            </ul>
+            <p className="tg-muted sell__blurb">
+              We keep only the last four digits of your document after the check.
+            </p>
+          </section>
+        )}
       </aside>
 
       <section className="sell__main" aria-label="Seller sections">
-        {/* Not gated on `kyc.loading`: useApi keeps `data` across a reload but
-            flips `loading`, so testing it here unmounted the whole panel every
-            time a photograph finished uploading — taking the half-filled form
-            with it. The panel shows its own loading state instead. */}
-        {!canSell && (
-          <div className="sell__gate tg-card">
-            <h2 className="sell__aside-title">Identity check</h2>
-            <p className="tg-muted sell__blurb">
-              You need to be verified before you can consign anything or reach seller tools.
-            </p>
-            <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
-          </div>
-        )}
+        {sellingLocked ? (
+          <>
+            <div className="tg-card sell__locked">
+              <h3 className="sell__panel-title">Selling is locked</h3>
+              <p className="tg-muted sell__blurb">
+                Complete the identity check below to unlock your items, approvals, and payouts.
+              </p>
+            </div>
 
-        <div className="sell__head">
-          <div>
-            <p className="sell__eyebrow tg-muted">Your selling workspace</p>
-            <h2 className="sell__main-title">Manage inventory, approvals, and payouts</h2>
-          </div>
-          {!canSell && !kyc.loading && (
-            <p className="sell__notice tg-muted">
-              Finish identity verification to unlock consignments and approvals.
-            </p>
-          )}
-        </div>
-
-        {submitted && (
-          <div className="tg-card sell__success">
-            <p className="sell__success-text">✓ Item submitted and waiting for approval</p>
-          </div>
-        )}
-
-        {/* The one thing a seller cannot work out for themselves is what anybody
-            actually wants, so the board is offered before the tabs. */}
-        <p className="sell__wanted tg-muted">
-          Not sure what to send in? <Link to="/wanted">See what buyers are asking for</Link> —
-          every one of them is somebody waiting.
-        </p>
-
-        <nav className="sell__tabs" aria-label="Seller sections">
-          <TabButton active={tab === 'items'} onClick={() => setTab('items')} label="My items" />
-          <TabButton
-            active={tab === 'approvals'}
-            onClick={() => setTab('approvals')}
-            label="Price approvals"
-            badge={pending.length || undefined}
-          />
-          <TabButton active={tab === 'payouts'} onClick={() => setTab('payouts')} label="Payouts" />
-        </nav>
-
-        {!canSell && !kyc.loading ? (
-          <div className="tg-card sell__locked">
-            <h3 className="sell__panel-title">Selling is locked</h3>
-            <p className="tg-muted sell__blurb">
-              Complete the identity check on the left to unlock your items, approvals, and payouts.
-            </p>
-          </div>
+            <div className="sell__locked-center">
+              <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
+            </div>
+          </>
         ) : (
           <>
+            <div className="sell__head">
+              <div>
+                <p className="sell__eyebrow tg-muted">Your selling workspace</p>
+                <h2 className="sell__main-title">Manage inventory, approvals, and payouts</h2>
+              </div>
+            </div>
+
+            {submitted && (
+              <div className="tg-card sell__success">
+                <p className="sell__success-text">✓ Item submitted and waiting for approval</p>
+              </div>
+            )}
+
+            {/* The one thing a seller cannot work out for themselves is what anybody
+                actually wants, so the board is offered before the tabs. */}
+            <p className="sell__wanted tg-muted">
+              Not sure what to send in? <Link to="/wanted">See what buyers are asking for</Link> —
+              every one of them is somebody waiting.
+            </p>
+
+            <nav className="sell__tabs" aria-label="Seller sections">
+              <TabButton active={tab === 'items'} onClick={() => setTab('items')} label="My items" />
+              <TabButton
+                active={tab === 'approvals'}
+                onClick={() => setTab('approvals')}
+                label="Price approvals"
+                badge={pending.length || undefined}
+              />
+              <TabButton active={tab === 'payouts'} onClick={() => setTab('payouts')} label="Payouts" />
+            </nav>
+
             {tab === 'items' && <MyItems />}
             {tab === 'approvals' && <Approvals state={approvals} />}
             {tab === 'payouts' && <Payouts />}
