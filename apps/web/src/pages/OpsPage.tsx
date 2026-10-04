@@ -25,6 +25,7 @@ export function OpsPage() {
   const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
   const graded = useApi(() => (staff ? api.itemQueue('GRADED') : Promise.resolve([])), [staff])
   const wanted = useApi(() => (staff ? api.requestQueue() : Promise.resolve([])), [staff])
+  const people = useApi(() => (staff ? api.staffUsers('', 'pending_review') : Promise.resolve([])), [staff])
 
   // The session arrives after the first render, so the open queue is derived
   // rather than stored — a technician must never land on a tab that is not there.
@@ -38,9 +39,22 @@ export function OpsPage() {
     wanted: wanted.data?.length ?? 0,
   }
 
+  const pendingPeople = people.data?.length ?? 0
+
   return (
     <div className="ops">
-      <h1 className="ops__title">Operations</h1>
+      <div className="ops__head">
+        <h1 className="ops__title">Operations</h1>
+        {/* A link rather than a tab: the others swap a queue in place, this
+            goes somewhere. Carrying the count makes it a queue indicator and
+            not just a menu item. */}
+        {staff && (
+          <Link to="/ops/users" className="ops__people">
+            People
+            {pendingPeople > 0 && <span className="ops__people-count">{pendingPeople}</span>}
+          </Link>
+        )}
+      </div>
 
       <nav className="ops__tabs" aria-label="Work queues">
         {staff && <Tab active={active === 'intake'} onClick={() => setQueue('intake')} label="Intake" count={counts.intake} />}

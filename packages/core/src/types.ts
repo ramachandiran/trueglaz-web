@@ -955,3 +955,70 @@ export interface PaymentSessionView {
   url: string | null
   expiresAt: string | null
 }
+
+/* -- staff: people ---------------------------------------------------------- */
+
+/** One person, as the staff queue shows them. */
+export interface StaffUserRow {
+  userId: string
+  displayName: string
+  email: string | null
+  phone: string | null
+  accountState: string
+  kycStatus: string
+  /** not_requested | pending_review | approved | rejected */
+  sellingState: string
+  roles: string[]
+  itemsListed: number
+  ordersPlaced: number
+  joinedAt: string | null
+}
+
+/** The identity check, as much of it as staff have any business seeing. */
+export interface StaffKycView {
+  status: string
+  legalName: string | null
+  /** `uidai` when the name came from the issuer rather than from typing. */
+  nameSource: string | null
+  idType: string | null
+  /** Last four digits only. The number itself is never kept. */
+  idLast4: string | null
+  provider: string | null
+  verifiedAt: string | null
+  expiresAt: string | null
+  mobileHint: string | null
+}
+
+export interface StaffUserDetail {
+  user: StaffUserRow
+  kyc: StaffKycView | null
+  sellingDecidedBy: string | null
+  sellingDecidedAt: string | null
+  sellingNote: string | null
+  /** Masked. Staff confirm a destination exists; they never read it. */
+  payoutAccountHint: string | null
+}
+
+export interface StaffSellingRow {
+  itemId: string
+  title: string
+  state: string
+  gradeCode: string | null
+  askingMinor: number | null
+  listedPriceMinor: number | null
+  soldPriceMinor: number | null
+  submittedAt: string | null
+  soldAt: string | null
+}
+
+export interface StaffBuyingRow {
+  orderId: string
+  orderNumber: string
+  orderState: string
+  lineState: string
+  title: string
+  gradeCode: string | null
+  pricePaidMinor: number
+  placedAt: string | null
+  acceptedAt: string | null
+}

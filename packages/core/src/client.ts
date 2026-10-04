@@ -7,6 +7,7 @@ import type {
   MyRequests, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
   BonusPointLine, PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, ReferralView, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
+  StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow,
 } from './types'
 
 /**
@@ -325,6 +326,17 @@ export const api = {
   myPoints: () => get<BonusPointLine[]>('/profile/referral/points'),
   previewReferral: (code: string) =>
     post<{ valid: boolean; pointsEach: number }>('/profile/referral/preview', { code }),
+
+  // -- staff: people -------------------------------------------------------
+  staffUsers: (q = '', sellingState = '') =>
+    get<StaffUserRow[]>(`/staff/users?q=${encodeURIComponent(q)}&sellingState=${encodeURIComponent(sellingState)}`),
+  staffUser: (userId: string) => get<StaffUserDetail>(`/staff/users/${userId}`),
+  staffUserSelling: (userId: string) => get<StaffSellingRow[]>(`/staff/users/${userId}/selling`),
+  staffUserBuying: (userId: string) => get<StaffBuyingRow[]>(`/staff/users/${userId}/buying`),
+  approveSelling: (userId: string, note?: string) =>
+    post<StaffUserDetail>(`/staff/users/${userId}/selling/approve`, { note: note ?? null }),
+  rejectSelling: (userId: string, note?: string) =>
+    post<StaffUserDetail>(`/staff/users/${userId}/selling/reject`, { note: note ?? null }),
 
   // -- identity ------------------------------------------------------------
   myKyc: () => get<KycStatus>('/kyc/mine'),

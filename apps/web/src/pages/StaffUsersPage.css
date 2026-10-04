@@ -1,0 +1,135 @@
+.people {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-4);
+  max-width: 1180px;
+}
+
+.people__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--tg-space-4);
+}
+.people__title { margin: 0; font-size: var(--tg-text-xxl); }
+.people__sub { margin: var(--tg-space-2) 0 0; font-size: var(--tg-text-sm); max-width: 62ch; line-height: 1.6; }
+
+.people__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tg-space-3);
+  padding-bottom: var(--tg-space-3);
+  border-bottom: 1px solid var(--tg-border);
+}
+.people__filters { display: flex; flex-wrap: wrap; gap: var(--tg-space-2); }
+.people__filter {
+  padding: 6px 14px;
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-pill);
+  background: transparent;
+  color: var(--tg-text-muted);
+  font: inherit;
+  font-size: var(--tg-text-sm);
+  cursor: pointer;
+}
+.people__filter--on {
+  background: var(--tg-accent);
+  border-color: var(--tg-accent);
+  color: #fff;
+}
+.people__search { display: flex; gap: var(--tg-space-2); align-items: center; }
+.people__search .tg-input { min-width: 15rem; }
+
+.people__table { width: 100%; border-collapse: collapse; font-size: var(--tg-text-sm); }
+.people__table th {
+  text-align: left;
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tg-text-muted);
+  padding-bottom: var(--tg-space-2);
+  border-bottom: 1px solid var(--tg-border);
+}
+.people__table td {
+  padding: var(--tg-space-3) var(--tg-space-3) var(--tg-space-3) 0;
+  border-bottom: 1px solid var(--tg-border);
+  vertical-align: top;
+}
+/* Figures line up on their last digit, which is the only way a column of
+   money can be compared at a glance. */
+.people__num { text-align: right; font-variant-numeric: tabular-nums; }
+.people__when { white-space: nowrap; }
+
+.people__name { font-weight: var(--tg-weight-medium); text-decoration: none; color: var(--tg-text); }
+.people__name:hover { color: var(--tg-accent); text-decoration: underline; }
+.people__contact { margin: 2px 0 0; font-size: var(--tg-text-xs); }
+.people__roles {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: var(--tg-text-xs);
+  color: var(--tg-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.people__empty { padding: var(--tg-space-6) 0; max-width: 54ch; line-height: 1.6; }
+
+/* -- one person ------------------------------------------------------------ */
+
+.person__crumbs { font-size: var(--tg-text-sm); }
+.person__crumbs a { color: var(--tg-text-muted); text-decoration: none; }
+.person__crumbs a:hover { color: var(--tg-accent); text-decoration: underline; }
+.person__badges { display: flex; flex-wrap: wrap; gap: var(--tg-space-2); }
+
+.person__panels {
+  display: grid;
+  /* auto-fit on the container rather than a viewport breakpoint: this sits in
+     the ops layout, where the window width says nothing useful about how much
+     room these two panels actually have. */
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: var(--tg-space-4);
+}
+.person__panel { padding: var(--tg-space-5); }
+.person__panel-title { margin: 0 0 var(--tg-space-3); font-size: var(--tg-text-lg); }
+.person__blurb { margin: 0 0 var(--tg-space-4); font-size: var(--tg-text-sm); line-height: 1.6; }
+
+.person__facts { margin: 0; display: flex; flex-direction: column; gap: var(--tg-space-3); }
+.person__fact { display: flex; flex-wrap: wrap; gap: var(--tg-space-2) var(--tg-space-4); justify-content: space-between; }
+.person__fact dt { font-size: var(--tg-text-xs); text-transform: uppercase; letter-spacing: 0.04em; }
+.person__fact dd { margin: 0; font-size: var(--tg-text-sm); text-align: right; }
+
+.person__fineprint { margin: var(--tg-space-4) 0 0; font-size: var(--tg-text-xs); line-height: 1.6; }
+.person__decision { margin: 0 0 var(--tg-space-4); font-size: var(--tg-text-sm); line-height: 1.6; }
+.person__note { font-style: italic; }
+.person__blocked { margin: 0; font-size: var(--tg-text-sm); }
+.person__field { display: flex; flex-direction: column; gap: var(--tg-space-2); font-size: var(--tg-text-xs); }
+.person__actions { display: flex; flex-wrap: wrap; gap: var(--tg-space-3); margin-top: var(--tg-space-4); }
+.person__error { margin: var(--tg-space-3) 0 0; color: var(--tg-bad); font-size: var(--tg-text-sm); }
+
+.person__tabs {
+  display: flex;
+  gap: var(--tg-space-4);
+  border-bottom: 1px solid var(--tg-border);
+  margin-top: var(--tg-space-2);
+}
+.person__tab {
+  padding: var(--tg-space-3) 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  color: var(--tg-text-muted);
+  cursor: pointer;
+}
+.person__tab--on { color: var(--tg-text); border-bottom-color: var(--tg-accent); }
+.person__empty { padding: var(--tg-space-5) 0; }
+
+@media (max-width: 900px) {
+  /* Five or seven columns of real content stop being a table well before this;
+     a horizontal scroll inside the table beats one on the page. */
+  .people__table { display: block; overflow-x: auto; white-space: nowrap; }
+  .people__search .tg-input { min-width: 0; flex: 1 1 auto; }
+  .people__controls { align-items: stretch; }
+}

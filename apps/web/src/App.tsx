@@ -4,6 +4,8 @@ import { AppShell } from './components/AppShell'
 import { Guard } from './components/Guard'
 import { Loading } from './components/ui'
 import { AdminPage } from './pages/AdminPage'
+import { StaffUsersPage } from './pages/StaffUsersPage'
+import { StaffUserDetailPage } from './pages/StaffUserDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { HomePage } from './pages/HomePage'
 import { CheckoutPage } from './pages/CheckoutPage'
@@ -71,6 +73,8 @@ export function App() {
           <Route path="/ops/inspect/:itemId" element={<Guard need="ops"><InspectPage /></Guard>} />
           <Route path="/ops/items" element={<Guard need="ops"><ItemsPage /></Guard>} />
           <Route path="/ops/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
+          <Route path="/ops/users" element={<Guard need="staff"><StaffUsersPage /></Guard>} />
+          <Route path="/ops/users/:id" element={<Guard need="staff"><StaffUserDetailPage /></Guard>} />
 
           {/* Money */}
           <Route path="/admin" element={<Guard need="admin"><AdminPage /></Guard>} />

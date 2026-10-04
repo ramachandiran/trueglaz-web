@@ -99,3 +99,31 @@
 
 /* Queue rows stack a headline over its fine print, so they cannot centre. */
 .ops__inbound > div { align-self: center; }
+
+/* -- people link ------------------------------------------------------------ */
+
+.ops__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tg-space-3);
+}
+.ops__people {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-sm);
+  text-decoration: none;
+  color: var(--tg-text-muted);
+}
+.ops__people:hover { color: var(--tg-accent); text-decoration: underline; }
+.ops__people-count {
+  min-width: 1.4rem;
+  padding: 1px 7px;
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-accent);
+  color: #fff;
+  font-size: var(--tg-text-xs);
+  text-align: center;
+}
