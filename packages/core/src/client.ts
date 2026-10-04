@@ -3,8 +3,8 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
-  Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payment, Payout,
-  MyRequests, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
+  Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payout,
+  MyRequests, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
   BonusPointLine, PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, ReferralView, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
 } from './types'
@@ -292,16 +292,19 @@ export const api = {
       // says nothing twice.
       ...(referralCode ? { referralCode } : {}),
     }),
-  pay: (
-    orderId: string,
-    body: {
-      gateway: string
-      gatewayRef: string
-      method?: string | null
-      idempotencyKey: string
-      gatewayFeeMinor?: number | null
-    },
-  ) => post<Payment>(`/orders/${orderId}/payments`, body),
+  /**
+   * Opens a payment with the gateway and returns somewhere to pay.
+   *
+   * It does NOT report success: whether money moved arrives separately and
+   * signed, straight from the gateway to the API. There is deliberately no
+   * client call that can say "this order is paid" — there used to be, and a
+   * buyer could call it without paying.
+   */
+  paymentSession: (orderId: string) =>
+    post<PaymentSessionView>(`/orders/${orderId}/payment-session`),
+
+  /** Development only: stands in for the gateway, and is absent in production. */
+  devPay: (orderId: string) => post<{ status: string }>(`/dev/pay/${orderId}`),
   myOrders: () => get<Order[]>('/orders'),
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
   acceptLine: (lineId: string, byWindowExpiry = false) =>

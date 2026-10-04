@@ -166,15 +166,22 @@ export function CheckoutPage() {
     if (!orderId) return
     setBusy(true); setError(null)
     try {
-      // No gateway is integrated yet; this stands in for the redirect and the
-      // callback that would normally capture the payment.
-      await api.pay(orderId, {
-        gateway: 'razorpay',
-        gatewayRef: `pay_${orderId.slice(0, 8)}`,
-        method: 'upi',
-        idempotencyKey: `checkout-${orderId}`,
-        gatewayFeeMinor: Math.round(total * 0.02),
-      })
+      // Open the payment and hand off. This page cannot mark the order paid —
+      // nothing a browser can send is allowed to, because the browser belongs
+      // to the person who would most like to skip the paying part. The gateway
+      // tells the API directly, over a signed webhook.
+      const session = await api.paymentSession(orderId)
+
+      if (session.url) {
+        // A real gateway: leave for its page and come back by redirect.
+        window.location.assign(session.url)
+        return
+      }
+
+      // No hosted page, which in practice means the stub gateway in
+      // development. Ask it to send the webhook it would have sent, and keep
+      // the real verification in the path rather than pretending around it.
+      await api.devPay(orderId)
       setStep('done')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Payment failed')

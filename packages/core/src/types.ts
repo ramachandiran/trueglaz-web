@@ -936,3 +936,22 @@ export interface BonusPointLine {
   reason: string
   createdAt: string | null
 }
+
+/**
+ * Somewhere to pay an order.
+ *
+ * Carries no notion of success. The gateway tells the API whether the payment
+ * went through, over a channel this browser is not on.
+ */
+export interface PaymentSessionView {
+  orderId: string
+  orderNumber: string
+  amountMinor: number
+  currency: string
+  provider: string
+  providerOrderId: string
+  token: string | null
+  /** The gateway's hosted page. Null for a provider that has none. */
+  url: string | null
+  expiresAt: string | null
+}
