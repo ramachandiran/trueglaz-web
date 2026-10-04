@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { isOps, isSeller, useSession } from '@trueglaz/core'
+import { isAdmin, isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { useMarketView, type MarketView } from '../state/useMarketView'
 import { useTheme, type ThemeMode } from '../state/useTheme'
 import { AccountMenu } from './AccountMenu'
@@ -40,6 +40,8 @@ function Header() {
   // exists only once it is real, so it can never be answered wrongly.
   const seller = isSeller(session)
   const isOpsUser = isOps(session)
+  const staff = isStaff(session)
+  const admin = isAdmin(session)
   const side: MarketView = seller ? view : 'buying'
 
   return (
@@ -50,6 +52,19 @@ function Header() {
         </NavLink>
 
         {!isAuthPage && <HeaderSearch />}
+
+        {/* Staff navigation. Ops users previously had none — they landed on
+            /inventory and every other page of their own job was reachable only
+            by typing its URL. */}
+        {!isAuthPage && isOpsUser && (
+          <nav className="shell__ops" aria-label="Staff">
+            <NavLink to="/inventory" className="shell__ops-link">Inventory</NavLink>
+            <NavLink to="/ops" className="shell__ops-link">Operations</NavLink>
+            {staff && <NavLink to="/ops/users" className="shell__ops-link">People</NavLink>}
+            {staff && <NavLink to="/ops/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
+            {admin && <NavLink to="/admin" className="shell__ops-link">Money</NavLink>}
+          </nav>
+        )}
 
         {!isAuthPage && !isOpsUser && session && (seller ? (
           <MarketSwitch

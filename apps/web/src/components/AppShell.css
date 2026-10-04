@@ -300,3 +300,31 @@
     padding-block: var(--tg-space-3);
   }
 }
+
+/* -- staff navigation ------------------------------------------------------- */
+
+.shell__ops {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tg-space-1);
+  margin-left: var(--tg-space-4);
+}
+
+.shell__ops-link {
+  padding: 6px 12px;
+  border-radius: var(--tg-radius-pill);
+  font-size: var(--tg-text-sm);
+  text-decoration: none;
+  color: var(--tg-header-text-muted, rgba(255, 255, 255, 0.72));
+  white-space: nowrap;
+}
+.shell__ops-link:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.shell__ops-link.active { color: #fff; background: rgba(255, 255, 255, 0.18); }
+
+@media (max-width: 1100px) {
+  /* The search box is the first thing to give up its room: a staff member
+     needs to reach their queues more than they need to search the catalogue. */
+  .shell__ops { margin-left: var(--tg-space-2); }
+  .shell__ops-link { padding: 6px 9px; }
+}
