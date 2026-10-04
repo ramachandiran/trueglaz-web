@@ -100,30 +100,11 @@
 /* Queue rows stack a headline over its fine print, so they cannot centre. */
 .ops__inbound > div { align-self: center; }
 
-/* -- people link ------------------------------------------------------------ */
+/* -- the People queue, which is a link wearing a tab ----------------------- */
 
-.ops__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--tg-space-3);
-}
-.ops__people {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--tg-space-2);
-  font-size: var(--tg-text-sm);
+.ops__tab--link {
   text-decoration: none;
-  color: var(--tg-text-muted);
-}
-.ops__people:hover { color: var(--tg-accent); text-decoration: underline; }
-.ops__people-count {
-  min-width: 1.4rem;
-  padding: 1px 7px;
-  border-radius: var(--tg-radius-pill);
-  background: var(--tg-accent);
-  color: #fff;
-  font-size: var(--tg-text-xs);
-  text-align: center;
+  /* Pushed to the end of the row: it leaves the page, and grouping it with
+     the tabs that do not would be a small lie about what clicking does. */
+  margin-left: auto;
 }

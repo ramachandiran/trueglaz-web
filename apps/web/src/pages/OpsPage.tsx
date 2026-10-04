@@ -43,24 +43,23 @@ export function OpsPage() {
 
   return (
     <div className="ops">
-      <div className="ops__head">
-        <h1 className="ops__title">Operations</h1>
-        {/* A link rather than a tab: the others swap a queue in place, this
-            goes somewhere. Carrying the count makes it a queue indicator and
-            not just a menu item. */}
-        {staff && (
-          <Link to="/ops/users" className="ops__people">
-            People
-            {pendingPeople > 0 && <span className="ops__people-count">{pendingPeople}</span>}
-          </Link>
-        )}
-      </div>
+      <h1 className="ops__title">Operations</h1>
 
       <nav className="ops__tabs" aria-label="Work queues">
         {staff && <Tab active={active === 'intake'} onClick={() => setQueue('intake')} label="Intake" count={counts.intake} />}
         <Tab active={active === 'inspect'} onClick={() => setQueue('inspect')} label="Inspection" count={counts.inspect} />
         {staff && <Tab active={active === 'price'} onClick={() => setQueue('price')} label="Pricing" count={counts.price} />}
         {staff && <Tab active={active === 'wanted'} onClick={() => setQueue('wanted')} label="Requests" count={counts.wanted} />}
+        {/* Sits in the row with the other queues because that is what it is.
+            It navigates rather than swapping the panel below, which is why it
+            is a Link, but a staff member looking for their work should not
+            have to find it somewhere else on the page. */}
+        {staff && (
+          <Link to="/ops/users" className="ops__tab ops__tab--link">
+            People
+            <span className="ops__tab-count">{pendingPeople}</span>
+          </Link>
+        )}
       </nav>
 
       {active === 'intake' && <IntakeQueue state={pending} />}
