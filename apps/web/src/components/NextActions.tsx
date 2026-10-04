@@ -178,6 +178,7 @@ export function NextActions({
   const [error, setError] = useState<string | null>(null)
   const [asking, setAsking] = useState<string | null>(null)
   const [reason, setReason] = useState('')
+  const [note, setNote] = useState('')
   const [failedFallback, setFailedFallback] = useState<Recipe['fallback']>(undefined)
 
   const actions = useMemo(
@@ -189,13 +190,16 @@ export function NextActions({
     return <p className="tg-muted next__none">This item has reached the end of its journey.</p>
   }
 
-  async function run(state: NextState, reasonCode: string | null) {
+  async function run(state: NextState, reasonCode: string | null, note: string | null) {
     setBusy(state.toState); setError(null); setFailedFallback(undefined)
     const recipe = RECIPES[`${currentState}>${state.toState}`]
     try {
       if (recipe?.target.kind === 'do') await recipe.target.run(itemId, reasonCode)
-      else await api.transitionItem(itemId, state.toState, reasonCode)
-      setAsking(null); setReason('')
+      // The note was being dropped here: the column, the function, the endpoint
+      // and the client all carried one, and this call passed three arguments.
+      // Every staff move ever made has a null note because of it.
+      else await api.transitionItem(itemId, state.toState, reasonCode, note)
+      setAsking(null); setReason(''); setNote('')
       onDone()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'That move did not go through')
@@ -223,16 +227,26 @@ export function NextActions({
             return (
               <span key={a.state.toState} className="next__slot">
                 <button
-                  className={`tg-button next__button${isForward(a.state.toState) ? ' tg-button--primary' : ''}`}
+                  className={`tg-button next__button${isForward(a.state) ? ' tg-button--primary' : ''}`}
                   disabled={busy !== null}
                   title={a.hint}
-                  onClick={() => (a.state.requiresReason ? setAsking(a.state.toState) : run(a.state, null))}
+                  onClick={() =>
+                    a.state.requiresReason || a.state.requiresNote
+                      ? setAsking(a.state.toState)
+                      : run(a.state, null, null)
+                  }
                 >
                   {busy === a.state.toState ? 'Working…' : a.label}
                 </button>
 
                 {asking === a.state.toState && (
-                  <span className="next__reason">
+                  <span className={`next__reason${a.state.isReversal ? ' next__reason--undo' : ''}`}>
+                    {a.state.isReversal && (
+                      <span className="next__undo-head">
+                        Putting this item back. Say what happened — it stays on the item's
+                        record with your name and the time.
+                      </span>
+                    )}
                     <select
                       className="tg-select"
                       value={reason}
@@ -244,14 +258,30 @@ export function NextActions({
                         <option key={r.code} value={r.code}>{r.label}</option>
                       ))}
                     </select>
+                    {a.state.requiresNote && (
+                      <input
+                        className="tg-input next__note-input"
+                        value={note}
+                        placeholder="What happened, in a sentence"
+                        aria-label={`Note for moving to ${a.label}`}
+                        onChange={(e) => setNote(e.target.value)}
+                      />
+                    )}
                     <button
                       className="tg-button tg-button--primary"
-                      disabled={!reason || busy !== null}
-                      onClick={() => run(a.state, reason)}
+                      /* The server demands ten characters; refusing here saves a
+                         round trip that would come back as a 409 the person can
+                         do nothing useful with. */
+                      disabled={
+                        busy !== null ||
+                        (a.state.requiresReason && !reason) ||
+                        (a.state.requiresNote && note.trim().length < 10)
+                      }
+                      onClick={() => run(a.state, reason || null, note.trim() || null)}
                     >
                       Confirm
                     </button>
-                    <button className="tg-button" onClick={() => { setAsking(null); setReason('') }}>
+                    <button className="tg-button" onClick={() => { setAsking(null); setReason(''); setNote('') }}>
                       Cancel
                     </button>
                   </span>
@@ -301,7 +331,11 @@ interface Planned {
 /** Decides what, if anything, this person can do about one legal next state. */
 function plan(n: NextState, currentState: string, itemId: string, session: Session | null): Planned {
   const recipe = RECIPES[`${currentState}>${n.toState}`]
-  const label = recipe?.label ?? STATE_LABELS[n.toState] ?? n.toState
+  const base = recipe?.label ?? STATE_LABELS[n.toState] ?? n.toState
+  // An arrow rather than a sentence. "Back to " + the state label reads badly
+  // for half the states ("Back to in inspection"), and rewriting each label for
+  // the reversal case is a second set of names to keep in step with the first.
+  const label = n.isReversal ? `← ${STATE_LABELS[n.toState] ?? n.toState}` : base
   const hint = recipe?.hint ?? n.notes ?? undefined
   const note = (text: string): Planned => ({ state: n, label, hint, mode: 'note', note: text })
 
@@ -332,12 +366,24 @@ function plan(n: NextState, currentState: string, itemId: string, session: Sessi
   if (recipe?.target.kind === 'do') return { state: n, label, hint, mode: 'act' }
 
   // No recipe: only offer it when the state change really is the whole job.
-  return RAW_SAFE.has(n.toState)
+  //
+  // A reversal always is, by construction. RAW_SAFE lists target states that
+  // carry no bookkeeping, which cannot classify a reversal — IN_INSPECTION is
+  // raw-safe when you are putting an item back and emphatically not when you
+  // are starting an inspection. The rule knows which of the two this is, and
+  // the server does the one piece of bookkeeping a reversal needs (pulling the
+  // listing when a live item is withdrawn).
+  return RAW_SAFE.has(n.toState) || n.isReversal
     ? { state: n, label, hint, mode: 'act' }
     : note('not available from this screen')
 }
 
-/** Continuing the journey reads as the default; ending it should not. */
-function isForward(toState: string): boolean {
-  return !['INSPECTION_FAILED', 'QUARANTINED', 'RETURN_TO_SELLER', 'ARCHIVED', 'SELLER_DECLINED', 'RETURN_REJECTED'].includes(toState)
+/**
+ * Continuing the journey reads as the default; ending it should not, and
+ * undoing it certainly should not — a correction must never be the primary
+ * button on the row.
+ */
+function isForward(state: NextState): boolean {
+  if (state.isReversal) return false
+  return !['INSPECTION_FAILED', 'QUARANTINED', 'RETURN_TO_SELLER', 'ARCHIVED', 'SELLER_DECLINED', 'RETURN_REJECTED'].includes(state.toState)
 }

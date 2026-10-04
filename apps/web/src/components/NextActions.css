@@ -54,3 +54,26 @@
   color: var(--tg-bad);
   font-size: var(--tg-text-sm);
 }
+
+/* -- putting an item back --------------------------------------------------- */
+
+.next__reason--undo {
+  /* A correction asks for more than a forward step does, so it gets its own
+     shape: the panel stacks and is tinted, which is the only warning a staff
+     member gets before undoing somebody else's work. */
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-3);
+  background: var(--tg-accent-soft);
+  border-radius: var(--tg-radius-md);
+  max-width: 34rem;
+}
+
+.next__undo-head {
+  font-size: var(--tg-text-xs);
+  line-height: 1.5;
+  color: var(--tg-text);
+}
+
+.next__note-input { width: 100%; }

@@ -99,6 +99,10 @@ export interface NextState {
   toState: string
   allowedRoles: string[]
   requiresReason: boolean
+  /** Wants prose as well as a code. Every reversal does. */
+  requiresNote: boolean
+  /** Undoing rather than progressing, so the UI can say so before the click. */
+  isReversal: boolean
   notes: string | null
 }
 

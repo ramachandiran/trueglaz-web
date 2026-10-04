@@ -192,6 +192,9 @@ export function ItemDetailPage() {
                   {h.actorRole ?? 'System'} · {dateTime(h.occurredAt)}
                   {h.reasonCode ? ` · ${h.reasonCode}` : ''}
                 </span>
+                {/* The whole point of demanding a note on a reversal is that
+                    somebody reads it later. This is later. */}
+                {h.note && <span className="detail__history-note">{h.note}</span>}
               </li>
             ))}
           </ul>

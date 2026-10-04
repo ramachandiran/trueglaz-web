@@ -274,3 +274,15 @@
 @media (max-width: 720px) {
   .product { grid-template-columns: 1fr; }
 }
+
+/* The note a staff member left when they moved the item. Indented under the
+   move it belongs to, because it explains that line and not the list. */
+.detail__history-note {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding-left: var(--tg-space-3);
+  border-left: 2px solid var(--tg-border);
+  font-size: var(--tg-text-sm);
+  line-height: 1.5;
+  color: var(--tg-text);
+}
