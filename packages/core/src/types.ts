@@ -353,6 +353,69 @@ export interface OrderDetail {
   payments: Payment[]
 }
 
+/**
+ * One order as the orders list draws it.
+ *
+ * Deliberately not `Order`. That shape knows ids; somebody reading their own
+ * orders needs names — what the thing was called, what grade it was, who is
+ * carrying it. The API joins all of that server-side so the page is one request
+ * instead of two per order plus one for invoices.
+ */
+export interface OrderSummary {
+  id: string
+  orderNumber: string
+  state: string
+  createdAt: string | null
+  completedAt: string | null
+
+  subtotalMinor: number
+  shippingMinor: number
+  taxMinor: number
+  discountMinor: number
+  totalMinor: number
+
+  shipToName: string | null
+  shipToCity: string | null
+
+  paidAt: string | null
+
+  /** Null until the payment is captured and the invoice raised. */
+  invoiceId: string | null
+  invoiceNumber: string | null
+
+  lines: OrderLineSummary[]
+}
+
+export interface OrderLineSummary {
+  id: string
+  consignmentItemId: string
+  listingId: string | null
+
+  title: string
+  /** Picks the placeholder artwork while real photographs are not served. */
+  categoryName: string | null
+
+  itemPriceMinor: number
+  gradeCodeAtSale: string
+  gradeLabel: string | null
+
+  state: string
+
+  /**
+   * When silence becomes acceptance — the one deadline on this screen with
+   * money behind it. After it the sale is final and the seller is paid,
+   * whether or not anybody clicked anything.
+   */
+  acceptanceWindowEndsAt: string | null
+  acceptedAt: string | null
+  acceptedBy: string | null
+
+  courierCode: string | null
+  trackingNumber: string | null
+  dispatchedAt: string | null
+  deliveredAt: string | null
+}
+
 export interface Payout {
   id: string
   sellerUserId: string

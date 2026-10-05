@@ -1,169 +1,403 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiError, dateTime, money, useApi } from '@trueglaz/core'
+import {
+  api, ApiError, dateOnly, money, relative, useApi,
+  type OrderLineSummary, type OrderSummary,
+} from '@trueglaz/core'
+import { GearPhoto, photoKindFor } from '../components/GearPhoto'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import './OrdersPage.css'
 
 /**
- * The buyer's orders, and the one action that matters: accepting delivery.
+ * The buyer's orders.
  *
- * Acceptance is not a formality — it is the moment escrow clears and the seller
- * is owed money, so the page says so rather than presenting a bare button.
+ * Laid out the way an orders page people already know is laid out — a header
+ * strip carrying placed / total / ship to / order number, then one row per item
+ * with its picture, its name, and the actions beside it. Familiarity is the
+ * whole point of that convention; there is nothing to win by inventing another.
+ *
+ * Two things are deliberately not borrowed.
+ *
+ * There is no "buy it again". Every item here is one second-hand unit and it has
+ * just been sold, so the button would be a lie on every row. The honest version
+ * of that wish goes to the catalogue.
+ *
+ * And acceptance is not a dead line of text. On a general marketplace the
+ * nearest equivalent is a return window that has usually already closed. Here
+ * the window is live and it moves money: when it runs out the sale is final and
+ * the seller is paid, whether or not the buyer did anything. So an open window
+ * is the loudest thing on the card, and it says what happens if it is ignored.
  */
+
+type Tab = 'all' | 'open' | 'needs-you' | 'done'
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'all', label: 'All orders' },
+  { key: 'open', label: 'In progress' },
+  { key: 'needs-you', label: 'Needs you' },
+  { key: 'done', label: 'Completed' },
+]
+
+const FINISHED = ['accepted', 'returned', 'cancelled']
+
+/** A line waits on the buyer when it has arrived and not been confirmed. */
+function needsYou(line: OrderLineSummary): boolean {
+  return line.state === 'delivered'
+}
+
+/** Whole days left, rounded up, or null when no window is running. */
+function daysLeft(iso: string | null): number | null {
+  if (!iso) return null
+  const ms = new Date(iso).getTime() - Date.now()
+  if (Number.isNaN(ms)) return null
+  return Math.max(0, Math.ceil(ms / 86_400_000))
+}
+
 export function OrdersPage() {
   const orders = useApi(() => api.myOrders(), [])
+  const [tab, setTab] = useState<Tab>('all')
+  const [query, setQuery] = useState('')
+  const [year, setYear] = useState('all')
+
+  const rows = useMemo(() => orders.data ?? [], [orders.data])
+
+  const years = useMemo(() => {
+    const seen = new Set<string>()
+    rows.forEach((o) => { if (o.createdAt) seen.add(String(new Date(o.createdAt).getFullYear())) })
+    return Array.from(seen).sort((a, b) => Number(b) - Number(a))
+  }, [rows])
+
+  const attention = useMemo(
+    () => rows.reduce((n, o) => n + o.lines.filter(needsYou).length, 0),
+    [rows],
+  )
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return rows.filter((o) => {
+      if (year !== 'all' && (!o.createdAt || String(new Date(o.createdAt).getFullYear()) !== year)) return false
+      if (tab === 'needs-you' && !o.lines.some(needsYou)) return false
+      if (tab === 'open' && !o.lines.some((l) => !FINISHED.includes(l.state))) return false
+      if (tab === 'done' && !o.lines.every((l) => FINISHED.includes(l.state))) return false
+      if (!q) return true
+      // Searching orders means searching for the thing you bought, or for a
+      // number off an email. Nothing else on the card is something anyone types.
+      return o.orderNumber.toLowerCase().includes(q) ||
+        o.lines.some((l) => l.title.toLowerCase().includes(q))
+    })
+  }, [rows, tab, query, year])
 
   if (orders.loading) return <Loading label="Loading your orders" />
   if (orders.error) return <ErrorNote error={orders.error} onRetry={orders.reload} />
 
-  const rows = orders.data ?? []
   if (rows.length === 0) {
     return (
-      <Empty
-        title="No orders yet"
-        hint="Anything you buy will show up here, with its delivery and acceptance status."
-      />
+      <div className="orders">
+        <h1 className="orders__title">Your orders</h1>
+        <Empty
+          title="No orders yet"
+          hint="Anything you buy shows up here, with where it is and when you need to confirm it arrived."
+        />
+      </div>
     )
   }
 
   return (
     <div className="orders">
-      <h1 className="orders__title">My orders</h1>
-      {rows.map((o) => (
-        <OrderCard key={o.id} orderId={o.id} onChanged={orders.reload} />
-      ))}
+      <div className="orders__masthead">
+        <h1 className="orders__title">Your orders</h1>
+        <form className="orders__search" role="search" onSubmit={(e) => e.preventDefault()}>
+          <label className="tg-visually-hidden" htmlFor="orders-q">Search your orders</label>
+          <input
+            id="orders-q"
+            type="search"
+            className="orders__search-input"
+            placeholder="Search by item or order number"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </form>
+      </div>
+
+      <div className="orders__tabs" role="tablist" aria-label="Filter orders">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.key}
+            className={`orders__tab${tab === t.key ? ' orders__tab--on' : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+            {t.key === 'needs-you' && attention > 0 && (
+              <span className="orders__tab-count">{attention}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="orders__filter">
+        <span>
+          <strong>{shown.length}</strong> {shown.length === 1 ? 'order' : 'orders'}
+          {year === 'all' ? '' : ' placed in'}
+        </span>
+        <label className="tg-visually-hidden" htmlFor="orders-year">Year</label>
+        <select
+          id="orders-year"
+          className="orders__year"
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+        >
+          <option value="all">all time</option>
+          {years.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+
+      {shown.length === 0 ? (
+        <Empty title="Nothing matches" hint="Try a different search, year, or tab." />
+      ) : (
+        shown.map((o) => <OrderCard key={o.id} order={o} onChanged={orders.reload} />)
+      )}
     </div>
   )
 }
 
-/**
- * The invoice for this order.
- *
- * Raised when the payment is captured and kept for good, so this is a link
- * rather than a button that generates something: a buyer asking a year later
- * for a warranty claim gets the same document they got on the day.
- */
-function OrderInvoice({ orderId }: { orderId: string }) {
-  const invoices = useApi(() => api.myInvoices(), [])
-  const [busy, setBusy] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const invoice = (invoices.data ?? []).find((i) => i.orderId === orderId && i.kind === 'sale')
-  if (!invoice) return null
-
-  // Fetched rather than linked, because the token is a header and a browser
-  // following a link sends none. The blob is opened in a tab, where every
-  // browser already has a better "save as PDF" than we would ship.
-  async function open() {
-    if (!invoice) return
-    setBusy(true); setFailed(false)
-    let href: string | null = null
-    try {
-      href = URL.createObjectURL(await api.invoiceDocument(invoice.id))
-      window.open(href, '_blank', 'noopener')
-    } catch {
-      setFailed(true)
-    } finally {
-      // Revoked on a timer: revoking immediately races the tab that is opening
-      // it, and never revoking leaks the blob for the life of the page.
-      if (href) setTimeout(() => URL.revokeObjectURL(href as string), 60_000)
-      setBusy(false)
-    }
-  }
-
-  return (
-    <p className="orders__invoice">
-      <button className="tg-button orders__invoice-link" onClick={open} disabled={busy}>
-        {busy ? 'Opening…' : 'Download invoice'}
-      </button>
-      <span className="tg-muted orders__invoice-meta">
-        <span className="tg-mono">{invoice.invoiceNumber}</span>
-        {invoice.issuedAt && ` · issued ${dateTime(invoice.issuedAt)}`}
-      </span>
-      {failed && <span className="orders__error">That invoice would not open. Try again.</span>}
-    </p>
-  )
-}
-
-function OrderCard({ orderId, onChanged }: { orderId: string; onChanged: () => void }) {
-  const detail = useApi(() => api.order(orderId), [orderId])
+function OrderCard({ order, onChanged }: { order: OrderSummary; onChanged: () => void }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  if (detail.loading) return <div className="tg-skeleton orders__skeleton" />
-  if (detail.error) return <ErrorNote error={detail.error} onRetry={detail.reload} />
-  if (!detail.data) return null
-
-  const { order, lines, payments } = detail.data
 
   async function accept(lineId: string) {
     setBusy(lineId); setError(null)
     try {
       await api.acceptLine(lineId)
-      detail.reload()
       onChanged()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not accept')
+      setError(e instanceof ApiError ? e.message : 'Could not confirm that')
     } finally {
       setBusy(null)
     }
   }
 
   return (
-    <article className="orders__card tg-card">
-      <header className="orders__head">
-        <div>
-          <span className="tg-mono orders__number">{order.orderNumber}</span>
-          <span className={`tg-badge orders__state orders__state--${order.state}`}>
-            {order.state.replace(/_/g, ' ')}
+    <article className="order">
+      <header className="order__strip">
+        <div className="order__fact">
+          <span className="order__fact-label">Order placed</span>
+          <span className="order__fact-value">{dateOnly(order.createdAt)}</span>
+        </div>
+        <div className="order__fact">
+          <span className="order__fact-label">Total</span>
+          <span className="order__fact-value order__fact-value--money">{money(order.totalMinor)}</span>
+        </div>
+        <div className="order__fact">
+          <span className="order__fact-label">Ship to</span>
+          <span className="order__fact-value">
+            {order.shipToName ?? '—'}
+            {order.shipToCity && <span className="order__ship-city">, {order.shipToCity}</span>}
           </span>
         </div>
-        <span className="orders__total">{money(order.totalMinor)}</span>
+        <div className="order__fact order__fact--end">
+          <span className="order__fact-label">
+            Order # <span className="tg-mono">{order.orderNumber}</span>
+          </span>
+          <span className="order__fact-links">
+            <OrderInvoice invoiceId={order.invoiceId} invoiceNumber={order.invoiceNumber} />
+          </span>
+        </div>
       </header>
 
-      <p className="tg-muted orders__meta">
-        Placed {dateTime(order.createdAt)}
-        {payments.length > 0 && ` · paid ${dateTime(payments[0].capturedAt)}`}
-      </p>
+      {error && <p className="order__error" role="alert">{error}</p>}
 
-      <OrderInvoice orderId={orderId} />
-
-      {error && <p className="orders__error" role="alert">{error}</p>}
-
-      <ul className="orders__lines">
-        {lines.map((l) => (
-          <li key={l.id} className="orders__line">
-            <div className="orders__line-main">
-              <Link to={`/items/${l.consignmentItemId}`} className="orders__line-link">
-                Item {l.gradeCodeAtSale}
-              </Link>
-              <span className="tg-badge">{l.state}</span>
-              <span className="orders__line-price">{money(l.itemPriceMinor)}</span>
-            </div>
-
-            {l.state === 'delivered' && (
-              <div className="orders__accept">
-                <p className="tg-muted orders__accept-note">
-                  Delivered. Accepting releases your payment from escrow to the seller
-                  {l.acceptanceWindowEndsAt && ` — the window closes ${dateTime(l.acceptanceWindowEndsAt)}`}.
-                </p>
-                <button
-                  className="tg-button tg-button--primary"
-                  disabled={busy === l.id}
-                  onClick={() => accept(l.id)}
-                >
-                  {busy === l.id ? 'Accepting…' : 'Accept delivery'}
-                </button>
-              </div>
-            )}
-
-            {l.state === 'accepted' && (
-              <p className="tg-muted orders__accept-note">
-                Accepted {dateTime(l.acceptedAt)} — the seller has been paid.
-              </p>
-            )}
-          </li>
+      <div className="order__lines">
+        {order.lines.map((line) => (
+          <LineRow key={line.id} line={line} busy={busy === line.id} onAccept={() => accept(line.id)} />
         ))}
-      </ul>
+      </div>
     </article>
+  )
+}
+
+function LineRow({
+  line, busy, onAccept,
+}: {
+  line: OrderLineSummary
+  busy: boolean
+  onAccept: () => void
+}) {
+  const left = daysLeft(line.acceptanceWindowEndsAt)
+  const waiting = needsYou(line)
+
+  return (
+    <div className={`line${waiting ? ' line--waiting' : ''}`}>
+      <Link
+        to={`/items/${line.consignmentItemId}`}
+        className="line__photo"
+        tabIndex={-1}
+        aria-hidden="true"
+      >
+        <GearPhoto kind={photoKindFor(line.categoryName)} size="thumb" />
+      </Link>
+
+      <div className="line__main">
+        <Link to={`/items/${line.consignmentItemId}`} className="line__title">{line.title}</Link>
+
+        <p className="line__facts">
+          {line.gradeLabel && <span className="line__grade">{line.gradeLabel}</span>}
+          {/* Titles generated at listing time already end in the grade code, and
+              repeating it beside them reads as a stutter. */}
+          {!line.title.endsWith(line.gradeCodeAtSale) && (
+            <span className="tg-mono line__code">{line.gradeCodeAtSale}</span>
+          )}
+          <span className="line__price">{money(line.itemPriceMinor)}</span>
+        </p>
+
+        <Progress line={line} />
+
+        {waiting ? (
+          <p className="line__window" role="status">
+            <strong className="line__window-head">
+              {left === 0 ? 'Confirm this today'
+                : left === 1 ? 'Confirm by tomorrow'
+                  : `Confirm within ${left} days`}
+            </strong>{' '}
+            Your payment is still held. Confirming releases it to the seller — and if you do
+            nothing it is released automatically on {dateOnly(line.acceptanceWindowEndsAt)}.
+          </p>
+        ) : (
+          <p className="line__status">{statusLine(line)}</p>
+        )}
+      </div>
+
+      <div className="line__actions">
+        {waiting && (
+          <button
+            type="button"
+            className="tg-button tg-button--primary line__cta"
+            disabled={busy}
+            onClick={onAccept}
+          >
+            {busy ? 'Confirming…' : 'Confirm it arrived'}
+          </button>
+        )}
+        {line.trackingNumber && (
+          <span className="line__tracking">
+            <span className="line__tracking-label">{line.courierCode ?? 'Courier'}</span>
+            <span className="tg-mono line__tracking-number">{line.trackingNumber}</span>
+          </span>
+        )}
+        <Link className="tg-button line__action" to={`/items/${line.consignmentItemId}`}>
+          View your item
+        </Link>
+        {/* Not "buy it again": there is exactly one of each of these and it has
+            just been sold. The catalogue is the honest version of that wish. */}
+        <Link
+          className="tg-button line__action"
+          to={`/catalog${line.categoryName ? `?q=${encodeURIComponent(line.categoryName)}` : ''}`}
+        >
+          Find another like this
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+/** Where the parcel is, in the four steps it actually has. */
+function Progress({ line }: { line: OrderLineSummary }) {
+  // A returned or cancelled line never walked this path, and drawing it part
+  // of the way along would say it is still coming.
+  if (['returned', 'cancelled'].includes(line.state)) return null
+
+  const steps = ['Paid', 'Dispatched', 'Delivered', 'Confirmed']
+  const done = line.state === 'accepted'
+  const reached = done ? 3
+    : line.state === 'delivered' ? 2
+      : line.state === 'dispatched' ? 1
+        : 0
+
+  return (
+    <ol className="rail" aria-label="Progress">
+      {steps.map((s, i) => (
+        <li
+          key={s}
+          className={
+            'rail__step' +
+            (i <= reached ? ' rail__step--done' : '') +
+            // A finished line has no step in progress — every one of them is
+            // behind it. Marking the last one "now" as well drew a live
+            // highlight on a sale that closed days ago.
+            (!done && i === reached ? ' rail__step--now' : '')
+          }
+          aria-current={!done && i === reached ? 'step' : undefined}
+        >
+          <span className="rail__dot" aria-hidden="true" />
+          <span className="rail__label">{s}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function statusLine(line: OrderLineSummary): string {
+  switch (line.state) {
+    case 'accepted':
+      return line.acceptedBy === 'window_expired'
+        ? `Accepted automatically on ${dateOnly(line.acceptedAt)} — the confirmation window passed.`
+        : `Confirmed on ${dateOnly(line.acceptedAt)}. The seller has been paid.`
+    case 'dispatched':
+      return line.dispatchedAt ? `On its way — sent ${relative(line.dispatchedAt)}.` : 'On its way to you.'
+    case 'returned':
+      return 'Being returned.'
+    case 'cancelled':
+      return 'Cancelled.'
+    default:
+      return 'Paid and held. We will dispatch it shortly.'
+  }
+}
+
+/**
+ * The invoice, fetched rather than linked.
+ *
+ * The session token lives in a header and a browser following a link sends
+ * none, so the document is pulled and opened as a blob — where every browser
+ * already has a better "save as PDF" than we would ship.
+ */
+function OrderInvoice({
+  invoiceId, invoiceNumber,
+}: {
+  invoiceId: string | null
+  invoiceNumber: string | null
+}) {
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+  if (!invoiceId) return null
+
+  async function open() {
+    if (!invoiceId) return
+    setBusy(true); setFailed(false)
+    let href: string | null = null
+    try {
+      href = URL.createObjectURL(await api.invoiceDocument(invoiceId))
+      window.open(href, '_blank', 'noopener')
+    } catch {
+      setFailed(true)
+    } finally {
+      // Revoked on a timer: revoking at once races the tab that is opening it,
+      // and never revoking leaks the blob for the life of the page.
+      if (href) setTimeout(() => URL.revokeObjectURL(href as string), 60_000)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="order__link"
+      onClick={open}
+      disabled={busy}
+      title={invoiceNumber ?? undefined}
+    >
+      {busy ? 'Opening…' : failed ? 'Try the invoice again' : 'Invoice'}
+    </button>
   )
 }

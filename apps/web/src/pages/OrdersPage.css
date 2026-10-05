@@ -1,55 +1,427 @@
-.orders { display: flex; flex-direction: column; gap: var(--tg-space-4); }
-.orders__title { font-size: var(--tg-text-xl); }
-.orders__skeleton { height: 120px; }
-
-.orders__card { padding: var(--tg-space-5); }
-
-.orders__head {
+.orders {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--tg-space-4);
+}
+
+/* ---- masthead ----------------------------------------------------------- */
+
+.orders__masthead {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--tg-space-3);
   flex-wrap: wrap;
 }
 
-.orders__number { font-weight: var(--tg-weight-medium); margin-right: var(--tg-space-2); }
-.orders__state--completed { background: var(--tg-good-soft); color: var(--tg-good); }
-.orders__state--paid { background: var(--tg-accent-soft); color: var(--tg-accent); }
-.orders__total { font-size: var(--tg-text-lg); font-weight: var(--tg-weight-bold); font-variant-numeric: tabular-nums; }
+.orders__title {
+  font-size: var(--tg-text-xxl);
+  margin: 0;
+}
 
-.orders__meta { font-size: var(--tg-text-xs); margin: var(--tg-space-1) 0 var(--tg-space-3); }
+.orders__search {
+  flex: 1 1 260px;
+  max-width: 420px;
+  min-width: 0;
+}
 
-.orders__lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--tg-space-3); }
+.orders__search-input {
+  width: 100%;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  font: inherit;
+  color: var(--tg-text);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border-strong);
+  border-radius: var(--tg-radius-pill);
+}
 
-.orders__line {
-  padding: var(--tg-space-3);
+.orders__search-input::placeholder { color: var(--tg-text-muted); }
+
+/* ---- tabs --------------------------------------------------------------- */
+
+.orders__tabs {
+  display: flex;
+  gap: var(--tg-space-4);
+  border-bottom: 1px solid var(--tg-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.orders__tabs::-webkit-scrollbar { display: none; }
+
+.orders__tab {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-2) 0 var(--tg-space-3);
+  font: inherit;
+  font-weight: var(--tg-weight-medium);
+  color: var(--tg-text-muted);
+  background: none;
+  border: 0;
+  /* On the element rather than a pseudo-element, so the row of tabs sits on one
+     baseline whether or not any of them is selected. */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.orders__tab:hover { color: var(--tg-text); }
+
+.orders__tab--on {
+  color: var(--tg-text);
+  border-bottom-color: var(--tg-accent);
+}
+
+/* The count only ever appears on "Needs you", and only when it is not zero —
+   a badge showing 0 is an alarm about nothing. */
+.orders__tab-count {
+  min-width: 20px;
+  padding: 0 6px;
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  line-height: 20px;
+  text-align: center;
+  color: var(--tg-on-cta);
+  background: var(--tg-cta);
+  border-radius: var(--tg-radius-pill);
+}
+
+/* ---- count and year ----------------------------------------------------- */
+
+.orders__filter {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+  margin-top: calc(var(--tg-space-2) * -1);
+}
+
+.orders__filter strong { color: var(--tg-text); }
+
+.orders__year {
+  font: inherit;
+  color: var(--tg-text);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border-strong);
+  border-radius: var(--tg-radius-sm);
+  padding: 2px var(--tg-space-2);
+}
+
+/* ---- one order ---------------------------------------------------------- */
+
+.order {
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+  overflow: hidden;
+}
+
+/* The strip is the convention worth keeping: four facts, always in the same
+   places, so a page of orders can be read by scanning one column at a time. */
+.order__strip {
+  display: grid;
+  grid-template-columns: repeat(3, auto) 1fr;
+  gap: var(--tg-space-3) var(--tg-space-6);
+  padding: var(--tg-space-3) var(--tg-space-4);
   background: var(--tg-bg-sunken);
+  border-bottom: 1px solid var(--tg-border);
+  font-size: var(--tg-text-xs);
+}
+
+.order__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.order__fact--end {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.order__fact-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+/* An order number broken across two lines at its hyphen is no longer one thing
+   you can read off to support. */
+.order__fact-label .tg-mono { white-space: nowrap; }
+
+.order__fact-value {
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text);
+  overflow-wrap: anywhere;
+}
+
+.order__fact-value--money {
+  font-weight: var(--tg-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.order__ship-city { color: var(--tg-text-muted); }
+
+.order__fact-links {
+  display: flex;
+  gap: var(--tg-space-3);
+  align-items: center;
+}
+
+.order__link {
+  font: inherit;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+.order__link:hover { text-decoration: underline; }
+.order__link:disabled { color: var(--tg-text-muted); cursor: default; text-decoration: none; }
+
+.order__error {
+  margin: 0;
+  padding: var(--tg-space-3) var(--tg-space-4);
+  color: var(--tg-bad);
+  background: var(--tg-bad-soft);
+  font-size: var(--tg-text-sm);
+}
+
+.order__lines {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- one line ----------------------------------------------------------- */
+
+.line {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  gap: var(--tg-space-4);
+  padding: var(--tg-space-4);
+  align-items: start;
+}
+
+.line + .line { border-top: 1px solid var(--tg-border); }
+
+/* The one row on the page with something to do on it says so before it is
+   read, with a rule down the edge rather than a wash behind the text. */
+.line--waiting { border-left: 3px solid var(--tg-warn); }
+
+.line__photo {
+  display: block;
+  width: 112px;
+  color: var(--tg-text-muted);
+}
+
+/* GearPhoto's own sizes are fixed pixel boxes shared with the catalogue, so the
+   slot resizes the art here instead of the component being changed for
+   everybody — last time that was done the other way round it stretched the
+   catalogue tiles. */
+.line__photo .photo {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.line__main { min-width: 0; }
+
+.line__title {
+  display: block;
+  font-size: var(--tg-text-md);
+  font-weight: var(--tg-weight-medium);
+  line-height: 1.35;
+  text-decoration: none;
+  color: var(--tg-accent);
+}
+.line__title:hover { text-decoration: underline; }
+
+.line__facts {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--tg-space-2) var(--tg-space-3);
+  margin: var(--tg-space-2) 0 0;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+}
+
+.line__grade { color: var(--tg-text); }
+.line__code { font-size: var(--tg-text-xs); }
+
+.line__price {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--tg-weight-medium);
+  color: var(--tg-text);
+}
+
+.line__status {
+  margin: var(--tg-space-2) 0 0;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+}
+
+/* The acceptance window. Loud on purpose: it is the only thing on this page
+   that spends the buyer's money by itself if they ignore it. */
+.line__window {
+  margin: var(--tg-space-3) 0 0;
+  padding: var(--tg-space-3);
+  font-size: var(--tg-text-sm);
+  line-height: 1.5;
+  color: var(--tg-text);
+  background: var(--tg-warn-soft);
   border-radius: var(--tg-radius-md);
 }
 
-.orders__line-main { display: flex; align-items: center; gap: var(--tg-space-3); flex-wrap: wrap; }
-.orders__line-link { font-weight: var(--tg-weight-medium); }
-.orders__line-price { margin-left: auto; font-variant-numeric: tabular-nums; }
-
-.orders__accept { margin-top: var(--tg-space-3); display: flex; flex-direction: column; align-items: flex-start; gap: var(--tg-space-2); }
-.orders__accept-note { font-size: var(--tg-text-sm); margin: var(--tg-space-2) 0 0; }
-
-.orders__error { color: var(--tg-bad); font-size: var(--tg-text-sm); margin: var(--tg-space-2) 0; }
-
-/* The invoice link. Present from the moment the order is paid for. */
-.orders__invoice {
-  display: flex;
-  align-items: center;
-  gap: var(--tg-space-3);
-  margin: 0 0 var(--tg-space-3);
-  flex-wrap: wrap;
+.line__window-head {
+  color: var(--tg-warn);
+  font-weight: var(--tg-weight-bold);
 }
 
-.orders__invoice-link {
-  padding: var(--tg-space-2) var(--tg-space-3);
-  font-size: var(--tg-text-sm);
+/* ---- progress rail ------------------------------------------------------ */
+
+.rail {
+  display: flex;
+  list-style: none;
+  margin: var(--tg-space-3) 0 0;
+  padding: 0;
+  /* Capped. Stretched across a full text column the four steps stop reading as
+     an indicator and start reading as a banner. */
+  max-width: 440px;
+}
+
+.rail__step {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: var(--tg-text-xs);
+  color: var(--tg-step-upcoming);
+  position: relative;
+}
+
+/* The connector is drawn from each step to the one before it, so the rail has
+   no trailing stub hanging off its last dot. */
+.rail__step + .rail__step::before {
+  content: '';
+  position: absolute;
+  left: calc(-100% + 9px);
+  top: 4px;
+  width: calc(100% - 18px);
+  height: 2px;
+  background: var(--tg-step-upcoming);
+}
+
+.rail__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tg-step-upcoming);
+}
+
+.rail__step--done { color: var(--tg-step-done); }
+.rail__step--done .rail__dot { background: var(--tg-step-done); }
+.rail__step--done + .rail__step--done::before,
+.rail__step--done + .rail__step--now::before { background: var(--tg-step-done); }
+
+.rail__step--now {
+  color: var(--tg-text);
+  font-weight: var(--tg-weight-medium);
+}
+.rail__step--now .rail__dot {
+  background: var(--tg-step-current);
+  box-shadow: 0 0 0 3px var(--tg-accent-soft);
+}
+
+.rail__label { overflow-wrap: anywhere; }
+
+/* ---- actions ------------------------------------------------------------ */
+
+.line__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-2);
+  width: 190px;
+}
+
+.line__action,
+.line__cta {
+  width: 100%;
+  text-align: center;
   text-decoration: none;
+  font-size: var(--tg-text-sm);
   white-space: nowrap;
 }
 
-.orders__invoice-meta { font-size: var(--tg-text-xs); }
+.line__tracking {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--tg-space-2);
+  font-size: var(--tg-text-xs);
+  background: var(--tg-bg-sunken);
+  border-radius: var(--tg-radius-sm);
+  text-align: center;
+}
+
+.line__tracking-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.line__tracking-number { overflow-wrap: anywhere; }
+
+/* ---- narrow ------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  /* The strip's four facts stop being columns worth scanning once they wrap
+     to two per row, so the order number goes back to the left with the rest. */
+  .order__strip { grid-template-columns: 1fr 1fr; gap: var(--tg-space-3); }
+  .order__fact--end { align-items: flex-start; text-align: left; }
+
+  /* Photo and text side by side, actions beneath: a 190px button column at
+     phone width leaves the title about nine characters. */
+  .line {
+    grid-template-columns: 72px minmax(0, 1fr);
+    column-gap: var(--tg-space-3);
+  }
+  .line__photo { width: 72px; }
+  .line__actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .line__action,
+  .line__cta { width: auto; flex: 1 1 auto; }
+  .line__tracking { flex: 1 1 100%; text-align: left; }
+}
+
+@media (max-width: 520px) {
+  .orders__title { font-size: var(--tg-text-xl); }
+  .orders__tabs { gap: var(--tg-space-3); font-size: var(--tg-text-sm); }
+
+  /* Four labels will not fit under four dots at this width, and letting them
+     wrap produced "Dispatch / ed". The dots keep the shape of the journey and
+     the sentence underneath already says where the parcel is — so the labels
+     are hidden from the eye and kept for screen readers rather than removed. */
+  .rail__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .rail { max-width: 180px; }
+}
