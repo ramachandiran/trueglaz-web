@@ -1,0 +1,90 @@
+name: Deploy web to AWS
+
+# Pushing to the deployment branch is the deploy. No AWS key lives in this
+# repository: the job assumes a role through GitHub's OIDC provider.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-south-1
+  BUCKET: trueglaz-demo-web
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Typecheck before building rather than trusting the build to catch it:
+      # `vite build` runs `tsc -b` first in this project, but a failure there is
+      # worth seeing as its own step rather than buried in bundler output.
+      - run: npx tsc --noEmit -p apps/web
+
+      # VITE_API_ORIGIN is deliberately NOT set. Left unset, the client calls
+      # /api/v1 relative to whatever origin served the page — which is the whole
+      # point of putting the app and the API behind one CloudFront
+      # distribution. Setting it here would bake a hostname into the bundle and
+      # turn an infrastructure change into a rebuild.
+      - run: npm run -w apps/web build
+
+      - name: Assume the deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Two passes, and the order matters. The hashed assets go first and are
+      # immutable for a year; index.html goes last and is never cached. Doing it
+      # the other way round publishes an index that references assets which are
+      # not uploaded yet, and anyone loading the site in that window gets a
+      # white screen.
+      - name: Upload assets, then the index
+        run: |
+          set -euo pipefail
+          aws s3 sync apps/web/dist "s3://$BUCKET" \
+            --delete \
+            --exclude index.html \
+            --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp apps/web/dist/index.html "s3://$BUCKET/index.html" \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      # Only index.html needs invalidating — everything else is content-hashed,
+      # so a new build has new filenames and the old ones can stay cached.
+      # Invalidating /* on every deploy is both slower and, past the free
+      # thousand paths a month, billable.
+      - name: Invalidate the index
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/index.html" "/"
+
+      - name: Check the site is actually serving
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 12); do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' https://demo.trueglaz.com/ || true)
+            echo "attempt $i: $CODE"
+            [ "$CODE" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "demo.trueglaz.com did not serve a 200 within 120s"
+          exit 1
