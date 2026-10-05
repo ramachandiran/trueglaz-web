@@ -4,7 +4,7 @@ import type {
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payout,
-  MyRequests, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
+  MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
   BonusPointLine, PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, ReferralView, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow,
@@ -390,6 +390,12 @@ export const api = {
 
   // -- my account ----------------------------------------------------------
   profile: () => get<Profile>('/profile'),
+
+  notifications: () => get<Notifications>('/profile/notifications'),
+  /** Both of these answer with the whole list, so the badge and the rows stay in step. */
+  markNotificationRead: (id: string) =>
+    post<Notifications>(`/profile/notifications/${id}/read`),
+  markAllNotificationsRead: () => post<Notifications>('/profile/notifications/read-all'),
   updateProfile: (displayName: string) => patch<Profile>('/profile', { displayName }),
 
   /** Sends a code to the NEW contact: what needs proving is that you can read mail there. */

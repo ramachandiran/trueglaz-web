@@ -1,0 +1,166 @@
+.notif__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tg-space-3);
+  flex-wrap: wrap;
+}
+.notif__head .profile__section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+}
+
+/* The unread total, beside the heading rather than floating over an icon: this
+   is a section on a page somebody navigated to, not a bell they might miss. */
+.notif__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-accent);
+  color: var(--tg-on-accent);
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  line-height: 1;
+}
+
+.notif__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tg-space-2);
+  margin: var(--tg-space-3) 0;
+}
+.notif__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--tg-space-1) var(--tg-space-3);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-bg);
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-sm);
+  cursor: pointer;
+  transition: var(--tg-transition);
+}
+.notif__tab:hover { border-color: var(--tg-border-strong); color: var(--tg-text); }
+.notif__tab--on {
+  background: var(--tg-accent-soft);
+  border-color: var(--tg-accent);
+  color: var(--tg-text);
+  font-weight: var(--tg-weight-medium);
+}
+/* A dot, not a number: the count is already on the heading, and a second one
+   per tab turns the row into arithmetic. */
+.notif__tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tg-accent);
+}
+
+.notif__empty { margin-top: var(--tg-space-4); }
+
+.notif__list {
+  list-style: none;
+  margin: var(--tg-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-2);
+}
+
+.notif__row {
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bg);
+  transition: var(--tg-transition);
+}
+.notif__row:hover { border-color: var(--tg-border-strong); background: var(--tg-bg-hover); }
+
+/* Unread is carried by a left edge and weight, never by colour alone. */
+.notif__row--unread {
+  border-left: 3px solid var(--tg-accent);
+  background: var(--tg-bg-raised);
+}
+
+/* The whole row is the target. A small "mark read" control beside a tappable
+   card is two hit areas competing on a phone. */
+.notif__hit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: var(--tg-space-3);
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.notif__hit:focus-visible {
+  outline: 2px solid var(--tg-accent);
+  outline-offset: 2px;
+  border-radius: var(--tg-radius-md);
+}
+
+.notif__line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--tg-space-2);
+  flex-wrap: wrap;
+}
+.notif__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tg-accent);
+  flex: none;
+}
+.notif__title {
+  font-weight: var(--tg-weight-medium);
+  font-size: var(--tg-text-md);
+}
+.notif__row--unread .notif__title { font-weight: var(--tg-weight-bold); }
+.notif__when { font-size: var(--tg-text-xs); margin-left: auto; white-space: nowrap; }
+
+.notif__body {
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+  max-width: 78ch;
+}
+.notif__row--unread .notif__body { color: var(--tg-text); }
+
+.notif__tagrow {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  margin-top: 2px;
+}
+.notif__tag {
+  font-size: var(--tg-text-xs);
+  padding: 2px 8px;
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-bg-sunken);
+  color: var(--tg-text-muted);
+  border: 1px solid var(--tg-border);
+}
+/* Money and account safety are the two categories somebody scans for. */
+.notif__tag--payouts { background: var(--tg-good-soft); color: var(--tg-good); border-color: transparent; }
+.notif__tag--security { background: var(--tg-warn-soft); color: var(--tg-warn); border-color: transparent; }
+.notif__tag--rewards { background: var(--tg-accent-soft); color: var(--tg-text); border-color: transparent; }
+
+.notif__go {
+  font-size: var(--tg-text-xs);
+  color: var(--tg-accent);
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  .notif__when { margin-left: 0; width: 100%; }
+}

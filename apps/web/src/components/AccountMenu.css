@@ -113,3 +113,42 @@
   .account__name { display: none; }
   .account__menu { min-width: 220px; }
 }
+
+/* The unread pip on the avatar, and the count in the menu.
+   Two places, because the avatar is what gets noticed and the menu item is what
+   gets clicked — a dot alone never says how many. */
+.account__avatar { position: relative; }
+.account__pip {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tg-accent);
+  /* Ringed in the header's own background so it reads as a pip on the avatar
+     rather than a smudge in it. */
+  box-shadow: 0 0 0 2px var(--tg-bg-raised);
+}
+/* Only this row becomes a flex line — the other links stay plain blocks. */
+.account__link--badged {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+}
+
+.account__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-accent);
+  color: var(--tg-on-accent);
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  line-height: 1;
+}

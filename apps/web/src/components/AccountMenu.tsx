@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useSession } from '@trueglaz/core'
+import { api, useSession } from '@trueglaz/core'
 import './AccountMenu.css'
 
 /**
@@ -15,7 +15,31 @@ export function AccountMenu() {
   const { session, signOut } = useSession()
   const nav = useNavigate()
   const [open, setOpen] = useState(false)
+  const [unread, setUnread] = useState(0)
   const box = useRef<HTMLDivElement>(null)
+
+  /**
+   * The unread count, for the badge.
+   *
+   * Without something in the header, a notification is only ever found by
+   * someone who already went looking for it — which is the same mistake as
+   * putting the staff user list behind a URL nobody could reach. The count comes
+   * off the profile payload rather than a second endpoint, and is refreshed when
+   * the menu opens so a badge cleared on the profile page does not linger.
+   *
+   * Staff and admin are not special-cased: no notification is ever written
+   * against them, so their count is 0 and the badge simply never appears.
+   */
+  useEffect(() => {
+    let alive = true
+    if (!session) { setUnread(0); return }
+    api.profile()
+      .then((p) => { if (alive) setUnread(p.unreadNotifications ?? 0) })
+      // A header badge is not worth an error state. Nothing shown is correct
+      // enough, and the profile page is where the real list lives.
+      .catch(() => { if (alive) setUnread(0) })
+    return () => { alive = false }
+  }, [session?.userId, open])
 
   // A menu that stays open when you click elsewhere, or press Escape, reads as
   // stuck rather than open.
@@ -43,9 +67,15 @@ export function AccountMenu() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="account__avatar" aria-hidden="true">{initials(session.displayName)}</span>
+        <span className="account__avatar" aria-hidden="true">
+          {initials(session.displayName)}
+          {unread > 0 && <span className="account__pip" aria-hidden="true" />}
+        </span>
         <span className="account__name">{session.displayName}</span>
         <span className="account__caret" aria-hidden="true">▾</span>
+        {unread > 0 && (
+          <span className="tg-visually-hidden">{unread} unread notifications</span>
+        )}
       </button>
 
       {open && (
@@ -64,6 +94,15 @@ export function AccountMenu() {
           </div>
 
           <div className="account__links">
+            <Link
+              className="account__link account__link--badged"
+              role="menuitem"
+              to="/profile#notifications"
+              onClick={() => setOpen(false)}
+            >
+              Notifications
+              {unread > 0 && <span className="account__badge">{unread}</span>}
+            </Link>
             <Link className="account__link" role="menuitem" to="/profile" onClick={() => setOpen(false)}>
               Profile &amp; settings
             </Link>
