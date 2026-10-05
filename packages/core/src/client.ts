@@ -5,7 +5,7 @@ import type {
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payout,
   MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
-  CreditLine, PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, ReferralView, RenderedReport, Reservation, SellerApproval,
+  PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow,
 } from './types'
@@ -283,14 +283,12 @@ export const api = {
   checkout: (
     reservationId: string,
     deliveryAddress: Record<string, unknown>,
-    referralCode?: string | null,
   ) =>
     post<Order>(`/reservations/${reservationId}/checkout`, {
       deliveryAddress,
       // Omitted rather than sent empty: the server treats a blank code as
       // "no code", but a request that says nothing is clearer than one that
       // says nothing twice.
-      ...(referralCode ? { referralCode } : {}),
     }),
   /**
    * Opens a payment with the gateway and returns somewhere to pay.
@@ -316,15 +314,6 @@ export const api = {
     put<PlatformSetting>(`/admin/settings/${encodeURIComponent(key)}`, { value }),
   settingHistory: () => get<SettingChange[]>('/admin/settings/history'),
 
-  // -- referrals -----------------------------------------------------------
-  myReferral: () => get<ReferralView>('/profile/referral'),
-  // Checkout's version: asked on every visit, so it must not mint a code for
-  // somebody who only ever looked at a buy page.
-  myClaimedReferral: () => get<{ claimedCode: string | null }>('/profile/referral/claimed'),
-  regenerateReferral: () => post<ReferralView>('/profile/referral/regenerate'),
-  myCredit: () => get<CreditLine[]>('/profile/referral/credit'),
-  previewReferral: (code: string) =>
-    post<{ valid: boolean; creditEachMinor: number }>('/profile/referral/preview', { code }),
 
   // -- staff: people -------------------------------------------------------
   staffUsers: (q = '', sellingState = '') =>
