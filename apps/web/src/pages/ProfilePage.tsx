@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  api, ApiError, dateOnly, dateTime, useApi, useSession,
-  type Address, type BonusPointLine, type CodeSent, type Profile, type SessionInfo,
+  api, ApiError, dateOnly, dateTime, money, useApi, useSession,
+  type Address, type CodeSent, type CreditLine, type Profile, type SessionInfo,
 } from '@trueglaz/core'
 import { KycPanel } from '../components/KycPanel'
 import { NotificationsPanel } from '../components/NotificationsPanel'
@@ -92,16 +92,18 @@ export function ProfilePage() {
 
 /* -- refer & earn ----------------------------------------------------------- */
 
-/** How a bonus point row explains itself. */
-const POINT_REASONS: Record<string, string> = {
-  referral_referrer: 'Someone used your code',
-  referral_redeemer: 'You used a referral code',
+/** How a credit row explains itself. */
+const CREDIT_REASONS: Record<string, string> = {
+  referral_referrer: 'Someone you referred completed an order',
+  referral_redeemer: 'The code you used paid out',
+  spent_on_order: 'Used on an order',
+  refunded_on_cancel: 'Returned — that order was cancelled',
   adjustment: 'Adjustment by TrueGlaz',
 }
 
 function Referral() {
   const mine = useApi(() => api.myReferral(), [])
-  const history = useApi(() => api.myPoints(), [])
+  const history = useApi(() => api.myCredit(), [])
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -154,14 +156,16 @@ function Referral() {
   }
 
   const r = mine.data
-  const lines: BonusPointLine[] = history.data ?? []
+  const lines: CreditLine[] = history.data ?? []
 
   return (
     <section className="tg-card profile__section" id="referral">
       <h2 className="profile__section-title">Refer &amp; earn</h2>
       <p className="tg-muted profile__blurb">
-        Share your code. When someone uses it on a purchase, you both get{' '}
-        {r.pointsPerClaim} bonus points. Each person can use your code once.
+        Share your code. When someone uses it and <strong>their order completes</strong> —
+        paid for, delivered and accepted — you both get {money(r.creditPerReferralMinor)} off
+        your next order. Orders under {money(r.minOrderMinor)} do not count, and each
+        person can use your code once.
       </p>
 
       <div className="profile__referral">
@@ -181,32 +185,41 @@ function Referral() {
 
       <div className="profile__stats">
         <div className="profile__stat">
-          <span className="profile__label">Your points</span>
-          <p className="profile__stat-value">{r.pointsBalance}</p>
+          <span className="profile__label">Credit to spend</span>
+          <p className="profile__stat-value">{money(r.creditBalanceMinor)}</p>
         </div>
         <div className="profile__stat">
-          <span className="profile__label">People who used your code</span>
+          <span className="profile__label">Referrals completed</span>
           <p className="profile__stat-value">{r.timesUsed}</p>
         </div>
         <div className="profile__stat">
           <span className="profile__label">Worth per referral</span>
-          <p className="profile__stat-value">{r.pointsPerClaim}</p>
+          <p className="profile__stat-value">{money(r.creditPerReferralMinor)}</p>
         </div>
       </div>
 
+      {r.pending > 0 && (
+        // Said plainly, because the gap between typing a code and being paid is
+        // where somebody would otherwise assume the system had forgotten them.
+        <p className="tg-muted profile__hint">
+          {r.pending === 1 ? 'One order is' : `${r.pending} orders are`} still on the way.
+          You will be credited when {r.pending === 1 ? 'it completes' : 'they complete'}.
+        </p>
+      )}
+
       <p className="tg-muted profile__hint profile__referral-note">
         {r.claimedCode
-          ? `You used the code ${r.claimedCode} on a purchase. Everyone gets one.`
-          : 'Got a code from a friend? Enter it at checkout and you will both be credited.'}
+          ? `You used the code ${r.claimedCode}. Everyone gets one.`
+          : 'Got a code from a friend? Enter it at checkout. You are both credited once your order completes.'}
       </p>
 
-      {r.pointsBalance > 0 && (
+      {lines.length > 0 && (
         <>
           <button
             className="tg-button tg-button--subtle profile__referral-toggle"
             onClick={() => { setShowHistory((v) => !v); if (!showHistory) history.reload() }}
           >
-            {showHistory ? 'Hide history' : 'Show points history'}
+            {showHistory ? 'Hide history' : 'Show credit history'}
           </button>
 
           {showHistory && (
@@ -214,9 +227,9 @@ function Referral() {
               {lines.length === 0 && <li className="tg-muted">Nothing yet.</li>}
               {lines.map((l, i) => (
                 <li key={i} className="profile__point">
-                  <span>{POINT_REASONS[l.reason] ?? l.reason}</span>
+                  <span>{CREDIT_REASONS[l.reason] ?? l.reason}</span>
                   <span className="profile__point-amount">
-                    {l.amount > 0 ? `+${l.amount}` : l.amount}
+                    {l.amountMinor > 0 ? `+${money(l.amountMinor)}` : `-${money(-l.amountMinor)}`}
                   </span>
                   <span className="tg-muted profile__point-when">
                     {l.createdAt ? dateOnly(l.createdAt) : ''}

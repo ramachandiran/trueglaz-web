@@ -113,9 +113,9 @@ export function CheckoutPage() {
     if (!code) return
     setCheckingCode(true); setCodeError(null)
     try {
-      const { pointsEach } = await api.previewReferral(code)
+      const { creditEachMinor } = await api.previewReferral(code)
       setAppliedCode(code)
-      setCodeWorth(pointsEach)
+      setCodeWorth(creditEachMinor)
       setCodeInput(code)
     } catch (e) {
       setAppliedCode(null)
@@ -140,7 +140,7 @@ export function CheckoutPage() {
     } catch (e) {
       // The code was valid a moment ago, so this is rare. When it happens, the
       // purchase matters more than the bonus: retry without the code rather
-      // than making somebody lose the item over 500 points. No string matching
+      // than making somebody lose the item over a referral. No string matching
       // — if the second attempt fails too, the code was never the problem and
       // its error is the one worth showing.
       if (appliedCode) {
@@ -280,13 +280,14 @@ export function CheckoutPage() {
               ) : appliedCode ? (
                 <p className="checkout__referral-ok">
                   {appliedCode} applied — you and whoever gave it to you each get{' '}
-                  {codeWorth} bonus points.{' '}
+                  {money(codeWorth ?? 0)} in credit once this order completes.{' '}
                   <button className="checkout__referral-remove" onClick={clearCode}>Remove</button>
                 </p>
               ) : (
                 <>
                   <p className="tg-muted checkout__note">
-                    Got one from a friend? You will both be credited when the order goes through.
+                    Got one from a friend? You are both credited once this order is
+                    delivered and you have accepted it — not before.
                   </p>
                   <div className="checkout__referral-row">
                     <input

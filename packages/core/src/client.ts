@@ -5,7 +5,7 @@ import type {
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payout,
   MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
-  BonusPointLine, PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, ReferralView, RenderedReport, Reservation, SellerApproval,
+  CreditLine, PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, ReferralView, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow,
 } from './types'
@@ -322,9 +322,9 @@ export const api = {
   // somebody who only ever looked at a buy page.
   myClaimedReferral: () => get<{ claimedCode: string | null }>('/profile/referral/claimed'),
   regenerateReferral: () => post<ReferralView>('/profile/referral/regenerate'),
-  myPoints: () => get<BonusPointLine[]>('/profile/referral/points'),
+  myCredit: () => get<CreditLine[]>('/profile/referral/credit'),
   previewReferral: (code: string) =>
-    post<{ valid: boolean; pointsEach: number }>('/profile/referral/preview', { code }),
+    post<{ valid: boolean; creditEachMinor: number }>('/profile/referral/preview', { code }),
 
   // -- staff: people -------------------------------------------------------
   staffUsers: (q = '', sellingState = '') =>

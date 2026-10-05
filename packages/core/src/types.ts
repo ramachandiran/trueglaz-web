@@ -965,17 +965,23 @@ export interface ShipmentLeg {
 /** Somebody's own referral code, and what it has earned them. */
 export interface ReferralView {
   code: string
+  /** Referrals that actually completed. A claim in flight is not one yet. */
   timesUsed: number
-  pointsBalance: number
-  /** What a claim is worth right now, both sides. An admin can change it. */
-  pointsPerClaim: number
+  /** Spendable right now, in paise. */
+  creditBalanceMinor: number
+  /** What a completed referral is worth to each side, in paise. */
+  creditPerReferralMinor: number
+  /** Orders below this earn nothing, in paise. */
+  minOrderMinor: number
   /** The code this person themselves claimed, if any. Nobody gets two. */
   claimedCode: string | null
+  /** Claimed but not yet earned — somebody's order is still in flight. */
+  pending: number
 }
 
-/** One movement of bonus points. Signed, so spending them later is negative. */
-export interface BonusPointLine {
-  amount: number
+/** One movement of referral credit, in paise. Signed: spending is negative. */
+export interface CreditLine {
+  amountMinor: number
   reason: string
   createdAt: string | null
 }
