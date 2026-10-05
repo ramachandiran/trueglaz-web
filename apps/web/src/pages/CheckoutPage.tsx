@@ -127,10 +127,10 @@ export function CheckoutPage() {
         return
       }
 
-      // No hosted page, which in practice means the stub gateway in
-      // development. Ask it to send the webhook it would have sent, and keep
-      // the real verification in the path rather than pretending around it.
-      await api.devPay(orderId)
+      // No hosted page, which means the stub gateway — development, or the demo
+      // environment. Ask it to send the webhook it would have sent, and keep the
+      // real verification in the path rather than pretending around it.
+      await api.stubPay(orderId)
       setStep('done')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Payment failed')

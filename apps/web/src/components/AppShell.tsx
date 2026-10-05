@@ -3,6 +3,7 @@ import { isAdmin, isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { useMarketView, type MarketView } from '../state/useMarketView'
 import { useTheme, type ThemeMode } from '../state/useTheme'
 import { AccountMenu } from './AccountMenu'
+import { DemoNotice } from './DemoNotice'
 import { HeaderSearch } from './HeaderSearch'
 import { Logo, LogoMark } from './Logo'
 import './AppShell.css'
@@ -10,6 +11,7 @@ import './AppShell.css'
 export function AppShell() {
   return (
     <div className="shell">
+      <DemoNotice />
       <Header />
       <main className="shell__main">
         <Outlet />

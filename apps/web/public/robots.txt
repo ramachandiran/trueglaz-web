@@ -1,0 +1,10 @@
+# The demo environment must not be indexed: it is a working storefront where
+# nothing is for sale, and a search result pointing at it would send people to
+# buy cameras that do not exist.
+#
+# This file ships with every build, so a live deployment needs it replaced. That
+# is deliberate — a site that is accidentally not indexed is a marketing problem
+# somebody notices; a demo that is accidentally indexed is a customer who thinks
+# they bought something.
+User-agent: *
+Disallow: /

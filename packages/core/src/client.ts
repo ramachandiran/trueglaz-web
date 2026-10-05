@@ -4,7 +4,7 @@ import type {
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payout,
-  MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
+  Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow,
@@ -174,6 +174,14 @@ export interface BrowseParams {
 }
 
 export const api = {
+  // -- what this deployment is ---------------------------------------------
+  /**
+   * Answers one question: does paying here move real money? The API derives it
+   * from the payment provider it actually has wired, so it cannot disagree with
+   * reality the way a build-time flag in this bundle could.
+   */
+  meta: () => get<Meta>('/meta'),
+
   // -- auth ---------------------------------------------------------------
   requestCode: (contact: string) =>
     post<{ sent: boolean; expiresAt: string; devCode: string | null }>('/auth/request-code', { contact }),
@@ -301,8 +309,13 @@ export const api = {
   paymentSession: (orderId: string) =>
     post<PaymentSessionView>(`/orders/${orderId}/payment-session`),
 
-  /** Development only: stands in for the gateway, and is absent in production. */
-  devPay: (orderId: string) => post<{ status: string }>(`/dev/pay/${orderId}`),
+  /**
+   * Pays your own order where the gateway is the stub, which is development and
+   * the demo environment. Absent wherever a real gateway is configured — there
+   * the browser is sent to the gateway's own page instead, and this is never
+   * called.
+   */
+  stubPay: (orderId: string) => post<{ status: string }>(`/payments/stub/pay/${orderId}`),
   myOrders: () => get<Order[]>('/orders'),
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
   acceptLine: (lineId: string, byWindowExpiry = false) =>

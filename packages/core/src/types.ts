@@ -1049,3 +1049,15 @@ export interface StaffBuyingRow {
   placedAt: string | null
   acceptedAt: string | null
 }
+
+/**
+ * What kind of deployment is answering.
+ *
+ * `paymentsAreReal` is false on the demo environment, where the gateway is a
+ * stub that approves everything. Everything else there — grading, consignment,
+ * the ledger, the state machine — is genuine; only the money is pretend, and
+ * the app has to say so before somebody checks out believing otherwise.
+ */
+export interface Meta {
+  paymentsAreReal: boolean
+}

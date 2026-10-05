@@ -1,0 +1,28 @@
+/* Sits above the header and scrolls away with the page: it is a fact about the
+   site, not a control, and a strip pinned to the top of every screen would eat
+   the one thing a phone is short of. */
+.demo-notice {
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  background: var(--tg-warn-bg, #fdf0d5);
+  color: var(--tg-warn-fg, #5c4206);
+  border-bottom: 1px solid var(--tg-warn-border, #e8d3a0);
+}
+
+.demo-notice strong { font-weight: 600; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .demo-notice {
+    background: #3a2f10;
+    color: #f0dca8;
+    border-bottom-color: #574419;
+  }
+}
+
+:root[data-theme='dark'] .demo-notice {
+  background: #3a2f10;
+  color: #f0dca8;
+  border-bottom-color: #574419;
+}
