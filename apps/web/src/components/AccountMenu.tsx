@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, useSession } from '@trueglaz/core'
+import { useSession } from '@trueglaz/core'
+import { useUnread } from './useUnread'
 import './AccountMenu.css'
 
 /**
@@ -15,31 +16,21 @@ export function AccountMenu() {
   const { session, signOut } = useSession()
   const nav = useNavigate()
   const [open, setOpen] = useState(false)
-  const [unread, setUnread] = useState(0)
   const box = useRef<HTMLDivElement>(null)
 
   /**
-   * The unread count, for the badge.
+   * The unread count, polled, so a notification that arrives while somebody is
+   * sitting on a page actually shows up there.
    *
-   * Without something in the header, a notification is only ever found by
-   * someone who already went looking for it — which is the same mistake as
-   * putting the staff user list behind a URL nobody could reach. The count comes
-   * off the profile payload rather than a second endpoint, and is refreshed when
-   * the menu opens so a badge cleared on the profile page does not linger.
-   *
-   * Staff and admin are not special-cased: no notification is ever written
-   * against them, so their count is 0 and the badge simply never appears.
+   * Before this it was read once on mount and again when the menu opened, which
+   * meant a seller watching their item while staff approved its price saw
+   * nothing change until they navigated. See useUnread for the cadence.
    */
-  useEffect(() => {
-    let alive = true
-    if (!session) { setUnread(0); return }
-    api.profile()
-      .then((p) => { if (alive) setUnread(p.unreadNotifications ?? 0) })
-      // A header badge is not worth an error state. Nothing shown is correct
-      // enough, and the profile page is where the real list lives.
-      .catch(() => { if (alive) setUnread(0) })
-    return () => { alive = false }
-  }, [session?.userId, open])
+  const { unread, refresh } = useUnread()
+
+  // Opening the menu is a cheap moment to be certain: it is the one place the
+  // number is about to be read closely.
+  useEffect(() => { if (open) refresh() }, [open, refresh])
 
   // A menu that stays open when you click elsewhere, or press Escape, reads as
   // stuck rather than open.
@@ -95,7 +86,10 @@ export function AccountMenu() {
 
           <div className="account__links">
             <Link
-              className="account__link account__link--badged"
+              className={
+                'account__link account__link--badged' +
+                (unread > 0 ? ' account__link--new' : '')
+              }
               role="menuitem"
               to="/profile#notifications"
               onClick={() => setOpen(false)}

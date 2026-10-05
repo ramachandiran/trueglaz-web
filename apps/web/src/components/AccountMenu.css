@@ -129,6 +129,20 @@
   /* Ringed in the header's own background so it reads as a pip on the avatar
      rather than a smudge in it. */
   box-shadow: 0 0 0 2px var(--tg-bg-raised);
+  animation: account-pip 1.6s ease-out 2;
+}
+
+/* Twice, then still. A dot that pulses forever is a thing people learn to stop
+   seeing, and this one has to still mean something an hour later. */
+@keyframes account-pip {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.45); }
+  70%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account__pip { animation: none; }
 }
 /* Only this row becomes a flex line — the other links stay plain blocks. */
 .account__link--badged {
@@ -136,6 +150,16 @@
   align-items: center;
   gap: var(--tg-space-2);
 }
+
+/* Something waiting. The row is tinted and given an accent edge rather than
+   just carrying a number, so the menu reads as "there is something here" at a
+   glance — the count answers "how much" once you are already looking. */
+.account__link--new {
+  background: var(--tg-accent-soft);
+  box-shadow: inset 2px 0 0 var(--tg-accent);
+  font-weight: var(--tg-weight-medium);
+}
+.account__link--new:hover { background: var(--tg-accent-soft); filter: brightness(0.97); }
 
 .account__badge {
   display: inline-flex;

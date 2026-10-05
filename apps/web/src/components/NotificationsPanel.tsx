@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError, dateTime, useApi, type Notification } from '@trueglaz/core'
 import { ErrorNote, Loading } from './ui'
+import { POLL_MS } from './useUnread'
 import './NotificationsPanel.css'
 
 /**
@@ -33,6 +34,32 @@ export function NotificationsPanel({ onChanged }: { onChanged?: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const { pathname } = useLocation()
+
+  /**
+   * Keep the open list current.
+   *
+   * Someone who leaves this page open while a payout clears should see it
+   * arrive, not find out by reloading. Same cadence and same rules as the
+   * header count: nothing happens while the tab is hidden, and coming back to
+   * it refetches at once.
+   *
+   * reload is held in a ref so the effect is set up once per mount. Depending
+   * on it directly would tear the timer down and build it again on every
+   * render, which in practice means the interval never gets to fire.
+   */
+  const reload = useRef(feed.reload)
+  reload.current = feed.reload
+  useEffect(() => {
+    const read = () => { if (!document.hidden) reload.current() }
+    const timer = window.setInterval(read, POLL_MS)
+    document.addEventListener('visibilitychange', read)
+    window.addEventListener('focus', read)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', read)
+      window.removeEventListener('focus', read)
+    }
+  }, [])
 
   // Same rule as the rest of the profile page: only the first load takes over,
   // so marking one read does not flash a spinner over the list it just changed.
