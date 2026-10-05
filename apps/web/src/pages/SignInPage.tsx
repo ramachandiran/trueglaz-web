@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { api, ApiError, useSession } from '@trueglaz/core'
+import { api, ApiError, useSession, type AuthResult } from '@trueglaz/core'
 import { Logo } from '../components/Logo'
 import './SignInPage.css'
 
@@ -17,9 +17,10 @@ export function SignInPage() {
   const location = useLocation()
   const { signIn } = useSession()
 
-  const [step, setStep] = useState<'contact' | 'code'>('contact')
+  const [step, setStep] = useState<'contact' | 'code' | 'name'>('contact')
   const [contact, setContact] = useState('')
   const [code, setCode] = useState('')
+  const [name, setName] = useState('')
   const [devCode, setDevCode] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,24 +42,55 @@ export function SignInPage() {
     }
   }
 
+  /**
+   * Turns either ending of an auth call into a session, or says it was a signup.
+   *
+   * Returns true when the caller should stop and ask for a name.
+   */
+  async function land(res: AuthResult): Promise<boolean> {
+    if (res.newUser || !res.token || !res.user) {
+      setStep('name')
+      return true
+    }
+    await signIn({
+      token: res.token,
+      expiresAt: res.expiresAt!,
+      userId: res.user.userId,
+      displayName: res.user.displayName,
+      email: res.user.email,
+      roles: res.user.roles,
+      sellerActivatedAt: res.user.sellerActivatedAt,
+    })
+    nav(from, { replace: true })
+    return false
+  }
+
   async function verify(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setError(null)
     try {
-      const res = await api.verifyCode(contact.trim(), code.trim())
-      await signIn({
-        token: res.token,
-        expiresAt: res.expiresAt,
-        userId: res.user.userId,
-        displayName: res.user.displayName,
-        email: res.user.email,
-        roles: res.user.roles,
-        sellerActivatedAt: res.user.sellerActivatedAt,
-      })
-      nav(from, { replace: true })
+      await land(await api.verifyCode(contact.trim(), code.trim()))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not sign in')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /**
+   * The second half of a signup. It sends the same code again, because the
+   * server deliberately did not spend it on the verify — that code is still the
+   * only proof this person can read that inbox.
+   */
+  async function createAccount(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await land(await api.signUp(contact.trim(), code.trim(), name.trim()))
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not create your account')
     } finally {
       setBusy(false)
     }
@@ -110,12 +142,16 @@ export function SignInPage() {
 
         <div className="signin__card tg-card">
           <Logo className="signin__logo signin__logo--card" />
-          <h2 className="signin__title">Sign in</h2>
+          <h2 className="signin__title">
+            {step === 'name' ? 'Create your account' : 'Sign in'}
+          </h2>
 
           {step === 'contact' ? (
             <form onSubmit={sendCode} className="signin__form">
               <p className="tg-muted signin__blurb">
-                We'll send a one-time code to your email or phone.
+                We'll send a one-time code to your email or phone. The same code
+                signs you in or creates your account — there is nothing else to
+                remember.
               </p>
               <label className="signin__label" htmlFor="contact">Email or phone</label>
               <input
@@ -133,10 +169,11 @@ export function SignInPage() {
                 {busy ? 'Sending…' : 'Send code'}
               </button>
             </form>
-          ) : (
+          ) : step === 'code' ? (
             <form onSubmit={verify} className="signin__form">
               <p className="tg-muted signin__blurb">
-                If <strong>{contact}</strong> has an account, a code is on its way. It expires in a few minutes.
+                A code is on its way to <strong>{contact}</strong>. It expires in a few
+                minutes. New here? The same code signs you up.
               </p>
               <label className="signin__label" htmlFor="code">Code</label>
               <input
@@ -160,12 +197,50 @@ export function SignInPage() {
               )}
 
               <button className="tg-button tg-button--primary signin__submit" disabled={busy || code.length < 4}>
-                {busy ? 'Checking…' : 'Sign in'}
+                {busy ? 'Checking…' : 'Continue'}
               </button>
               <button
                 type="button"
                 className="tg-button tg-button--subtle"
                 onClick={() => { setStep('contact'); setCode(''); setError(null) }}
+              >
+                Use a different address
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={createAccount} className="signin__form">
+              <p className="tg-muted signin__blurb">
+                <strong>{contact}</strong> is confirmed, and there is no account on it
+                yet. Tell us what to call you and we will set one up.
+              </p>
+              <label className="signin__label" htmlFor="name">Your name</label>
+              <input
+                id="name"
+                className="tg-input"
+                type="text"
+                autoComplete="name"
+                autoFocus
+                required
+                maxLength={120}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Priya Nair"
+              />
+              <p className="tg-muted signin__hint">
+                This is the name on your orders and, if you ever sell with us, on your
+                payouts. You can change it later.
+              </p>
+
+              <button
+                className="tg-button tg-button--primary signin__submit"
+                disabled={busy || name.trim().length < 2}
+              >
+                {busy ? 'Creating…' : 'Create account'}
+              </button>
+              <button
+                type="button"
+                className="tg-button tg-button--subtle"
+                onClick={() => { setStep('contact'); setCode(''); setName(''); setError(null) }}
               >
                 Use a different address
               </button>

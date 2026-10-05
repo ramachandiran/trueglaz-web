@@ -188,3 +188,11 @@
   }
 }
 
+
+/* Why we are asking for a name, under the field rather than in the blurb: it
+   answers the question someone has while their cursor is already in the box. */
+.signin__hint {
+  margin: calc(var(--tg-space-2) * -1) 0 0;
+  font-size: var(--tg-text-xs);
+  line-height: 1.5;
+}

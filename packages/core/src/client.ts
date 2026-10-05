@@ -3,7 +3,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
-  Address, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payout,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, Page, Payout,
   MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
   BonusPointLine, PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, ReferralView, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -177,18 +177,17 @@ export const api = {
   // -- auth ---------------------------------------------------------------
   requestCode: (contact: string) =>
     post<{ sent: boolean; expiresAt: string; devCode: string | null }>('/auth/request-code', { contact }),
+  /**
+   * A correct code either signs you in or tells you there is no account yet.
+   *
+   * token and user are null exactly when newUser is true — the code is still
+   * live at that point, and signUp is what spends it.
+   */
   verifyCode: (contact: string, code: string) =>
-    post<{
-      token: string
-      expiresAt: string
-      user: {
-        userId: string
-        displayName: string
-        email: string | null
-        roles: string[]
-        sellerActivatedAt: string | null
-      }
-    }>('/auth/verify', { contact, code }),
+    post<AuthResult>('/auth/verify', { contact, code }),
+  /** Follows a verify that answered newUser, with the same code. */
+  signUp: (contact: string, code: string, displayName: string) =>
+    post<AuthResult>('/auth/sign-up', { contact, code, displayName }),
   me: () => get<{
     userId: string
     displayName: string

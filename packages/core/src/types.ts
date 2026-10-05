@@ -179,6 +179,26 @@ export interface TransitionRule {
   notes: string | null
 }
 
+/**
+ * What /auth/verify and /auth/sign-up both answer with.
+ *
+ * One shape for both endings: a session, or "nobody has an account on that
+ * contact yet, ask them who they are and call sign-up".
+ */
+export interface AuthResult {
+  token: string | null
+  expiresAt: string | null
+  user: {
+    userId: string
+    displayName: string
+    email: string | null
+    roles: string[]
+    sellerActivatedAt: string | null
+  } | null
+  newUser: boolean
+  contact: string | null
+}
+
 export interface Session {
   token: string
   expiresAt: string
