@@ -1124,3 +1124,25 @@ export interface StaffBuyingRow {
 export interface Meta {
   paymentsAreReal: boolean
 }
+
+/** One option on the signup form's genre box. */
+export interface PhotographyGenre {
+  code: string
+  label: string
+  displayOrder: number
+  isActive: boolean
+}
+
+/**
+ * Everything signup collects, beyond the contact that was proven.
+ *
+ * `email` and `mobile` are both required, but only the one the code reached is
+ * marked verified — the other is a claim, and a claim never signs anybody in.
+ */
+export interface SignUpDetails {
+  firstName: string
+  lastName: string
+  email: string
+  mobile: string
+  photographyGenre: string
+}

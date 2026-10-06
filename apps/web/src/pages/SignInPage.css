@@ -196,3 +196,51 @@
   font-size: var(--tg-text-xs);
   line-height: 1.5;
 }
+
+/* ---- the signup step ----------------------------------------------------- */
+
+/* First and last name side by side: they are one answer, and stacking them
+   makes a short form look like a long one. */
+.signin__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--tg-space-3);
+}
+
+/* A block of its own, not display:contents. Contents made the label and the
+   input direct children of the row grid, so they landed in separate columns
+   and the two names stacked with their labels beside them. */
+.signin__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-1);
+  min-width: 0;
+}
+
+.signin__field .signin__label { margin: 0; }
+
+@media (max-width: 420px) {
+  .signin__row { grid-template-columns: 1fr; }
+}
+
+/* Marks the contact the code actually reached. The other one is a claim, and
+   the label is the only place that difference is visible to the person. */
+.signin__proved {
+  margin-left: var(--tg-space-2);
+  padding: 1px 7px;
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-medium);
+  text-transform: lowercase;
+  letter-spacing: 0;
+  color: var(--tg-good);
+  background: var(--tg-good-soft);
+  border-radius: var(--tg-radius-pill);
+}
+
+.signin__form input[readonly] {
+  background: var(--tg-bg-sunken);
+  color: var(--tg-text-muted);
+  cursor: default;
+}
+
+.signin__form select.tg-input { appearance: auto; }

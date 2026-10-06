@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { api, ApiError, useSession, type AuthResult } from '@trueglaz/core'
+import { api, ApiError, useSession, type AuthResult, type PhotographyGenre } from '@trueglaz/core'
 import { Logo } from '../components/Logo'
 import './SignInPage.css'
 
@@ -17,15 +17,36 @@ export function SignInPage() {
   const location = useLocation()
   const { signIn } = useSession()
 
-  const [step, setStep] = useState<'contact' | 'code' | 'name'>('contact')
+  const [step, setStep] = useState<'contact' | 'code' | 'details'>('contact')
   const [contact, setContact] = useState('')
   const [code, setCode] = useState('')
-  const [name, setName] = useState('')
   const [devCode, setDevCode] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [mobile, setMobile] = useState('')
+  const [genre, setGenre] = useState('')
+  const [genres, setGenres] = useState<PhotographyGenre[]>([])
+
   const from = (location.state as { from?: string } | null)?.from ?? '/'
+
+  // Fetched once, not per render of the step: somebody who mistypes a code
+  // three times should not refetch a list that cannot have changed.
+  useEffect(() => {
+    let live = true
+    api.photographyGenres()
+      .then((g) => { if (live) setGenres(g) })
+      // A failure here loses the dropdown, not the signup: the field still
+      // submits whatever is selected, and the server is what validates it.
+      .catch(() => {})
+    return () => { live = false }
+  }, [])
+
+  /** Whichever contact they proved is already known — prefill it, don't ask twice. */
+  const provedIsEmail = contact.includes('@')
 
   async function sendCode(e: FormEvent) {
     e.preventDefault()
@@ -49,7 +70,12 @@ export function SignInPage() {
    */
   async function land(res: AuthResult): Promise<boolean> {
     if (res.newUser || !res.token || !res.user) {
-      setStep('name')
+      // Carry the contact they just proved into the form rather than making
+      // them type it a second time, and never into the other field: the one
+      // thing we know is which kind it is.
+      const proved = contact.trim().toLowerCase()
+      if (proved.includes('@')) setEmail(proved); else setMobile(proved)
+      setStep('details')
       return true
     }
     await signIn({
@@ -88,7 +114,13 @@ export function SignInPage() {
     setBusy(true)
     setError(null)
     try {
-      await land(await api.signUp(contact.trim(), code.trim(), name.trim()))
+      await land(await api.signUp(contact.trim(), code.trim(), {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim().toLowerCase(),
+        mobile: mobile.trim(),
+        photographyGenre: genre,
+      }))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create your account')
     } finally {
@@ -143,7 +175,7 @@ export function SignInPage() {
         <div className="signin__card tg-card">
           <Logo className="signin__logo signin__logo--card" />
           <h2 className="signin__title">
-            {step === 'name' ? 'Create your account' : 'Sign in'}
+            {step === 'details' ? 'Create your account' : 'Sign in'}
           </h2>
 
           {step === 'contact' ? (
@@ -210,37 +242,114 @@ export function SignInPage() {
           ) : (
             <form onSubmit={createAccount} className="signin__form">
               <p className="tg-muted signin__blurb">
-                <strong>{contact}</strong> is confirmed, and there is no account on it
-                yet. Tell us what to call you and we will set one up.
+                <strong>{contact}</strong> is confirmed and there is no account on it
+                yet. A few details and you are in.
               </p>
-              <label className="signin__label" htmlFor="name">Your name</label>
+
+              <div className="signin__row">
+                <div className="signin__field">
+                  <label className="signin__label" htmlFor="first-name">First name</label>
+                  <input
+                    id="first-name"
+                    className="tg-input"
+                    type="text"
+                    autoComplete="given-name"
+                    autoFocus
+                    required
+                    maxLength={80}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Priya"
+                  />
+                </div>
+                <div className="signin__field">
+                  <label className="signin__label" htmlFor="last-name">Last name</label>
+                  <input
+                    id="last-name"
+                    className="tg-input"
+                    type="text"
+                    autoComplete="family-name"
+                    required
+                    maxLength={80}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Nair"
+                  />
+                </div>
+              </div>
+
+              <label className="signin__label" htmlFor="email">
+                Email
+                {provedIsEmail && <span className="signin__proved">confirmed</span>}
+              </label>
               <input
-                id="name"
+                id="email"
                 className="tg-input"
-                type="text"
-                autoComplete="name"
-                autoFocus
+                type="email"
+                autoComplete="email"
                 required
-                maxLength={120}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Priya Nair"
+                /* The one they just proved is not editable here. Changing it
+                   would leave the code they spent pointing at an address that
+                   is no longer on the form, and the server refuses that. */
+                readOnly={provedIsEmail}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+
+              <label className="signin__label" htmlFor="mobile">
+                Mobile
+                {!provedIsEmail && <span className="signin__proved">confirmed</span>}
+              </label>
+              <input
+                id="mobile"
+                className="tg-input"
+                type="tel"
+                autoComplete="tel"
+                required
+                readOnly={!provedIsEmail}
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                placeholder="+919876543210"
               />
               <p className="tg-muted signin__hint">
-                This is the name on your orders and, if you ever sell with us, on your
-                payouts. You can change it later.
+                {provedIsEmail
+                  ? 'We use your mobile for delivery updates. You will confirm it later, from your profile.'
+                  : 'We send order confirmations and invoices to your email. You will confirm it later, from your profile.'}
+              </p>
+
+              <label className="signin__label" htmlFor="genre">What do you shoot?</label>
+              <select
+                id="genre"
+                className="tg-input"
+                required
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+              >
+                <option value="" disabled>Choose one</option>
+                {genres.map((g) => <option key={g.code} value={g.code}>{g.label}</option>)}
+              </select>
+              <p className="tg-muted signin__hint">
+                It decides what we show you first, and what we go looking for when
+                somebody asks what to buy next.
               </p>
 
               <button
                 className="tg-button tg-button--primary signin__submit"
-                disabled={busy || name.trim().length < 2}
+                disabled={
+                  busy || !firstName.trim() || !lastName.trim() ||
+                  !email.trim() || !mobile.trim() || !genre
+                }
               >
                 {busy ? 'Creating…' : 'Create account'}
               </button>
               <button
                 type="button"
                 className="tg-button tg-button--subtle"
-                onClick={() => { setStep('contact'); setCode(''); setName(''); setError(null) }}
+                onClick={() => {
+                  setStep('contact'); setCode(''); setError(null)
+                  setFirstName(''); setLastName(''); setEmail(''); setMobile(''); setGenre('')
+                }}
               >
                 Use a different address
               </button>

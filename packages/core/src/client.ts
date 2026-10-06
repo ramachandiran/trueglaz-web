@@ -4,7 +4,7 @@ import type {
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
   Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout,
-  Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, WantedRequest,
+  Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow,
@@ -193,9 +193,18 @@ export const api = {
    */
   verifyCode: (contact: string, code: string) =>
     post<AuthResult>('/auth/verify', { contact, code }),
-  /** Follows a verify that answered newUser, with the same code. */
-  signUp: (contact: string, code: string, displayName: string) =>
-    post<AuthResult>('/auth/sign-up', { contact, code, displayName }),
+  /**
+   * Follows a verify that answered newUser, with the same code.
+   *
+   * `contact` is whichever one the code went to, and the server refuses the
+   * request unless it is one of the two on the form — so an account cannot be
+   * registered under contacts nobody proved.
+   */
+  signUp: (contact: string, code: string, details: SignUpDetails) =>
+    post<AuthResult>('/auth/sign-up', { contact, code, ...details }),
+
+  /** Fills the signup form's genre box. Public: nobody is signed in yet. */
+  photographyGenres: () => get<PhotographyGenre[]>('/auth/photography-genres'),
   me: () => get<{
     userId: string
     displayName: string
