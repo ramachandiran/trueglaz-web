@@ -2,10 +2,10 @@ import { getStorage } from './storage'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
-  Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, Listing, ListingDetail,
+  Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail,
   Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
-  PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval,
+  PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow,
 } from './types'
@@ -287,7 +287,13 @@ export const api = {
   brands: () => get<Brand[]>('/brands'),
   mounts: () => get<Mount[]>('/mounts'),
   categories: () => get<Category[]>('/categories'),
-  models: () => get<Page<ProductModel>>('/models?size=500'),
+  models: () => get<Page<ProductModel>>('/models?size=1000'),
+  /** Type-ahead for the consignment form. Matches the brand as well as the name. */
+  searchModels: (q: string, size = 12) =>
+    get<Page<ProductModel>>(`/models?q=${encodeURIComponent(q)}&size=${size}`),
+  lensTypes: () => get<LensType[]>('/lens-types'),
+  lensRanges: () => get<LensRange[]>('/lens-ranges'),
+  sensorFormats: () => get<SensorFormat[]>('/sensor-formats'),
   transitionRules: () => get<TransitionRule[]>('/transition-rules'),
   settings: () => get<PlatformSetting[]>('/settings'),
   feeQuote: (salePriceMinor: number) => get<FeeQuote>(`/fee-quote?salePriceMinor=${salePriceMinor}`),

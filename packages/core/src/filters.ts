@@ -6,6 +6,12 @@ export interface Filters {
   brandIds: string[]
   /** Which lens mount the body or glass uses — the "will it fit" facet. */
   mountIds: string[]
+  /** prime | zoom | super_zoom. Lenses only; a body has no answer. */
+  lensTypes: string[]
+  /** ultra_wide … super_telephoto, plus macro and tilt-shift. Lenses only. */
+  lensRanges: string[]
+  /** full_frame | aps_c | … — the one facet that applies to bodies and glass alike. */
+  sensorFormats: string[]
   grades: string[]
   minPriceMinor: number | null
   maxPriceMinor: number | null
@@ -19,6 +25,9 @@ export const EMPTY_FILTERS: Filters = {
   categoryIds: [],
   brandIds: [],
   mountIds: [],
+  lensTypes: [],
+  lensRanges: [],
+  sensorFormats: [],
   grades: [],
   minPriceMinor: null,
   maxPriceMinor: null,
@@ -31,6 +40,9 @@ export function activeFilterCount(f: Filters): number {
     f.categoryIds.length +
     f.brandIds.length +
     f.mountIds.length +
+    f.lensTypes.length +
+    f.lensRanges.length +
+    f.sensorFormats.length +
     f.grades.length +
     (f.minPriceMinor !== null ? 1 : 0) +
     (f.maxPriceMinor !== null ? 1 : 0)
@@ -84,6 +96,18 @@ export function applyFilters(
       return false
     }
     if (f.mountIds.length && !(model && f.mountIds.includes(model.mountId ?? ''))) {
+      return false
+    }
+    // A body has no lens type or range, so these three never match one — which
+    // is right: picking "telephoto" is asking for glass, and a camera appearing
+    // in those results would be a bug, not a bonus.
+    if (f.lensTypes.length && !(model && f.lensTypes.includes(model.lensTypeCode ?? ''))) {
+      return false
+    }
+    if (f.lensRanges.length && !(model && f.lensRanges.includes(model.lensRangeCode ?? ''))) {
+      return false
+    }
+    if (f.sensorFormats.length && !(model && f.sensorFormats.includes(model.sensorFormat ?? ''))) {
       return false
     }
     if (f.grades.length && !f.grades.includes(listing.gradeCode)) return false

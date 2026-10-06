@@ -169,6 +169,33 @@ export interface ProductModel {
   name: string
   slug: string
   status: string
+  sensorFormat: string | null
+  focalLengthMinMm: number | null
+  focalLengthMaxMm: number | null
+  /** prime | zoom | super_zoom. Null on a body. */
+  lensTypeCode: string | null
+  /** fisheye … super_telephoto, plus macro and tilt-shift. Null on a body. */
+  lensRangeCode: string | null
+  msrpMinor: number | null
+}
+
+/** A code-and-label list the filters and forms draw from. */
+export interface LensType {
+  code: string
+  label: string
+  displayOrder: number
+  isActive: boolean
+}
+
+export type LensRange = LensType
+
+export interface SensorFormat {
+  code: string
+  label: string
+  /** Against full frame — what turns a focal length into what it frames like. */
+  cropFactor: number
+  displayOrder: number
+  isActive: boolean
 }
 
 export interface TransitionRule {

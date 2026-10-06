@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError, money, singularCategory, useApi } from '@trueglaz/core'
+import { ModelPicker } from '../components/ModelPicker'
 import { PhotoPicker } from '../components/PhotoPicker'
 import './SellPage.css'
 
@@ -195,16 +196,27 @@ export function NewSubmissionPage() {
             </select>
           </label>
 
-          <label className="sell__field">
-            <span className="sell__field-label">Model</span>
-            <input
-              className="tg-input"
+          <div className="sell__field">
+            <span className="sell__field-label" id="model-label">Model</span>
+            <ModelPicker
               value={item.modelFreeText}
-              placeholder="e.g. EOS R6 Mark II"
-              onChange={(e) => setItem({ ...item, modelFreeText: e.target.value })}
+              onChange={(text) => setItem((prev) => ({ ...prev, modelFreeText: text }))}
+              onPick={() => { /* the match is derived below, from the text */ }}
+              models={models.data?.content ?? []}
+              brandId={item.brandId}
+              categoryId={item.categoryId}
+              brands={brands.data ?? []}
+              categories={categories.data ?? []}
+              placeholder="Start typing — e.g. R6, 70-200, X-T5"
             />
-            {matched && <span className="sell__matched">Matched to {matched.name} in our catalogue</span>}
-          </label>
+            {matched
+              ? <span className="sell__matched">Matched to {matched.name} in our catalogue</span>
+              : item.modelFreeText.trim().length > 1 && (
+                  <span className="sell__unmatched">
+                    Not in our catalogue yet — we will match it by hand, which can slow the first quote.
+                  </span>
+                )}
+          </div>
 
           <label className="sell__field sell__field--wide">
             <span className="sell__field-label">Description</span>

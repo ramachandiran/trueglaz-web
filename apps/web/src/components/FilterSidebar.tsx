@@ -1,4 +1,4 @@
-import type { Brand, Category, Grade } from '@trueglaz/core'
+import type { Brand, Category, Grade, LensRange, LensType, SensorFormat } from '@trueglaz/core'
 import { activeFilterCount, EMPTY_FILTERS, type Filters } from '@trueglaz/core'
 import { money } from '@trueglaz/core'
 import './FilterSidebar.css'
@@ -9,20 +9,30 @@ interface Props {
   categories: Category[]
   brands: Brand[]
   grades: Grade[]
+  lensTypes: LensType[]
+  lensRanges: LensRange[]
+  sensorFormats: SensorFormat[]
   counts: {
     category: Map<string, number>
     brand: Map<string, number>
     grade: Map<string, number>
+    lensType: Map<string, number>
+    lensRange: Map<string, number>
+    sensorFormat: Map<string, number>
   }
   priceBounds: { min: number; max: number }
 }
 
 export function FilterSidebar({
-  filters, onChange, categories, brands, grades, counts, priceBounds,
+  filters, onChange, categories, brands, grades,
+  lensTypes, lensRanges, sensorFormats, counts, priceBounds,
 }: Props) {
   const active = activeFilterCount(filters)
 
-  const toggle = (key: 'categoryIds' | 'brandIds' | 'grades', value: string) => {
+  const toggle = (
+    key: 'categoryIds' | 'brandIds' | 'grades' | 'lensTypes' | 'lensRanges' | 'sensorFormats',
+    value: string,
+  ) => {
     const list = filters[key]
     onChange({
       ...filters,
@@ -60,8 +70,15 @@ export function FilterSidebar({
         ))}
       </Section>
 
+      {/* Only brands the current results actually contain. The catalogue now
+          carries every maker that trades here, and listing all of them against
+          a shelf of two produces a column of zeroes that buries the one brand
+          in stock. A selected brand stays visible even at zero, so a filter
+          can always be un-ticked. */}
       <Section title="Brand">
-        {brands.map((b) => (
+        {brands
+          .filter((b) => (counts.brand.get(b.id) ?? 0) > 0 || filters.brandIds.includes(b.id))
+          .map((b) => (
           <Check
             key={b.id}
             label={b.name}
@@ -71,6 +88,57 @@ export function FilterSidebar({
           />
         ))}
       </Section>
+
+      {/* Shown only where the current results actually contain some. A lens
+          section above a shelf of camera bodies is a list of dead ends, and a
+          sensor section on an empty catalogue is worse. */}
+      {lensTypes.some((t) => (counts.lensType.get(t.code) ?? 0) > 0) && (
+        <Section title="Lens type">
+          {lensTypes
+            .filter((t) => (counts.lensType.get(t.code) ?? 0) > 0 || filters.lensTypes.includes(t.code))
+            .map((t) => (
+              <Check
+                key={t.code}
+                label={t.label}
+                count={counts.lensType.get(t.code) ?? 0}
+                checked={filters.lensTypes.includes(t.code)}
+                onChange={() => toggle('lensTypes', t.code)}
+              />
+            ))}
+        </Section>
+      )}
+
+      {lensRanges.some((r) => (counts.lensRange.get(r.code) ?? 0) > 0) && (
+        <Section title="Focal range">
+          {lensRanges
+            .filter((r) => (counts.lensRange.get(r.code) ?? 0) > 0 || filters.lensRanges.includes(r.code))
+            .map((r) => (
+              <Check
+                key={r.code}
+                label={r.label}
+                count={counts.lensRange.get(r.code) ?? 0}
+                checked={filters.lensRanges.includes(r.code)}
+                onChange={() => toggle('lensRanges', r.code)}
+              />
+            ))}
+        </Section>
+      )}
+
+      {sensorFormats.some((f) => (counts.sensorFormat.get(f.code) ?? 0) > 0) && (
+        <Section title="Sensor">
+          {sensorFormats
+            .filter((f) => (counts.sensorFormat.get(f.code) ?? 0) > 0 || filters.sensorFormats.includes(f.code))
+            .map((f) => (
+              <Check
+                key={f.code}
+                label={f.label}
+                count={counts.sensorFormat.get(f.code) ?? 0}
+                checked={filters.sensorFormats.includes(f.code)}
+                onChange={() => toggle('sensorFormats', f.code)}
+              />
+            ))}
+        </Section>
+      )}
 
       <Section title="Condition">
         {grades.map((g) => (

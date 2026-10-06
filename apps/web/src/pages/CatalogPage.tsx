@@ -27,6 +27,9 @@ export function CatalogPage() {
   const brands = useApi(() => api.brands(), [])
   const mounts = useApi(() => api.mounts(), [])
   const categories = useApi(() => api.categories(), [])
+  const lensTypes = useApi(() => api.lensTypes(), [])
+  const lensRanges = useApi(() => api.lensRanges(), [])
+  const sensorFormats = useApi(() => api.sensorFormats(), [])
 
   const rows: Facetable[] = useMemo(() => {
     if (!listings.data) return []
@@ -106,6 +109,18 @@ export function CatalogPage() {
         applyFilters(rows, { ...filters, grades: [] }, gradeRank),
         (r) => r.listing.gradeCode,
       ),
+      lensType: countBy(
+        applyFilters(rows, { ...filters, lensTypes: [] }, gradeRank),
+        (r) => r.model?.lensTypeCode,
+      ),
+      lensRange: countBy(
+        applyFilters(rows, { ...filters, lensRanges: [] }, gradeRank),
+        (r) => r.model?.lensRangeCode,
+      ),
+      sensorFormat: countBy(
+        applyFilters(rows, { ...filters, sensorFormats: [] }, gradeRank),
+        (r) => r.model?.sensorFormat,
+      ),
     }),
     [rows, filters, gradeRank],
   )
@@ -125,6 +140,9 @@ export function CatalogPage() {
         categories={categories.data ?? []}
         brands={brands.data ?? []}
         grades={(grades.data ?? []).filter((g) => g.isActive).sort((a, b) => b.rank - a.rank)}
+        lensTypes={lensTypes.data ?? []}
+        lensRanges={lensRanges.data ?? []}
+        sensorFormats={sensorFormats.data ?? []}
         counts={counts}
         priceBounds={priceBounds}
       />

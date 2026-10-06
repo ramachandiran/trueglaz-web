@@ -526,3 +526,13 @@
   margin-bottom: var(--tg-space-5);
   padding: var(--tg-space-5);
 }
+
+/* The other half of the match: said as a consequence, not a scolding. A seller
+   with genuinely rare glass is doing nothing wrong, and should know only that
+   it costs them a little time. */
+.sell__unmatched {
+  display: block;
+  margin-top: var(--tg-space-1);
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+}
