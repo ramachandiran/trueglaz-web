@@ -1,25 +1,6 @@
 .ops { display: flex; flex-direction: column; gap: var(--tg-space-4); }
 .ops__title { font-size: var(--tg-text-xl); }
 .ops__subtitle { font-size: var(--tg-text-lg); margin-bottom: var(--tg-space-2); }
-
-.ops__tabs { display: flex; gap: var(--tg-space-1); border-bottom: 1px solid var(--tg-border); flex-wrap: wrap; }
-.ops__tab {
-  display: flex; align-items: center; gap: var(--tg-space-2);
-  padding: var(--tg-space-2) var(--tg-space-3);
-  border: 0; background: transparent; cursor: pointer;
-  color: var(--tg-text-muted); font-size: var(--tg-text-sm);
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
-}
-.ops__tab:hover { color: var(--tg-text); }
-.ops__tab--active { color: var(--tg-accent); border-bottom-color: var(--tg-accent); font-weight: var(--tg-weight-medium); }
-.ops__tab-count {
-  font-size: var(--tg-text-xs); font-variant-numeric: tabular-nums;
-  background: var(--tg-bg-sunken); border-radius: var(--tg-radius-pill);
-  padding: 0 var(--tg-space-2); min-width: 20px; text-align: center;
-}
-.ops__tab--active .ops__tab-count { background: var(--tg-accent-soft); color: var(--tg-accent); }
-
-.ops__list { display: flex; flex-direction: column; gap: var(--tg-space-3); }
 .ops__card { padding: var(--tg-space-5); display: flex; flex-direction: column; gap: var(--tg-space-3); }
 .ops__card-head { display: flex; justify-content: space-between; align-items: center; gap: var(--tg-space-3); flex-wrap: wrap; }
 
@@ -28,7 +9,6 @@
 
 .ops__actions { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; align-items: center; }
 .ops__reject { color: var(--tg-bad); }
-.ops__reject-box { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; padding: var(--tg-space-3); background: var(--tg-bad-soft); border-radius: var(--tg-radius-md); }
 
 .ops__inbound + .ops__inbound { margin-top: var(--tg-space-2); }
 .ops__inbound {
@@ -46,9 +26,6 @@
   background: var(--tg-good-soft); color: var(--tg-good); border-radius: var(--tg-radius-md);
 }
 .ops__fineprint { font-size: var(--tg-text-xs); margin: 0; }
-
-.ops__override { display: flex; gap: var(--tg-space-2); }
-.ops__override-input { width: 150px; }
 
 .ops__questions { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--tg-space-3); }
 .ops__question { display: flex; flex-direction: column; gap: var(--tg-space-1); }
@@ -100,11 +77,73 @@
 /* Queue rows stack a headline over its fine print, so they cannot centre. */
 .ops__inbound > div { align-self: center; }
 
-/* -- the People queue, which is a link wearing a tab ----------------------- */
+/* -- the tables ------------------------------------------------------------ */
+/* The page chrome is QueueScreen now, shared with Inventory. What is left here
+   is what a row of one of these four queues is made of. */
 
-.ops__tab--link {
+.ops__id {
+  display: block;
+  font-weight: var(--tg-weight-medium);
+  color: var(--tg-accent);
   text-decoration: none;
-  /* Pushed to the end of the row: it leaves the page, and grouping it with
-     the tabs that do not would be a small lie about what clicking does. */
-  margin-left: auto;
+}
+
+.ops__id:hover { text-decoration: underline; }
+
+/* The second line under an identifier: the SKUs in a submission, the note a
+   buyer wrote, what pricing is about to take a snapshot of. */
+.ops__gear {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+  max-width: 28rem;
+}
+
+.ops__wanted {
+  font-weight: var(--tg-weight-medium);
+  margin-right: var(--tg-space-2);
+}
+
+/* Actions sit on one line and stay on it; the column is right-aligned, so a
+   wrapped button row drifts away from the row it belongs to. */
+.ops__inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  justify-content: flex-end;
+}
+
+.ops__inline .tg-button {
+  white-space: nowrap;
+  font-size: var(--tg-text-sm);
+  padding: var(--tg-space-1) var(--tg-space-3);
+  text-decoration: none;
+}
+
+.ops__reason { width: auto; min-width: 11rem; }
+.ops__amount { width: 9rem; }
+
+/* People waiting on a decision is staff work, but it is not a queue of items,
+   so it is a line under the table rather than a fifth tab. */
+.ops__aside {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+}
+
+.ops__aside a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  color: var(--tg-accent);
+  text-decoration: none;
+}
+
+.ops__aside a:hover { text-decoration: underline; }
+
+.ops__aside-count {
+  padding: 0 var(--tg-space-2);
+  border-radius: 999px;
+  background: var(--tg-accent-soft);
+  font-variant-numeric: tabular-nums;
 }

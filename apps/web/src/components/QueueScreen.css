@@ -1,0 +1,158 @@
+.q {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-4);
+}
+
+.q__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--tg-space-4);
+}
+
+.q__title {
+  font-size: var(--tg-text-xxl);
+  margin: 0;
+}
+
+.q__subtitle {
+  font-size: var(--tg-text-sm);
+  margin: var(--tg-space-1) 0 0;
+}
+
+/* -- tabs ------------------------------------------------------------------ */
+
+.q__filters {
+  display: flex;
+  gap: var(--tg-space-1);
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--tg-border);
+  padding-bottom: var(--tg-space-3);
+}
+
+.q__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-2) var(--tg-space-3);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-sm);
+  transition: color 200ms;
+  white-space: nowrap;
+}
+
+.q__filter:hover { color: var(--tg-text); }
+
+.q__filter--active {
+  color: var(--tg-accent);
+  border-bottom: 2px solid var(--tg-accent);
+  margin-bottom: -1px;
+  font-weight: var(--tg-weight-medium);
+}
+
+/* The count is the point of a tab on a work screen: an empty queue should read
+   as empty before it is opened, not after. */
+.q__filter-count {
+  font-size: var(--tg-text-xs);
+  font-variant-numeric: tabular-nums;
+  padding: 0 var(--tg-space-2);
+  border-radius: 999px;
+  background: var(--tg-bg-sunken);
+  color: var(--tg-text-muted);
+}
+
+.q__filter--active .q__filter-count {
+  background: var(--tg-accent-soft);
+  color: var(--tg-accent);
+}
+
+/* -- search ---------------------------------------------------------------- */
+
+.q__search-box {
+  display: flex;
+  gap: var(--tg-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--tg-space-3);
+  background: var(--tg-bg-raised);
+  border-radius: var(--tg-radius-md);
+}
+
+.q__search {
+  flex: 1;
+  min-width: 240px;
+}
+
+.q__search-info {
+  font-size: var(--tg-text-sm);
+  white-space: nowrap;
+}
+
+/* -- table ----------------------------------------------------------------- */
+
+.q__table-container {
+  overflow-x: auto;
+  padding: 0;
+}
+
+.q__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tg-text-sm);
+}
+
+.q__table thead {
+  background: var(--tg-bg-sunken);
+  border-bottom: 1px solid var(--tg-border);
+}
+
+.q__table th {
+  padding: var(--tg-space-3);
+  text-align: left;
+  white-space: nowrap;
+  font-weight: var(--tg-weight-medium);
+  color: var(--tg-text);
+}
+
+.q__table tbody tr {
+  border-bottom: 1px solid var(--tg-border);
+  transition: background-color 150ms;
+}
+
+.q__table tbody tr:hover { background-color: var(--tg-bg-raised); }
+
+.q__table td {
+  padding: var(--tg-space-3);
+  vertical-align: middle;
+}
+
+/* The last column is where the action lives on every one of these screens. */
+.q__table th:last-child,
+.q__table td:last-child {
+  text-align: right;
+  padding-right: var(--tg-space-4);
+}
+
+.q__num { text-align: right; }
+
+/* -- pagination ------------------------------------------------------------ */
+
+.q__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-4);
+  border-top: 1px solid var(--tg-border);
+}
+
+.q__page-info {
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+  min-width: 120px;
+  text-align: center;
+}

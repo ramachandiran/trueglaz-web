@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api, money, useApi, useSession, isStaff,
   type ConsignmentItem, type NextState,
 } from '@trueglaz/core'
-import { Empty, ErrorNote, Loading } from '../components/ui'
 import { planMove, type Planned } from '../components/NextActions'
+import { QueueScreen } from '../components/QueueScreen'
 import { StateMenu } from '../components/StateMenu'
 import './InventoryDashboard.css'
 
@@ -23,6 +23,10 @@ import './InventoryDashboard.css'
  * were invisible on a screen whose subtitle promises all of them. Grouping a
  * single unfiltered list cannot develop that kind of hole, because a state nobody
  * thought of still arrives in the list.
+ *
+ * The page chrome — title, counted tabs, search, table, pagination — is
+ * QueueScreen, shared with Operations so the two screens are the same shape
+ * rather than two that merely resemble each other.
  *
  * The table is deliberately four columns. Brand, model and SKU are one thing —
  * which item this is — and reading them as three columns made a staff member
@@ -54,7 +58,6 @@ export function InventoryDashboard() {
   const [view, setView] = useState('all')
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
 
   const itemsPerPage = 10
   const staff = isStaff(session)
@@ -129,10 +132,6 @@ export function InventoryDashboard() {
       .some((v) => v?.toLowerCase().includes(q))
   })
 
-  useEffect(() => {
-    if (!all.loading && rows.length > 0) setLastUpdated(new Date())
-  }, [all.loading, rows.length])
-
   const totalPages = Math.ceil(filtered.length / itemsPerPage)
   const validPage = Math.min(Math.max(1, currentPage), totalPages || 1)
   const startIndex = (validPage - 1) * itemsPerPage
@@ -148,128 +147,78 @@ export function InventoryDashboard() {
   }
 
   return (
-    <div className="inv">
-      <div className="inv__header">
-        <div>
-          <h1 className="inv__title">Inventory Database</h1>
-          <p className="tg-muted inv__subtitle">View and manage all items in the system</p>
-        </div>
-      </div>
+    <QueueScreen
+      title="Inventory Database"
+      subtitle="Every unit the platform holds, whatever stage it is at"
+      tabs={shown.map((t) => ({ key: t.key, label: t.label, count: countFor(t.states) }))}
+      active={stage.key}
+      onTab={handleViewChange}
+      search={search}
+      onSearch={handleSearchChange}
+      searchPlaceholder="Search by SKU, serial, model or brand…"
+      shown={filtered.length}
+      total={items.length}
+      loading={all.loading}
+      error={all.error}
+      onRetry={all.reload}
+      emptyTitle="No items at this stage"
+      page={validPage}
+      pages={totalPages}
+      onPage={setCurrentPage}
+    >
+      <table className="q__table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Grade</th>
+            <th className="q__num">Price</th>
+            <th className="q__num">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedItems.map((item) => (
+            <tr key={item.id}>
+              <td>
+                <Link to={`/items/${item.id}`} className="inv__sku tg-mono">{item.internalSku}</Link>
+                <span className="inv__gear">
+                  {[brandName((item as any).brandId), modelName(item)].filter(Boolean).join(' ') || '—'}
+                </span>
+                {/* Whose bench it is on. Only worth a line while it is work:
+                    a sold item assigned to somebody last month is noise. */}
+                {item.assignedTechnicianUserId && BENCH_STATES.includes(item.currentState) && (
+                  <span className="inv__bench">
+                    on {technicianName(item.assignedTechnicianUserId) ?? 'a bench'}
+                  </span>
+                )}
+              </td>
+              <td>{(item as any).assignedGradeCode ?? (item as any).declaredGradeCode ?? '—'}</td>
+              <td className="q__num">
+                <span className="inv__price">{money((item as any).askingAmountMinor || 0)}</span>
+                <span className="inv__floor tg-muted">
+                  floor {money((item as any).floorAmountMinor || 0)}
+                </span>
+              </td>
+              <td className="q__num">
+                {/* The field is currentState; `state` was always undefined,
+                    so every row read "Unknown". */}
+                <StateMenu
+                  itemId={item.id}
+                  sku={item.internalSku}
+                  gear={[brandName((item as any).brandId), modelName(item)].filter(Boolean).join(' ') || item.internalSku}
+                  currentState={item.currentState}
+                  moves={movesFor(item)}
+                  reasons={reasons.data ?? []}
+                  technicians={technicians.data ?? []}
+                  assignedTo={item.assignedTechnicianUserId}
+                  canAssign={staff}
+                  onDone={() => all.reload()}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+  </table>
 
-      {/* Stage tabs */}
-      <nav className="inv__filters" aria-label="Inventory views">
-        {shown.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            className={`inv__filter${stage.key === s.key ? ' inv__filter--active' : ''}`}
-            onClick={() => handleViewChange(s.key)}
-            aria-pressed={stage.key === s.key}
-          >
-            {s.label}
-            <span className="inv__filter-count">{countFor(s.states)}</span>
-          </button>
-        ))}
-      </nav>
-
-      {/* Search bar */}
-      <div className="inv__search-box">
-        <input
-          type="text"
-          className="tg-input inv__search"
-          placeholder="Search by SKU, serial, model or brand…"
-          value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          aria-label="Search inventory"
-        />
-        <span className="inv__search-info tg-muted">
-          {filtered.length} of {items.length} items • Last updated {lastUpdated.toLocaleTimeString()}
-        </span>
-      </div>
-
-      {all.loading && <Loading label="Loading inventory" />}
-      {all.error && <ErrorNote error={all.error} onRetry={all.reload} />}
-
-      {!all.loading && !all.error && filtered.length === 0 && (
-        <Empty title={search ? 'No items found' : 'No items at this stage'} />
-      )}
-
-      {!all.loading && filtered.length > 0 && (
-        <div className="tg-card inv__table-container">
-          <table className="inv__table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Grade</th>
-                <th className="inv__num">Price</th>
-                <th className="inv__num">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedItems.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <Link to={`/items/${item.id}`} className="inv__sku tg-mono">{item.internalSku}</Link>
-                    <span className="inv__gear">
-                      {[brandName((item as any).brandId), modelName(item)].filter(Boolean).join(' ') || '—'}
-                    </span>
-                    {/* Whose bench it is on. Only worth a line while it is work:
-                        a sold item assigned to somebody last month is noise. */}
-                    {item.assignedTechnicianUserId && BENCH_STATES.includes(item.currentState) && (
-                      <span className="inv__bench">
-                        on {technicianName(item.assignedTechnicianUserId) ?? 'a bench'}
-                      </span>
-                    )}
-                  </td>
-                  <td>{(item as any).assignedGradeCode ?? (item as any).declaredGradeCode ?? '—'}</td>
-                  <td className="inv__num">
-                    <span className="inv__price">{money((item as any).askingAmountMinor || 0)}</span>
-                    <span className="inv__floor tg-muted">
-                      floor {money((item as any).floorAmountMinor || 0)}
-                    </span>
-                  </td>
-                  <td className="inv__num">
-                    {/* The field is currentState; `state` was always undefined,
-                        so every row read "Unknown". */}
-                    <StateMenu
-                      itemId={item.id}
-                      sku={item.internalSku}
-                      gear={[brandName((item as any).brandId), modelName(item)].filter(Boolean).join(' ') || item.internalSku}
-                      currentState={item.currentState}
-                      moves={movesFor(item)}
-                      reasons={reasons.data ?? []}
-                      technicians={technicians.data ?? []}
-                      assignedTo={item.assignedTechnicianUserId}
-                      canAssign={staff}
-                      onDone={() => all.reload()}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="inv__pagination">
-            <button
-              className="tg-button"
-              disabled={validPage === 1}
-              onClick={() => setCurrentPage(validPage - 1)}
-            >
-              ← Previous
-            </button>
-            <span className="inv__page-info">
-              Page {validPage} of {totalPages || 1}
-            </span>
-            <button
-              className="tg-button"
-              disabled={validPage === totalPages}
-              onClick={() => setCurrentPage(validPage + 1)}
-            >
-              Next →
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    </QueueScreen>
   )
 }

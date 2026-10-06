@@ -1,20 +1,45 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiError, dateOnly, money, useApi, isStaff, useSession } from '@trueglaz/core'
-import { Empty, ErrorNote, Loading, StateBadge } from '../components/ui'
+import {
+  api, ApiError, dateOnly, isStaff, money, useApi, useSession,
+  type ConsignmentItem, type ReviewRequest, type Submission, type Technician,
+} from '@trueglaz/core'
+import { StateBadge } from '../components/ui'
+import { QueueScreen } from '../components/QueueScreen'
 import './OpsPage.css'
 
-type Queue = 'intake' | 'inspect' | 'price' | 'wanted'
+type Queue = 'intake' | 'inbound' | 'inspect' | 'price' | 'wanted'
+
+const REJECT_REASONS = [
+  { code: 'too_vague', label: 'Too vague to act on' },
+  { code: 'not_our_category', label: "Not something TrueGlaz deals in" },
+  { code: 'unrealistic_budget', label: 'Budget far below what these sell for' },
+  { code: 'duplicate_request', label: 'Already asked for by this buyer' },
+  { code: 'contact_details', label: 'Contains contact details or an off-platform offer' },
+  { code: 'inappropriate', label: 'Inappropriate wording' },
+]
+
+const INTAKE_REASONS = ['insufficient_detail', 'prohibited_item', 'price_unrealistic']
 
 /**
  * The operations floor, organised by what is waiting rather than by entity.
  *
- * Each queue answers "what should I pick up next", so the counts are the point:
- * an empty queue should look empty, not like a page that failed to load.
+ * Four queues, one shape. It used to be a column of cards per queue, each laid
+ * out differently from the next and from Inventory, so a staff member moving
+ * between screens had to relearn where things were and could not tell how big a
+ * queue was until they opened it. It now wears the same chrome as Inventory —
+ * counted tabs, a search box, a table, pagination — from QueueScreen, so a
+ * change to the shape reaches both.
+ *
+ * What stays different is the row, because a submission, an item and a buyer's
+ * request have nothing in common but the frame around them.
  */
 export function OpsPage() {
   const { session } = useSession()
   const [queue, setQueue] = useState<Queue>('intake')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const perPage = 10
 
   // Intake and pricing are staff work. A technician asking for them gets a 403,
   // so they are not asked for: an error where a queue should be reads as the
@@ -26,127 +51,224 @@ export function OpsPage() {
   const graded = useApi(() => (staff ? api.itemQueue('GRADED') : Promise.resolve([])), [staff])
   const wanted = useApi(() => (staff ? api.requestQueue() : Promise.resolve([])), [staff])
   const people = useApi(() => (staff ? api.staffUsers('', 'pending_review') : Promise.resolve([])), [staff])
+  const roster = useApi(() => api.technicians(), [])
+  // Pre-approved and in transit are one queue: both are units the hub is
+  // waiting on, and receiving is the same act either way.
+  const preApproved = useApi(() => (staff ? api.itemQueue('PRE_APPROVED') : Promise.resolve([])), [staff])
+  const inTransit = useApi(() => (staff ? api.itemQueue('IN_TRANSIT_INBOUND') : Promise.resolve([])), [staff])
+
+  /** One row per submission, because a box is received whole, not item by item. */
+  const inboundRows = useMemo(() => {
+    const by = new Map<string, ConsignmentItem[]>()
+    for (const i of [...(preApproved.data ?? []), ...(inTransit.data ?? [])]) {
+      by.set(i.submissionId, [...(by.get(i.submissionId) ?? []), i])
+    }
+    return [...by.entries()].map(([id, items]) => ({ id, items }))
+  }, [preApproved.data, inTransit.data])
+
+  const inspectRows = useMemo(
+    () => [...(received.data ?? []), ...(inInspection.data ?? [])],
+    [received.data, inInspection.data],
+  )
 
   // The session arrives after the first render, so the open queue is derived
   // rather than stored — a technician must never land on a tab that is not there.
-  const allowed: Queue[] = staff ? ['intake', 'inspect', 'price', 'wanted'] : ['inspect']
+  const allowed: Queue[] = staff ? ['intake', 'inbound', 'inspect', 'price', 'wanted'] : ['inspect']
   const active = allowed.includes(queue) ? queue : allowed[0]
 
-  const counts = {
-    intake: pending.data?.length ?? 0,
-    inspect: (received.data?.length ?? 0) + (inInspection.data?.length ?? 0),
-    price: graded.data?.length ?? 0,
-    wanted: wanted.data?.length ?? 0,
+  const tabs = [
+    staff && { key: 'intake', label: 'Intake', count: pending.data?.length ?? 0 },
+    staff && { key: 'inbound', label: 'Inbound', count: inboundRows.length },
+    { key: 'inspect', label: 'Inspection', count: inspectRows.length },
+    staff && { key: 'price', label: 'Pricing', count: graded.data?.length ?? 0 },
+    staff && { key: 'wanted', label: 'Requests', count: wanted.data?.length ?? 0 },
+  ].filter(Boolean) as Array<{ key: string; label: string; count: number }>
+
+  const source = {
+    intake: pending,
+    inbound: { ...preApproved, data: inboundRows, error: preApproved.error ?? inTransit.error,
+               loading: preApproved.loading || inTransit.loading,
+               // Receiving a box empties this queue and fills the next one, so
+               // the Inspection count has to be refreshed with it or the tab
+               // row contradicts the table underneath it.
+               reload: () => { preApproved.reload(); inTransit.reload(); received.reload() } },
+    inspect: { ...received, data: inspectRows, error: received.error ?? inInspection.error,
+               loading: received.loading || inInspection.loading,
+               reload: () => { received.reload(); inInspection.reload() } },
+    price: graded,
+    wanted,
+  }[active]
+
+  const rows: any[] = (source.data as any[]) ?? []
+
+  // One predicate per queue: the thing a person would actually type.
+  const matches = (r: any) => {
+    const t = search.trim().toLowerCase()
+    if (!t) return true
+    const hay = active === 'intake' ? [r.id, r.pricingMode]
+      : active === 'inbound' ? [r.id, ...r.items.map((i: ConsignmentItem) => i.internalSku)]
+      : active === 'wanted' ? [r.wanted, r.note, r.minGradeCode]
+        : [r.internalSku, r.serialNumber, r.declaredGradeCode, r.assignedGradeCode]
+    return hay.some((v: string | null) => v?.toLowerCase().includes(t))
   }
+  const filtered = rows.filter(matches)
+  const pages = Math.ceil(filtered.length / perPage)
+  const validPage = Math.min(Math.max(1, page), pages || 1)
+  const shown = filtered.slice((validPage - 1) * perPage, validPage * perPage)
 
-  const pendingPeople = people.data?.length ?? 0
+  const go = (next: string) => { setQueue(next as Queue); setPage(1); setSearch('') }
+  const onSearch = (v: string) => { setSearch(v); setPage(1) }
+
+  const unit = active === 'intake' || active === 'inbound' ? 'submissions'
+    : active === 'wanted' ? 'requests' : 'items'
+  const placeholder = active === 'intake' ? 'Search by submission id…'
+    : active === 'inbound' ? 'Search by submission or SKU…'
+    : active === 'wanted' ? 'Search what buyers asked for…'
+      : 'Search by SKU, serial or grade…'
+  const empty = {
+    intake: 'Nothing waiting on pre-approval',
+    inbound: 'Nothing on its way in',
+    inspect: 'Nothing to inspect',
+    price: 'Nothing waiting on a price',
+    wanted: 'Nothing waiting',
+  }[active]
 
   return (
-    <div className="ops">
-      <h1 className="ops__title">Operations</h1>
-
-      <nav className="ops__tabs" aria-label="Work queues">
-        {staff && <Tab active={active === 'intake'} onClick={() => setQueue('intake')} label="Intake" count={counts.intake} />}
-        <Tab active={active === 'inspect'} onClick={() => setQueue('inspect')} label="Inspection" count={counts.inspect} />
-        {staff && <Tab active={active === 'price'} onClick={() => setQueue('price')} label="Pricing" count={counts.price} />}
-        {staff && <Tab active={active === 'wanted'} onClick={() => setQueue('wanted')} label="Requests" count={counts.wanted} />}
-        {/* Sits in the row with the other queues because that is what it is.
-            It navigates rather than swapping the panel below, which is why it
-            is a Link, but a staff member looking for their work should not
-            have to find it somewhere else on the page. */}
-        {staff && (
-          <Link to="/ops/users" className="ops__tab ops__tab--link">
-            People
-            <span className="ops__tab-count">{pendingPeople}</span>
-          </Link>
+    <>
+      <QueueScreen
+        title="Operations"
+        subtitle="What is waiting, and what to do about it"
+        tabs={tabs}
+        active={active}
+        onTab={go}
+        search={search}
+        onSearch={onSearch}
+        searchPlaceholder={placeholder}
+        shown={filtered.length}
+        total={rows.length}
+        unit={unit}
+        loading={source.loading}
+        error={source.error}
+        onRetry={source.reload}
+        emptyTitle={empty}
+        page={validPage}
+        pages={pages}
+        onPage={setPage}
+      >
+        {active === 'intake' && <IntakeTable rows={shown} reload={pending.reload} />}
+        {active === 'inbound' && <InboundTable rows={shown} reload={source.reload} />}
+        {active === 'inspect' && (
+          <InspectTable rows={shown} roster={roster.data ?? []} reload={source.reload} />
         )}
-      </nav>
+        {active === 'price' && <PricingTable rows={shown} reload={graded.reload} />}
+        {active === 'wanted' && <RequestTable rows={shown} reload={wanted.reload} />}
+      </QueueScreen>
 
-      {active === 'intake' && <IntakeQueue state={pending} />}
-      {active === 'inspect' && <InspectQueue received={received} inProgress={inInspection} />}
-      {active === 'price' && <PricingQueue state={graded} />}
-      {active === 'wanted' && <RequestQueue state={wanted} />}
-    </div>
+      {/* Not a queue of items, so not a tab — but it is staff work waiting, and
+          a staff member looking for their work should not have to find it
+          somewhere else on the page. */}
+      {staff && (
+        <p className="ops__aside">
+          <Link to="/ops/users">
+            People waiting on a selling decision
+            <span className="ops__aside-count">{people.data?.length ?? 0}</span>
+          </Link>
+        </p>
+      )}
+    </>
   )
 }
 
-function Tab({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
-  return (
-    <button type="button" className={`ops__tab${active ? ' ops__tab--active' : ''}`} onClick={onClick}>
-      {label}
-      <span className="ops__tab-count">{count}</span>
-    </button>
-  )
-}
-
-/** Pre-approve, issue the label, mark in transit, then receive into a bin. */
-function IntakeQueue({ state }: { state: ReturnType<typeof useApi<any>> }) {
+/** Shared by every table here: run one action, show what went wrong, reload. */
+function useAction(reload: () => void) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState<string | null>(null)
-
-  if (state.loading) return <Loading label="Loading submissions" />
-  if (state.error) return <ErrorNote error={state.error} onRetry={state.reload} />
-  const rows = state.data ?? []
-  if (rows.length === 0) return <Empty title="Nothing waiting on pre-approval" />
-
   async function act(id: string, fn: () => Promise<unknown>) {
     setBusy(id); setError(null)
-    try { await fn(); state.reload() } catch (e) {
+    try { await fn(); reload() } catch (e) {
       setError(e instanceof ApiError ? e.message : 'That did not work')
     } finally { setBusy(null) }
   }
+  return { busy, error, act }
+}
+
+function ErrorRow({ error, span }: { error: string | null; span: number }) {
+  if (!error) return null
+  return (
+    <tr><td colSpan={span}><p className="ops__error" role="alert">{error}</p></td></tr>
+  )
+}
+
+/** Pre-approve, issue the label, or turn it away with a reason the seller sees. */
+function IntakeTable({ rows, reload }: { rows: Submission[]; reload: () => void }) {
+  const { busy, error, act } = useAction(reload)
+  const [rejecting, setRejecting] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
 
   return (
-    <div className="ops__list">
-      {error && <p className="ops__error" role="alert">{error}</p>}
-      {rows.map((s: any) => (
-        <article key={s.id} className="ops__card tg-card">
-          <header className="ops__card-head">
-            <div>
-              <span className="tg-mono">{s.id.slice(0, 8)}</span>
-              <span className="tg-badge">{s.pricingMode}</span>
-            </div>
-            <span className="tg-muted">submitted {dateOnly(s.submittedAt)}</span>
-          </header>
-
-          <SubmissionItems submissionId={s.id} />
-
-          <div className="ops__actions">
-            <button
-              className="tg-button tg-button--primary"
-              disabled={busy === s.id}
-              onClick={() => act(s.id, () => api.preApprove(s.id, 'bluedart'))}
-            >
-              Pre-approve and issue label
-            </button>
-            <button
-              className="tg-button ops__reject"
-              disabled={busy === s.id}
-              onClick={() => setOpen(open === s.id ? null : s.id)}
-            >
-              Reject
-            </button>
-          </div>
-
-          {open === s.id && (
-            <div className="ops__reject-box">
-              {['insufficient_detail', 'prohibited_item', 'price_unrealistic'].map((r) => (
-                <button
-                  key={r}
-                  className="tg-button"
-                  disabled={busy === s.id}
-                  onClick={() => act(s.id, () => api.rejectSubmission(s.id, r))}
-                >
-                  {r.replace(/_/g, ' ')}
-                </button>
-              ))}
-            </div>
-          )}
-        </article>
-      ))}
-      <ShipmentsAwaitingIntake />
-    </div>
+    <table className="q__table">
+      <thead>
+        <tr>
+          <th>Submission</th>
+          <th>Pricing</th>
+          <th>Submitted</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ErrorRow error={error} span={4} />
+        {rows.map((s) => (
+          <tr key={s.id}>
+            <td>
+              <span className="ops__id tg-mono">{s.id.slice(0, 8)}</span>
+              <SubmissionItems submissionId={s.id} />
+            </td>
+            <td><span className="tg-badge">{s.pricingMode}</span></td>
+            <td className="tg-muted">{s.submittedAt ? dateOnly(s.submittedAt) : '—'}</td>
+            <td>
+              {rejecting === s.id ? (
+                <span className="ops__inline">
+                  <select
+                    className="tg-select ops__reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    aria-label="Reason for turning it away"
+                  >
+                    <option value="">Pick a reason…</option>
+                    {INTAKE_REASONS.map((r) => (
+                      <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="tg-button"
+                    disabled={!reason || busy === s.id}
+                    onClick={() => act(s.id, () => api.rejectSubmission(s.id, reason))}
+                  >
+                    Confirm
+                  </button>
+                  <button className="tg-button" onClick={() => { setRejecting(null); setReason('') }}>
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <span className="ops__inline">
+                  <button
+                    className="tg-button tg-button--primary"
+                    disabled={busy === s.id}
+                    onClick={() => act(s.id, () => api.preApprove(s.id, 'bluedart'))}
+                  >
+                    {busy === s.id ? 'Working…' : 'Pre-approve and label'}
+                  </button>
+                  <button className="tg-button" disabled={busy === s.id} onClick={() => setRejecting(s.id)}>
+                    Reject
+                  </button>
+                </span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
@@ -154,229 +276,206 @@ function SubmissionItems({ submissionId }: { submissionId: string }) {
   const view = useApi(() => api.submission(submissionId), [submissionId])
   if (!view.data) return null
   return (
-    <ul className="ops__items">
-      {view.data.items.map((i) => (
-        <li key={i.id}>
-          <span className="tg-mono">{i.internalSku}</span>
-          <span>declared {i.declaredGradeCode}</span>
-          <span>asking {money(i.askingAmountMinor)}</span>
-        </li>
-      ))}
-    </ul>
+    <span className="ops__gear">
+      {view.data.items.map((i) => i.internalSku).join(', ')}
+      {' · '}
+      {money(view.data.items.reduce((t, i) => t + i.askingAmountMinor, 0))} asked
+    </span>
   )
 }
 
-/** Shipments that were pre-approved and still need receiving. */
-function ShipmentsAwaitingIntake() {
-  const inTransit = useApi(() => api.itemQueue('IN_TRANSIT_INBOUND'), [])
-  const preApproved = useApi(() => api.itemQueue('PRE_APPROVED'), [])
+/**
+ * Boxes the hub is waiting on, and the act of taking one in.
+ *
+ * Receiving is the one step with no other home: the state machine's
+ * IN_TRANSIT_INBOUND → RECEIVED move routes here precisely because the raw
+ * transition would skip the intake record and the bin assignment.
+ */
+function InboundTable({
+  rows, reload,
+}: { rows: Array<{ id: string; items: ConsignmentItem[] }>; reload: () => void }) {
+  const { busy, error, act } = useAction(reload)
   const bins = useApi(() => api.storageBins(), [])
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const bin = bins.data?.[0]
 
-  const waiting = [...(preApproved.data ?? []), ...(inTransit.data ?? [])]
-  if (waiting.length === 0) return null
-
-  const bySubmission = new Map<string, typeof waiting>()
-  for (const i of waiting) {
-    bySubmission.set(i.submissionId, [...(bySubmission.get(i.submissionId) ?? []), i])
-  }
-
-  async function receiveFor(submissionId: string) {
-    setBusy(submissionId); setError(null)
-    try {
-      const shipments = await api.submissionShipments(submissionId)
-      const shipment = shipments[0]
-      if (!shipment) throw new Error('No inbound shipment for this submission')
-      if (shipment.state === 'label_issued') await api.markInTransit(shipment.id)
-      await api.receive(shipment.id, { outcomes: {}, binCode: bins.data?.[0]?.code ?? null })
-      preApproved.reload(); inTransit.reload()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : (e as Error).message)
-    } finally {
-      setBusy(null)
-    }
+  async function receive(submissionId: string) {
+    const shipments = await api.submissionShipments(submissionId)
+    const shipment = shipments[0]
+    if (!shipment) throw new Error('No inbound shipment for this submission')
+    // A courier that never scanned still arrives at the counter; the state
+    // machine wants the leg recorded before the box can be taken in.
+    if (shipment.state === 'label_issued') await api.markInTransit(shipment.id)
+    await api.receive(shipment.id, { outcomes: {}, binCode: bin?.code ?? null })
   }
 
   return (
-    <section className="tg-card ops__card">
-      <h2 className="ops__subtitle">Inbound — waiting to be received</h2>
-      {error && <p className="ops__error" role="alert">{error}</p>}
-      {[...bySubmission.entries()].map(([sid, items]) => (
-        <div key={sid} className="ops__inbound">
-          <div>
-            <span className="tg-mono">{sid.slice(0, 8)}</span>
-            <span className="tg-muted"> · {items.length} item{items.length === 1 ? '' : 's'}</span>
-            <StateBadge state={items[0].currentState} />
-          </div>
-          <button
-            className="tg-button tg-button--primary"
-            disabled={busy === sid}
-            onClick={() => receiveFor(sid)}
-          >
-            {busy === sid ? 'Receiving…' : `Receive into ${bins.data?.[0]?.code ?? 'a bin'}`}
-          </button>
-        </div>
-      ))}
-    </section>
+    <table className="q__table">
+      <thead>
+        <tr>
+          <th>Submission</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ErrorRow error={error} span={3} />
+        {rows.map((r) => (
+          <tr key={r.id}>
+            <td>
+              <span className="ops__id tg-mono">{r.id.slice(0, 8)}</span>
+              <span className="ops__gear">
+                {r.items.map((i) => i.internalSku).join(', ')}
+                {' · '}{r.items.length} item{r.items.length === 1 ? '' : 's'}
+              </span>
+            </td>
+            <td><StateBadge state={r.items[0].currentState} /></td>
+            <td>
+              <span className="ops__inline">
+                <button
+                  className="tg-button tg-button--primary"
+                  disabled={busy === r.id}
+                  onClick={() => act(r.id, () => receive(r.id))}
+                >
+                  {busy === r.id ? 'Receiving…' : `Receive into ${bin?.code ?? 'a bin'}`}
+                </button>
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
-function InspectQueue({
-  received, inProgress,
-}: { received: ReturnType<typeof useApi<any>>; inProgress: ReturnType<typeof useApi<any>> }) {
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  // Whose bench each unit is on. Without it this queue is a shared pile and two
-  // technicians open the same lens.
-  const roster = useApi(() => api.technicians(), [])
-  const bench = (id?: string | null) =>
-    (roster.data ?? []).find((t) => t.id === id)?.displayName ?? null
-
-  if (received.loading || inProgress.loading) return <Loading label="Loading inspection queue" />
-  const waiting = received.data ?? []
-  const open = inProgress.data ?? []
-  if (waiting.length === 0 && open.length === 0) return <Empty title="Nothing to inspect" />
-
-  async function start(itemId: string) {
-    setBusy(itemId); setError(null)
-    try {
-      await api.startInspection(itemId)
-      received.reload(); inProgress.reload()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not start')
-    } finally { setBusy(null) }
-  }
+/** Received and in progress in one list, because it is one bench. */
+function InspectTable({
+  rows, roster, reload,
+}: { rows: ConsignmentItem[]; roster: Technician[]; reload: () => void }) {
+  const { busy, error, act } = useAction(reload)
+  const bench = (id?: string | null) => roster.find((t) => t.id === id)?.displayName ?? null
 
   return (
-    <div className="ops__list">
-      {error && <p className="ops__error" role="alert">{error}</p>}
-
-      {open.length > 0 && (
-        <section className="tg-card ops__card">
-          <h2 className="ops__subtitle">In progress</h2>
-          {open.map((i: any) => (
-            <div key={i.id} className="ops__inbound">
-              <div>
-                <span className="tg-mono">{i.internalSku}</span>
-                {bench(i.assignedTechnicianUserId) && (
-                  <span className="tg-badge">{bench(i.assignedTechnicianUserId)}</span>
+    <table className="q__table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Declared</th>
+          <th>On the bench of</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ErrorRow error={error} span={5} />
+        {rows.map((i) => (
+          <tr key={i.id}>
+            <td><Link to={`/items/${i.id}`} className="ops__id tg-mono">{i.internalSku}</Link></td>
+            <td>{i.declaredGradeCode}</td>
+            <td>
+              {bench(i.assignedTechnicianUserId)
+                ?? <span className="tg-muted">unassigned</span>}
+            </td>
+            <td><StateBadge state={i.currentState} /></td>
+            <td>
+              <span className="ops__inline">
+                {i.currentState === 'IN_INSPECTION' ? (
+                  <Link className="tg-button tg-button--primary" to={`/ops/inspect/${i.id}`}>Continue →</Link>
+                ) : (
+                  <button
+                    className="tg-button tg-button--primary"
+                    disabled={busy === i.id}
+                    onClick={() => act(i.id, () => api.startInspection(i.id))}
+                  >
+                    {busy === i.id ? 'Starting…' : 'Start inspection'}
+                  </button>
                 )}
-              </div>
-              <Link className="tg-button tg-button--primary" to={`/ops/inspect/${i.id}`}>Continue</Link>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {waiting.length > 0 && (
-        <section className="tg-card ops__card">
-          <h2 className="ops__subtitle">Received, not yet inspected</h2>
-          {waiting.map((i: any) => (
-            <div key={i.id} className="ops__inbound">
-              <div>
-                <span className="tg-mono">{i.internalSku}</span>
-                <span className="tg-muted"> · declared {i.declaredGradeCode}</span>
-                {bench(i.assignedTechnicianUserId)
-                  ? <span className="tg-badge">{bench(i.assignedTechnicianUserId)}</span>
-                  : <span className="tg-muted"> · unassigned</span>}
-              </div>
-              <button className="tg-button tg-button--primary" disabled={busy === i.id} onClick={() => start(i.id)}>
-                {busy === i.id ? 'Starting…' : 'Start inspection'}
-              </button>
-            </div>
-          ))}
-        </section>
-      )}
-    </div>
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
 /** Graded items waiting on a price. */
-function PricingQueue({ state }: { state: ReturnType<typeof useApi<any>> }) {
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+function PricingTable({ rows, reload }: { rows: ConsignmentItem[]; reload: () => void }) {
+  const { busy, error, act } = useAction(reload)
   const [override, setOverride] = useState<Record<string, string>>({})
-  const [result, setResult] = useState<string | null>(null)
+  const [open, setOpen] = useState<string | null>(null)
 
-  if (state.loading) return <Loading label="Loading pricing queue" />
-  if (state.error) return <ErrorNote error={state.error} onRetry={state.reload} />
-  const rows = state.data ?? []
-  if (rows.length === 0) return <Empty title="Nothing waiting on a price" />
-
-  async function price(itemId: string, amount?: number) {
-    setBusy(itemId); setError(null); setResult(null)
-    try {
-      const outcome = await api.propose(itemId, {
-        staffAmountMinor: amount ?? null,
-        staffOverrideReason: amount ? 'Priced off comparable recent sales' : null,
-      })
-      setResult(
-        outcome.listing
-          ? 'Listed straight away — it met the seller\'s floor.'
-          : 'Sent to the seller to approve.',
-      )
-      state.reload()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not price that')
-    } finally { setBusy(null) }
-  }
+  const price = (id: string, amount?: number) =>
+    act(id, () => api.propose(id, {
+      staffAmountMinor: amount ?? null,
+      staffOverrideReason: amount ? 'Priced off comparable recent sales' : null,
+    }))
 
   return (
-    <div className="ops__list">
-      {error && <p className="ops__error" role="alert">{error}</p>}
-      {result && <p className="ops__result">{result}</p>}
-      {rows.map((i: any) => (
-        <article key={i.id} className="ops__card tg-card">
-          <header className="ops__card-head">
-            <div>
-              <span className="tg-mono">{i.internalSku}</span>
-              <span className="tg-badge tg-badge--accent">{i.assignedGradeCode}</span>
-            </div>
-            <span className="tg-muted">
-              declared {i.declaredGradeCode} · asking {money(i.askingAmountMinor)}
-              {i.floorAmountMinor != null && ` · floor ${money(i.floorAmountMinor)}`}
-            </span>
-          </header>
-          <div className="ops__actions">
-            <button className="tg-button tg-button--primary" disabled={busy === i.id} onClick={() => price(i.id)}>
-              Use the guided price
-            </button>
-            <div className="ops__override">
-              <input
-                className="tg-input ops__override-input"
-                type="number"
-                min={1}
-                placeholder="Override (₹)"
-                value={override[i.id] ?? ''}
-                onChange={(e) => setOverride({ ...override, [i.id]: e.target.value })}
-              />
-              <button
-                className="tg-button"
-                disabled={busy === i.id || !Number(override[i.id])}
-                onClick={() => price(i.id, Math.round(Number(override[i.id]) * 100))}
-              >
-                Price manually
-              </button>
-            </div>
-          </div>
-          <p className="tg-muted ops__fineprint">
-            Pricing takes the fee snapshot. It is what the payout will read, whatever the fee table says later.
-          </p>
-        </article>
-      ))}
-    </div>
+    <table className="q__table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Grade</th>
+          <th className="q__num">Asking</th>
+          <th className="q__num">Floor</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ErrorRow error={error} span={5} />
+        {rows.map((i) => (
+          <tr key={i.id}>
+            <td>
+              <Link to={`/items/${i.id}`} className="ops__id tg-mono">{i.internalSku}</Link>
+              {/* Pricing takes the fee snapshot: it is what the payout will read,
+                  whatever the fee table says later. */}
+              <span className="ops__gear">declared {i.declaredGradeCode} · takes the fee snapshot</span>
+            </td>
+            <td><span className="tg-badge tg-badge--accent">{i.assignedGradeCode}</span></td>
+            <td className="q__num">{money(i.askingAmountMinor)}</td>
+            <td className="q__num">{i.floorAmountMinor != null ? money(i.floorAmountMinor) : '—'}</td>
+            <td>
+              {open === i.id ? (
+                <span className="ops__inline">
+                  <input
+                    className="tg-input ops__amount"
+                    type="number"
+                    min={1}
+                    placeholder="Override (₹)"
+                    aria-label="Price it by hand"
+                    value={override[i.id] ?? ''}
+                    onChange={(e) => setOverride({ ...override, [i.id]: e.target.value })}
+                  />
+                  <button
+                    className="tg-button tg-button--primary"
+                    disabled={busy === i.id || !Number(override[i.id])}
+                    onClick={() => price(i.id, Math.round(Number(override[i.id]) * 100))}
+                  >
+                    Set
+                  </button>
+                  <button className="tg-button" onClick={() => setOpen(null)}>Cancel</button>
+                </span>
+              ) : (
+                <span className="ops__inline">
+                  <button
+                    className="tg-button tg-button--primary"
+                    disabled={busy === i.id}
+                    onClick={() => price(i.id)}
+                  >
+                    {busy === i.id ? 'Pricing…' : 'Use the guided price'}
+                  </button>
+                  <button className="tg-button" disabled={busy === i.id} onClick={() => setOpen(i.id)}>
+                    By hand
+                  </button>
+                </span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
-
-const REJECT_REASONS = [
-  { code: 'too_vague', label: 'Too vague to act on' },
-  { code: 'not_our_category', label: "Not something TrueGlaz deals in" },
-  { code: 'unrealistic_budget', label: 'Budget far below what these sell for' },
-  { code: 'duplicate_request', label: 'Already asked for by this buyer' },
-  { code: 'contact_details', label: 'Contains contact details or an off-platform offer' },
-  { code: 'inappropriate', label: 'Inappropriate wording' },
-]
 
 /**
  * What buyers have asked for, waiting to go on the public board.
@@ -386,79 +485,76 @@ const REJECT_REASONS = [
  * unmoderated noticeboard on a marketplace becomes a channel for off-platform
  * deals within a week.
  */
-function RequestQueue({ state }: { state: ReturnType<typeof useApi<any>> }) {
-  const [busy, setBusy] = useState<string | null>(null)
+function RequestTable({ rows, reload }: { rows: ReviewRequest[]; reload: () => void }) {
+  const { busy, error, act } = useAction(reload)
   const [rejecting, setRejecting] = useState<string | null>(null)
   const [reason, setReason] = useState('')
-  const [error, setError] = useState<string | null>(null)
-
-  async function act(id: string, fn: () => Promise<unknown>) {
-    setBusy(id); setError(null)
-    try {
-      await fn()
-      setRejecting(null); setReason('')
-      state.reload()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'That did not work')
-    } finally { setBusy(null) }
-  }
-
-  if (state.loading) return <Loading label="Loading requests" />
-  if (state.error) return <ErrorNote error={state.error} onRetry={state.reload} />
-  const rows = state.data ?? []
-  if (rows.length === 0) {
-    return <Empty title="Nothing waiting" hint="Every request a buyer has sent in has been decided." />
-  }
 
   return (
-    <div className="ops__list">
-      {error && <p className="ops__error" role="alert">{error}</p>}
-      {rows.map((r: any) => (
-        <section key={r.id} className="tg-card ops__card">
-          <div className="ops__inbound">
-            <div>
-              <strong>{r.wanted}</strong>
+    <table className="q__table">
+      <thead>
+        <tr>
+          <th>Wanted</th>
+          <th className="q__num">Up to</th>
+          <th>Asked</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ErrorRow error={error} span={4} />
+        {rows.map((r) => (
+          <tr key={r.id}>
+            <td>
+              <span className="ops__wanted">{r.wanted}</span>
               {r.fromCatalogue && <span className="tg-badge tg-badge--accent">from the catalogue</span>}
-              <div className="tg-muted ops__fineprint">
-                {r.maxPriceMinor != null && `up to ${money(r.maxPriceMinor)} · `}
-                {r.minGradeCode && `${r.minGradeCode} or better · `}
-                asked {dateOnly(r.createdAt)}
-              </div>
-              {r.note && <p className="ops__fineprint">“{r.note}”</p>}
-            </div>
-
-            {rejecting === r.id ? (
-              <span className="ops__inbound-actions">
-                <select className="tg-select" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason">
-                  <option value="">Pick a reason…</option>
-                  {REJECT_REASONS.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}
-                </select>
-                <button
-                  className="tg-button"
-                  disabled={!reason || busy === r.id}
-                  onClick={() => act(r.id, () => api.rejectRequest(r.id, reason))}
-                >
-                  Confirm
-                </button>
-                <button className="tg-button" onClick={() => { setRejecting(null); setReason('') }}>Cancel</button>
-              </span>
-            ) : (
-              <span className="ops__inbound-actions">
-                <button
-                  className="tg-button tg-button--primary"
-                  disabled={busy === r.id}
-                  onClick={() => act(r.id, () => api.publishRequest(r.id))}
-                >
-                  Put on the board
-                </button>
-                <button className="tg-button" disabled={busy === r.id} onClick={() => setRejecting(r.id)}>
-                  Turn down
-                </button>
-              </span>
-            )}
-          </div>
-        </section>
-      ))}
-    </div>
+              {r.note && <span className="ops__gear">“{r.note}”</span>}
+            </td>
+            <td className="q__num">
+              {r.maxPriceMinor != null ? money(r.maxPriceMinor) : '—'}
+              {r.minGradeCode && <span className="ops__gear">{r.minGradeCode} or better</span>}
+            </td>
+            <td className="tg-muted">{r.createdAt ? dateOnly(r.createdAt) : '—'}</td>
+            <td>
+              {rejecting === r.id ? (
+                <span className="ops__inline">
+                  <select
+                    className="tg-select ops__reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    aria-label="Reason for turning it down"
+                  >
+                    <option value="">Pick a reason…</option>
+                    {REJECT_REASONS.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}
+                  </select>
+                  <button
+                    className="tg-button"
+                    disabled={!reason || busy === r.id}
+                    onClick={() => act(r.id, () => api.rejectRequest(r.id, reason))}
+                  >
+                    Confirm
+                  </button>
+                  <button className="tg-button" onClick={() => { setRejecting(null); setReason('') }}>
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <span className="ops__inline">
+                  <button
+                    className="tg-button tg-button--primary"
+                    disabled={busy === r.id}
+                    onClick={() => act(r.id, () => api.publishRequest(r.id))}
+                  >
+                    Put on the board
+                  </button>
+                  <button className="tg-button" disabled={busy === r.id} onClick={() => setRejecting(r.id)}>
+                    Turn down
+                  </button>
+                </span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
