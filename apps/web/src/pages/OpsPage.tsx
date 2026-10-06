@@ -227,6 +227,11 @@ function InspectQueue({
 }: { received: ReturnType<typeof useApi<any>>; inProgress: ReturnType<typeof useApi<any>> }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Whose bench each unit is on. Without it this queue is a shared pile and two
+  // technicians open the same lens.
+  const roster = useApi(() => api.technicians(), [])
+  const bench = (id?: string | null) =>
+    (roster.data ?? []).find((t) => t.id === id)?.displayName ?? null
 
   if (received.loading || inProgress.loading) return <Loading label="Loading inspection queue" />
   const waiting = received.data ?? []
@@ -252,7 +257,12 @@ function InspectQueue({
           <h2 className="ops__subtitle">In progress</h2>
           {open.map((i: any) => (
             <div key={i.id} className="ops__inbound">
-              <span className="tg-mono">{i.internalSku}</span>
+              <div>
+                <span className="tg-mono">{i.internalSku}</span>
+                {bench(i.assignedTechnicianUserId) && (
+                  <span className="tg-badge">{bench(i.assignedTechnicianUserId)}</span>
+                )}
+              </div>
               <Link className="tg-button tg-button--primary" to={`/ops/inspect/${i.id}`}>Continue</Link>
             </div>
           ))}
@@ -267,6 +277,9 @@ function InspectQueue({
               <div>
                 <span className="tg-mono">{i.internalSku}</span>
                 <span className="tg-muted"> · declared {i.declaredGradeCode}</span>
+                {bench(i.assignedTechnicianUserId)
+                  ? <span className="tg-badge">{bench(i.assignedTechnicianUserId)}</span>
+                  : <span className="tg-muted"> · unassigned</span>}
               </div>
               <button className="tg-button tg-button--primary" disabled={busy === i.id} onClick={() => start(i.id)}>
                 {busy === i.id ? 'Starting…' : 'Start inspection'}

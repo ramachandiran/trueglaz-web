@@ -1,0 +1,30 @@
+.asn {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  flex-wrap: wrap;
+}
+
+.asn__label {
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+  white-space: nowrap;
+}
+
+.asn__select {
+  width: auto;
+  min-width: 12rem;
+  font-size: var(--tg-text-sm);
+  padding: var(--tg-space-1) var(--tg-space-2);
+}
+
+.asn--read {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+}
+
+.asn__error {
+  margin: 0;
+  color: var(--tg-bad);
+  font-size: var(--tg-text-xs);
+}

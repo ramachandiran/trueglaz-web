@@ -77,11 +77,21 @@ export interface ConsignmentItem {
   askingAmountMinor: number
   floorAmountMinor: number | null
   currentState: string
+  /** Who is MEANT to inspect it. Who did is on the inspection report. */
+  assignedTechnicianUserId: string | null
+  assignedByUserId: string | null
+  assignedAt: string | null
   listedAt: string | null
   soldAt: string | null
   returnedAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** A name on the bench roster, for the picker. Not a directory entry. */
+export interface Technician {
+  id: string
+  displayName: string
 }
 
 export interface ItemStateTransition {

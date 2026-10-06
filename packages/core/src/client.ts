@@ -7,7 +7,7 @@ import type {
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
-  StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow,
+  StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
 } from './types'
 
 /**
@@ -462,11 +462,16 @@ export const api = {
     body: { outcomes: Record<string, string>; binCode?: string | null; notes?: string | null },
   ) => post<Intake>(`/ops/inbound-shipments/${shipmentId}/receive`, body),
   storageBins: () => get<StorageBin[]>('/ops/storage-bins'),
+  technicians: () => get<Technician[]>('/ops/technicians'),
   submissionShipments: (submissionId: string) =>
     get<InboundShipment[]>(`/ops/submissions/${submissionId}/shipments`),
 
   itemQueue: (state?: string) =>
     get<ConsignmentItem[]>(`/items${state ? `?state=${encodeURIComponent(state)}` : ''}`),
+  /** Hand a unit to a bench, or pass null to take the assignment off. */
+  assignTechnician: (itemId: string, technicianUserId: string | null) =>
+    post<ConsignmentItem>(`/items/${itemId}/assign`, { technicianUserId }),
+  myBench: () => get<ConsignmentItem[]>('/items/mine/to-inspect'),
   startInspection: (itemId: string) =>
     post<InspectionReport>(`/items/${itemId}/inspections?purpose=initial`),
   itemInspections: (itemId: string) => get<InspectionReport[]>(`/items/${itemId}/inspections`),

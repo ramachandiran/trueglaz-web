@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ApiError, STATE_LABELS, type ReasonCode } from '@trueglaz/core'
+import { api, ApiError, STATE_LABELS, type ReasonCode, type Technician } from '@trueglaz/core'
 import { runMove, type Planned } from './NextActions'
 import { StateBadge } from './ui'
 import './StateMenu.css'
@@ -22,7 +22,8 @@ import './StateMenu.css'
  * the note, which the endpoint has always accepted and almost nobody has sent.
  */
 export function StateMenu({
-  itemId, sku, gear, currentState, moves, reasons, onDone,
+  itemId, sku, gear, currentState, moves, reasons, technicians = [], assignedTo = null,
+  canAssign = false, onDone,
 }: {
   itemId: string
   sku: string
@@ -31,6 +32,11 @@ export function StateMenu({
   /** Already planned by the caller, so the rules live in one place. */
   moves: Planned[]
   reasons: ReasonCode[]
+  /** The bench roster, for the move that sends a unit to be inspected. */
+  technicians?: Technician[]
+  assignedTo?: string | null
+  /** Only staff hand work out, so only staff see the picker. */
+  canAssign?: boolean
   onDone: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -38,6 +44,7 @@ export function StateMenu({
   const [chosen, setChosen] = useState<Planned | null>(null)
   const [reason, setReason] = useState('')
   const [note, setNote] = useState('')
+  const [tech, setTech] = useState<string>('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -100,11 +107,14 @@ export function StateMenu({
     setChosen(m)
     setReason('')
     setNote('')
+    // Whoever has it now is the sensible default when re-sending it to the
+    // bench; a blank box would silently drop the assignment on a re-inspect.
+    setTech(assignedTo ?? '')
     setError(null)
   }
 
   function close() {
-    setChosen(null); setReason(''); setNote(''); setError(null)
+    setChosen(null); setReason(''); setNote(''); setTech(''); setError(null)
     trigger.current?.focus()
   }
 
@@ -113,6 +123,12 @@ export function StateMenu({
     setBusy(true); setError(null)
     try {
       await runMove(itemId, currentState, chosen.state.toState, reason || null, note.trim() || null)
+      // After the move, not before: an assignment written against a transition
+      // the state machine then refused would put a unit on somebody's bench
+      // that never went to the bench.
+      if (showPicker && tech !== (assignedTo ?? '')) {
+        await api.assignTechnician(itemId, tech || null)
+      }
       close()
       onDone()
     } catch (e) {
@@ -136,6 +152,17 @@ export function StateMenu({
   const needsReason = chosen?.state.requiresReason ?? false
   const needsNote = chosen?.state.requiresNote ?? false
   const shortNote = note.trim().length < 10
+
+  /**
+   * Sending a unit to the bench is the one move that needs a name on it.
+   *
+   * It is the same question whichever direction the item arrives from — a fresh
+   * unit, a grade sent back, a quarantine released — so the picker keys off the
+   * destination rather than the pair.
+   */
+  const showPicker =
+    canAssign && technicians.length > 0 &&
+    (chosen?.state.toState === 'IN_INSPECTION' || chosen?.state.toState === 'RE_INSPECTION')
 
   return (
     <span className="sm">
@@ -207,6 +234,29 @@ export function StateMenu({
                   <option value="">Pick a reason…</option>
                   {reasons.map((r) => <option key={r.code} value={r.code}>{r.label}</option>)}
                 </select>
+              </label>
+            )}
+
+            {showPicker && (
+              <label className="sm__field">
+                <span className="sm__label">
+                  Assign to <em>{assignedTo ? 'currently assigned' : 'optional'}</em>
+                </span>
+                <select
+                  className="tg-select"
+                  aria-label="Assign the inspection to"
+                  value={tech}
+                  onChange={(e) => setTech(e.target.value)}
+                >
+                  <option value="">Nobody in particular</option>
+                  {technicians.map((t) => (
+                    <option key={t.id} value={t.id}>{t.displayName}</option>
+                  ))}
+                </select>
+                <span className="sm__help tg-muted">
+                  It shows on their bench. Whoever actually opens the checklist is
+                  recorded on the report, which is allowed to be somebody else.
+                </span>
               </label>
             )}
 

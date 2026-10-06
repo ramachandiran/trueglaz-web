@@ -46,6 +46,9 @@ const STAGES: Array<{ key: string; label: string; states: string[] | null; staff
   { key: 'closed', label: 'Closed', states: ['DRAFT', 'EXPIRED', 'REJECTED_PRE_INTAKE', 'ARCHIVED'] },
 ]
 
+/** Where an assignment is still live work rather than a stale note. */
+const BENCH_STATES = ['RECEIVED', 'IN_INSPECTION', 'RE_INSPECTION', 'RETURN_RECEIVED', 'INSPECTION_FAILED']
+
 export function InventoryDashboard() {
   const { session } = useSession()
   const [view, setView] = useState('all')
@@ -80,6 +83,11 @@ export function InventoryDashboard() {
   }, [rules.data])
 
   const reasons = useApi(() => api.reasonCodes('item_transition'), [])
+  // Who a unit can be handed to. Read by everyone on the floor so a technician
+  // can see whose bench a row is on, not only the person doing the handing.
+  const technicians = useApi(() => api.technicians(), [])
+  const technicianName = (id?: string | null) =>
+    (technicians.data ?? []).find((t) => t.id === id)?.displayName ?? null
 
   // The queue returns a consignment_item as stored, which holds ids rather than
   // names — so Brand printed a raw uuid and Model an em dash for anything
@@ -205,6 +213,13 @@ export function InventoryDashboard() {
                     <span className="inv__gear">
                       {[brandName((item as any).brandId), modelName(item)].filter(Boolean).join(' ') || '—'}
                     </span>
+                    {/* Whose bench it is on. Only worth a line while it is work:
+                        a sold item assigned to somebody last month is noise. */}
+                    {item.assignedTechnicianUserId && BENCH_STATES.includes(item.currentState) && (
+                      <span className="inv__bench">
+                        on {technicianName(item.assignedTechnicianUserId) ?? 'a bench'}
+                      </span>
+                    )}
                   </td>
                   <td>{(item as any).assignedGradeCode ?? (item as any).declaredGradeCode ?? '—'}</td>
                   <td className="inv__num">
@@ -223,6 +238,9 @@ export function InventoryDashboard() {
                       currentState={item.currentState}
                       moves={movesFor(item)}
                       reasons={reasons.data ?? []}
+                      technicians={technicians.data ?? []}
+                      assignedTo={item.assignedTechnicianUserId}
+                      canAssign={staff}
                       onDone={() => all.reload()}
                     />
                   </td>

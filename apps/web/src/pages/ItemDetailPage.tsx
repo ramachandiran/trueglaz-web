@@ -5,11 +5,15 @@ import { useApi } from '@trueglaz/core'
 import { InspectionReport } from '../components/InspectionReport'
 import { ShipmentLegs } from '../components/ShipmentLegs'
 import { NextActions } from '../components/NextActions'
+import { AssignTechnician } from '../components/AssignTechnician'
 import { Timeline } from '../components/Timeline'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge, StateBadge } from '../components/ui'
 import { buildTimeline, progressOf, STATE_BLURBS, STATE_LABELS } from '@trueglaz/core'
 import { dateTime, money } from '@trueglaz/core'
 import './DetailPage.css'
+
+/** Where naming a technician is still a live question. */
+const BENCH_STATES = ['RECEIVED', 'IN_INSPECTION', 'RE_INSPECTION', 'RETURN_RECEIVED', 'INSPECTION_FAILED']
 
 export function ItemDetailPage() {
   const { id = '' } = useParams()
@@ -88,6 +92,18 @@ export function ItemDetailPage() {
           {STATE_BLURBS[item.currentState] ?? `Currently ${STATE_LABELS[item.currentState] ?? item.currentState}.`}
         </p>
         <Timeline steps={steps} orientation="horizontal" reasons={reasonLabel} />
+
+        {/* Only while the unit is anywhere near a bench. On a listed or sold
+            item it is a question nobody is asking. */}
+        {BENCH_STATES.includes(item.currentState) && (
+          <div className="detail__assign">
+            <AssignTechnician
+              itemId={id}
+              assignedTo={item.assignedTechnicianUserId}
+              onDone={reload}
+            />
+          </div>
+        )}
 
         {/* The move out of the current state is the only question anyone has
             while looking at the line, so the buttons live on it. */}

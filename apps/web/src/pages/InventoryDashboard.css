@@ -134,7 +134,16 @@
 .inv__table th:last-child,
 .inv__table td:last-child { text-align: right; }
 
-.inv__table th.inv__num { text-align: right; }
+.inv__table th/* Under the gear, not in a column of its own: most rows have no assignment and
+   an empty column on fifty of sixty lines is a column that earns nothing. */
+.inv__bench {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--tg-text-xs);
+  color: var(--tg-accent);
+}
+
+.inv__num { text-align: right; }
 
 .inv__sku {
   font-weight: var(--tg-weight-medium);
@@ -159,6 +168,15 @@
   margin-top: 2px;
   font-size: var(--tg-text-sm);
   color: var(--tg-text);
+}
+
+/* Under the gear, not in a column of its own: most rows have no assignment and
+   an empty column on fifty of sixty lines is a column that earns nothing. */
+.inv__bench {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--tg-text-xs);
+  color: var(--tg-accent);
 }
 
 .inv__num { text-align: right; }
