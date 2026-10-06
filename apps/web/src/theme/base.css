@@ -148,6 +148,14 @@ select {
 .tg-button--primary:hover { background: var(--tg-accent-hover); }
 .tg-button--subtle { border-color: transparent; background: transparent; }
 .tg-button--subtle:hover { background: var(--tg-bg-hover); }
+/* Nothing said a disabled button was disabled: it kept its fill, its pointer
+   and its hover, so "Previous" on page one and a Confirm waiting on a required
+   field both read as live and did nothing when pressed. The hover rules have to
+   be answered one by one, since they are no less specific than this. */
+.tg-button:disabled { opacity: 0.45; cursor: not-allowed; }
+.tg-button:disabled:hover { background: var(--tg-bg-raised); }
+.tg-button--primary:disabled:hover { background: var(--tg-accent); }
+.tg-button--subtle:disabled:hover { background: transparent; }
 
 .tg-input,
 .tg-select {

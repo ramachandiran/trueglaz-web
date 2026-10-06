@@ -1,0 +1,232 @@
+.sm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+}
+
+.sm__end {
+  font-size: var(--tg-text-xs);
+}
+
+/* -- the chip, as a control ------------------------------------------------ */
+
+.sm__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-1);
+  padding: var(--tg-space-1);
+  margin: calc(var(--tg-space-1) * -1);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--tg-radius-pill);
+  cursor: pointer;
+  transition: border-color 150ms, background-color 150ms;
+}
+
+/* Nothing but a badge until you go near it. A list of sixty rows with sixty
+   outlined dropdowns reads as a form, which is not what it is. */
+.sm__trigger:hover,
+.sm__trigger[aria-expanded='true'] {
+  border-color: var(--tg-border);
+  background: var(--tg-bg-raised);
+}
+
+.sm__trigger:focus-visible {
+  outline: 2px solid var(--tg-accent);
+  outline-offset: 2px;
+}
+
+.sm__caret {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--tg-text-muted);
+}
+
+/* -- the menu -------------------------------------------------------------- */
+
+.sm__menu {
+  position: fixed;
+  z-index: 60;
+  width: 280px;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  padding: var(--tg-space-2);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  box-shadow: var(--tg-shadow-lg, 0 12px 32px rgb(0 0 0 / 0.18));
+}
+
+.sm__head {
+  margin: var(--tg-space-1) var(--tg-space-2) var(--tg-space-2);
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.sm__head--back {
+  margin-top: var(--tg-space-3);
+  padding-top: var(--tg-space-2);
+  border-top: 1px solid var(--tg-border);
+}
+
+.sm__item {
+  display: block;
+  width: 100%;
+  position: relative;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  border: 0;
+  border-radius: var(--tg-radius-sm);
+  background: transparent;
+  text-align: left;
+  text-decoration: none;
+  color: var(--tg-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.sm__item:hover,
+.sm__item:focus-visible {
+  background: var(--tg-bg-sunken);
+}
+
+.sm__item--off,
+.sm__item--off:hover {
+  cursor: default;
+  background: transparent;
+  opacity: 0.65;
+}
+
+.sm__item-name {
+  display: block;
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+}
+
+.sm__item-why {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--tg-text-xs);
+  line-height: 1.45;
+}
+
+.sm__item-go {
+  position: absolute;
+  top: var(--tg-space-2);
+  right: var(--tg-space-3);
+  color: var(--tg-text-muted);
+}
+
+/* -- the confirmation ------------------------------------------------------ */
+
+.sm__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tg-space-4);
+  background: rgb(0 0 0 / 0.45);
+}
+
+.sm__dialog {
+  width: min(30rem, 100%);
+  max-height: calc(100vh - var(--tg-space-6, 3rem));
+  overflow-y: auto;
+  padding: var(--tg-space-5);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg, 12px);
+  box-shadow: 0 20px 48px rgb(0 0 0 / 0.3);
+}
+
+/* A correction asks for more than a step forward does, so it looks different
+   before the click rather than after it. */
+.sm__dialog--undo {
+  border-color: var(--tg-accent);
+}
+
+.sm__title {
+  margin: 0;
+  font-size: var(--tg-text-lg);
+}
+
+.sm__gear {
+  margin: var(--tg-space-1) 0 0;
+  font-size: var(--tg-text-sm);
+}
+
+.sm__flow {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  margin: var(--tg-space-4) 0 0;
+}
+
+.sm__arrow { color: var(--tg-text-muted); }
+
+.sm__hint {
+  margin: var(--tg-space-3) 0 0;
+  font-size: var(--tg-text-sm);
+  line-height: 1.5;
+}
+
+.sm__warn {
+  margin: var(--tg-space-3) 0 0;
+  padding: var(--tg-space-3);
+  background: var(--tg-accent-soft);
+  border-radius: var(--tg-radius-md);
+  font-size: var(--tg-text-sm);
+  line-height: 1.5;
+}
+
+.sm__field {
+  display: block;
+  margin-top: var(--tg-space-4);
+}
+
+.sm__label {
+  display: block;
+  margin-bottom: var(--tg-space-1);
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+}
+
+.sm__label em {
+  font-style: normal;
+  font-weight: var(--tg-weight-regular, 400);
+  color: var(--tg-text-muted);
+}
+
+.sm__note {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+}
+
+.sm__help {
+  display: block;
+  margin-top: var(--tg-space-1);
+  font-size: var(--tg-text-xs);
+  line-height: 1.45;
+}
+
+.sm__error {
+  margin: var(--tg-space-3) 0 0;
+  color: var(--tg-bad);
+  font-size: var(--tg-text-sm);
+}
+
+.sm__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tg-space-2);
+  margin-top: var(--tg-space-5);
+}
+
+@media (max-width: 30rem) {
+  .sm__buttons { flex-direction: column-reverse; }
+  .sm__buttons .tg-button { width: 100%; }
+}
