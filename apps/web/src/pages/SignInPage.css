@@ -243,4 +243,64 @@
   cursor: default;
 }
 
-.signin__form select.tg-input { appearance: auto; }
+/* ---- the genre checkboxes ------------------------------------------------ */
+
+.signin__genres {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.signin__legend-hint {
+  margin-left: var(--tg-space-2);
+  font-weight: var(--tg-weight-normal);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--tg-text-muted);
+}
+
+/* Two columns where there is room. Thirteen options down one column turns a
+   short form into a scroll, and these are two or three words each. */
+.signin__genre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--tg-space-1) var(--tg-space-3);
+  margin-top: var(--tg-space-2);
+}
+
+/* The whole row is the target, not just the 16px box beside it — these are
+   mostly tapped with a thumb. */
+.signin__genre {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  min-height: 36px;
+  padding: var(--tg-space-1) var(--tg-space-2);
+  border-radius: var(--tg-radius-sm);
+  font-size: var(--tg-text-sm);
+  line-height: 1.3;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.signin__genre:hover { background: var(--tg-bg-hover); }
+
+.signin__genre--on {
+  background: var(--tg-accent-soft);
+  color: var(--tg-text);
+  font-weight: var(--tg-weight-medium);
+}
+
+.signin__genre-box {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  accent-color: var(--tg-accent);
+  cursor: pointer;
+}
+
+.signin__genre-box:focus-visible {
+  outline: 2px solid var(--tg-accent);
+  outline-offset: 2px;
+}

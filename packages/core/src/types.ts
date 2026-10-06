@@ -1144,5 +1144,6 @@ export interface SignUpDetails {
   lastName: string
   email: string
   mobile: string
-  photographyGenre: string
+  /** One or more genre codes. People shoot more than one thing. */
+  photographyGenres: string[]
 }

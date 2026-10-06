@@ -28,8 +28,12 @@ export function SignInPage() {
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [mobile, setMobile] = useState('')
-  const [genre, setGenre] = useState('')
+  const [chosen, setChosen] = useState<string[]>([])
   const [genres, setGenres] = useState<PhotographyGenre[]>([])
+
+  function toggleGenre(code: string) {
+    setChosen((prev) => prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code])
+  }
 
   const from = (location.state as { from?: string } | null)?.from ?? '/'
 
@@ -119,7 +123,7 @@ export function SignInPage() {
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
         mobile: mobile.trim(),
-        photographyGenre: genre,
+        photographyGenres: chosen,
       }))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create your account')
@@ -318,17 +322,31 @@ export function SignInPage() {
                   : 'We send order confirmations and invoices to your email. You will confirm it later, from your profile.'}
               </p>
 
-              <label className="signin__label" htmlFor="genre">What do you shoot?</label>
-              <select
-                id="genre"
-                className="tg-input"
-                required
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-              >
-                <option value="" disabled>Choose one</option>
-                {genres.map((g) => <option key={g.code} value={g.code}>{g.label}</option>)}
-              </select>
+              {/* A group, not a list of inputs: without the fieldset and legend a
+                  screen reader reads eleven unrelated checkboxes and never says
+                  what the question was. */}
+              <fieldset className="signin__genres">
+                <legend className="signin__label">
+                  What do you shoot?
+                  <span className="signin__legend-hint">pick as many as apply</span>
+                </legend>
+                <div className="signin__genre-grid">
+                  {genres.map((g) => (
+                    <label
+                      key={g.code}
+                      className={`signin__genre${chosen.includes(g.code) ? ' signin__genre--on' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="signin__genre-box"
+                        checked={chosen.includes(g.code)}
+                        onChange={() => toggleGenre(g.code)}
+                      />
+                      <span>{g.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <p className="tg-muted signin__hint">
                 It decides what we show you first, and what we go looking for when
                 somebody asks what to buy next.
@@ -338,7 +356,7 @@ export function SignInPage() {
                 className="tg-button tg-button--primary signin__submit"
                 disabled={
                   busy || !firstName.trim() || !lastName.trim() ||
-                  !email.trim() || !mobile.trim() || !genre
+                  !email.trim() || !mobile.trim() || chosen.length === 0
                 }
               >
                 {busy ? 'Creating…' : 'Create account'}
@@ -348,7 +366,7 @@ export function SignInPage() {
                 className="tg-button tg-button--subtle"
                 onClick={() => {
                   setStep('contact'); setCode(''); setError(null)
-                  setFirstName(''); setLastName(''); setEmail(''); setMobile(''); setGenre('')
+                  setFirstName(''); setLastName(''); setEmail(''); setMobile(''); setChosen([])
                 }}
               >
                 Use a different address
