@@ -1,61 +1,53 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, money, useApi, useSession, isStaff } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading, StateBadge } from '../components/ui'
 import './InventoryDashboard.css'
 
-type View = 'all' | 'pending-approval' | 'listed' | 'graded' | 'in-inspection'
-
 /**
  * Inventory database dashboard for ops staff.
  *
- * A complete view of all items in the system, filterable by status and searchable.
+ * A complete view of all items in the system, filterable by stage and searchable.
  * This is the primary interface for ops/staff login rather than the work queue view.
+ *
+ * It reads the whole inventory in ONE call and groups it here, rather than asking
+ * for a handful of states and stitching the answers together. The old version did
+ * the latter, and the consequence was the bug this page exists to avoid: an item a
+ * seller had just submitted was in none of the six states it asked for, so it
+ * appeared nowhere — not even under "All items". Forty-one of fifty-eight items
+ * were invisible on a screen whose subtitle promises all of them. Grouping a
+ * single unfiltered list cannot develop that kind of hole, because a state nobody
+ * thought of still arrives in the list.
  */
+
+/** The lifecycle, in the order an item walks it. `null` means every state. */
+const STAGES: Array<{ key: string; label: string; states: string[] | null; staffOnly?: boolean }> = [
+  { key: 'all', label: 'All items', states: null },
+  // The stage the seller is looking at while they wait for a courier, and the
+  // one a QC user goes hunting for after a submission lands.
+  { key: 'intake', label: 'Awaiting intake', states: ['SUBMITTED', 'PRE_APPROVED', 'IN_TRANSIT_INBOUND'] },
+  { key: 'inspection', label: 'Inspection', states: ['RECEIVED', 'IN_INSPECTION', 'RE_INSPECTION', 'RETURN_RECEIVED', 'INSPECTION_FAILED', 'QUARANTINED'] },
+  { key: 'pricing', label: 'Pricing', states: ['GRADED', 'PRICE_PROPOSED', 'AWAITING_SELLER_APPROVAL', 'SELLER_DECLINED'], staffOnly: true },
+  { key: 'listed', label: 'Listed', states: ['LISTED', 'RELISTED', 'RESERVED', 'UNSOLD_REVIEW'] },
+  { key: 'sold', label: 'Sold', states: ['SOLD', 'DISPATCHED', 'DELIVERED', 'ACCEPTED'] },
+  { key: 'returns', label: 'Returns', states: ['RETURN_REQUESTED', 'RETURN_IN_TRANSIT', 'RETURN_REJECTED', 'RETURN_TO_SELLER', 'RETURNED'] },
+  { key: 'closed', label: 'Closed', states: ['DRAFT', 'EXPIRED', 'REJECTED_PRE_INTAKE', 'ARCHIVED'] },
+]
+
 export function InventoryDashboard() {
   const { session } = useSession()
   const nav = useNavigate()
-  const [view, setView] = useState<View>('all')
+  const [view, setView] = useState('all')
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
 
   const itemsPerPage = 10
-
-  // Load all items based on current view/filter
-  // No state at all means every state. 'ALL' was read as a state name, matched
-  // nothing, and left the landing tab showing "0 of 0 items".
-  const pendingApproval = useApi(() => api.itemQueue('AWAITING_SELLER_APPROVAL'), [])
-  const listedItems = useApi(() => api.itemQueue('LISTED'), [])
-  const gradedItems = useApi(() => api.itemQueue('GRADED'), [])
-  const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
-  const received = useApi(() => api.itemQueue('RECEIVED'), [])
-  const inTransit = useApi(() => api.itemQueue('IN_TRANSIT_INBOUND'), [])
-
-  // Combine all items from different states for "All items" view
-  const allItemsData = {
-    loading: pendingApproval.loading || listedItems.loading || gradedItems.loading || inInspection.loading || received.loading || inTransit.loading,
-    error: pendingApproval.error || listedItems.error || gradedItems.error || inInspection.error || received.error || inTransit.error,
-    data: [
-      ...(pendingApproval.data ?? []),
-      ...(listedItems.data ?? []),
-      ...(gradedItems.data ?? []),
-      ...(inInspection.data ?? []),
-      ...(received.data ?? []),
-      ...(inTransit.data ?? []),
-    ].filter((item, index, self) => self.findIndex(i => i.id === item.id) === index), // Remove duplicates
-    reload: () => {
-      pendingApproval.reload()
-      listedItems.reload()
-      gradedItems.reload()
-      inInspection.reload()
-      received.reload()
-      inTransit.reload()
-    },
-  }
-  const allItems = allItemsData
-
   const staff = isStaff(session)
+
+  // No state parameter means every state, which is what this screen is for.
+  const all = useApi(() => api.itemQueue(), [])
+  const rows = all.data ?? []
 
   // The queue returns a consignment_item as stored, which holds ids rather than
   // names — so Brand printed a raw uuid and Model an em dash for anything
@@ -69,17 +61,29 @@ export function InventoryDashboard() {
       ?? item.modelFreeText
       ?? null
 
-  // Map views to their data source
-  const stateMap: Record<View, ReturnType<typeof useApi<any>>> = {
-    'all': allItems,
-    'pending-approval': pendingApproval,
-    'listed': listedItems,
-    'graded': gradedItems,
-    'in-inspection': inInspection,
-  }
+  const tabs = STAGES.filter((s) => staff || !s.staffOnly)
 
-  const state = stateMap[view]
-  const items = state.data ?? []
+  // Anything the groups above do not name would otherwise be reachable only
+  // under "All items", so it gets a tab of its own instead of going quiet.
+  const named = useMemo(
+    () => new Set(STAGES.flatMap((s) => s.states ?? [])),
+    [],
+  )
+  const strays = useMemo(
+    () => [...new Set(rows.filter((i: any) => !named.has(i.currentState)).map((i: any) => i.currentState))].sort(),
+    [rows, named],
+  )
+  const shown = strays.length > 0
+    ? [...tabs, { key: 'other', label: 'Other', states: strays, staffOnly: false }]
+    : tabs
+
+  const stage = shown.find((s) => s.key === view) ?? shown[0]
+  const items = stage.states === null
+    ? rows
+    : rows.filter((i: any) => stage.states!.includes(i.currentState))
+
+  const countFor = (states: string[] | null) =>
+    states === null ? rows.length : rows.filter((i: any) => states.includes(i.currentState)).length
 
   // Filter by search term
   const filtered = items.filter((item: any) => {
@@ -90,17 +94,14 @@ export function InventoryDashboard() {
   })
 
   useEffect(() => {
-    if (!state.loading && items.length > 0) {
-      setLastUpdated(new Date())
-    }
-  }, [state.loading, items.length, view])
+    if (!all.loading && rows.length > 0) setLastUpdated(new Date())
+  }, [all.loading, rows.length])
 
   // Pagination calculations
   const totalPages = Math.ceil(filtered.length / itemsPerPage)
   const validPage = Math.min(Math.max(1, currentPage), totalPages || 1)
   const startIndex = (validPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedItems = filtered.slice(startIndex, endIndex)
+  const paginatedItems = filtered.slice(startIndex, startIndex + itemsPerPage)
 
   // Reset to page 1 when search or view changes
   const handleSearchChange = (value: string) => {
@@ -108,7 +109,7 @@ export function InventoryDashboard() {
     setCurrentPage(1)
   }
 
-  const handleViewChange = (newView: View) => {
+  const handleViewChange = (newView: string) => {
     setView(newView)
     setCurrentPage(1)
   }
@@ -122,13 +123,20 @@ export function InventoryDashboard() {
         </div>
       </div>
 
-      {/* Filter tabs */}
+      {/* Stage tabs */}
       <nav className="inv__filters" aria-label="Inventory views">
-        <FilterTab active={view === 'all'} onClick={() => handleViewChange('all')} label="All items" />
-        {staff && <FilterTab active={view === 'pending-approval'} onClick={() => handleViewChange('pending-approval')} label="Pending approval" />}
-        <FilterTab active={view === 'listed'} onClick={() => handleViewChange('listed')} label="Listed" />
-        <FilterTab active={view === 'graded'} onClick={() => handleViewChange('graded')} label="Graded" />
-        <FilterTab active={view === 'in-inspection'} onClick={() => handleViewChange('in-inspection')} label="In inspection" />
+        {shown.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            className={`inv__filter${stage.key === s.key ? ' inv__filter--active' : ''}`}
+            onClick={() => handleViewChange(s.key)}
+            aria-pressed={stage.key === s.key}
+          >
+            {s.label}
+            <span className="inv__filter-count">{countFor(s.states)}</span>
+          </button>
+        ))}
       </nav>
 
       {/* Search bar */}
@@ -147,14 +155,14 @@ export function InventoryDashboard() {
       </div>
 
       {/* Items table */}
-      {state.loading && <Loading label="Loading inventory" />}
-      {state.error && <ErrorNote error={state.error} onRetry={state.reload} />}
+      {all.loading && <Loading label="Loading inventory" />}
+      {all.error && <ErrorNote error={all.error} onRetry={all.reload} />}
 
-      {!state.loading && filtered.length === 0 && (
-        <Empty title={search ? 'No items found' : 'No items in this category'} />
+      {!all.loading && !all.error && filtered.length === 0 && (
+        <Empty title={search ? 'No items found' : 'No items at this stage'} />
       )}
 
-      {!state.loading && filtered.length > 0 && (
+      {!all.loading && filtered.length > 0 && (
         <div className="tg-card inv__table-container">
           <table className="inv__table">
             <thead>
@@ -220,17 +228,5 @@ export function InventoryDashboard() {
         </div>
       )}
     </div>
-  )
-}
-
-function FilterTab({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button
-      className={`inv__filter${active ? ' inv__filter--active' : ''}`}
-      onClick={onClick}
-      aria-pressed={active}
-    >
-      {label}
-    </button>
   )
 }

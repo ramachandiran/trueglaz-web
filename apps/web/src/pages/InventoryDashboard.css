@@ -31,6 +31,9 @@
 }
 
 .inv__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
   padding: var(--tg-space-2) var(--tg-space-3);
   background: transparent;
   border: 0;
@@ -38,6 +41,23 @@
   color: var(--tg-text-muted);
   font-size: var(--tg-text-sm);
   transition: color 200ms;
+  white-space: nowrap;
+}
+
+/* The count is the point of a stage tab: an empty stage should read as empty
+   rather than as a tab somebody forgot to click. */
+.inv__filter-count {
+  font-size: var(--tg-text-xs);
+  font-variant-numeric: tabular-nums;
+  padding: 0 var(--tg-space-2);
+  border-radius: 999px;
+  background: var(--tg-bg-sunken);
+  color: var(--tg-text-muted);
+}
+
+.inv__filter--active .inv__filter-count {
+  background: var(--tg-accent-soft);
+  color: var(--tg-accent);
 }
 
 .inv__filter:hover {
