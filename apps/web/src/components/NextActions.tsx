@@ -182,7 +182,7 @@ export function NextActions({
   const [failedFallback, setFailedFallback] = useState<Recipe['fallback']>(undefined)
 
   const actions = useMemo(
-    () => nextLegalStates.map((n) => plan(n, currentState, itemId, session)),
+    () => nextLegalStates.map((n) => planMove(n, currentState, itemId, session)),
     [nextLegalStates, currentState, itemId, session],
   )
 
@@ -192,18 +192,13 @@ export function NextActions({
 
   async function run(state: NextState, reasonCode: string | null, note: string | null) {
     setBusy(state.toState); setError(null); setFailedFallback(undefined)
-    const recipe = RECIPES[`${currentState}>${state.toState}`]
     try {
-      if (recipe?.target.kind === 'do') await recipe.target.run(itemId, reasonCode)
-      // The note was being dropped here: the column, the function, the endpoint
-      // and the client all carried one, and this call passed three arguments.
-      // Every staff move ever made has a null note because of it.
-      else await api.transitionItem(itemId, state.toState, reasonCode, note)
+      await runMove(itemId, currentState, state.toState, reasonCode, note)
       setAsking(null); setReason(''); setNote('')
       onDone()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'That move did not go through')
-      setFailedFallback(recipe?.fallback)
+      setFailedFallback(RECIPES[`${currentState}>${state.toState}`]?.fallback)
     } finally {
       setBusy(null)
     }
@@ -319,7 +314,30 @@ export function NextActions({
   )
 }
 
-interface Planned {
+/**
+ * Makes one move, by whichever route that particular move is made.
+ *
+ * The /transition endpoint is not the way most states change: pricing creates a
+ * catalogue row, dispatch writes against the order line. Going through here
+ * means a caller cannot accidentally take the raw route for a move that owes
+ * somebody bookkeeping — the recipe decides, not the call site.
+ */
+export function runMove(
+  itemId: string,
+  currentState: string,
+  toState: string,
+  reasonCode: string | null,
+  note: string | null,
+): Promise<unknown> {
+  const recipe = RECIPES[`${currentState}>${toState}`]
+  if (recipe?.target.kind === 'do') return recipe.target.run(itemId, reasonCode)
+  // The note was being dropped here: the column, the function, the endpoint and
+  // the client all carried one, and this call passed three arguments. Every
+  // staff move ever made has a null note because of it.
+  return api.transitionItem(itemId, toState, reasonCode, note)
+}
+
+export interface Planned {
   state: NextState
   label: string
   hint?: string
@@ -328,8 +346,14 @@ interface Planned {
   note?: string
 }
 
-/** Decides what, if anything, this person can do about one legal next state. */
-function plan(n: NextState, currentState: string, itemId: string, session: Session | null): Planned {
+/**
+ * Decides what, if anything, this person can do about one legal next state.
+ *
+ * Exported because the inventory table offers the obvious next step on each row,
+ * and a second copy of these rules living there is how an item ends up LISTED
+ * with no catalogue row behind it. One table of recipes, two places that read it.
+ */
+export function planMove(n: NextState, currentState: string, itemId: string, session: Session | null): Planned {
   const recipe = RECIPES[`${currentState}>${n.toState}`]
   const base = recipe?.label ?? STATE_LABELS[n.toState] ?? n.toState
   // An arrow rather than a sentence. "Back to " + the state label reads badly
@@ -383,7 +407,7 @@ function plan(n: NextState, currentState: string, itemId: string, session: Sessi
  * undoing it certainly should not — a correction must never be the primary
  * button on the row.
  */
-function isForward(state: NextState): boolean {
+export function isForward(state: NextState): boolean {
   if (state.isReversal) return false
   return !['INSPECTION_FAILED', 'QUARANTINED', 'RETURN_TO_SELLER', 'ARCHIVED', 'SELLER_DECLINED', 'RETURN_REJECTED'].includes(state.toState)
 }

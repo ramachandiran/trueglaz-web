@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { api, money, useApi, useSession, isStaff } from '@trueglaz/core'
+import { Link } from 'react-router-dom'
+import {
+  api, ApiError, money, useApi, useSession, isStaff, STATE_LABELS,
+  type ConsignmentItem, type NextState,
+} from '@trueglaz/core'
 import { Empty, ErrorNote, Loading, StateBadge } from '../components/ui'
+import { NextActions, isForward, planMove, runMove, type Planned } from '../components/NextActions'
 import './InventoryDashboard.css'
 
 /**
@@ -18,6 +22,13 @@ import './InventoryDashboard.css'
  * were invisible on a screen whose subtitle promises all of them. Grouping a
  * single unfiltered list cannot develop that kind of hole, because a state nobody
  * thought of still arrives in the list.
+ *
+ * The table is deliberately five columns. Brand, model and SKU are one thing —
+ * which item this is — and reading them as three columns made a staff member
+ * scan sideways to answer a question they never asked. Asking and floor are one
+ * thing too. What was left over is the column that matters: the move out of the
+ * state it is in, which until now meant opening the item to find out there was
+ * nothing to do.
  */
 
 /** The lifecycle, in the order an item walks it. `null` means every state. */
@@ -36,10 +47,12 @@ const STAGES: Array<{ key: string; label: string; states: string[] | null; staff
 
 export function InventoryDashboard() {
   const { session } = useSession()
-  const nav = useNavigate()
   const [view, setView] = useState('all')
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [open, setOpen] = useState<string | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [rowError, setRowError] = useState<Record<string, string>>({})
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
 
   const itemsPerPage = 10
@@ -49,6 +62,25 @@ export function InventoryDashboard() {
   const all = useApi(() => api.itemQueue(), [])
   const rows = all.data ?? []
 
+  // The whole rule table, once. Asking each row what it may do next would be
+  // sixty calls to render ten lines, and the rules are the same seed data for
+  // every item in a state — they belong to the state, not to the item.
+  const rules = useApi(() => api.transitionRules(), [])
+  const nextByState = useMemo(() => {
+    const m = new Map<string, NextState[]>()
+    for (const r of rules.data ?? []) {
+      m.set(r.fromState, [...(m.get(r.fromState) ?? []), {
+        toState: r.toState,
+        allowedRoles: r.allowedRoles,
+        requiresReason: r.requiresReason,
+        requiresNote: r.requiresNote,
+        isReversal: r.isReversal,
+        notes: r.notes,
+      }])
+    }
+    return m
+  }, [rules.data])
+
   // The queue returns a consignment_item as stored, which holds ids rather than
   // names — so Brand printed a raw uuid and Model an em dash for anything
   // linked to the catalogue. Both are looked up here.
@@ -56,21 +88,18 @@ export function InventoryDashboard() {
   const models = useApi(() => api.models(), [])
   const brandName = (id?: string | null) =>
     (brands.data ?? []).find((b) => b.id === id)?.name ?? null
-  const modelName = (item: any) =>
-    (models.data?.content ?? []).find((m: any) => m.id === item.productModelId)?.name
-      ?? item.modelFreeText
+  const modelName = (item: ConsignmentItem) =>
+    (models.data?.content ?? []).find((m) => m.id === (item as any).productModelId)?.name
+      ?? (item as any).modelFreeText
       ?? null
 
   const tabs = STAGES.filter((s) => staff || !s.staffOnly)
 
   // Anything the groups above do not name would otherwise be reachable only
   // under "All items", so it gets a tab of its own instead of going quiet.
-  const named = useMemo(
-    () => new Set(STAGES.flatMap((s) => s.states ?? [])),
-    [],
-  )
+  const named = useMemo(() => new Set(STAGES.flatMap((s) => s.states ?? [])), [])
   const strays = useMemo(
-    () => [...new Set(rows.filter((i: any) => !named.has(i.currentState)).map((i: any) => i.currentState))].sort(),
+    () => [...new Set(rows.filter((i) => !named.has(i.currentState)).map((i) => i.currentState))].sort(),
     [rows, named],
   )
   const shown = strays.length > 0
@@ -80,16 +109,15 @@ export function InventoryDashboard() {
   const stage = shown.find((s) => s.key === view) ?? shown[0]
   const items = stage.states === null
     ? rows
-    : rows.filter((i: any) => stage.states!.includes(i.currentState))
+    : rows.filter((i) => stage.states!.includes(i.currentState))
 
   const countFor = (states: string[] | null) =>
-    states === null ? rows.length : rows.filter((i: any) => states.includes(i.currentState)).length
+    states === null ? rows.length : rows.filter((i) => states.includes(i.currentState)).length
 
-  // Filter by search term
-  const filtered = items.filter((item: any) => {
+  const filtered = items.filter((item) => {
     const q = search.trim().toLowerCase()
     if (!q) return true
-    return [item.internalSku, item.serialNumber, modelName(item), brandName(item.brandId)]
+    return [item.internalSku, (item as any).serialNumber, modelName(item), brandName((item as any).brandId)]
       .some((v) => v?.toLowerCase().includes(q))
   })
 
@@ -97,21 +125,57 @@ export function InventoryDashboard() {
     if (!all.loading && rows.length > 0) setLastUpdated(new Date())
   }, [all.loading, rows.length])
 
-  // Pagination calculations
   const totalPages = Math.ceil(filtered.length / itemsPerPage)
   const validPage = Math.min(Math.max(1, currentPage), totalPages || 1)
   const startIndex = (validPage - 1) * itemsPerPage
   const paginatedItems = filtered.slice(startIndex, startIndex + itemsPerPage)
 
-  // Reset to page 1 when search or view changes
-  const handleSearchChange = (value: string) => {
-    setSearch(value)
-    setCurrentPage(1)
+  const handleSearchChange = (value: string) => { setSearch(value); setCurrentPage(1); setOpen(null) }
+  const handleViewChange = (next: string) => { setView(next); setCurrentPage(1); setOpen(null) }
+
+  /** The moves this person could make on this item, best first. */
+  function movesFor(item: ConsignmentItem): Planned[] {
+    return (nextByState.get(item.currentState) ?? [])
+      .map((n) => planMove(n, item.currentState, item.id, session))
   }
 
-  const handleViewChange = (newView: string) => {
-    setView(newView)
-    setCurrentPage(1)
+  /**
+   * What the row offers, in one place.
+   *
+   * Carrying on is the move somebody came here to make; failing, quarantining
+   * and putting an item back are not, and they sit one click away in the
+   * drawer. A move wanting a reason or a note is not a one-click move either —
+   * it opens the drawer, where there is room to say why.
+   *
+   * When nothing carries the item forward the drawer becomes the call to
+   * action, because the row saying "nothing to do" beside a button holding two
+   * legal moves is a lie the staff member finds out by clicking anyway.
+   */
+  function offerFor(item: ConsignmentItem) {
+    const moves = movesFor(item)
+    const actionable = moves.filter((p) => p.mode !== 'note')
+    return {
+      moves,
+      actionable,
+      primary: actionable.find((p) => isForward(p.state)) ?? null,
+    }
+  }
+
+  async function quickMove(item: ConsignmentItem, p: Planned) {
+    setBusy(item.id)
+    setRowError((e) => ({ ...e, [item.id]: '' }))
+    try {
+      await runMove(item.id, item.currentState, p.state.toState, null, null)
+      all.reload()
+    } catch (e) {
+      setRowError((prev) => ({
+        ...prev,
+        [item.id]: e instanceof ApiError ? e.message : 'That move did not go through',
+      }))
+      setOpen(item.id)
+    } finally {
+      setBusy(null)
+    }
   }
 
   return (
@@ -154,7 +218,6 @@ export function InventoryDashboard() {
         </span>
       </div>
 
-      {/* Items table */}
       {all.loading && <Loading label="Loading inventory" />}
       {all.error && <ErrorNote error={all.error} onRetry={all.reload} />}
 
@@ -167,50 +230,121 @@ export function InventoryDashboard() {
           <table className="inv__table">
             <thead>
               <tr>
-                <th>SKU</th>
-                <th>Model</th>
-                <th>Brand</th>
+                <th>Item</th>
                 <th>Grade</th>
                 <th>Status</th>
-                <th>Asking</th>
-                <th>Floor</th>
-                <th>Action</th>
+                <th className="inv__num">Price</th>
+                <th>Next step</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.map((item: any) => (
-                <tr key={item.id}>
-                  <td className="inv__sku tg-mono">{item.internalSku}</td>
-                  <td>{modelName(item) ?? '—'}</td>
-                  <td>{brandName(item.brandId) ?? '—'}</td>
-                  <td>{item.assignedGradeCode ?? item.declaredGradeCode ?? '—'}</td>
-                  <td>
-                    {/* The field is currentState; `state` was always undefined,
-                        so every row read "Unknown". */}
-                    <StateBadge state={item.currentState} />
-                  </td>
-                  <td>{money(item.askingAmountMinor || 0)}</td>
-                  <td>{money(item.floorAmountMinor || 0)}</td>
-                  <td>
-                    <button
-                      className="tg-button tg-button--secondary inv__action-btn"
-                      title="View item details"
-                      onClick={() => nav(`/items/${item.id}`)}
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {paginatedItems.map((item) => {
+                const { moves, actionable, primary } = offerFor(item)
+                const expanded = open === item.id
+                const working = busy === item.id
+                return [
+                  <tr key={item.id} className={expanded ? 'inv__row inv__row--open' : 'inv__row'}>
+                    <td>
+                      <Link to={`/items/${item.id}`} className="inv__sku tg-mono">{item.internalSku}</Link>
+                      <span className="inv__gear">
+                        {[brandName((item as any).brandId), modelName(item)].filter(Boolean).join(' ') || '—'}
+                      </span>
+                    </td>
+                    <td>{(item as any).assignedGradeCode ?? (item as any).declaredGradeCode ?? '—'}</td>
+                    <td>
+                      {/* The field is currentState; `state` was always undefined,
+                          so every row read "Unknown". */}
+                      <StateBadge state={item.currentState} />
+                    </td>
+                    <td className="inv__num">
+                      <span className="inv__price">{money((item as any).askingAmountMinor || 0)}</span>
+                      <span className="inv__floor tg-muted">
+                        floor {money((item as any).floorAmountMinor || 0)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="inv__next">
+                        {primary && primary.mode === 'go' && (
+                          <Link to={primary.to!} className="tg-button tg-button--primary inv__go" title={primary.hint}>
+                            {primary.label} <span aria-hidden="true">→</span>
+                          </Link>
+                        )}
+                        {primary && primary.mode === 'act' && (
+                          <button
+                            type="button"
+                            className="tg-button tg-button--primary inv__go"
+                            title={primary.hint}
+                            disabled={working}
+                            onClick={() =>
+                              primary.state.requiresReason || primary.state.requiresNote
+                                ? setOpen(expanded ? null : item.id)
+                                : quickMove(item, primary)
+                            }
+                          >
+                            {working ? 'Working…' : primary.label}
+                          </button>
+                        )}
+                        {!primary && actionable.length === 0 && (
+                          <span className="tg-muted inv__nothing">
+                            {moves.length === 0 ? 'End of the line' : 'Waiting on others'}
+                          </span>
+                        )}
+                        {moves.length > 0 && (
+                          <button
+                            type="button"
+                            /* Promoted when it is the only way on: a quiet pill
+                               beside the words "waiting on others" reads as
+                               decoration, and gets ignored. */
+                            className={!primary && actionable.length > 0
+                              ? 'inv__more inv__more--cta'
+                              : 'inv__more'}
+                            aria-expanded={expanded}
+                            onClick={() => setOpen(expanded ? null : item.id)}
+                          >
+                            {expanded ? 'Close'
+                              : !primary && actionable.length > 0
+                                ? `${actionable.length} move${actionable.length === 1 ? '' : 's'} →`
+                                : 'Options'}
+                          </button>
+                        )}
+                      </div>
+                      {rowError[item.id] && (
+                        <p className="inv__row-error" role="alert">{rowError[item.id]}</p>
+                      )}
+                    </td>
+                  </tr>,
+
+                  expanded && (
+                    <tr key={`${item.id}-open`} className="inv__drawer-row">
+                      <td colSpan={5}>
+                        <div className="inv__drawer">
+                          <div className="inv__drawer-head">
+                            <strong>{STATE_LABELS[item.currentState] ?? item.currentState}</strong>
+                            <span className="tg-muted"> — where it can go from here</span>
+                            <Link to={`/items/${item.id}`} className="inv__record">
+                              Open the full record →
+                            </Link>
+                          </div>
+                          <NextActions
+                            itemId={item.id}
+                            currentState={item.currentState}
+                            nextLegalStates={nextByState.get(item.currentState) ?? []}
+                            onDone={() => { all.reload(); setOpen(null) }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ),
+                ]
+              })}
             </tbody>
           </table>
 
-          {/* Pagination controls */}
           <div className="inv__pagination">
             <button
               className="tg-button"
               disabled={validPage === 1}
-              onClick={() => setCurrentPage(validPage - 1)}
+              onClick={() => { setCurrentPage(validPage - 1); setOpen(null) }}
             >
               ← Previous
             </button>
@@ -220,7 +354,7 @@ export function InventoryDashboard() {
             <button
               className="tg-button"
               disabled={validPage === totalPages}
-              onClick={() => setCurrentPage(validPage + 1)}
+              onClick={() => { setCurrentPage(validPage + 1); setOpen(null) }}
             >
               Next →
             </button>

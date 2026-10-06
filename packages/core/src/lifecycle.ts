@@ -64,6 +64,14 @@ export const STATE_LABELS: Record<string, string> = {
   RETURNED: 'Returned',
   UNSOLD_REVIEW: 'Unsold review',
   ARCHIVED: 'Archived',
+  // The second half of the return and relist loop. Missing here, these printed
+  // as RETURN_IN_TRANSIT in the middle of a row of sentence-cased names.
+  RETURN_IN_TRANSIT: 'Return in transit',
+  RETURN_RECEIVED: 'Return received',
+  RETURN_REJECTED: 'Return rejected',
+  RE_INSPECTION: 'Re-inspection',
+  RELISTED: 'Relisted',
+  EXPIRED: 'Label expired',
 }
 
 export const STATE_BLURBS: Record<string, string> = {
