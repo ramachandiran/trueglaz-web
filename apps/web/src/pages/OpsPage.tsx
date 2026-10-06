@@ -169,7 +169,7 @@ export function OpsPage() {
           somewhere else on the page. */}
       {staff && (
         <p className="ops__aside">
-          <Link to="/ops/users">
+          <Link to="/people">
             People waiting on a selling decision
             <span className="ops__aside-count">{people.data?.length ?? 0}</span>
           </Link>

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { isAdmin, isOps, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
+import { useParams } from 'react-router-dom'
 import { Guard } from './components/Guard'
 import { Loading } from './components/ui'
 import { AdminPage } from './pages/AdminPage'
@@ -72,9 +73,18 @@ export function App() {
           <Route path="/ops" element={<Guard need="ops"><OpsPage /></Guard>} />
           <Route path="/ops/inspect/:itemId" element={<Guard need="ops"><InspectPage /></Guard>} />
           <Route path="/ops/items" element={<Guard need="ops"><ItemsPage /></Guard>} />
-          <Route path="/ops/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
-          <Route path="/ops/users" element={<Guard need="staff"><StaffUsersPage /></Guard>} />
-          <Route path="/ops/users/:id" element={<Guard need="staff"><StaffUserDetailPage /></Guard>} />
+
+          {/* People and Fulfilment are their own screens, not pages of the
+              Operations one — nothing nests, and they are gated on staff where
+              /ops is gated on ops. They lived under /ops/ only because that
+              prefix had become shorthand for "a staff screen". The old paths
+              redirect so anything already bookmarked still lands. */}
+          <Route path="/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
+          <Route path="/people" element={<Guard need="staff"><StaffUsersPage /></Guard>} />
+          <Route path="/people/:id" element={<Guard need="staff"><StaffUserDetailPage /></Guard>} />
+          <Route path="/ops/fulfilment" element={<Navigate to="/fulfilment" replace />} />
+          <Route path="/ops/users" element={<Navigate to="/people" replace />} />
+          <Route path="/ops/users/:id" element={<RedirectPerson />} />
 
           {/* Money */}
           <Route path="/admin" element={<Guard need="admin"><AdminPage /></Guard>} />
@@ -84,4 +94,10 @@ export function App() {
       </Routes>
     </BrowserRouter>
   )
+}
+
+/** Keeps a bookmarked person's old link working, id and all. */
+function RedirectPerson() {
+  const { id = '' } = useParams()
+  return <Navigate to={`/people/${id}`} replace />
 }

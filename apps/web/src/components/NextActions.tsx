@@ -105,12 +105,12 @@ const RECIPES: Record<string, Recipe> = {
   'SOLD>DISPATCHED': {
     label: 'Pack and dispatch',
     hint: 'Dispatch is recorded against the order line, in fulfilment.',
-    target: { kind: 'go', to: () => '/ops/fulfilment' },
+    target: { kind: 'go', to: () => '/fulfilment' },
   },
   'DISPATCHED>DELIVERED': {
     label: 'Mark delivered',
     hint: 'The delivery scan opens the buyer’s acceptance window.',
-    target: { kind: 'go', to: () => '/ops/fulfilment' },
+    target: { kind: 'go', to: () => '/fulfilment' },
   },
   'SOLD>LISTED': {
     label: 'Cancel before dispatch',

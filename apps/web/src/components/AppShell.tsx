@@ -62,8 +62,8 @@ function Header() {
           <nav className="shell__ops" aria-label="Staff">
             <NavLink to="/inventory" className="shell__ops-link">Inventory</NavLink>
             <NavLink to="/ops" className="shell__ops-link">Operations</NavLink>
-            {staff && <NavLink to="/ops/users" className="shell__ops-link">People</NavLink>}
-            {staff && <NavLink to="/ops/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
+            {staff && <NavLink to="/people" className="shell__ops-link">People</NavLink>}
+            {staff && <NavLink to="/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
             {admin && <NavLink to="/admin" className="shell__ops-link">Money</NavLink>}
           </nav>
         )}
