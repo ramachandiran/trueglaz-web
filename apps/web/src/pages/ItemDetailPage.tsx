@@ -21,10 +21,18 @@ export function ItemDetailPage() {
   // The recorded answers, joined to their questions by the API. Null until a
   // technician has opened a checklist.
   const report = useApi(() => api.itemReport(id), [id])
+  // Four rows, cached by the browser. Without it the history printed the stored
+  // codes — ist_grading_error — at the one moment a person is reading for why.
+  const reasons = useApi(() => api.reasonCodes('item_transition'), [])
 
   const steps = useMemo(
     () => (data ? buildTimeline(data.history, data.item.currentState, data.nextLegalStates) : []),
     [data],
+  )
+
+  const reasonLabel = useMemo(
+    () => Object.fromEntries((reasons.data ?? []).map((r) => [r.code, r.label])),
+    [reasons.data],
   )
 
   const modelName = useMemo(() => {
@@ -79,7 +87,7 @@ export function ItemDetailPage() {
         <p className="detail__blurb tg-muted">
           {STATE_BLURBS[item.currentState] ?? `Currently ${STATE_LABELS[item.currentState] ?? item.currentState}.`}
         </p>
-        <Timeline steps={steps} orientation="horizontal" />
+        <Timeline steps={steps} orientation="horizontal" reasons={reasonLabel} />
 
         {/* The move out of the current state is the only question anyone has
             while looking at the line, so the buttons live on it. */}
@@ -89,6 +97,38 @@ export function ItemDetailPage() {
           nextLegalStates={nextLegalStates}
           onDone={() => { reload(); report.reload() }}
         />
+      </section>
+
+      {/* Directly under the line it explains. It used to sit at the very bottom,
+          below a thousand pixels of inspection checklist, so the move somebody
+          had just made appeared — to them — not to have been recorded at all. */}
+      <section className="tg-card detail__section">
+        <div className="detail__section-head">
+          <h2 className="detail__section-title">Full history</h2>
+          <span className="tg-muted detail__progress">
+            {history.length} move{history.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        <p className="tg-muted detail__blurb">
+          Append-only, newest first. The current state is only a cache of this.
+        </p>
+        <ul className="detail__history">
+          {[...history].reverse().map((h) => (
+            <li key={h.id} className="detail__history-row">
+              <span className="detail__history-move">
+                {h.fromState ? `${STATE_LABELS[h.fromState] ?? h.fromState} → ` : ''}
+                <strong>{STATE_LABELS[h.toState] ?? h.toState}</strong>
+              </span>
+              <span className="tg-muted detail__history-meta">
+                {h.actorRole ?? 'System'} · {dateTime(h.occurredAt)}
+                {h.reasonCode ? ` · ${reasonLabel[h.reasonCode] ?? h.reasonCode}` : ''}
+              </span>
+              {/* The whole point of demanding a note on a reversal is that
+                  somebody reads it later. This is later. */}
+              {h.note && <span className="detail__history-note">{h.note}</span>}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="tg-card detail__section">
@@ -177,28 +217,6 @@ export function ItemDetailPage() {
           )}
         </section>
 
-        <section className="tg-card detail__section">
-          <h2 className="detail__section-title">Full history</h2>
-          <p className="tg-muted detail__blurb">
-            Append-only. The current state is only a cache of this.
-          </p>
-          <ul className="detail__history">
-            {[...history].reverse().map((h) => (
-              <li key={h.id} className="detail__history-row">
-                <span className="detail__history-move">
-                  {h.fromState ? `${h.fromState} → ` : ''}<strong>{h.toState}</strong>
-                </span>
-                <span className="tg-muted detail__history-meta">
-                  {h.actorRole ?? 'System'} · {dateTime(h.occurredAt)}
-                  {h.reasonCode ? ` · ${h.reasonCode}` : ''}
-                </span>
-                {/* The whole point of demanding a note on a reversal is that
-                    somebody reads it later. This is later. */}
-                {h.note && <span className="detail__history-note">{h.note}</span>}
-              </li>
-            ))}
-          </ul>
-        </section>
       </div>
     </article>
   )

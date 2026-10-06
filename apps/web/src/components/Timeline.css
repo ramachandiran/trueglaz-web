@@ -47,6 +47,16 @@
   box-shadow: 0 0 0 4px var(--tg-accent-soft);
 }
 
+/* Reached, then left behind. An outline rather than a fill, because the stage
+   is no longer true of the item — and the connector past it stays unfilled, so
+   the line does not read as progress the item has not made. */
+.tl__step--undone .tl__node {
+  border-color: var(--tg-step-detour);
+  border-style: dashed;
+  background: var(--tg-bg-raised);
+  color: var(--tg-step-detour);
+}
+
 .tl__step--detour .tl__node {
   border-color: var(--tg-step-detour);
 }
@@ -62,9 +72,36 @@
   color: var(--tg-text);
 }
 
-.tl__step--upcoming .tl__label {
+.tl__step--upcoming .tl__label,
+.tl__step--undone .tl__label {
   color: var(--tg-text-muted);
   font-weight: var(--tg-weight-normal);
+}
+
+.tl__visits {
+  display: inline-block;
+  white-space: nowrap;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-bg-sunken);
+  font-size: var(--tg-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--tg-text-muted);
+}
+
+.tl__undone {
+  font-size: var(--tg-text-xs);
+  font-style: italic;
+  color: var(--tg-step-detour);
+}
+
+/* The sentence somebody typed to explain the move. Only ever rendered in the
+   vertical orientation, where a step has the width for it. */
+.tl__note {
+  font-size: var(--tg-text-xs);
+  line-height: 1.4;
+  color: var(--tg-text-muted);
 }
 
 .tl__meta,
@@ -76,14 +113,16 @@
 
 .tl--horizontal .tl__label,
 .tl--horizontal .tl__meta,
+.tl--horizontal .tl__undone,
 .tl--horizontal .tl__role {
   display: block;
   max-width: 80px;
   overflow-wrap: break-word;
 }
 
+/* It prints the reason's label now, not the stored code, so the monospace that
+   marked it as an identifier is wrong. */
 .tl__reason {
-  font-family: var(--tg-font-mono);
   color: var(--tg-step-detour);
 }
 

@@ -130,7 +130,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--tg-space-2);
-  max-height: 320px;
+  max-height: 420px;
   overflow-y: auto;
   scrollbar-width: thin;
 }
@@ -143,7 +143,9 @@
 }
 .detail__history-row:last-child { border-bottom: 0; }
 
-.detail__history-move { font-size: var(--tg-text-sm); font-family: var(--tg-font-mono); }
+/* It reads "In inspection → Received" now, not IN_INSPECTION → RECEIVED, so the
+   monospace that made the codes legible only makes the words look like data. */
+.detail__history-move { font-size: var(--tg-text-sm); }
 .detail__history-meta { font-size: var(--tg-text-xs); }
 
 .detail__table {

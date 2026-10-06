@@ -95,7 +95,13 @@ export const STATE_BLURBS: Record<string, string> = {
   INSPECTION_FAILED: 'It did not pass inspection.',
 }
 
-export type StepStatus = 'done' | 'current' | 'upcoming'
+/**
+ * `undone` is a state the item reached and has since been pulled back out of —
+ * it sits ahead of where the item is now. Without it, an item moved backwards
+ * showed a tick on every stage past its own position, so the line read as
+ * though inspection and grading had both finished on a unit sitting in a bin.
+ */
+export type StepStatus = 'done' | 'current' | 'upcoming' | 'undone'
 
 export interface TimelineStep {
   state: string
@@ -107,6 +113,8 @@ export interface TimelineStep {
   actorRole?: string | null
   reasonCode?: string | null
   note?: string | null
+  /** How many times the item has entered this state. More than one is a loop. */
+  visits?: number
 }
 
 /**
@@ -123,10 +131,15 @@ export function buildTimeline(
   nextLegalStates: NextState[] = [],
 ): TimelineStep[] {
   const visits = new Map<string, ItemStateTransition>()
+  const counts = new Map<string, number>()
   for (const h of history) {
     // The last visit wins, so a relisted item shows its most recent pass.
     visits.set(h.toState, h)
+    counts.set(h.toState, (counts.get(h.toState) ?? 0) + 1)
   }
+
+  const reachedTerminal = OFF_PATH_TERMINALS.has(currentState)
+  const currentIndexOnPath = HAPPY_PATH.indexOf(currentState as (typeof HAPPY_PATH)[number])
 
   const steps: TimelineStep[] = []
   const placed = new Set<string>()
@@ -135,8 +148,16 @@ export function buildTimeline(
     if (placed.has(state)) return
     placed.add(state)
     const visit = visits.get(state)
+    // A visited state that sits AHEAD of where the item is now was reached and
+    // then left behind — the item came back. Calling that "done" is the lie
+    // this status exists to stop telling.
+    const ahead =
+      currentIndexOnPath >= 0 &&
+      HAPPY_PATH.indexOf(state as (typeof HAPPY_PATH)[number]) > currentIndexOnPath
     const status: StepStatus =
-      state === currentState ? 'current' : visit ? 'done' : 'upcoming'
+      state === currentState ? 'current'
+        : !visit ? 'upcoming'
+          : ahead ? 'undone' : 'done'
     steps.push({
       state,
       label: STATE_LABELS[state] ?? state,
@@ -146,11 +167,9 @@ export function buildTimeline(
       actorRole: visit?.actorRole,
       reasonCode: visit?.reasonCode,
       note: visit?.note,
+      visits: counts.get(state),
     })
   }
-
-  const reachedTerminal = OFF_PATH_TERMINALS.has(currentState)
-  const currentIndexOnPath = HAPPY_PATH.indexOf(currentState as (typeof HAPPY_PATH)[number])
 
   // Walk the happy path, splicing in any real detour that happened after each step.
   for (const state of HAPPY_PATH) {

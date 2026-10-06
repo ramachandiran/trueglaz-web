@@ -7,6 +7,8 @@ interface Props {
   steps: TimelineStep[]
   /** Horizontal reads as a journey; vertical suits a narrow column. */
   orientation?: 'horizontal' | 'vertical'
+  /** Reason codes by code, so a node can print the words rather than ist_grading_error. */
+  reasons?: Record<string, string>
 }
 
 /**
@@ -16,7 +18,7 @@ interface Props {
  * reads at a glance before any label is read. Colour never carries meaning on
  * its own — each node also has a distinct glyph and its status in text.
  */
-export function Timeline({ steps, orientation = 'horizontal' }: Props) {
+export function Timeline({ steps, orientation = 'horizontal', reasons = {} }: Props) {
   const scroller = useRef<HTMLDivElement>(null)
   const currentRef = useRef<HTMLLIElement>(null)
 
@@ -47,11 +49,25 @@ export function Timeline({ steps, orientation = 'horizontal' }: Props) {
             className={`tl__step tl__step--${step.status}${step.detour ? ' tl__step--detour' : ''}`}
           >
             <span className="tl__node" aria-hidden="true">
-              {step.status === 'done' ? '✓' : step.status === 'current' ? '●' : ''}
+              {step.status === 'done' ? '✓'
+                : step.status === 'current' ? '●'
+                  : step.status === 'undone' ? '↺' : ''}
             </span>
 
-            <div className="tl__body">
-              <span className="tl__label">{step.label}</span>
+            {/* The note is prose, and a node on the horizontal line is 80px
+                wide. It is carried as a tooltip here and printed in full by the
+                history card under the line; stacked vertically there is room. */}
+            <div className="tl__body" title={step.note ?? undefined}>
+              <span className="tl__label">
+                {step.label}
+                {/* An item can walk the same stage several times. One node with
+                    one timestamp hid every pass but the last. */}
+                {step.visits != null && step.visits > 1 && (
+                  <span className="tl__visits" title={`Entered ${step.visits} times`}>
+                    ×{step.visits}
+                  </span>
+                )}
+              </span>
               <span className="tl__meta">
                 {step.status === 'upcoming' ? (
                   <span className="tl__pending">Not yet</span>
@@ -61,10 +77,18 @@ export function Timeline({ steps, orientation = 'horizontal' }: Props) {
                   </time>
                 )}
               </span>
+              {step.status === 'undone' && (
+                <span className="tl__undone">went back from here</span>
+              )}
               {step.actorRole && step.status !== 'upcoming' && (
                 <span className="tl__role">by {step.actorRole}</span>
               )}
-              {step.reasonCode && <span className="tl__reason">{step.reasonCode}</span>}
+              {step.reasonCode && (
+                <span className="tl__reason">{reasons[step.reasonCode] ?? step.reasonCode}</span>
+              )}
+              {step.note && orientation === 'vertical' && (
+                <span className="tl__note">“{step.note}”</span>
+              )}
             </div>
 
             {/* Screen readers get the status and the explanation as words. */}
@@ -73,7 +97,9 @@ export function Timeline({ steps, orientation = 'horizontal' }: Props) {
                 ? 'Completed'
                 : step.status === 'current'
                   ? 'Current state'
-                  : 'Upcoming'}
+                  : step.status === 'undone'
+                    ? 'Reached earlier, then the item was moved back'
+                    : 'Upcoming'}
               . {STATE_BLURBS[step.state] ?? ''}
             </span>
           </li>
