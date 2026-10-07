@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, ApiError, money, singularCategory, useApi } from '@trueglaz/core'
+import { api, ApiError, singularCategory, useApi } from '@trueglaz/core'
 import { ModelPicker } from '../components/ModelPicker'
 import { PhotoPicker } from '../components/PhotoPicker'
 import './SellPage.css'
@@ -405,8 +405,6 @@ export function NewSubmissionPage() {
           goes for, which is why we ask for it rather than leaving it to us.
         </p>
         {floorTooHigh && <p className="sell__error">Your floor is above your asking price.</p>}
-        {askingNum > 0 && <FeePreview salePriceMinor={Math.round(askingNum * 100)} />}
-
         {uploading && <p className="sell__hint" role="status">{uploading}</p>}
         <button className="tg-button tg-button--primary" disabled={busy || !canAdd} onClick={addItem}>
           {busy ? 'Submitting…' : 'Add to submission'}
@@ -418,18 +416,6 @@ export function NewSubmissionPage() {
       </section>
       </div>
     </div>
-  )
-}
-
-/** What the seller would actually take home, before they commit to a number. */
-function FeePreview({ salePriceMinor }: { salePriceMinor: number }) {
-  const quote = useApi(() => api.feeQuote(salePriceMinor), [salePriceMinor])
-  if (!quote.data) return null
-  return (
-    <p className="sell__quote">
-      At {money(salePriceMinor)} our commission is {money(quote.data.commissionMinor)} and
-      you'd receive <strong>{money(quote.data.expectedNetMinor)}</strong>.
-    </p>
   )
 }
 

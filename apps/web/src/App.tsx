@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { isAdmin, isOps, useSession } from '@trueglaz/core'
+import { isAdmin, isOps, isSeller, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
 import { useParams } from 'react-router-dom'
 import { Guard } from './components/Guard'
@@ -38,6 +38,7 @@ function SmartHome() {
   if (session) {
     if (isAdmin(session)) return <Navigate to="/admin" replace />
     if (isOps(session)) return <Navigate to="/inventory" replace />
+    if (isSeller(session)) return <Navigate to="/sell" replace />
   }
 
   return <HomePage />

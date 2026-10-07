@@ -13,12 +13,13 @@ import './PhotoUpload.css'
  * fills in slowly, changing their mind about which eight photos, otherwise
  * leaks a blob per discarded file for as long as the tab is open.
  */
-export function PhotoPicker({ files, onChange, max = 12 }: {
+export function PhotoPicker({ files, onChange }: {
   files: File[]
   onChange: (files: File[]) => void
-  max?: number
 }) {
   const [previews, setPreviews] = useState<string[]>([])
+  const [dragging, setDragging] = useState<number | null>(null)
+  const [viewing, setViewing] = useState<number | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -27,33 +28,81 @@ export function PhotoPicker({ files, onChange, max = 12 }: {
     return () => urls.forEach(URL.revokeObjectURL)
   }, [files])
 
-  const room = max - files.length
+  const slotCount = 4
+  const room = slotCount - files.length
 
-  function add(picked: FileList | null) {
+  function add(picked: FileList | File[] | null) {
     if (!picked) return
-    onChange([...files, ...Array.from(picked).slice(0, room)])
+    const images = Array.from(picked).filter((file) =>
+      ['image/jpeg', 'image/png', 'image/webp'].includes(file.type),
+    )
+    onChange([...files, ...images.slice(0, room)])
     if (input.current) input.current.value = ''
   }
 
+  useEffect(() => {
+    if (viewing === null) return
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setViewing(null)
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [viewing])
+
   return (
     <div className="shots">
-      {files.length > 0 && (
-        <ul className="shots__grid">
-          {files.map((f, i) => (
-            <li key={`${f.name}-${f.size}-${i}`} className="shots__item shots__item--removable">
-              {previews[i] && <img src={previews[i]} alt="" />}
-              <button
-                type="button"
-                className="shots__remove"
-                aria-label={`Remove ${f.name}`}
-                onClick={() => onChange(files.filter((_, n) => n !== i))}
-              >
-                ×
-              </button>
+      <ul className="shots__grid">
+        {Array.from({ length: slotCount }, (_, i) => {
+          const file = files[i]
+          return (
+            <li
+              key={file ? `${file.name}-${file.size}-${i}` : `empty-${i}`}
+              className={`shots__slot${dragging === i ? ' shots__slot--dragging' : ''}`}
+              onDragOver={(event) => { event.preventDefault(); setDragging(i) }}
+              onDragLeave={() => setDragging(null)}
+              onDrop={(event) => {
+                event.preventDefault()
+                setDragging(null)
+                add(event.dataTransfer.files)
+              }}
+            >
+              {file && previews[i] ? (
+                <>
+                  <button
+                    type="button"
+                    className="shots__open"
+                    onClick={() => setViewing(i)}
+                    aria-label={`Preview ${file.name}`}
+                  >
+                    <img src={previews[i]} alt={file.name} />
+                  </button>
+                  <button
+                    type="button"
+                    className="shots__remove"
+                    aria-label={`Remove ${file.name}`}
+                    onClick={() => {
+                      onChange(files.filter((_, n) => n !== i))
+                      setViewing(null)
+                    }}
+                  >
+                    ×
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="shots__empty"
+                  disabled={room <= 0}
+                  onClick={() => input.current?.click()}
+                >
+                  <span aria-hidden="true">+</span>
+                  <span>Add photo</span>
+                </button>
+              )}
             </li>
-          ))}
-        </ul>
-      )}
+          )
+        })}
+      </ul>
 
       <input
         ref={input}
@@ -63,16 +112,38 @@ export function PhotoPicker({ files, onChange, max = 12 }: {
            HEIC, which the server cannot read, while asking for these makes the
            phone convert on the way out. */
         accept="image/jpeg,image/png,image/webp"
-        multiple
-        disabled={room <= 0}
         onChange={(e) => add(e.target.files)}
+        disabled={room <= 0}
       />
 
       <p className="shots__hint tg-muted">
         {room <= 0
-          ? `That is the maximum of ${max}.`
-          : `At least one, up to ${max}. JPEG or PNG, 15 MB each. They upload when you send the form.`}
+          ? `All ${slotCount} photo slots are filled.`
+          : `Add up to ${slotCount} JPEG, PNG or WebP photos. They upload when you send the form.`}
       </p>
+
+      {viewing !== null && previews[viewing] && (
+        <div
+          className="shots__lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Preview ${files[viewing]?.name ?? 'photo'}`}
+          onClick={() => setViewing(null)}
+        >
+          <div className="shots__lightbox-content" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="shots__lightbox-close"
+              aria-label="Close photo preview"
+              onClick={() => setViewing(null)}
+              autoFocus
+            >
+              ×
+            </button>
+            <img src={previews[viewing]} alt={files[viewing]?.name ?? 'Selected photo'} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

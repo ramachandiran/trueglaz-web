@@ -279,8 +279,8 @@
 
 .switch__tab--on,
 .switch__tab--on:hover {
-  background: var(--tg-on-brand);
-  color: var(--tg-brand);
+  background: var(--tg-accent);
+  color: var(--tg-on-accent);
 }
 
 .switch__tab:focus-visible {

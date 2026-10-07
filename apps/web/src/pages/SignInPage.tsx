@@ -91,7 +91,7 @@ export function SignInPage() {
       roles: res.user.roles,
       sellerActivatedAt: res.user.sellerActivatedAt,
     })
-    nav(from, { replace: true })
+    nav(res.user.sellerActivatedAt ? '/' : from, { replace: true })
     return false
   }
 
