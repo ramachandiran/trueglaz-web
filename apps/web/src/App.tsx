@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { isAdmin, isOps, isStaff, useSession } from '@trueglaz/core'
+import { isAdmin, isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
 import { useParams } from 'react-router-dom'
 import { Guard } from './components/Guard'
@@ -29,6 +29,7 @@ import { SignInPage } from './pages/SignInPage'
  * - Staff → Inventory dashboard
  * - Technician → Operations, which is the whole of their job
  * - Admin → Money page
+ * - Seller → Selling
  * - Everyone else → Public catalog
  */
 function SmartHome() {
@@ -42,6 +43,7 @@ function SmartHome() {
     // screen: they inspect what is on their bench, they do not browse the shelf.
     if (isStaff(session)) return <Navigate to="/inventory" replace />
     if (isOps(session)) return <Navigate to="/ops" replace />
+    if (isSeller(session)) return <Navigate to="/sell" replace />
   }
 
   return <HomePage />

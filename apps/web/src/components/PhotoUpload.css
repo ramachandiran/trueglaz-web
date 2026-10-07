@@ -11,28 +11,117 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--tg-space-2);
+  max-width: 480px;
 }
 
-.shots__item {
-  aspect-ratio: 4 / 3;
+.shots__slot {
+  position: relative;
+  aspect-ratio: 1;
   border-radius: var(--tg-radius-md);
   overflow: hidden;
   border: 1px solid var(--tg-border);
   background: var(--tg-bg-sunken, var(--tg-bg-raised));
 }
 
-.shots__item img {
+.shots__slot--dragging {
+  outline: 2px solid var(--tg-accent);
+  outline-offset: 2px;
+}
+
+.shots__open,
+.shots__empty {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tg-text-muted);
+  cursor: pointer;
+}
+
+.shots__open img,
+.shots__lightbox-content img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   display: block;
 }
 
+.shots__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tg-space-1);
+  border: 1px dashed var(--tg-border);
+  font-size: var(--tg-text-xs);
+}
+
+.shots__empty span:first-child {
+  font-size: var(--tg-text-xl);
+  line-height: 1;
+}
+
+.shots__empty:hover:not(:disabled) {
+  color: var(--tg-accent);
+  border-color: var(--tg-accent);
+}
+
+.shots__empty:disabled {
+  cursor: default;
+}
+
 .shots__input {
-  font-size: var(--tg-text-sm);
-  max-width: 100%;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.shots__lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--tg-space-5);
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.shots__lightbox-content {
+  position: relative;
+  width: min(100%, 960px);
+  height: min(85vh, 760px);
+}
+
+.shots__lightbox-content img {
+  border-radius: var(--tg-radius-md);
+}
+
+.shots__lightbox-close {
+  position: absolute;
+  z-index: 1;
+  top: var(--tg-space-2);
+  right: var(--tg-space-2);
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--tg-radius-pill);
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: var(--tg-text-xl);
+  cursor: pointer;
+}
+
+.shots__lightbox-close:hover {
+  background: rgba(0, 0, 0, 0.92);
 }
 
 .shots__hint {
@@ -61,8 +150,6 @@
 }
 
 /* A chosen-but-not-yet-uploaded photo, which can still be taken back out. */
-.shots__item--removable { position: relative; }
-
 .shots__remove {
   position: absolute;
   top: 4px;

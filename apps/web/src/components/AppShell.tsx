@@ -44,7 +44,8 @@ function Header() {
   const isOpsUser = isOps(session)
   const staff = isStaff(session)
   const admin = isAdmin(session)
-  const side: MarketView = seller ? view : 'buying'
+  const routeSide = sideOf(pathname)
+  const side: MarketView = seller ? routeSide ?? view : 'buying'
 
   return (
     <header className={`shell__header${isAuthPage ? ' shell__header--auth' : ''}`}>
@@ -155,7 +156,7 @@ function MarketSwitch({ view, onChange }: {
   const tab = (value: MarketView, label: string) => (
     <button
       type="button"
-      className={`switch__tab${view === value ? ' switch__tab--on' : ''}`}
+      className={`switch__tab${view === value ? ' switch__tab--on' : ''}${value === 'selling' ? ' switch__tab--selling' : ''}`}
       aria-pressed={view === value}
       onClick={() => onChange(value)}
     >
