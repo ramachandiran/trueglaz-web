@@ -1188,3 +1188,74 @@ export interface SignUpDetails {
   /** One or more genre codes. People shoot more than one thing. */
   photographyGenres: string[]
 }
+
+
+// -- balance sheet --------------------------------------------------------------
+
+export type CourierKind = 'inbound' | 'outbound' | 'return' | 'other'
+
+/** One bill paid to a courier. A unit can carry many. */
+export interface CourierCharge {
+  id: string
+  itemId: string
+  kind: CourierKind
+  courierCode: string | null
+  trackingNumber: string | null
+  amountMinor: number
+  /** A plain calendar date, YYYY-MM-DD. Not an instant, so never run it through Date. */
+  incurredOn: string
+  note: string | null
+}
+
+export interface NewCourierCharge {
+  kind: CourierKind
+  courierCode?: string | null
+  trackingNumber?: string | null
+  amountMinor: number
+  incurredOn: string
+  note?: string | null
+}
+
+/** A closed item: accepted by the buyer, so the money on it is settled in amount if not in time. */
+export interface StatementRow {
+  orderLineId: string
+  itemId: string
+  sku: string
+  title: string
+  orderNumber: string
+  closedAt: string
+  sellingMinor: number
+  /** Postage the buyer paid. Revenue, set against the courier bills. */
+  shippingMinor: number
+  /** What the seller is paid. Consigned stock is never bought, so this is the nearest thing to a cost. */
+  buyingMinor: number
+  payoutState: string | null
+  /** GST on the commission. Collected for the government; never profit. */
+  gstMinor: number
+  courierMinor: number
+  charges: CourierCharge[]
+  profitMinor: number
+}
+
+export interface StatementTotals {
+  count: number
+  sellingMinor: number
+  shippingMinor: number
+  buyingMinor: number
+  gstMinor: number
+  courierMinor: number
+  profitMinor: number
+}
+
+export interface Statement {
+  from: string | null
+  to: string | null
+  rows: StatementRow[]
+  totals: StatementTotals
+}
+
+export interface MonthCount {
+  /** YYYY-MM */
+  month: string
+  count: number
+}

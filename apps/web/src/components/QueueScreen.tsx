@@ -29,6 +29,7 @@ export function QueueScreen({
   shown, total, unit = 'items',
   loading, error, onRetry, emptyTitle, emptyHint,
   page, pages, onPage,
+  actions, summary,
   children,
 }: {
   title: string
@@ -50,6 +51,10 @@ export function QueueScreen({
   page: number
   pages: number
   onPage: (page: number) => void
+  /** Sits at the right of the title: the one thing to do with the whole screen, such as a download. */
+  actions?: ReactNode
+  /** Between the tabs and the search: figures for exactly what the tabs have selected. */
+  summary?: ReactNode
   children: ReactNode
 }) {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
@@ -65,6 +70,7 @@ export function QueueScreen({
           <h1 className="q__title">{title}</h1>
           <p className="tg-muted q__subtitle">{subtitle}</p>
         </div>
+        {actions && <div className="q__actions">{actions}</div>}
       </div>
 
       {/* The counts are the point of a tab row on a work screen: an empty queue
@@ -83,6 +89,8 @@ export function QueueScreen({
           </button>
         ))}
       </nav>
+
+      {summary}
 
       <div className="q__search-box">
         <input

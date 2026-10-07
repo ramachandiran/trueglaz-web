@@ -11,6 +11,8 @@
   gap: var(--tg-space-4);
 }
 
+.q__actions { flex: none; }
+
 .q__title {
   font-size: var(--tg-text-xxl);
   margin: 0;
@@ -137,7 +139,11 @@
   padding-right: var(--tg-space-4);
 }
 
-.q__num { text-align: right; }
+/* Both selectors name the element: `.q__table th` sets text-align: left and is
+   more specific than a bare `.q__num`, so a right-aligned column's header sat
+   left of its own numbers on every screen that uses this table. */
+.q__table th.q__num,
+.q__table td.q__num { text-align: right; }
 
 /* -- pagination ------------------------------------------------------------ */
 

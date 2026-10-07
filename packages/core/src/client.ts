@@ -8,6 +8,7 @@ import type {
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
+  CourierCharge, MonthCount, NewCourierCharge, Statement,
 } from './types'
 
 /**
@@ -164,6 +165,42 @@ const patch = <T,>(p: string, body?: unknown) =>
 const del = <T,>(p: string) => request<T>(p, { method: 'DELETE' })
 const put = <T,>(p: string, body?: unknown) =>
   request<T>(p, { method: 'PUT', body: JSON.stringify(body ?? {}) })
+
+/**
+ * Fetches a file rather than JSON.
+ *
+ * The statement is an attachment, so the JSON helpers do not fit — but it still
+ * has to carry the bearer token, which is why this is not simply a link the
+ * browser follows. The caller gets the bytes and the name the server chose.
+ */
+async function download(endpoint: string): Promise<{ blob: Blob; filename: string }> {
+  let res: Response
+  try {
+    res = await fetch(url(endpoint), {
+      headers: session ? { Authorization: `Bearer ${session.token}` } : {},
+    })
+  } catch {
+    throw new ApiError(0, unreachable(endpoint))
+  }
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`
+    try { const body = await res.json(); if (body?.message) detail = body.message } catch { /* status line only */ }
+    throw new ApiError(res.status, detail)
+  }
+  // filename*= is the encoded form; filename= the plain one. Either will do for
+  // a name made of ASCII, which the server's is.
+  const disposition = res.headers.get('Content-Disposition') ?? ''
+  const filename = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1] ?? 'statement.xlsx'
+  return { blob: await res.blob(), filename: decodeURIComponent(filename) }
+}
+
+const dateRange = (from?: string | null, to?: string | null) => {
+  const q = new URLSearchParams()
+  if (from) q.set('from', from)
+  if (to) q.set('to', to)
+  const text = q.toString()
+  return text ? `?${text}` : ''
+}
 
 export interface BrowseParams {
   q?: string
@@ -354,6 +391,16 @@ export const api = {
     post<StaffUserDetail>(`/staff/users/${userId}/selling/approve`, { note: note ?? null }),
   rejectSelling: (userId: string, note?: string) =>
     post<StaffUserDetail>(`/staff/users/${userId}/selling/reject`, { note: note ?? null }),
+
+  // -- admin: balance sheet ------------------------------------------------
+  balanceSheet: (from?: string | null, to?: string | null) =>
+    get<Statement>(`/admin/balance-sheet${dateRange(from, to)}`),
+  balanceSheetMonths: () => get<MonthCount[]>('/admin/balance-sheet/months'),
+  downloadStatement: (from?: string | null, to?: string | null) =>
+    download(`/admin/balance-sheet/export${dateRange(from, to)}`),
+  addCourierCharge: (itemId: string, body: NewCourierCharge) =>
+    post<CourierCharge>(`/admin/balance-sheet/items/${itemId}/courier-charges`, body),
+  voidCourierCharge: (id: string) => del<void>(`/admin/balance-sheet/courier-charges/${id}`),
 
   // -- identity ------------------------------------------------------------
   myKyc: () => get<KycStatus>('/kyc/mine'),

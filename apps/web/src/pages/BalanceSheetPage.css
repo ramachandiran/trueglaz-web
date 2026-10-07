@@ -1,0 +1,304 @@
+/* The page chrome is QueueScreen. This is what is particular to a statement. */
+
+/* -- the period's figures --------------------------------------------------- */
+
+.bs__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--tg-space-3);
+}
+
+.bs__card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--tg-space-3) var(--tg-space-4);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+}
+
+.bs__card--profit {
+  background: var(--tg-accent-soft);
+  border-color: var(--tg-accent);
+}
+
+.bs__card-label {
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-text-muted);
+}
+
+.bs__card-value {
+  font-size: var(--tg-text-lg);
+  font-weight: var(--tg-weight-bold, 700);
+  font-variant-numeric: tabular-nums;
+}
+
+.bs__card-note { font-size: var(--tg-text-xs); }
+
+/* A loss is the one number on the page that must not read like the others. */
+.bs__neg { color: var(--tg-bad); }
+
+/* -- rows ------------------------------------------------------------------- */
+
+.bs__when { white-space: nowrap; color: var(--tg-text-muted); }
+
+.bs__sku {
+  display: block;
+  font-weight: var(--tg-weight-medium);
+  color: var(--tg-accent);
+  text-decoration: none;
+}
+
+.bs__sku:hover { text-decoration: underline; }
+
+.bs__gear {
+  display: block;
+  margin-top: 2px;
+  max-width: 22rem;
+  font-size: var(--tg-text-sm);
+}
+
+.bs__order { display: block; font-size: var(--tg-text-xs); }
+
+.bs__amount,
+.bs__profit {
+  font-variant-numeric: tabular-nums;
+}
+
+.bs__amount { display: block; }
+
+.bs__sub {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--tg-text-xs);
+  white-space: nowrap;
+}
+
+.bs__profit { font-weight: var(--tg-weight-medium); }
+
+.bs__table td.q__num { font-variant-numeric: tabular-nums; }
+
+/* The courier cell is the one editable thing on a row, so it reads as a control:
+   outlined when there is nothing yet, because "+ Add" is an invitation, and a
+   plain figure with a count when there is. */
+.bs__courier {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  padding: var(--tg-space-1) var(--tg-space-3);
+  background: transparent;
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-pill);
+  color: var(--tg-text);
+  font: inherit;
+  font-size: var(--tg-text-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 150ms, background-color 150ms;
+}
+
+.bs__courier:hover,
+.bs__courier[aria-expanded='true'] {
+  border-color: var(--tg-accent);
+  background: var(--tg-accent-soft);
+}
+
+.bs__courier--empty {
+  border-style: dashed;
+  color: var(--tg-accent);
+}
+
+.bs__count {
+  min-width: 1.25em;
+  padding: 0 var(--tg-space-1);
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-bg-sunken);
+  font-size: var(--tg-text-xs);
+  text-align: center;
+  color: var(--tg-text-muted);
+}
+
+/* -- the courier panel ------------------------------------------------------ */
+
+.bs__row--open > td { border-bottom: 0; }
+
+.bs__panel-row:hover { background: transparent !important; }
+
+.bs__panel-row > td {
+  padding: 0 var(--tg-space-4) var(--tg-space-4);
+  background: var(--tg-bg-sunken);
+  text-align: left !important;
+}
+
+.bs__panel { padding-top: var(--tg-space-3); }
+
+.bs__panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--tg-space-3);
+  flex-wrap: wrap;
+  font-size: var(--tg-text-sm);
+}
+
+.bs__charges {
+  list-style: none;
+  margin: var(--tg-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bs__charge {
+  display: grid;
+  grid-template-columns: 6rem 1fr auto 8rem auto;
+  align-items: center;
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-2) 0;
+  border-bottom: 1px solid var(--tg-border);
+  font-size: var(--tg-text-sm);
+}
+
+.bs__charge:last-child { border-bottom: 0; }
+
+.bs__charge-date { white-space: nowrap; font-size: var(--tg-text-xs); }
+
+.bs__charge-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--tg-weight-medium);
+}
+
+.bs__strike { display: inline-flex; gap: var(--tg-space-1); }
+
+.bs__strike .tg-button,
+.bs__strike-btn {
+  font-size: var(--tg-text-xs);
+  padding: var(--tg-space-1) var(--tg-space-2);
+  white-space: nowrap;
+}
+
+.bs__form {
+  display: grid;
+  grid-template-columns: 14rem 8rem 8rem 7rem 8.5rem 1fr auto;
+  gap: var(--tg-space-3);
+  align-items: end;
+  margin-top: var(--tg-space-3);
+  text-align: left;
+}
+
+.bs__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-1);
+  min-width: 0;
+}
+
+.bs__field > span {
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+}
+
+.bs__field .tg-input,
+.bs__field .tg-select { font-size: var(--tg-text-sm); }
+
+.bs__add { white-space: nowrap; }
+
+.bs__error {
+  margin: var(--tg-space-2) 0 0;
+  color: var(--tg-bad);
+  font-size: var(--tg-text-sm);
+  text-align: left;
+}
+
+.bs__foot {
+  margin: 0;
+  font-size: var(--tg-text-xs);
+  line-height: 1.5;
+}
+
+/* -- the download dialog ---------------------------------------------------- */
+
+.bs__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tg-space-4);
+  background: rgb(0 0 0 / 0.45);
+}
+
+.bs__dialog {
+  width: min(32rem, 100%);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  padding: var(--tg-space-5);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 48px rgb(0 0 0 / 0.3);
+}
+
+.bs__dialog-title { margin: 0; font-size: var(--tg-text-lg); }
+
+.bs__dialog-sub { margin: var(--tg-space-1) 0 0; font-size: var(--tg-text-sm); line-height: 1.5; }
+
+.bs__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tg-space-2);
+  margin-top: var(--tg-space-4);
+}
+
+.bs__preset {
+  padding: var(--tg-space-1) var(--tg-space-3);
+  background: transparent;
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-pill);
+  color: var(--tg-text-muted);
+  font: inherit;
+  font-size: var(--tg-text-sm);
+  cursor: pointer;
+}
+
+.bs__preset:hover { color: var(--tg-text); border-color: var(--tg-text-muted); }
+
+.bs__preset--on {
+  color: var(--tg-accent);
+  border-color: var(--tg-accent);
+  background: var(--tg-accent-soft);
+}
+
+.bs__dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--tg-space-3);
+  margin-top: var(--tg-space-4);
+}
+
+.bs__hint { margin: var(--tg-space-2) 0 0; font-size: var(--tg-text-xs); }
+
+.bs__preview {
+  margin: var(--tg-space-4) 0 0;
+  min-height: 1.4em;
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+}
+
+.bs__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tg-space-2);
+  margin-top: var(--tg-space-5);
+}
+
+@media (max-width: 70rem) {
+  .bs__form { grid-template-columns: 1fr 1fr 1fr; }
+  .bs__field--wide { grid-column: 1 / -1; }
+  .bs__charge { grid-template-columns: 5rem 1fr 7rem auto; }
+  .bs__charge-date { display: none; }
+}

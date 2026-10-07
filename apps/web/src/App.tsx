@@ -3,6 +3,7 @@ import { isAdmin, isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
 import { useParams } from 'react-router-dom'
 import { Guard } from './components/Guard'
+import { BalanceSheetPage } from './pages/BalanceSheetPage'
 import { Loading } from './components/ui'
 import { AdminPage } from './pages/AdminPage'
 import { StaffUsersPage } from './pages/StaffUsersPage'
@@ -98,6 +99,7 @@ export function App() {
 
           {/* Money */}
           <Route path="/admin" element={<Guard need="admin"><AdminPage /></Guard>} />
+          <Route path="/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
