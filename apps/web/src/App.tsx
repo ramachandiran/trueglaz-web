@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { isAdmin, isOps, useSession } from '@trueglaz/core'
+import { isAdmin, isOps, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
 import { useParams } from 'react-router-dom'
 import { Guard } from './components/Guard'
@@ -26,7 +26,8 @@ import { SignInPage } from './pages/SignInPage'
 
 /**
  * Smart home page that redirects based on user role.
- * - Ops/staff → Inventory dashboard
+ * - Staff → Inventory dashboard
+ * - Technician → Operations, which is the whole of their job
  * - Admin → Money page
  * - Everyone else → Public catalog
  */
@@ -37,7 +38,10 @@ function SmartHome() {
 
   if (session) {
     if (isAdmin(session)) return <Navigate to="/admin" replace />
-    if (isOps(session)) return <Navigate to="/inventory" replace />
+    // A technician is an ops user but not a staff one, and Inventory is a staff
+    // screen: they inspect what is on their bench, they do not browse the shelf.
+    if (isStaff(session)) return <Navigate to="/inventory" replace />
+    if (isOps(session)) return <Navigate to="/ops" replace />
   }
 
   return <HomePage />
@@ -69,7 +73,11 @@ export function App() {
           <Route path="/items/:id" element={<Guard need="signed-in"><ItemDetailPage /></Guard>} />
 
           {/* Operations */}
-          <Route path="/inventory" element={<Guard need="ops"><InventoryDashboard /></Guard>} />
+          {/* Staff, not ops: a technician's whole job is the Operations queue, and
+              the shelf-wide view is not part of it. The guard sends them home,
+              and home sends them to /ops, so a typed URL lands somewhere useful
+              rather than on a 403. */}
+          <Route path="/inventory" element={<Guard need="staff"><InventoryDashboard /></Guard>} />
           <Route path="/ops" element={<Guard need="ops"><OpsPage /></Guard>} />
           <Route path="/ops/inspect/:itemId" element={<Guard need="ops"><InspectPage /></Guard>} />
           <Route path="/ops/items" element={<Guard need="ops"><ItemsPage /></Guard>} />

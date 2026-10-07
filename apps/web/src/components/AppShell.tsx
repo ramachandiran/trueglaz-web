@@ -57,10 +57,10 @@ function Header() {
 
         {/* Staff navigation. Ops users previously had none — they landed on
             /inventory and every other page of their own job was reachable only
-            by typing its URL. */}
+            by typing its URL. A technician sees Operations alone. */}
         {!isAuthPage && isOpsUser && (
           <nav className="shell__ops" aria-label="Staff">
-            <NavLink to="/inventory" className="shell__ops-link">Inventory</NavLink>
+            {staff && <NavLink to="/inventory" className="shell__ops-link">Inventory</NavLink>}
             <NavLink to="/ops" className="shell__ops-link">Operations</NavLink>
             {staff && <NavLink to="/people" className="shell__ops-link">People</NavLink>}
             {staff && <NavLink to="/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
