@@ -390,6 +390,7 @@ function RefundsDue({ onChanged }: { onChanged: () => void }) {
             />
             <button
               className="tg-button tg-button--primary"
+              style={{ whiteSpace: 'nowrap' }}
               disabled={busy === r.orderId || !(refs[r.orderId] ?? '').trim()}
               onClick={() => record(r.orderId)}
             >
@@ -434,7 +435,7 @@ function TransferRow({ payout, busy, onPay }: { payout: any; busy: boolean; onPa
       {dest && (
         <span style={{ display: 'flex', gap: 8 }}>
           <input className="tg-input" placeholder="Bank reference (UTR)" value={ref} onChange={(e) => setRef(e.target.value)} />
-          <button className="tg-button tg-button--primary" disabled={busy || ref.trim().length < 3} onClick={() => onPay(ref.trim())}>
+          <button className="tg-button tg-button--primary" style={{ whiteSpace: 'nowrap' }} disabled={busy || ref.trim().length < 3} onClick={() => onPay(ref.trim())}>
             Mark transferred
           </button>
         </span>

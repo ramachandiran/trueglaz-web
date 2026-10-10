@@ -373,6 +373,8 @@ export const api = {
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
   acceptLine: (lineId: string, byWindowExpiry = false) =>
     post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`),
+  /** The seller calls off a submission that has not shipped. */
+  withdrawSubmission: (submissionId: string) => post<unknown>(`/submissions/${submissionId}/withdraw`),
   /** The seller takes their own listed item off sale; it is then returned to them. */
   withdrawItem: (itemId: string, note?: string) =>
     post<unknown>(`/items/${itemId}/withdraw`, { note: note?.trim() || null }),

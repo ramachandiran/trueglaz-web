@@ -120,6 +120,10 @@ export function ItemDetailPage() {
         {session?.userId === item.sellerUserId && ['LISTED', 'UNSOLD_REVIEW'].includes(item.currentState) && (
           <WithdrawListing itemId={id} onDone={reload} />
         )}
+        {/* Before it ships, the whole submission can be called off. */}
+        {session?.userId === item.sellerUserId && ['SUBMITTED', 'PRE_APPROVED'].includes(item.currentState) && item.submissionId && (
+          <WithdrawListing itemId={id} submissionId={item.submissionId} onDone={reload} />
+        )}
       </section>
 
       {/* Directly under the line it explains. It used to sit at the very bottom,
