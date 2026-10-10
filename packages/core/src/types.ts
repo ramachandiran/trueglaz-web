@@ -1269,3 +1269,15 @@ export interface RefundDue {
   paidAt: string | null
   sku: string | null
 }
+
+/** Where an approved payout is to be sent. The account number is shown here and nowhere else. */
+export interface PayoutDestination {
+  payoutId: string
+  netMinor: number
+  method: 'bank' | 'upi'
+  accountHolderName: string
+  upiVpa: string | null
+  ifsc: string | null
+  accountNumber: string | null
+  accountLast4: string | null
+}

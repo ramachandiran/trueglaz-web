@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, type PlatformSetting } from '@trueglaz/core'
+import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, type PayoutDestination, type PlatformSetting } from '@trueglaz/core'
 import { InventoryTable } from '../components/InventoryTable'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { KycDocuments } from '../components/KycDocuments'
@@ -115,15 +115,7 @@ export function AdminPage() {
         blurb="Paying marks the transfer and clears the seller's balance."
         state={approved}
         busy={busy}
-        render={(p) => (
-          <button
-            className="tg-button tg-button--primary"
-            disabled={busy === p.id}
-            onClick={() => act(p.id, () => api.payPayout(p.id, `utr_${p.id.slice(0, 8)}`))}
-          >
-            Mark transferred
-          </button>
-        )}
+        render={(p) => <TransferRow payout={p} busy={busy === p.id} onPay={(ref) => act(p.id, () => api.payPayout(p.id, ref))} />}
       />
 
       <RefundsDue onChanged={() => { recon.reload(); accounts.reload() }} />
@@ -407,6 +399,47 @@ function RefundsDue({ onChanged }: { onChanged: () => void }) {
         </div>
       ))}
     </section>
+  )
+}
+
+/**
+ * Sending one payout: look up where it goes, send it from the bank, then enter the
+ * bank's own reference. The reference used to be made up by the screen, which
+ * recorded a transfer that nobody had any way to trace.
+ */
+function TransferRow({ payout, busy, onPay }: { payout: any; busy: boolean; onPay: (ref: string) => void }) {
+  const [dest, setDest] = useState<PayoutDestination | null>(null)
+  const [ref, setRef] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+
+  async function reveal() {
+    setErr(null)
+    try { setDest(await api.payoutDestination(payout.id)) }
+    catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not load the destination') }
+  }
+
+  return (
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+      {!dest && <button className="tg-button" onClick={reveal}>Show where to send it</button>}
+      {dest && (
+        <span className="tg-mono" style={{ textAlign: 'right' }}>
+          {dest.accountHolderName}<br />
+          {dest.method === 'upi'
+            ? dest.upiVpa
+            : <>A/c {dest.accountNumber}<br />IFSC {dest.ifsc}</>}
+          <br /><strong>{money(dest.netMinor)}</strong>
+        </span>
+      )}
+      {err && <span className="ops__error" role="alert">{err}</span>}
+      {dest && (
+        <span style={{ display: 'flex', gap: 8 }}>
+          <input className="tg-input" placeholder="Bank reference (UTR)" value={ref} onChange={(e) => setRef(e.target.value)} />
+          <button className="tg-button tg-button--primary" disabled={busy || ref.trim().length < 3} onClick={() => onPay(ref.trim())}>
+            Mark transferred
+          </button>
+        </span>
+      )}
+    </span>
   )
 }
 

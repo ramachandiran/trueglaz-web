@@ -3,7 +3,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail,
-  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, RefundDue,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -376,6 +376,8 @@ export const api = {
   /** The seller takes their own listed item off sale; it is then returned to them. */
   withdrawItem: (itemId: string, note?: string) =>
     post<unknown>(`/items/${itemId}/withdraw`, { note: note?.trim() || null }),
+  /** Admin: where an approved payout is to be sent. Audited. */
+  payoutDestination: (payoutId: string) => get<PayoutDestination>(`/payouts/${payoutId}/destination`),
   /** Money we hold for cancelled orders, owed back to buyers. */
   refundsDue: () => get<RefundDue[]>('/refunds/due'),
   /** Admin: record that the gateway has sent the refund. */
