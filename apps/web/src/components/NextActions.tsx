@@ -41,7 +41,7 @@ const RECIPES: Record<string, Recipe> = {
   'DRAFT>SUBMITTED': {
     label: 'Finish the submission',
     hint: 'The seller sends it from their own submission.',
-    target: { kind: 'go', to: () => '/sell' },
+    target: { kind: 'go', to: () => '/sell/manage' },
   },
   'SUBMITTED>PRE_APPROVED': {
     label: 'Pre-approve and issue a label',
@@ -95,12 +95,12 @@ const RECIPES: Record<string, Recipe> = {
   'AWAITING_SELLER_APPROVAL>LISTED': {
     label: 'The seller accepts the price',
     hint: 'Only the seller can accept, from their own Selling page.',
-    target: { kind: 'go', to: () => '/sell' },
+    target: { kind: 'go', to: () => '/sell/manage' },
   },
   'AWAITING_SELLER_APPROVAL>SELLER_DECLINED': {
     label: 'The seller declines',
     hint: 'Only the seller can decline, from their own Selling page.',
-    target: { kind: 'go', to: () => '/sell' },
+    target: { kind: 'go', to: () => '/sell/manage' },
   },
   'SOLD>DISPATCHED': {
     label: 'Pack and dispatch',

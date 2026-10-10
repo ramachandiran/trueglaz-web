@@ -17,8 +17,9 @@ type Tab = 'items' | 'approvals' | 'payouts'
  * blocks money moving — an item sits unlisted until the seller answers.
  */
 export function SellPage() {
-  const [tab, setTab] = useState<Tab>('items')
   const [searchParams] = useSearchParams()
+  const asked = searchParams.get('tab')
+  const [tab, setTab] = useState<Tab>(asked === 'approvals' || asked === 'payouts' ? asked : 'items')
   const approvals = useApi(() => api.myApprovals(), [])
   const kyc = useApi(() => api.myKyc(), [])
   const pending = (approvals.data ?? []).filter((a) => a.approval.decision === 'pending')
@@ -94,6 +95,7 @@ export function SellPage() {
           <>
             <div className="sell__head">
               <div>
+                <Link to="/sell" className="tg-muted">← Back to your home</Link>
                 <p className="sell__eyebrow tg-muted">Your selling workspace</p>
                 <h2 className="sell__main-title">Manage inventory, approvals, and payouts</h2>
               </div>

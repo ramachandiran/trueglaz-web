@@ -1327,3 +1327,12 @@ export interface StaffHome {
     actorRole: string | null; at: string | null; grade: string | null; priceMinor: number | null
   }[]
 }
+
+/** A seller's day: where their gear is, what they are owed, what is waiting on them. */
+export interface SellerHome {
+  status: { canSell: boolean; kycStatus: string; sellingState: string; hasPayoutAccount: boolean }
+  pipeline: { key: string; label: string; count: number; tone: string }[]
+  money: { paidOutMinor: number; owedMinor: number; expectedMinor: number; soldCount: number; itemCount: number }
+  actions: { key: string; title: string; hint: string; count: number; href: string; tone: 'urgent' | 'normal' | 'quiet' }[]
+  recent: { itemId: string; sku: string; title: string; toState: string; at: string | null; grade: string | null; priceMinor: number | null }[]
+}

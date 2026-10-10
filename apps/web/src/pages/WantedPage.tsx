@@ -33,7 +33,7 @@ export function WantedPage() {
           What buyers are looking for and we do not have. Every one of these is a person
           waiting — if you have the thing, it has a home before you send it in.
         </p>
-        {session && <Link className="tg-button wanted__sell" to="/sell">Consign something</Link>}
+        {session && <Link className="tg-button wanted__sell" to="/sell/new">Consign something</Link>}
       </header>
 
       {session && <MySlots mine={mine} />}

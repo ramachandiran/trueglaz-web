@@ -24,6 +24,7 @@ import { OpsPage } from './pages/OpsPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SellPage } from './pages/SellPage'
+import { SellerHomePage } from './pages/SellerHomePage'
 import { WantedPage } from './pages/WantedPage'
 import { SignInPage } from './pages/SignInPage'
 
@@ -72,7 +73,8 @@ export function App() {
           <Route path="/profile" element={<Guard need="signed-in"><ProfilePage /></Guard>} />
 
           {/* Seller */}
-          <Route path="/sell" element={<Guard need="signed-in"><SellPage /></Guard>} />
+          <Route path="/sell" element={<Guard need="signed-in"><SellerHomePage /></Guard>} />
+          <Route path="/sell/manage" element={<Guard need="signed-in"><SellPage /></Guard>} />
           <Route path="/sell/new" element={<Guard need="signed-in"><NewSubmissionPage /></Guard>} />
           <Route path="/sell/:id" element={<Guard need="signed-in"><NewSubmissionPage /></Guard>} />
           <Route path="/items/:id" element={<Guard need="signed-in"><ItemDetailPage /></Guard>} />

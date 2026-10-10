@@ -99,7 +99,7 @@ export function NewSubmissionPage() {
 
       await api.submitSubmission(submission.id)
       // Redirect to /sell with query param to show banner
-      nav('/sell?submitted=true')
+      nav('/sell/manage?submitted=true')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not submit')
     } finally {
