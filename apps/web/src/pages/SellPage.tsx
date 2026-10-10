@@ -158,6 +158,9 @@ function MyItems() {
 
   const rows = items.data ?? []
   const drafts = (submissions.data ?? []).filter((s) => s.state === 'draft')
+  const [discardTarget, setDiscardTarget] = useState<string | null>(null)
+  const [discardingId, setDiscardingId] = useState<string | null>(null)
+  const [discardError, setDiscardError] = useState<string | null>(null)
   const byStatus = useMemo(() => {
     const counts = new Map<string, number>()
     for (const item of rows) counts.set(item.currentState, (counts.get(item.currentState) ?? 0) + 1)
@@ -201,6 +204,21 @@ function MyItems() {
   if (items.loading) return <Loading label="Loading your items" />
   if (items.error) return <ErrorNote error={items.error} onRetry={items.reload} />
 
+  async function discardDraft() {
+    if (!discardTarget) return
+    setDiscardingId(discardTarget)
+    setDiscardError(null)
+    try {
+      await api.withdrawSubmission(discardTarget)
+      setDiscardTarget(null)
+      submissions.reload()
+    } catch (error) {
+      setDiscardError(error instanceof ApiError ? error.message : 'Could not discard that submission')
+    } finally {
+      setDiscardingId(null)
+    }
+  }
+
   return (
     <>
       {drafts.length > 0 && (
@@ -208,11 +226,56 @@ function MyItems() {
           <strong>You have {drafts.length} unfinished {drafts.length === 1 ? 'submission' : 'submissions'}.</strong>
           <ul className="sell__draft-list">
             {drafts.map((s) => (
-              <li key={s.id}>
+              <li key={s.id} className="sell__draft-line">
                 <Link to={`/sell/${s.id}`}>Started {dateOnly(s.createdAt)} · {s.pricingMode} pricing</Link>
+                <button
+                  type="button"
+                  className="tg-button sell__draft-discard"
+                  disabled={discardingId === s.id}
+                  onClick={() => setDiscardTarget(s.id)}
+                >
+                  {discardingId === s.id ? 'Discarding…' : 'Discard'}
+                </button>
               </li>
             ))}
           </ul>
+          {discardError && <p className="sell__error" role="alert">{discardError}</p>}
+        </div>
+      )}
+
+      {discardTarget && (
+        <div className="sell__scrim" onMouseDown={() => !discardingId && setDiscardTarget(null)}>
+          <div
+            className="sell__confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sell-discard-title"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h3 id="sell-discard-title" className="sell__confirm-title">Discard unfinished submission?</h3>
+            <p className="sell__confirm-copy tg-muted">
+              This draft will be deleted and cannot be restored.
+            </p>
+            {discardError && <p className="sell__error" role="alert">{discardError}</p>}
+            <div className="sell__confirm-actions">
+              <button
+                type="button"
+                className="tg-button"
+                disabled={!!discardingId}
+                onClick={() => setDiscardTarget(null)}
+              >
+                Keep it
+              </button>
+              <button
+                type="button"
+                className="tg-button tg-button--primary"
+                disabled={!!discardingId}
+                onClick={discardDraft}
+              >
+                {discardingId === discardTarget ? 'Discarding…' : 'Discard submission'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

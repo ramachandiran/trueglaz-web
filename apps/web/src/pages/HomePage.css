@@ -121,6 +121,20 @@
   display: block;
 }
 
+.card__photo .model-photo {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 4 / 3;
+  display: block;
+}
+
+.card__photo .model-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 .card__brand {
   font-size: var(--tg-text-xs);
 }
@@ -151,7 +165,7 @@
 }
 
 /* Sold gear is history, not stock: it is legible but visibly not for sale. */
-.card--sold .photo {
+.card--sold .card__photo {
   opacity: 0.55;
 }
 

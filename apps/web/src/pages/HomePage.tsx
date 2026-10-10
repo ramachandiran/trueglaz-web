@@ -220,7 +220,7 @@ function SoldCard({ sale }: { sale: HomeSale }) {
         {sale.gradeLabel && <span className="tg-muted">{sale.gradeLabel}</span>}
       </span>
       <strong className="card__price">{money(sale.priceMinor)}</strong>
-      {sale.soldAt && <span className="card__when tg-muted">Sold {relative(sale.soldAt)}</span>}
+      {sale.soldAt && <span className="card__saving">Sold {relative(sale.soldAt)}</span>}
     </li>
   )
 }
@@ -241,7 +241,11 @@ function Cover({ cover, categorySlug, alt, modelSlug }: {
   // A photograph of the actual unit first, always. The model's stock picture
   // only stands in when there is none, and says so when it does.
   if (!cover) {
-    return <ModelPhoto slug={modelSlug} kind={photoKindFor(categorySlug)} alt={alt} />
+    return (
+      <span className="card__photo">
+        <ModelPhoto slug={modelSlug} kind={photoKindFor(categorySlug)} alt={alt} />
+      </span>
+    )
   }
   return (
     <span className="card__photo">
