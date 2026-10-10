@@ -158,6 +158,7 @@ function MyItems() {
 
   const rows = items.data ?? []
   const drafts = (submissions.data ?? []).filter((s) => s.state === 'draft')
+  const [discardTarget, setDiscardTarget] = useState<string | null>(null)
   const [discardingId, setDiscardingId] = useState<string | null>(null)
   const [discardError, setDiscardError] = useState<string | null>(null)
   const byStatus = useMemo(() => {
@@ -203,12 +204,13 @@ function MyItems() {
   if (items.loading) return <Loading label="Loading your items" />
   if (items.error) return <ErrorNote error={items.error} onRetry={items.reload} />
 
-  async function discardDraft(id: string) {
-    if (!window.confirm('Discard this unfinished submission? It will be deleted and cannot be restored.')) return
-    setDiscardingId(id)
+  async function discardDraft() {
+    if (!discardTarget) return
+    setDiscardingId(discardTarget)
     setDiscardError(null)
     try {
-      await api.withdrawSubmission(id)
+      await api.withdrawSubmission(discardTarget)
+      setDiscardTarget(null)
       submissions.reload()
     } catch (error) {
       setDiscardError(error instanceof ApiError ? error.message : 'Could not discard that submission')
@@ -230,7 +232,7 @@ function MyItems() {
                   type="button"
                   className="tg-button sell__draft-discard"
                   disabled={discardingId === s.id}
-                  onClick={() => discardDraft(s.id)}
+                  onClick={() => setDiscardTarget(s.id)}
                 >
                   {discardingId === s.id ? 'Discarding…' : 'Discard'}
                 </button>
@@ -238,6 +240,42 @@ function MyItems() {
             ))}
           </ul>
           {discardError && <p className="sell__error" role="alert">{discardError}</p>}
+        </div>
+      )}
+
+      {discardTarget && (
+        <div className="sell__scrim" onMouseDown={() => !discardingId && setDiscardTarget(null)}>
+          <div
+            className="sell__confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sell-discard-title"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h3 id="sell-discard-title" className="sell__confirm-title">Discard unfinished submission?</h3>
+            <p className="sell__confirm-copy tg-muted">
+              This draft will be deleted and cannot be restored.
+            </p>
+            {discardError && <p className="sell__error" role="alert">{discardError}</p>}
+            <div className="sell__confirm-actions">
+              <button
+                type="button"
+                className="tg-button"
+                disabled={!!discardingId}
+                onClick={() => setDiscardTarget(null)}
+              >
+                Keep it
+              </button>
+              <button
+                type="button"
+                className="tg-button tg-button--primary"
+                disabled={!!discardingId}
+                onClick={discardDraft}
+              >
+                {discardingId === discardTarget ? 'Discarding…' : 'Discard submission'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
