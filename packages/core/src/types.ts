@@ -1335,4 +1335,16 @@ export interface SellerHome {
   money: { paidOutMinor: number; owedMinor: number; expectedMinor: number; soldCount: number; itemCount: number }
   actions: { key: string; title: string; hint: string; count: number; href: string; tone: 'urgent' | 'normal' | 'quiet' }[]
   recent: { itemId: string; sku: string; title: string; toState: string; at: string | null; grade: string | null; priceMinor: number | null }[]
+  /** Open Wanted asks read against this seller's unsold gear. */
+  wantedMatches: WantedMatch[]
+}
+
+export interface WantedMatch {
+  requestId: string
+  itemId: string
+  sku: string
+  title: string
+  /** match: the model, grade and price all work for the buyer. close: same model, but not quite. */
+  kind: 'match' | 'close'
+  reason: string
 }

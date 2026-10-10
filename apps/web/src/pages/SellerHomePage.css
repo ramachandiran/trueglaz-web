@@ -98,3 +98,10 @@
 }
 
 .sl__cta-main, .sl__wanted-cta { text-decoration: none; }
+
+/* An ask the seller's own gear answers. */
+.sl__ask--match { border: 2px solid var(--tg-good); background: var(--tg-good-soft); }
+.sl__ask--close { border: 1px dashed var(--tg-warn); }
+.sl__ask-flag { font-size: var(--tg-text-xs); font-weight: var(--tg-weight-bold); color: var(--tg-good); text-decoration: none; }
+.sl__ask--close .sl__ask-flag { color: var(--tg-warn); }
+.sl__ask-why { font-size: var(--tg-text-xs); color: var(--tg-warn); }

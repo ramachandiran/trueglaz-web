@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { api, dateOnly, money, relative, STATE_LABELS, useApi, useSession, type SellerHome, type WantedRequest } from '@trueglaz/core'
+import { api, dateOnly, money, relative, STATE_LABELS, useApi, useSession, type SellerHome, type WantedMatch, type WantedRequest } from '@trueglaz/core'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './SellerHomePage.css'
 
@@ -109,7 +109,7 @@ export function SellerHomePage() {
         </div>
 
         <aside className="sl__side">
-          <WantedWidget rows={wanted.data ?? []} loading={wanted.loading} canSell={d.status.canSell} />
+          <WantedWidget rows={wanted.data ?? []} loading={wanted.loading} canSell={d.status.canSell} matches={d.wantedMatches} />
         </aside>
       </div>
     </div>
@@ -193,30 +193,55 @@ function Onboarding({ d }: { d: SellerHome }) {
   )
 }
 
-/** The board, beside the seller's own work: what buyers are waiting for. */
-function WantedWidget({ rows, loading, canSell }: { rows: WantedRequest[]; loading: boolean; canSell: boolean }) {
-  const shown = rows.slice(0, 5)
+/**
+ * The board, beside the seller's own work: what buyers are waiting for.
+ *
+ * Asks that the seller's own gear answers come first and say which item, so the
+ * widget reads as "you already have this" rather than as a list to go and check
+ * against a shelf. A near miss is shown too, with what is missing.
+ */
+function WantedWidget({ rows, loading, canSell, matches }: {
+  rows: WantedRequest[]; loading: boolean; canSell: boolean; matches: WantedMatch[]
+}) {
+  const by = new Map(matches.map((m) => [m.requestId, m]))
+  const rank = (r: WantedRequest) => (by.get(r.id)?.kind === 'match' ? 0 : by.get(r.id) ? 1 : 2)
+  const ordered = [...rows].sort((a, b) => rank(a) - rank(b))
+  const shown = ordered.slice(0, 6)
+  const full = matches.filter((m) => m.kind === 'match').length
   return (
     <section className="sl__wanted" aria-labelledby="sl-wanted">
       <div className="sl__wanted-head">
         <h2 id="sl-wanted" className="sl__wanted-title">Buyers are asking for</h2>
         {rows.length > 0 && <span className="sl__wanted-n">{rows.length}</span>}
       </div>
-      <p className="sl__wanted-lede">If you have one of these, it already has a buyer.</p>
+      <p className="sl__wanted-lede">
+        {full > 0
+          ? `${full} of these ${full === 1 ? 'is' : 'are'} gear you already have.`
+          : 'If you have one of these, it already has a buyer.'}
+      </p>
       {loading && <p className="sl__empty">Loading…</p>}
       {!loading && shown.length === 0 && <p className="sl__empty">Nobody is asking for anything right now.</p>}
       <ul className="sl__wanted-list">
-        {shown.map((r) => (
-          <li key={r.id} className="sl__ask">
-            <strong className="sl__ask-what">{r.wanted}</strong>
-            <span className="sl__ask-meta">
-              {r.minGradeCode && <GradeBadge code={r.minGradeCode} />}
-              {r.maxPriceMinor != null && <span>up to {money(r.maxPriceMinor)}</span>}
-              {r.createdAt && <span className="sl__ask-when">asked {dateOnly(r.createdAt)}</span>}
-            </span>
-            {r.note && <span className="sl__ask-note">“{r.note}”</span>}
-          </li>
-        ))}
+        {shown.map((r) => {
+          const m = by.get(r.id)
+          return (
+            <li key={r.id} className={`sl__ask${m ? ` sl__ask--${m.kind}` : ''}`}>
+              {m && (
+                <Link to={`/items/${m.itemId}`} className="sl__ask-flag">
+                  {m.kind === 'match' ? '★ You have this' : 'You have a similar one'}: <span className="tg-mono">{m.sku}</span>
+                </Link>
+              )}
+              <strong className="sl__ask-what">{r.wanted}</strong>
+              <span className="sl__ask-meta">
+                {r.minGradeCode && <GradeBadge code={r.minGradeCode} />}
+                {r.maxPriceMinor != null && <span>up to {money(r.maxPriceMinor)}</span>}
+                {r.createdAt && <span className="sl__ask-when">asked {dateOnly(r.createdAt)}</span>}
+              </span>
+              {m && m.kind === 'close' && <span className="sl__ask-why">{m.reason}</span>}
+              {r.note && <span className="sl__ask-note">“{r.note}”</span>}
+            </li>
+          )
+        })}
       </ul>
       <div className="sl__wanted-foot">
         <Link to="/wanted">{rows.length > shown.length ? `See all ${rows.length}` : 'Open the board'} →</Link>

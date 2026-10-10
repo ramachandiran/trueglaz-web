@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, relative, useApi, useSession,
-  type MyRequest, type WantedRequest,
+  isSeller, type MyRequest, type WantedMatch, type WantedRequest,
 } from '@trueglaz/core'
 import { Empty, ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './WantedPage.css'
@@ -20,10 +20,14 @@ export function WantedPage() {
   const board = useApi(() => api.wantedBoard(), [])
   const mine = useApi(() => (session ? api.myRequests() : Promise.resolve(null)), [session?.userId])
   const [searchTerm, setSearchTerm] = useState('')
+  // A seller sees which asks their own gear answers; anyone else has none.
+  const seller = useApi(() => (isSeller(session) ? api.sellerHome() : Promise.resolve(null)), [session?.userId])
+  const matches = new Map((seller.data?.wantedMatches ?? []).map((m) => [m.requestId, m]))
 
-  const filteredBoard = (board.data ?? []).filter((r) =>
-    r.wanted.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const rank = (r: WantedRequest) => (matches.get(r.id)?.kind === 'match' ? 0 : matches.get(r.id) ? 1 : 2)
+  const filteredBoard = (board.data ?? [])
+    .filter((r) => r.wanted.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => rank(a) - rank(b))
 
   return (
     <div className="wanted">
@@ -70,7 +74,7 @@ export function WantedPage() {
               {filteredBoard.length} of {board.data?.length} {(board.data?.length ?? 0) === 1 ? 'request' : 'requests'}
             </p>
             <ul className="wanted__board">
-              {filteredBoard.map((r) => <BoardCard key={r.id} request={r} />)}
+              {filteredBoard.map((r) => <BoardCard key={r.id} request={r} match={matches.get(r.id)} />)}
             </ul>
           </>
         )}
@@ -86,9 +90,17 @@ export function WantedPage() {
   )
 }
 
-function BoardCard({ request }: { request: WantedRequest }) {
+function BoardCard({ request, match }: { request: WantedRequest; match?: WantedMatch }) {
   return (
-    <li className="want tg-card">
+    <li className="want tg-card" style={match?.kind === 'match' ? { borderColor: 'var(--tg-good)', borderWidth: 2 } : undefined}>
+      {match && (
+        <p className="want__asked">
+          <Link to={`/items/${match.itemId}`}>
+            <strong>{match.kind === 'match' ? '★ You have this' : 'You have a similar one'}</strong> — {match.sku}
+          </Link>
+          {match.kind === 'close' && <span className="tg-muted"> · {match.reason}</span>}
+        </p>
+      )}
       <h3 className="want__title">{request.wanted}</h3>
       <div className="want__terms">
         {request.maxPriceMinor != null && (
