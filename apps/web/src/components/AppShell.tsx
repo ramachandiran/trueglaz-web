@@ -61,6 +61,7 @@ function Header() {
             by typing its URL. A technician sees Operations alone. */}
         {!isAuthPage && isOpsUser && (
           <nav className="shell__ops" aria-label="Staff">
+            {staff && <NavLink to="/today" className="shell__ops-link">Home</NavLink>}
             {staff && <NavLink to="/inventory" className="shell__ops-link">Inventory</NavLink>}
             <NavLink to="/ops" className="shell__ops-link">Operations</NavLink>
             {staff && <NavLink to="/people" className="shell__ops-link">People</NavLink>}

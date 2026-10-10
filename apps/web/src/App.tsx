@@ -13,6 +13,7 @@ import { HomePage } from './pages/HomePage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { FulfilmentPage } from './pages/FulfilmentPage'
 import { ReturnsPage } from './pages/ReturnsPage'
+import { StaffHomePage } from './pages/StaffHomePage'
 import { InspectPage } from './pages/InspectPage'
 import { InventoryDashboard } from './pages/InventoryDashboard'
 import { ItemDetailPage } from './pages/ItemDetailPage'
@@ -28,7 +29,7 @@ import { SignInPage } from './pages/SignInPage'
 
 /**
  * Smart home page that redirects based on user role.
- * - Staff → Inventory dashboard
+ * - Staff → Today: what is waiting on them, how the shelf is doing, what just moved
  * - Technician → Operations, which is the whole of their job
  * - Admin → Money page
  * - Seller → Selling
@@ -43,7 +44,7 @@ function SmartHome() {
     if (isAdmin(session)) return <Navigate to="/admin" replace />
     // A technician is an ops user but not a staff one, and Inventory is a staff
     // screen: they inspect what is on their bench, they do not browse the shelf.
-    if (isStaff(session)) return <Navigate to="/inventory" replace />
+    if (isStaff(session)) return <Navigate to="/today" replace />
     if (isOps(session)) return <Navigate to="/ops" replace />
     if (isSeller(session)) return <Navigate to="/sell" replace />
   }
@@ -81,6 +82,7 @@ export function App() {
               the shelf-wide view is not part of it. The guard sends them home,
               and home sends them to /ops, so a typed URL lands somewhere useful
               rather than on a 403. */}
+          <Route path="/today" element={<Guard need="staff"><StaffHomePage /></Guard>} />
           <Route path="/inventory" element={<Guard need="staff"><InventoryDashboard /></Guard>} />
           <Route path="/ops" element={<Guard need="ops"><OpsPage /></Guard>} />
           <Route path="/ops/inspect/:itemId" element={<Guard need="ops"><InspectPage /></Guard>} />

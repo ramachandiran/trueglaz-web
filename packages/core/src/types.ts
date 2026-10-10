@@ -1314,3 +1314,16 @@ export interface ReturnCaseView {
   amountMinor: number
   buyerName: string | null
 }
+
+/** What staff see first: stage sizes, what is waiting on them, and what just moved. */
+export interface StaffHome {
+  pipeline: { key: string; label: string; count: number; tone: string }[]
+  totals: { units: number; onSaleCount: number; onSaleValueMinor: number; soldWeekCount: number; soldWeekValueMinor: number }
+  today: { received: number; listed: number; sold: number; delivered: number; returns: number }
+  last7: { day: string; received: number; listed: number; sold: number }[]
+  actions: { key: string; group: string; title: string; hint: string; count: number; href: string; tone: 'urgent' | 'normal' | 'quiet' }[]
+  recent: {
+    itemId: string; sku: string; title: string; fromState: string | null; toState: string
+    actorRole: string | null; at: string | null; grade: string | null; priceMinor: number | null
+  }[]
+}
