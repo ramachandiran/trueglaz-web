@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { api } from '@trueglaz/core'
+import { api, useSession } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { InspectionReport } from '../components/InspectionReport'
 import { ShipmentLegs } from '../components/ShipmentLegs'
 import { NextActions } from '../components/NextActions'
 import { AssignTechnician } from '../components/AssignTechnician'
+import { WithdrawListing } from '../components/WithdrawListing'
 import { Timeline } from '../components/Timeline'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge, StateBadge } from '../components/ui'
 import { buildTimeline, progressOf, STATE_BLURBS, STATE_LABELS } from '@trueglaz/core'
@@ -18,6 +19,7 @@ const BENCH_STATES = ['RECEIVED', 'IN_INSPECTION', 'RE_INSPECTION', 'RETURN_RECE
 export function ItemDetailPage() {
   const { id = '' } = useParams()
   const nav = useNavigate()
+  const { session } = useSession()
   const { data, error, loading, reload } = useApi(() => api.item(id), [id])
   // The item carries a productModelId, not a name, so the catalogue supplies the
   // words a person would recognise.
@@ -113,6 +115,11 @@ export function ItemDetailPage() {
           nextLegalStates={nextLegalStates}
           onDone={() => { reload(); report.reload() }}
         />
+
+        {/* The owner's own exit, only while the item is simply on sale. */}
+        {session?.userId === item.sellerUserId && ['LISTED', 'UNSOLD_REVIEW'].includes(item.currentState) && (
+          <WithdrawListing itemId={id} onDone={reload} />
+        )}
       </section>
 
       {/* Directly under the line it explains. It used to sit at the very bottom,

@@ -126,6 +126,8 @@ export function AdminPage() {
         )}
       />
 
+      <RefundsDue onChanged={() => { recon.reload(); accounts.reload() }} />
+
       <KycQueue />
 
       <Settings />
@@ -341,6 +343,67 @@ function PayoutSection({
             {p.holdReasonCode && <span className="tg-badge tg-badge--warn">{p.holdReasonCode.replace(/_/g, ' ')}</span>}
           </div>
           <span aria-busy={busy === p.id}>{render(p)}</span>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+/**
+ * Money we are holding that belongs to a buyer: an order that was cancelled after
+ * it was paid. The transfer back is made in the gateway's own dashboard; recording
+ * it here, with the gateway's reference, is what clears the escrow.
+ */
+function RefundsDue({ onChanged }: { onChanged: () => void }) {
+  const due = useApi(() => api.refundsDue(), [])
+  const [refs, setRefs] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const rows = due.data ?? []
+  if (due.loading || rows.length === 0) return null
+
+  async function record(orderId: string) {
+    setBusy(orderId); setError(null)
+    try {
+      await api.refundOrder(orderId, (refs[orderId] ?? '').trim())
+      due.reload(); onChanged()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'That did not work')
+    } finally { setBusy(null) }
+  }
+
+  return (
+    <section className="tg-card ops__card">
+      <h2 className="ops__subtitle">Refunds due ({rows.length})</h2>
+      <p className="tg-muted ops__fineprint">
+        Orders cancelled after the buyer paid. Refund each in the gateway's dashboard, then enter
+        the gateway's reference here to clear it from escrow.
+      </p>
+      {error && <p className="ops__error" role="alert">{error}</p>}
+      {rows.map((r) => (
+        <div key={r.orderId} className="ops__inbound">
+          <div>
+            <span className="tg-mono">{r.orderNumber}</span>
+            {r.sku && <span className="tg-muted"> · {r.sku}</span>}
+            <strong> {money(r.amountMinor)}</strong>
+            {r.paidAt && <span className="tg-muted"> · paid {dateTime(r.paidAt)}</span>}
+          </div>
+          <span style={{ display: 'flex', gap: 8 }}>
+            <input
+              className="tg-input"
+              placeholder="Gateway refund reference"
+              value={refs[r.orderId] ?? ''}
+              onChange={(e) => setRefs({ ...refs, [r.orderId]: e.target.value })}
+            />
+            <button
+              className="tg-button tg-button--primary"
+              disabled={busy === r.orderId || !(refs[r.orderId] ?? '').trim()}
+              onClick={() => record(r.orderId)}
+            >
+              Record refund
+            </button>
+          </span>
         </div>
       ))}
     </section>

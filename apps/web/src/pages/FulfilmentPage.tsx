@@ -67,13 +67,15 @@ export function FulfilmentPage() {
             <span className="tg-muted">
               {l.acceptanceWindowEndsAt ? `Window closes ${dateTime(l.acceptanceWindowEndsAt)}` : 'Acceptance window open'}
             </span>
+            {/* Closes by itself within a minute of the window ending. This is only
+                for pressing it sooner than that; before the end it is refused. */}
             <button
               className="tg-button"
-              disabled={busy === l.id}
+              disabled={busy === l.id || !l.acceptanceWindowEndsAt || new Date(l.acceptanceWindowEndsAt) > new Date()}
               onClick={() => act(l.id, () => api.acceptLine(l.id, true))}
-              title="Close the window on the buyer's behalf once it has expired"
+              title="Closes automatically when the window ends. Available only after it has."
             >
-              Auto-accept
+              Close now
             </button>
           </div>
         )}

@@ -1259,3 +1259,13 @@ export interface MonthCount {
   month: string
   count: number
 }
+
+/** A cancelled order whose payment has not been sent back to the buyer yet. */
+export interface RefundDue {
+  orderId: string
+  orderNumber: string
+  buyerUserId: string
+  amountMinor: number
+  paidAt: string | null
+  sku: string | null
+}

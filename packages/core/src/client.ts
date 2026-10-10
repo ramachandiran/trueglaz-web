@@ -3,7 +3,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail,
-  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, RefundDue,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -373,6 +373,14 @@ export const api = {
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
   acceptLine: (lineId: string, byWindowExpiry = false) =>
     post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`),
+  /** The seller takes their own listed item off sale; it is then returned to them. */
+  withdrawItem: (itemId: string, note?: string) =>
+    post<unknown>(`/items/${itemId}/withdraw`, { note: note?.trim() || null }),
+  /** Money we hold for cancelled orders, owed back to buyers. */
+  refundsDue: () => get<RefundDue[]>('/refunds/due'),
+  /** Admin: record that the gateway has sent the refund. */
+  refundOrder: (orderId: string, reference: string, note?: string) =>
+    post<unknown>(`/orders/${orderId}/refund`, { reference, note: note?.trim() || null }),
 
   // -- admin settings ------------------------------------------------------
   adminSettings: () => get<PlatformSetting[]>('/admin/settings'),
