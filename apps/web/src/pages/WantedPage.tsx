@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, relative, useApi, useSession,
@@ -20,6 +20,7 @@ export function WantedPage() {
   const board = useApi(() => api.wantedBoard(), [])
   const mine = useApi(() => (session ? api.myRequests() : Promise.resolve(null)), [session?.userId])
   const [searchTerm, setSearchTerm] = useState('')
+  const [askSignal, setAskSignal] = useState(0)
   // A seller sees which asks their own gear answers; anyone else has none.
   const seller = useApi(() => (isSeller(session) ? api.sellerHome() : Promise.resolve(null)), [session?.userId])
   const matches = new Map((seller.data?.wantedMatches ?? []).map((m) => [m.requestId, m]))
@@ -32,15 +33,26 @@ export function WantedPage() {
   return (
     <div className="wanted">
       <header className="wanted__head">
-        <h1 className="wanted__title">Wanted</h1>
+        <div className="wanted__titlebar">
+          <h1 className="wanted__title">Wanted</h1>
+          <div className="wanted__top-actions">
+            {session ? (
+              <button type="button" className="tg-button tg-button--primary" onClick={() => setAskSignal((n) => n + 1)}>
+                Looking for something?
+              </button>
+            ) : (
+              <Link className="tg-button tg-button--primary wanted__sell" to="/sign-in">Sign in to ask for something</Link>
+            )}
+            {session && <Link className="tg-button wanted__sell" to="/sell/new">Consign something</Link>}
+          </div>
+        </div>
         <p className="wanted__lede">
           What buyers are looking for and we do not have. Every one of these is a person
           waiting — if you have the thing, it has a home before you send it in.
         </p>
-        {session && <Link className="tg-button wanted__sell" to="/sell/new">Consign something</Link>}
       </header>
 
-      {session && <MySlots mine={mine} />}
+      {session && <MySlots mine={mine} signal={askSignal} />}
 
       <section aria-label="Open requests">
         <div className="wanted__board-header">
@@ -74,7 +86,7 @@ export function WantedPage() {
               {filteredBoard.length} of {board.data?.length} {(board.data?.length ?? 0) === 1 ? 'request' : 'requests'}
             </p>
             <ul className="wanted__board">
-              {filteredBoard.map((r) => <BoardCard key={r.id} request={r} match={matches.get(r.id)} />)}
+              {filteredBoard.map((r) => <BoardCard key={r.id} request={r} match={matches.get(r.id)} canConsign={isSeller(session)} />)}
             </ul>
           </>
         )}
@@ -90,7 +102,7 @@ export function WantedPage() {
   )
 }
 
-function BoardCard({ request, match }: { request: WantedRequest; match?: WantedMatch }) {
+function BoardCard({ request, match, canConsign }: { request: WantedRequest; match?: WantedMatch; canConsign: boolean }) {
   return (
     <li className="want tg-card" style={match?.kind === 'match' ? { borderColor: 'var(--tg-good)', borderWidth: 2 } : undefined}>
       {match && (
@@ -118,6 +130,15 @@ function BoardCard({ request, match }: { request: WantedRequest; match?: WantedM
         Asked {dateOnly(request.createdAt)}
         {request.expiresAt && <> · <Expiry at={request.expiresAt} /></>}
       </p>
+      {canConsign && (
+        // Starts a consignment already pointed at what they asked for.
+        <Link
+          className={`tg-button${match?.kind === 'match' ? '' : ' tg-button--primary'} want__consign`}
+          to={`/sell/new?${request.productModelId ? `model=${request.productModelId}` : `text=${encodeURIComponent(request.wanted)}`}`}
+        >
+          {match ? 'Consign another' : 'I have this — consign it'}
+        </Link>
+      )}
     </li>
   )
 }
@@ -126,12 +147,21 @@ function BoardCard({ request, match }: { request: WantedRequest; match?: WantedM
 
 const EMPTY_ASK = { modelFreeText: '', minGradeCode: '', maxPrice: '', note: '' }
 
-function MySlots({ mine }: { mine: ReturnType<typeof useApi<import('@trueglaz/core').MyRequests | null>> }) {
+function MySlots({ mine, signal }: { mine: ReturnType<typeof useApi<import('@trueglaz/core').MyRequests | null>>; signal: number }) {
   const grades = useApi(() => api.grades(), [])
   const [form, setForm] = useState(EMPTY_ASK)
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const box = useRef<HTMLElement>(null)
+  const slotsLeft = mine.data?.slotsLeft ?? 1
+
+  // The button at the top of the page opens the form and brings it into view.
+  useEffect(() => {
+    if (signal === 0) return
+    if (slotsLeft > 0) setAsking(true)
+    box.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [signal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (mine.loading) return <Loading label="Loading your requests" />
   // Without this the section simply vanished on a failed load — no message, no
@@ -181,7 +211,7 @@ function MySlots({ mine }: { mine: ReturnType<typeof useApi<import('@trueglaz/co
   }
 
   return (
-    <section className="tg-card wanted__mine" aria-label="Your requests">
+    <section ref={box} className="tg-card wanted__mine" aria-label="Your requests">
       <div className="wanted__mine-head">
         <h2 className="wanted__section-title">Your requests</h2>
         <span className="wanted__slots tg-muted">

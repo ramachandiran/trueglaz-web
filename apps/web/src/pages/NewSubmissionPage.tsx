@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, ApiError, singularCategory, useApi } from '@trueglaz/core'
 import { ModelPicker } from '../components/ModelPicker'
 import { PhotoPicker } from '../components/PhotoPicker'
@@ -15,6 +15,7 @@ import './SellPage.css'
  */
 export function NewSubmissionPage() {
   const nav = useNavigate()
+  const [params] = useSearchParams()
   const tooltipRef = useRef<HTMLDivElement>(null)
 
   const models = useApi(() => api.models(), [])
@@ -59,6 +60,25 @@ export function NewSubmissionPage() {
     // unanswered question is to record that they answered.
     packagingAnswered: false,
   })
+
+  // Arriving from a Wanted ask: start with the model they asked for, so the seller
+  // is describing the unit rather than hunting for it in the catalogue.
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (prefilled.current) return
+    const modelId = params.get('model')
+    const text = params.get('text')
+    if (!modelId && !text) { prefilled.current = true; return }
+    if (modelId) {
+      const m = models.data?.content.find((x) => x.id === modelId)
+      if (!m) return // the catalogue has not loaded yet; try again when it has
+      prefilled.current = true
+      setItem((prev) => ({ ...prev, categoryId: m.categoryId ?? prev.categoryId, brandId: m.brandId ?? prev.brandId, modelFreeText: m.name }))
+    } else if (text) {
+      prefilled.current = true
+      setItem((prev) => ({ ...prev, modelFreeText: text.slice(0, 120) }))
+    }
+  }, [params, models.data])
 
   // Held rather than uploaded on pick: the unit does not exist until the form
   // is sent, so there is nothing to attach them to until then.

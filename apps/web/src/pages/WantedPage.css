@@ -123,3 +123,8 @@
   color: var(--tg-warn);
   font-weight: var(--tg-weight-bold);
 }
+
+.wanted__titlebar { display: flex; flex-basis: 100%; align-items: center; justify-content: space-between; gap: var(--tg-space-3); flex-wrap: wrap; }
+.wanted__titlebar .wanted__title { flex-basis: auto; }
+.wanted__top-actions { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; }
+.want__consign { margin-top: var(--tg-space-2); text-decoration: none; align-self: flex-start; }
