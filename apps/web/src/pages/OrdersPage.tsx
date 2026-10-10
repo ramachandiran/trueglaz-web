@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  api, ApiError, dateOnly, money, relative, useApi,
-  type OrderLineSummary, type OrderSummary,
+  api, ApiError, dateOnly, dateTime, money, relative, useApi,
+  type OrderLineSummary, type OrderSummary, type ReturnForBuyer,
 } from '@trueglaz/core'
 import { GearPhoto, photoKindFor } from '../components/GearPhoto'
 import { Empty, ErrorNote, Loading } from '../components/ui'
@@ -45,13 +45,23 @@ function needsYou(line: OrderLineSummary): boolean {
   return line.state === 'delivered'
 }
 
-/** Whole days left, rounded up, or null when no window is running. */
-function daysLeft(iso: string | null): number | null {
+/** "23h 10m", "40m", or null once it has passed (or when no window is running). */
+function timeLeft(iso: string | null): string | null {
   if (!iso) return null
   const ms = new Date(iso).getTime() - Date.now()
-  if (Number.isNaN(ms)) return null
-  return Math.max(0, Math.ceil(ms / 86_400_000))
+  if (Number.isNaN(ms) || ms <= 0) return null
+  const mins = Math.ceil(ms / 60_000)
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`
 }
+
+const RETURN_REASONS: { code: string; label: string; needsNote: boolean }[] = [
+  { code: 'not_as_described', label: 'Not as described', needsNote: true },
+  { code: 'damaged_in_transit', label: 'Damaged in transit', needsNote: true },
+  { code: 'wrong_item', label: 'Wrong item received', needsNote: true },
+  { code: 'change_of_mind', label: 'Changed my mind', needsNote: false },
+]
 
 export function OrdersPage() {
   const orders = useApi(() => api.myOrders(), [])
@@ -211,7 +221,7 @@ function OrderCard({ order, onChanged }: { order: OrderSummary; onChanged: () =>
 
       <div className="order__lines">
         {order.lines.map((line) => (
-          <LineRow key={line.id} line={line} busy={busy === line.id} onAccept={() => accept(line.id)} />
+          <LineRow key={line.id} line={line} busy={busy === line.id} onAccept={() => accept(line.id)} onChanged={onChanged} />
         ))}
       </div>
     </article>
@@ -219,14 +229,15 @@ function OrderCard({ order, onChanged }: { order: OrderSummary; onChanged: () =>
 }
 
 function LineRow({
-  line, busy, onAccept,
+  line, busy, onAccept, onChanged,
 }: {
   line: OrderLineSummary
   busy: boolean
   onAccept: () => void
+  onChanged: () => void
 }) {
-  const left = daysLeft(line.acceptanceWindowEndsAt)
-  const waiting = needsYou(line)
+  const left = timeLeft(line.acceptanceWindowEndsAt)
+  const waiting = needsYou(line) && left != null
 
   return (
     <div className={`line${waiting ? ' line--waiting' : ''}`}>
@@ -256,17 +267,15 @@ function LineRow({
 
         {waiting ? (
           <p className="line__window" role="status">
-            <strong className="line__window-head">
-              {left === 0 ? 'Confirm this today'
-                : left === 1 ? 'Confirm by tomorrow'
-                  : `Confirm within ${left} days`}
-            </strong>{' '}
-            Your payment is still held. Confirming releases it to the seller — and if you do
-            nothing it is released automatically on {dateOnly(line.acceptanceWindowEndsAt)}.
+            <strong className="line__window-head">{left} left to return it</strong>{' '}
+            Your payment is held. If it is not what you expected, return it now. If you do
+            nothing it is released to the seller automatically at {dateTime(line.acceptanceWindowEndsAt)}.
           </p>
         ) : (
           <p className="line__status">{statusLine(line)}</p>
         )}
+
+        <ReturnPanel line={line} canRaise={waiting} onChanged={onChanged} />
       </div>
 
       <div className="line__actions">
@@ -342,12 +351,16 @@ function statusLine(line: OrderLineSummary): string {
   switch (line.state) {
     case 'accepted':
       return line.acceptedBy === 'window_expired'
-        ? `Accepted automatically on ${dateOnly(line.acceptedAt)} — the confirmation window passed.`
+        ? `Closed automatically on ${dateOnly(line.acceptedAt)} — the return window passed.`
         : `Confirmed on ${dateOnly(line.acceptedAt)}. The seller has been paid.`
     case 'dispatched':
       return line.dispatchedAt ? `On its way — sent ${relative(line.dispatchedAt)}.` : 'On its way to you.'
+    case 'delivered':
+      return 'Delivered. The return window has ended and the sale is closing.'
+    case 'return_requested':
+      return 'Return in progress — the clock is stopped while we deal with it.'
     case 'returned':
-      return 'Being returned.'
+      return 'Returned. Your refund is on its way.'
     case 'cancelled':
       return 'Cancelled.'
     default:
@@ -399,5 +412,99 @@ function OrderInvoice({
     >
       {busy ? 'Opening…' : failed ? 'Try the invoice again' : 'Invoice'}
     </button>
+  )
+}
+
+/**
+ * Returning an item: asking, and then following it.
+ *
+ * Asking is only on offer while the window is open. Once a return exists the
+ * panel says where it stands in words, and, when it has been approved, where to
+ * send the parcel.
+ */
+function ReturnPanel({
+  line, canRaise, onChanged,
+}: {
+  line: OrderLineSummary
+  canRaise: boolean
+  onChanged: () => void
+}) {
+  const hasCase = ['return_requested', 'returned'].includes(line.state) || line.acceptedBy === 'return_refused'
+  const found = useApi<ReturnForBuyer | null | undefined>(
+    () => (hasCase ? api.returnForLine(line.id) : Promise.resolve(null)),
+    [line.id, line.state],
+  )
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('not_as_described')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const spec = RETURN_REASONS.find((r) => r.code === reason)!
+
+  async function submit() {
+    setBusy(true); setError(null)
+    try {
+      await api.returnRequest(line.id, reason, note)
+      setOpen(false); setNote('')
+      onChanged(); found.reload()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'That did not go through')
+    } finally { setBusy(false) }
+  }
+
+  const rc = found.data
+  if (rc) {
+    const c = rc.case
+    const text: Record<string, string> = {
+      requested: 'We have your return request and will review it shortly.',
+      approved: `Approved. Send it back with ${rc.courierCode ?? 'the courier'}${rc.trackingNumber ? `, tracking ${rc.trackingNumber}` : ''}. We refund you once it has arrived and been checked.`,
+      received: 'We have your parcel and are checking it.',
+      inspected: 'Checked. We are finishing up.',
+      refunded: 'Return accepted. Your refund is being processed.',
+      escalated: 'The item did not pass our check on arrival. Our team will contact you.',
+      sale_stands: 'After review the sale stands; the item is being sent back to you.',
+      declined: `Not accepted. ${c.decisionNote ?? ''}`,
+    }
+    return (
+      <p className="line__status" role="status">
+        <strong>Return:</strong> {text[c.state] ?? c.state}
+      </p>
+    )
+  }
+
+  if (!canRaise) return null
+  if (!open) {
+    return (
+      <p className="line__status">
+        <button type="button" className="tg-button" onClick={() => setOpen(true)}>Return this item</button>
+      </p>
+    )
+  }
+  return (
+    <div className="line__status">
+      <label className="tg-label">
+        Why are you returning it?
+        <select className="tg-input" value={reason} onChange={(e) => setReason(e.target.value)}>
+          {RETURN_REASONS.map((r) => <option key={r.code} value={r.code}>{r.label}</option>)}
+        </select>
+      </label>
+      <label className="tg-label">
+        {spec.needsNote ? 'What is wrong?' : 'Anything you would like to tell us?'}
+        {!spec.needsNote && <span className="tg-muted"> (optional)</span>}
+        <textarea className="tg-input" rows={3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} />
+      </label>
+      {error && <p className="order__error" role="alert">{error}</p>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <button
+          type="button" className="tg-button tg-button--primary"
+          disabled={busy || (spec.needsNote && note.trim().length < 10)}
+          onClick={submit}
+        >
+          {busy ? 'Sending…' : 'Request the return'}
+        </button>
+        <button type="button" className="tg-button" disabled={busy} onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+    </div>
   )
 }

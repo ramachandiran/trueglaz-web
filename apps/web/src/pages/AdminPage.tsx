@@ -205,7 +205,7 @@ function Widget({ label, value, note, tone }: {
 /* -- platform settings ----------------------------------------------------- */
 
 /** Which keys are worth putting at the top of the list. */
-const SETTING_ORDER = ['commission_gst_percent', 'reservation_timeout_minutes', 'acceptance_window_days']
+const SETTING_ORDER = ['commission_gst_percent', 'reservation_timeout_minutes', 'return_window_hours']
 
 /**
  * The numbers the platform runs on, editable here.

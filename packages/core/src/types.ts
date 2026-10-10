@@ -1281,3 +1281,36 @@ export interface PayoutDestination {
   accountNumber: string | null
   accountLast4: string | null
 }
+
+/** One returned line, from the buyer's request to its resolution. */
+export interface ReturnCase {
+  id: string
+  orderLineId: string
+  consignmentItemId: string
+  buyerUserId: string
+  reasonCode: string
+  buyerNote: string | null
+  /** requested | approved | declined | received | inspected | refunded | escalated | sale_stands */
+  state: string
+  requestedAt: string | null
+  decisionNote: string | null
+  inspection: { serialMatches: boolean; conditionOk: boolean; accessoriesOk: boolean; note: string | null } | null
+  resolutionNote: string | null
+}
+
+/** A case as the buyer sees it: with where to send the parcel once it is approved. */
+export interface ReturnForBuyer {
+  case: ReturnCase
+  courierCode: string | null
+  trackingNumber: string | null
+}
+
+export interface ReturnCaseView {
+  case: ReturnCase
+  orderLineId: string
+  orderNumber: string
+  itemSku: string
+  itemLabel: string
+  amountMinor: number
+  buyerName: string | null
+}

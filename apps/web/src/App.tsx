@@ -12,6 +12,7 @@ import { CatalogPage } from './pages/CatalogPage'
 import { HomePage } from './pages/HomePage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { FulfilmentPage } from './pages/FulfilmentPage'
+import { ReturnsPage } from './pages/ReturnsPage'
 import { InspectPage } from './pages/InspectPage'
 import { InventoryDashboard } from './pages/InventoryDashboard'
 import { ItemDetailPage } from './pages/ItemDetailPage'
@@ -91,6 +92,8 @@ export function App() {
               prefix had become shorthand for "a staff screen". The old paths
               redirect so anything already bookmarked still lands. */}
           <Route path="/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
+          {/* Ops, not staff: the bench check on a returned unit is a technician's. */}
+          <Route path="/returns" element={<Guard need="ops"><ReturnsPage /></Guard>} />
           <Route path="/people" element={<Guard need="staff"><StaffUsersPage /></Guard>} />
           <Route path="/people/:id" element={<Guard need="staff"><StaffUserDetailPage /></Guard>} />
           <Route path="/ops/fulfilment" element={<Navigate to="/fulfilment" replace />} />

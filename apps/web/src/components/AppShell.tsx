@@ -65,6 +65,7 @@ function Header() {
             <NavLink to="/ops" className="shell__ops-link">Operations</NavLink>
             {staff && <NavLink to="/people" className="shell__ops-link">People</NavLink>}
             {staff && <NavLink to="/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
+            <NavLink to="/returns" className="shell__ops-link">Returns</NavLink>
             {admin && <NavLink to="/admin" className="shell__ops-link">Money</NavLink>}
             {admin && <NavLink to="/balance-sheet" className="shell__ops-link">Balance sheet</NavLink>}
           </nav>

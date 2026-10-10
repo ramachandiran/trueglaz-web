@@ -3,7 +3,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail,
-  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -373,6 +373,21 @@ export const api = {
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
   acceptLine: (lineId: string, byWindowExpiry = false) =>
     post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`),
+  // -- returns -------------------------------------------------------------
+  returnRequest: (lineId: string, reasonCode: string, note?: string) =>
+    post<ReturnCase>(`/order-lines/${lineId}/return-request`, { reasonCode, note: note?.trim() || null }),
+  returnForLine: (lineId: string) => get<ReturnForBuyer | null>(`/order-lines/${lineId}/return`),
+  returns: (state?: string) => get<ReturnCaseView[]>(`/returns${state ? `?state=${state}` : ''}`),
+  returnApprove: (lineId: string, courierCode?: string, trackingNumber?: string) =>
+    post<ReturnCase>(`/returns/${lineId}/approve`, { courierCode: courierCode || null, trackingNumber: trackingNumber || null }),
+  returnDecline: (lineId: string, note: string) => post<ReturnCase>(`/returns/${lineId}/decline`, { note }),
+  returnReceive: (lineId: string) => post<ReturnCase>(`/returns/${lineId}/receive`, {}),
+  returnInspect: (lineId: string, body: { serialMatches: boolean; conditionOk: boolean; accessoriesOk: boolean; note?: string }) =>
+    post<ReturnCase>(`/returns/${lineId}/inspect`, body),
+  returnResolve: (lineId: string, outcome: 'refund' | 'reject', note?: string) =>
+    post<ReturnCase>(`/returns/${lineId}/resolve`, { outcome, note: note?.trim() || null }),
+  returnClose: (lineId: string, outcome: 'refund' | 'sale_stands', note: string) =>
+    post<ReturnCase>(`/returns/${lineId}/close`, { outcome, note }),
   /** The seller calls off a submission that has not shipped. */
   withdrawSubmission: (submissionId: string) => post<unknown>(`/submissions/${submissionId}/withdraw`),
   /** The seller takes their own listed item off sale; it is then returned to them. */
