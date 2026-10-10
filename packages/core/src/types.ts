@@ -1030,9 +1030,13 @@ export interface HomeSale {
 
 /** Everything the shop front shows, in one answer. */
 export interface HomeView {
+  /** The platform's return window, so the page promises the real one. */
+  returnWindowHours: number
   justIn: HomeListing[]
   bestSavings: HomeListing[]
   recentlySold: HomeSale[]
+  /** Top-level departments with stock, slug included for the catalogue link. */
+  categories: HomeFacet[]
   brands: HomeFacet[]
   mounts: HomeFacet[]
   topModels: HomeModel[]
@@ -1347,4 +1351,68 @@ export interface WantedMatch {
   /** match: the model, grade and price all work for the buyer. close: same model, but not quite. */
   kind: 'match' | 'close'
   reason: string
+}
+
+// --- the signed-in buyer's corner of the home page ---------------------------
+
+export type BuyerStage =
+  | 'paying' | 'preparing' | 'on_the_way' | 'delivered' | 'returning'
+  | 'yours' | 'kept_after_return' | 'refunded' | 'cancelled'
+
+export interface BuyerOrder {
+  lineId: string
+  orderId: string
+  orderNumber: string
+  listingId: string
+  title: string
+  gradeCode: string
+  priceMinor: number
+  placedAt: string | null
+  stage: BuyerStage
+  /** Only while delivered and the return clock is running. */
+  windowEndsAt: string | null
+  returnState: string | null
+  courierCode: string | null
+  trackingNumber: string | null
+  modelSlug: string | null
+  categorySlug: string | null
+  cover: MediaView | null
+}
+
+export interface BuyerAskMatch {
+  listingId: string
+  title: string
+  gradeCode: string
+  priceMinor: number
+}
+
+export interface BuyerAsk {
+  id: string
+  wanted: string
+  state: 'submitted' | 'published'
+  minGradeCode: string | null
+  maxPriceMinor: number | null
+  expiresAt: string | null
+  /** Up to three, cheapest first. */
+  matches: BuyerAskMatch[]
+  matchCount: number
+  /** Same model in stock, but over budget or below the grade asked for. */
+  nearCount: number
+}
+
+export interface BuyerAction {
+  key: string
+  title: string
+  hint: string
+  count: number
+  href: string
+  tone: 'urgent' | 'good' | 'normal'
+}
+
+export interface BuyerHome {
+  actions: BuyerAction[]
+  orders: BuyerOrder[]
+  asks: BuyerAsk[]
+  stats: { inProgress: number; bought: number; spentMinor: number; openAsks: number }
+  returnWindowHours: number
 }

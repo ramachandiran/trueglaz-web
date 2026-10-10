@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, relative, useApi, useSession,
   isSeller, type MyRequest, type WantedMatch, type WantedRequest,
@@ -20,7 +20,9 @@ export function WantedPage() {
   const board = useApi(() => api.wantedBoard(), [])
   const mine = useApi(() => (session ? api.myRequests() : Promise.resolve(null)), [session?.userId])
   const [searchTerm, setSearchTerm] = useState('')
-  const [askSignal, setAskSignal] = useState(0)
+  // ?ask=1 (the home page's "Tell us what you're looking for") arrives with the form open.
+  const [params] = useSearchParams()
+  const [askSignal, setAskSignal] = useState(params.get('ask') ? 1 : 0)
   // A seller sees which asks their own gear answers; anyone else has none.
   const seller = useApi(() => (isSeller(session) ? api.sellerHome() : Promise.resolve(null)), [session?.userId])
   const matches = new Map((seller.data?.wantedMatches ?? []).map((m) => [m.requestId, m]))

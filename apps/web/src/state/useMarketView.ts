@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 export type MarketView = 'buying' | 'selling'
 
@@ -17,21 +17,31 @@ const KEY = 'trueglaz.view'
  * checks their payouts on a phone should not find the laptop switched over.
  */
 export function useMarketView() {
-  const [view, setView] = useState<MarketView>(() => {
-    try {
-      return localStorage.getItem(KEY) === 'selling' ? 'selling' : 'buying'
-    } catch {
-      return 'buying'
-    }
-  })
+  const [view, setViewState] = useState<MarketView>(() => storedMarketView() ?? 'buying')
 
-  useEffect(() => {
+  // Saved only when someone actually switches, and at once rather than in an
+  // effect: the switch navigates in the same click, and the home route reads
+  // this to decide which home to show. Saving the default on first render
+  // would also make "never chose" look like "chose Buying", and a seller who
+  // never touched the switch would stop landing on their selling home.
+  const setView = useCallback((next: MarketView) => {
     try {
-      localStorage.setItem(KEY, view)
+      localStorage.setItem(KEY, next)
     } catch {
       /* storage unavailable — the switch still works for this session */
     }
-  }, [view])
+    setViewState(next)
+  }, [])
 
   return { view, setView }
+}
+
+/** The side last chosen on this device, or null if it has never been chosen. */
+export function storedMarketView(): MarketView | null {
+  try {
+    const v = localStorage.getItem(KEY)
+    return v === 'selling' || v === 'buying' ? v : null
+  } catch {
+    return null
+  }
 }

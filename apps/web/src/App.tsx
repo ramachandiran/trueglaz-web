@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { isAdmin, isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
+import { storedMarketView } from './state/useMarketView'
 import { useParams } from 'react-router-dom'
 import { Guard } from './components/Guard'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
@@ -47,7 +48,9 @@ function SmartHome() {
     // screen: they inspect what is on their bench, they do not browse the shelf.
     if (isStaff(session)) return <Navigate to="/today" replace />
     if (isOps(session)) return <Navigate to="/ops" replace />
-    if (isSeller(session)) return <Navigate to="/sell" replace />
+    // A seller lands on their selling home, unless they last switched to
+    // Buying on this device: then the switch would bounce straight back.
+    if (isSeller(session) && storedMarketView() !== 'buying') return <Navigate to="/sell" replace />
   }
 
   return <HomePage />

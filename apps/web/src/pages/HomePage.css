@@ -1,10 +1,9 @@
 /* ---------------------------------------------------------------------------
    The shop front.
 
-   Rows of gear rather than a grid behind filters. The page is a column of
-   sections, each one a rail that scrolls sideways when it does not fit — a
-   wrapping row reads as a grid that has gone wrong, and a grid is what the
-   catalogue is for.
+   Hero, promises, the signed-in buyer's own corner, then rails of gear. Rails
+   scroll sideways when they do not fit — a wrapping row reads as a grid that
+   has gone wrong, and a grid is what the catalogue is for.
    --------------------------------------------------------------------------- */
 .home {
   display: grid;
@@ -12,20 +11,6 @@
   padding: var(--tg-space-5) var(--tg-space-4) var(--tg-space-7);
   max-width: 1180px;
   margin: 0 auto;
-}
-
-.home__intro {
-  max-width: 62ch;
-}
-
-.home__headline {
-  font-size: var(--tg-text-xxl);
-  margin: 0 0 var(--tg-space-2);
-}
-
-.home__sub {
-  margin: 0;
-  line-height: 1.55;
 }
 
 .home__section {
@@ -59,9 +44,597 @@
   white-space: nowrap;
 }
 
+.home__kicker {
+  margin: 0;
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--tg-text-muted);
+  font-weight: var(--tg-weight-bold);
+}
+
+/* --- hero ----------------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.9fr);
+  gap: var(--tg-space-6);
+  align-items: center;
+  padding: var(--tg-space-7) var(--tg-space-6);
+  border-radius: calc(var(--tg-radius-lg) * 1.5);
+  background:
+    radial-gradient(120% 140% at 100% 0%, var(--tg-brand-alt) 0%, transparent 55%),
+    var(--tg-brand);
+  color: var(--tg-on-brand);
+  overflow: hidden;
+}
+
+.hero__eyebrow {
+  margin: 0 0 var(--tg-space-3);
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: var(--tg-weight-bold);
+  color: var(--tg-accent);
+}
+
+.hero__headline {
+  margin: 0 0 var(--tg-space-3);
+  font-size: clamp(2.1rem, 4.6vw, 3.3rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--tg-on-brand);
+}
+
+.hero__sub {
+  margin: 0 0 var(--tg-space-5);
+  max-width: 52ch;
+  line-height: 1.55;
+  color: var(--tg-on-brand-muted);
+}
+
+.hero__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tg-space-3) var(--tg-space-5);
+}
+
+.hero .hero__cta {
+  padding: 13px 24px;
+  font-weight: var(--tg-weight-bold);
+  background: var(--tg-cta);
+  border-color: var(--tg-cta);
+  color: var(--tg-on-cta, #fff);
+  text-decoration: none;
+}
+
+.hero .hero__cta:hover {
+  background: var(--tg-cta-hover);
+  border-color: var(--tg-cta-hover);
+  color: var(--tg-on-cta, #fff);
+  text-decoration: none;
+}
+
+.hero__ghost {
+  color: var(--tg-on-brand);
+  font-weight: var(--tg-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, var(--tg-on-brand) 40%, transparent);
+}
+
+.hero__ghost:hover {
+  color: var(--tg-on-brand);
+  text-decoration-color: var(--tg-on-brand);
+}
+
+.hero__cats {
+  list-style: none;
+  margin: var(--tg-space-5) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tg-space-2);
+}
+
+.hero__cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: var(--tg-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--tg-on-brand) 25%, transparent);
+  color: var(--tg-on-brand);
+  font-size: var(--tg-text-sm);
+  text-decoration: none;
+  transition: background var(--tg-transition), border-color var(--tg-transition);
+}
+
+.hero__cat span {
+  color: var(--tg-on-brand-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__cat:hover {
+  background: color-mix(in srgb, var(--tg-on-brand) 10%, transparent);
+  border-color: var(--tg-on-brand);
+  color: var(--tg-on-brand);
+  text-decoration: none;
+}
+
+/* One real unit, on a card that lifts off the band. */
+.hero__feature {
+  display: grid;
+  background: var(--tg-bg-raised);
+  color: var(--tg-text);
+  border-radius: var(--tg-radius-lg);
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  text-decoration: none;
+  transform: rotate(1.2deg);
+  transition: transform var(--tg-transition);
+}
+
+.hero__feature:hover {
+  color: var(--tg-text);
+  transform: rotate(0deg) translateY(-2px);
+  text-decoration: none;
+}
+
+.hero__feature .card__photo {
+  border: 0;
+  border-radius: 0;
+}
+
+.hero__feature-body {
+  display: grid;
+  gap: 4px;
+  padding: var(--tg-space-3) var(--tg-space-4) var(--tg-space-4);
+}
+
+.hero__feature-tag {
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--tg-accent);
+  font-weight: var(--tg-weight-bold);
+}
+
+.hero__feature-name {
+  font-weight: var(--tg-weight-bold);
+  font-size: var(--tg-text-md);
+}
+
+.hero__feature-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+}
+
+.hero__feature-price {
+  display: flex;
+  align-items: baseline;
+  gap: var(--tg-space-2);
+  margin-top: 2px;
+}
+
+.hero__feature-price strong {
+  font-size: var(--tg-text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__feature-was {
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+}
+
+/* --- promises ------------------------------------------------------------- */
+
+/* Pulled up under the hero so the four read as its footing, not a new section. */
+.promises {
+  list-style: none;
+  margin: calc(var(--tg-space-7) * -0.55) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--tg-space-3);
+}
+
+.promise {
+  display: flex;
+  gap: var(--tg-space-3);
+  align-items: flex-start;
+  padding: var(--tg-space-4);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  font-size: var(--tg-text-sm);
+}
+
+.promise__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--tg-accent-soft);
+  color: var(--tg-accent);
+}
+
+.promise__title {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.promise__body {
+  display: block;
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-xs);
+  line-height: 1.45;
+}
+
+/* --- your corner ---------------------------------------------------------- */
+
+.corner {
+  display: grid;
+  gap: var(--tg-space-4);
+  padding: var(--tg-space-5);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+}
+
+.corner__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--tg-space-2) var(--tg-space-5);
+}
+
+.corner__title {
+  margin: 0;
+  font-size: var(--tg-text-lg);
+}
+
+.corner__stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tg-space-4);
+  flex: 1;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+}
+
+.corner__stats strong {
+  color: var(--tg-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.corner__all {
+  font-size: var(--tg-text-sm);
+  white-space: nowrap;
+}
+
+.corner__todo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--tg-space-2);
+}
+
+.home-task {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-3) var(--tg-space-4);
+  border: 1px solid var(--tg-border);
+  border-left: 5px solid var(--tg-accent);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  text-decoration: none;
+  transition: background var(--tg-transition);
+}
+
+.home-task:hover { background: var(--tg-bg-hover); color: var(--tg-text); text-decoration: none; }
+.home-task--urgent { border-left-color: var(--tg-warn); background: var(--tg-warn-soft); }
+.home-task--good { border-left-color: var(--tg-good); background: var(--tg-good-soft); }
+
+.home-task__n {
+  font-size: 1.4rem;
+  font-weight: var(--tg-weight-bold);
+  min-width: 2ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-task--urgent .home-task__n { color: var(--tg-warn); }
+.home-task--good .home-task__n { color: var(--tg-good); }
+
+.home-task__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--tg-text-sm);
+}
+
+.home-task__body span {
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+}
+
+.home-task__go { color: var(--tg-text-muted); }
+
+.corner__empty {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+}
+
+.corner__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--tg-space-5);
+  align-items: start;
+}
+
+.corner__orders,
+.corner__asks {
+  display: grid;
+  gap: var(--tg-space-3);
+  min-width: 0;
+}
+
+.corner__muted {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+}
+
+/* A parcel: thumb, what it is, where it is. */
+.parcels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--tg-space-2);
+}
+
+.parcel {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: var(--tg-space-3);
+  padding: var(--tg-space-3);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bg);
+}
+
+.parcel__thumb .card__photo {
+  border-radius: var(--tg-radius-sm);
+}
+
+/* At thumbnail size the "not this unit" badge covers the whole picture; the
+   order is for a unit the buyer has already seen, so it says nothing here. */
+.parcel__thumb .model-photo__badge {
+  display: none;
+}
+
+.parcel__body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.parcel__top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--tg-space-2);
+  align-items: baseline;
+}
+
+.parcel__name {
+  font-weight: var(--tg-weight-bold);
+  color: var(--tg-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parcel__price {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--tg-text-sm);
+  white-space: nowrap;
+}
+
+.parcel__status {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+}
+
+.parcel__status--urgent { color: var(--tg-warn); }
+.parcel__status--good { color: var(--tg-good); }
+.parcel__status--live { color: var(--tg-accent); }
+.parcel__status--quiet { color: var(--tg-text-muted); }
+
+.parcel__meta {
+  margin: 0;
+  font-size: var(--tg-text-xs);
+}
+
+/* Four dots on a line: done, now, still to come. */
+.home-steps {
+  list-style: none;
+  margin: 2px 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  font-size: 0.68rem;
+  color: var(--tg-text-muted);
+}
+
+.home-steps__s {
+  position: relative;
+  padding-top: 14px;
+}
+
+.home-steps__s::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tg-border-strong);
+  z-index: 1;
+}
+
+.home-steps__s::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  right: 0;
+  height: 2px;
+  background: var(--tg-border);
+}
+
+.home-steps__s:last-child::after { display: none; }
+.home-steps__s--done { color: var(--tg-text); }
+.home-steps__s--done::before { background: var(--tg-good); }
+.home-steps__s--done::after { background: var(--tg-good); }
+.home-steps__s--now { font-weight: var(--tg-weight-bold); }
+.home-steps__s--now::before { box-shadow: 0 0 0 3px var(--tg-good-soft); }
+.home-steps__s--now::after { background: var(--tg-border); }
+
+/* The buyer's own asks. One that stock answers is the green one. */
+.myasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--tg-space-2);
+}
+
+.myask {
+  padding: var(--tg-space-3);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bg);
+  font-size: var(--tg-text-sm);
+}
+
+.myask--hit {
+  border-color: var(--tg-good);
+  background: var(--tg-good-soft);
+}
+
+.myask__top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--tg-space-2);
+  align-items: baseline;
+}
+
+.myask__review {
+  font-size: var(--tg-text-xs);
+  padding: 1px 8px;
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-bg-sunken);
+  color: var(--tg-text-muted);
+  white-space: nowrap;
+}
+
+.myask__terms,
+.myask__none {
+  margin: 2px 0 0;
+  font-size: var(--tg-text-xs);
+}
+
+.myask__hit {
+  margin: var(--tg-space-2) 0 var(--tg-space-1);
+  color: var(--tg-good);
+  font-weight: var(--tg-weight-bold);
+  font-size: var(--tg-text-xs);
+}
+
+.myask__matches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.myask__match {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-2);
+  padding: 6px 8px;
+  border-radius: var(--tg-radius-sm);
+  background: var(--tg-bg-raised);
+  color: var(--tg-text);
+  text-decoration: none;
+}
+
+.myask__match:hover { background: var(--tg-bg-hover); color: var(--tg-text); text-decoration: none; }
+
+.myask__match-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- how it works --------------------------------------------------------- */
+
+.how__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--tg-space-4);
+}
+
+.how__steps li {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  font-size: var(--tg-text-sm);
+}
+
+.how__steps li span:last-child {
+  color: var(--tg-text-muted);
+  font-size: var(--tg-text-xs);
+  line-height: 1.45;
+}
+
+.how__n {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--tg-brand);
+  color: var(--tg-on-brand);
+  font-weight: var(--tg-weight-bold);
+  margin-bottom: 4px;
+}
+
 /* --- rails ---------------------------------------------------------------- */
 
-.rail {
+.home-rail {
   list-style: none;
   margin: 0;
   padding: 0 0 var(--tg-space-2);
@@ -76,7 +649,7 @@
   margin-inline: -2px;
 }
 
-.rail > * {
+.home-rail > * {
   scroll-snap-align: start;
 }
 
@@ -88,6 +661,7 @@
 }
 
 .card__link {
+  position: relative;
   display: grid;
   gap: var(--tg-space-2);
   color: var(--tg-text);
@@ -97,6 +671,10 @@
 
 .card__link:hover .card__name {
   text-decoration: underline;
+}
+
+.card__link:hover .card__photo img {
+  transform: scale(1.03);
 }
 
 .card__name {
@@ -119,6 +697,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 300ms ease;
 }
 
 .card__photo .model-photo {
@@ -133,6 +712,25 @@
   height: 100%;
   object-fit: contain;
   display: block;
+}
+
+/* A sticker on the photo: the saving, or "Sold". */
+.card__flag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 9px;
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-accent);
+  color: var(--tg-on-accent);
+  font-size: var(--tg-text-xs);
+  font-weight: var(--tg-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.card__flag--sold {
+  background: var(--tg-brand);
+  color: var(--tg-on-brand);
 }
 
 .card__brand {
@@ -169,36 +767,73 @@
   opacity: 0.55;
 }
 
-/* --- ways in -------------------------------------------------------------- */
+/* --- shop by -------------------------------------------------------------- */
 
-.tile__link {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--tg-space-3) var(--tg-space-4);
+.home__shopby {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--tg-space-5);
+  padding: var(--tg-space-5);
   border: 1px solid var(--tg-border);
   border-radius: var(--tg-radius-lg);
   background: var(--tg-bg-raised);
-  color: var(--tg-text);
-  text-decoration: none;
-  height: 100%;
-  transition: border-color var(--tg-transition), background var(--tg-transition);
 }
 
-.tile__link:hover {
-  border-color: var(--tg-accent);
-  text-decoration: none;
+.shopby {
+  display: grid;
+  gap: var(--tg-space-3);
+  align-content: start;
 }
 
-.tile__label {
-  font-weight: var(--tg-weight-bold);
-}
-
-.tile__count {
+.shopby__note {
+  margin: -6px 0 0;
   font-size: var(--tg-text-xs);
 }
 
-/* --- demand by model ------------------------------------------------------ */
+.home-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tg-space-2);
+}
+
+.home-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-pill);
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-medium);
+  text-decoration: none;
+  transition: border-color var(--tg-transition), background var(--tg-transition);
+}
+
+.home-chip:hover {
+  border-color: var(--tg-accent);
+  background: var(--tg-accent-soft);
+  color: var(--tg-text);
+  text-decoration: none;
+}
+
+.home-chip__n {
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- demand by model + the ask -------------------------------------------- */
+
+.home__pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  gap: var(--tg-space-5);
+  align-items: start;
+}
 
 .home__models {
   list-style: none;
@@ -222,12 +857,20 @@
   font-size: var(--tg-text-sm);
 }
 
+.model__rank {
+  min-width: 2ch;
+  font-weight: var(--tg-weight-bold);
+  color: var(--tg-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .model__name {
   flex: 1 1 22ch;
 }
 
 .model__stat {
   font-variant-numeric: tabular-nums;
+  font-size: var(--tg-text-xs);
 }
 
 .model__cta,
@@ -236,13 +879,41 @@
   font-size: var(--tg-text-sm);
 }
 
-/* --- the Wanted teaser ---------------------------------------------------- */
-
-.home__wanted {
+.askpanel {
+  display: grid;
+  gap: var(--tg-space-3);
   padding: var(--tg-space-5);
-  border: 1px solid var(--tg-border);
   border-radius: var(--tg-radius-lg);
-  background: var(--tg-bg-raised);
+  background: linear-gradient(160deg, var(--tg-accent-soft), var(--tg-bg-raised) 70%);
+  border: 1px solid var(--tg-border);
+}
+
+.askpanel__title {
+  margin: 0;
+  font-size: var(--tg-text-xl);
+  letter-spacing: -0.01em;
+}
+
+.askpanel__lede {
+  margin: 0;
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text-muted);
+  line-height: 1.5;
+}
+
+.askpanel__cta {
+  justify-self: start;
+  text-decoration: none;
+}
+
+.askpanel__kicker {
+  margin-top: var(--tg-space-2);
+}
+
+.askpanel__foot {
+  margin: 0;
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
 }
 
 .home__asks {
@@ -250,16 +921,21 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--tg-space-2);
+  gap: 6px;
 }
 
 .ask {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--tg-space-2) var(--tg-space-3);
+  justify-content: space-between;
+  gap: var(--tg-space-1) var(--tg-space-3);
   font-size: var(--tg-text-sm);
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--tg-border);
 }
+
+.ask:last-child { border-bottom: 0; padding-bottom: 0; }
 
 .ask__what {
   font-weight: var(--tg-weight-medium);
@@ -269,21 +945,45 @@
   font-size: var(--tg-text-xs);
 }
 
-.home__wanted-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--tg-space-3);
+/* --- narrower screens ----------------------------------------------------- */
+
+@media (max-width: 960px) {
+  .hero { grid-template-columns: 1fr; padding: var(--tg-space-6) var(--tg-space-5); }
+  .hero__feature { max-width: 420px; transform: none; }
+  .promises { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }
+  .how__steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .corner__cols, .home__pair { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
   .home {
     gap: var(--tg-space-6);
-    padding: var(--tg-space-4) var(--tg-space-3) var(--tg-space-7);
+    padding: var(--tg-space-3) var(--tg-space-3) var(--tg-space-7);
   }
 
-  .home__headline { font-size: var(--tg-text-xl); }
+  .hero {
+    padding: var(--tg-space-5) var(--tg-space-4);
+    gap: var(--tg-space-5);
+  }
+
+  /* On a phone the feature card is a strip, not a tower: photo beside text. */
+  .hero__feature {
+    grid-template-columns: 120px minmax(0, 1fr);
+    max-width: none;
+  }
+
+  .hero__feature .card__photo { height: 100%; aspect-ratio: auto; }
+
+  .promises { grid-template-columns: 1fr; gap: var(--tg-space-2); }
+  .promise { padding: var(--tg-space-3); }
+  .corner { padding: var(--tg-space-4); }
+  .corner__stats { flex-basis: 100%; order: 3; gap: var(--tg-space-3); }
+  .how__steps { gap: var(--tg-space-3); }
+  /* Four labels do not fit beside a thumbnail on a phone; the dots carry the
+     progress and only the step it is at is named. */
+  .home-steps__s:not(.home-steps__s--now) { color: transparent; }
 
   /* Narrower cards, so a second one peeks in at the edge and the row reads as
      something you can push sideways. */
-  .rail { grid-auto-columns: minmax(150px, 70%); }
+  .home-rail { grid-auto-columns: minmax(150px, 70%); }
 }
