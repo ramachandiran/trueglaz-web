@@ -7,7 +7,7 @@ import { InspectionReport } from '../components/InspectionReport'
 import { photoKindFor } from '../components/GearPhoto'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge } from '../components/ui'
 import { buildTimeline, type RenderedReport } from '@trueglaz/core'
-import { dateTime, money } from '@trueglaz/core'
+import { dateOnly, dateTime, money } from '@trueglaz/core'
 import './DetailPage.css'
 import { Gallery } from '../components/Gallery'
 
@@ -38,6 +38,9 @@ export function ListingDetailPage() {
     [item.data],
   )
   const canSeeReport = ready && !!session
+  // Opened from the buyer's orders ("View your item"): this is theirs, and the
+  // buy box says so instead of "this one has been sold".
+  const fromOrder = (location.state as { fromOrder?: { orderNumber: string; placedAt: string | null; lineState: string } } | null)?.fromOrder
 
   if (listing.loading) return <Loading label="Loading listing" />
   if (listing.error) return <ErrorNote error={listing.error} onRetry={listing.reload} />
@@ -114,6 +117,18 @@ export function ListingDetailPage() {
           <p className="buybox__price">{money(d.listing.priceMinor, d.listing.currency)}</p>
           <p className="buybox__ship tg-muted">+ {meta.data ? money(meta.data.shippingMinor) : ''} delivery · arrives in 3–5 working days</p>
 
+          {fromOrder && (
+            <div className="buybox__mine" role="status">
+              {fromOrder.lineState === 'returned' ? (
+                <><strong>You returned this one.</strong> Your refund is on its way, and the unit is back on sale.</>
+              ) : (
+                <><strong>You bought this one</strong>{fromOrder.placedAt ? ` on ${dateOnly(fromOrder.placedAt)}` : ''}.</>
+              )}
+              <span className="tg-muted"> Order <span className="tg-mono">{fromOrder.orderNumber}</span> · </span>
+              <Link to="/orders">Back to your orders</Link>
+            </div>
+          )}
+
           {d.listing.state === 'published' ? (
             <>
               <p className="buybox__stock">In stock — and there is only one.</p>
@@ -131,7 +146,7 @@ export function ListingDetailPage() {
                 Checkout holds it for 15 minutes so nobody buys it from under you.
               </p>
             </>
-          ) : (
+          ) : fromOrder ? null : (
             <p className="buybox__gone">
               This one has been {d.listing.state}. Nothing else is quite like it —
               <Link to="/"> see what else is in</Link>.

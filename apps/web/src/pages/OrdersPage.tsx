@@ -222,37 +222,63 @@ function OrderCard({ order, onChanged }: { order: OrderSummary; onChanged: () =>
 
       <div className="order__lines">
         {order.lines.map((line) => (
-          <LineRow key={line.id} line={line} busy={busy === line.id} onAccept={() => accept(line.id)} onChanged={onChanged} />
+          <LineRow key={line.id} line={line} order={order} busy={busy === line.id} onAccept={() => accept(line.id)} onChanged={onChanged} />
         ))}
       </div>
     </article>
   )
 }
 
+/** "bluedart" is a code; the buyer is told to hand a parcel to Blue Dart. */
+const COURIERS: Record<string, string> = {
+  bluedart: 'Blue Dart', delhivery: 'Delhivery', dtdc: 'DTDC', ecomexpress: 'Ecom Express', xpressbees: 'Xpressbees',
+  shadowfax: 'Shadowfax', indiapost: 'India Post', speedpost: 'Speed Post', ekart: 'Ekart', shiprocket: 'Shiprocket',
+}
+function courierName(code: string | null | undefined): string | null {
+  if (!code) return null
+  return COURIERS[code.toLowerCase().replace(/[^a-z]/g, '')] ?? code.charAt(0).toUpperCase() + code.slice(1)
+}
+
+/** What the buyer bought, without the grade code the listing title ends in: "EOS R5 · TG-9" -> "EOS R5". */
+function modelText(title: string): string {
+  return title.split('·')[0].trim()
+}
+
 function LineRow({
-  line, busy, onAccept, onChanged,
+  line, order, busy, onAccept, onChanged,
 }: {
   line: OrderLineSummary
+  order: OrderSummary
   busy: boolean
   onAccept: () => void
   onChanged: () => void
 }) {
   const left = timeLeft(line.acceptanceWindowEndsAt)
   const waiting = needsYou(line) && left != null
+  // The listing they bought from, not the item record: that one is the
+  // seller's and staff's (asking price, floor, bin) and a buyer is refused it.
+  // The listing carries what was promised — photos, grade, defects, the
+  // condition report — and is told it was opened from this order.
+  const itemLink = line.listingId
+    ? { pathname: `/listings/${line.listingId}`, state: { fromOrder: { orderNumber: order.orderNumber, placedAt: order.createdAt, lineState: line.state } } }
+    : null
 
   return (
     <div className={`line${waiting ? ' line--waiting' : ''}`}>
-      <Link
-        to={`/items/${line.consignmentItemId}`}
-        className="line__photo"
-        tabIndex={-1}
-        aria-hidden="true"
-      >
-        <ModelPhoto slug={line.modelSlug} kind={photoKindFor(line.categoryName)} size="thumb" alt={line.title} />
-      </Link>
+      {itemLink ? (
+        <Link to={itemLink.pathname} state={itemLink.state} className="line__photo" tabIndex={-1} aria-hidden="true">
+          <ModelPhoto slug={line.modelSlug} kind={photoKindFor(line.categoryName)} size="thumb" alt={line.title} />
+        </Link>
+      ) : (
+        <span className="line__photo" aria-hidden="true">
+          <ModelPhoto slug={line.modelSlug} kind={photoKindFor(line.categoryName)} size="thumb" alt={line.title} />
+        </span>
+      )}
 
       <div className="line__main">
-        <Link to={`/items/${line.consignmentItemId}`} className="line__title">{line.title}</Link>
+        {itemLink
+          ? <Link to={itemLink.pathname} state={itemLink.state} className="line__title">{line.title}</Link>
+          : <span className="line__title">{line.title}</span>}
 
         <p className="line__facts">
           {line.gradeLabel && <span className="line__grade">{line.gradeLabel}</span>}
@@ -292,19 +318,20 @@ function LineRow({
         )}
         {line.trackingNumber && (
           <span className="line__tracking">
-            <span className="line__tracking-label">{line.courierCode ?? 'Courier'}</span>
+            <span className="line__tracking-label">{courierName(line.courierCode) ?? 'Courier'}</span>
             <span className="tg-mono line__tracking-number">{line.trackingNumber}</span>
           </span>
         )}
-        <Link className="tg-button line__action" to={`/items/${line.consignmentItemId}`}>
-          View your item
-        </Link>
+        {itemLink && (
+          <Link className="tg-button line__action" to={itemLink.pathname} state={itemLink.state}>
+            View your item
+          </Link>
+        )}
         {/* Not "buy it again": there is exactly one of each of these and it has
-            just been sold. The catalogue is the honest version of that wish. */}
-        <Link
-          className="tg-button line__action"
-          to={`/catalog${line.categoryName ? `?q=${encodeURIComponent(line.categoryName)}` : ''}`}
-        >
+            just been sold. The catalogue is the honest version of that wish —
+            searched by the model, since a search for the category's name
+            ("Cameras") matches no title and always came back empty. */}
+        <Link className="tg-button line__action" to={`/catalog?q=${encodeURIComponent(modelText(line.title))}`}>
           Find another like this
         </Link>
       </div>
@@ -321,7 +348,8 @@ function Progress({ line }: { line: OrderLineSummary }) {
   const steps = ['Paid', 'Dispatched', 'Delivered', 'Confirmed']
   const done = line.state === 'accepted'
   const reached = done ? 3
-    : line.state === 'delivered' ? 2
+    // A return can only be asked for once it has arrived, so it got this far.
+    : line.state === 'delivered' || line.state === 'return_requested' ? 2
       : line.state === 'dispatched' ? 1
         : 0
 
@@ -459,7 +487,7 @@ function ReturnPanel({
     const c = rc.case
     const text: Record<string, string> = {
       requested: 'We have your return request and will review it shortly.',
-      approved: `Approved. Send it back with ${rc.courierCode ?? 'the courier'}${rc.trackingNumber ? `, tracking ${rc.trackingNumber}` : ''}. We refund you once it has arrived and been checked.`,
+      approved: `Approved. Send it back with ${courierName(rc.courierCode) ?? 'the courier'}${rc.trackingNumber ? `, tracking ${rc.trackingNumber}` : ''}. We refund you once it has arrived and been checked.`,
       received: 'We have your parcel and are checking it.',
       inspected: 'Checked. We are finishing up.',
       refunded: 'Return accepted. Your refund is being processed.',

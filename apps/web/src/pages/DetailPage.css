@@ -250,6 +250,14 @@
 .buybox__ship { margin: 0; font-size: var(--tg-text-xs); }
 .buybox__stock { margin: var(--tg-space-2) 0 0; color: var(--tg-good); font-weight: var(--tg-weight-medium); }
 .buybox__gone { margin: var(--tg-space-2) 0 0; font-size: var(--tg-text-sm); }
+.buybox__mine {
+  margin: var(--tg-space-2) 0 0;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-accent-soft);
+  font-size: var(--tg-text-sm);
+  line-height: 1.5;
+}
 
 /* Doubled up: `.tg-button` sets its own background, and a single class here
    loses to it — which is how the one button on the page that must be
