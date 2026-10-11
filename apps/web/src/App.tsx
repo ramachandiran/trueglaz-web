@@ -1,8 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { isAdmin, isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
+import { isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
 import { storedMarketView } from './state/useMarketView'
-import { useParams } from 'react-router-dom'
 import { Guard } from './components/Guard'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
 import { Loading } from './components/ui'
@@ -37,9 +36,8 @@ import { SignInPage } from './pages/SignInPage'
 
 /**
  * Smart home page that redirects based on user role.
- * - Staff → Today: what is waiting on them, how the shelf is doing, what just moved
+ * - Staff / Admin → the admin console home (/admin): what is waiting, how the shelf is doing, what just moved
  * - Technician → Operations, which is the whole of their job
- * - Admin → Money page
  * - Seller → Selling
  * - Everyone else → Public catalog
  */
@@ -49,11 +47,11 @@ function SmartHome() {
   if (!ready) return <Loading label="Loading" />
 
   if (session) {
-    if (isAdmin(session)) return <Navigate to="/admin" replace />
+    // Staff and admin share one landing page, the console home at /admin.
+    if (isStaff(session)) return <Navigate to="/admin" replace />
     // A technician is an ops user but not a staff one, and Inventory is a staff
     // screen: they inspect what is on their bench, they do not browse the shelf.
-    if (isStaff(session)) return <Navigate to="/today" replace />
-    if (isOps(session)) return <Navigate to="/ops" replace />
+    if (isOps(session)) return <Navigate to="/admin/operations" replace />
     // A seller lands on their selling home, unless they last switched to
     // Buying on this device: then the switch would bounce straight back.
     if (isSeller(session) && storedMarketView() !== 'buying') return <Navigate to="/sell" replace />
@@ -88,33 +86,23 @@ export function App() {
           <Route path="/sell/:id" element={<Guard need="signed-in"><NewSubmissionPage /></Guard>} />
           <Route path="/items/:id" element={<Guard need="signed-in"><ItemDetailPage /></Guard>} />
 
-          {/* Operations */}
-          {/* Staff, not ops: a technician's whole job is the Operations queue, and
-              the shelf-wide view is not part of it. The guard sends them home,
-              and home sends them to /ops, so a typed URL lands somewhere useful
-              rather than on a 403. */}
-          <Route path="/today" element={<Guard need="staff"><StaffHomePage /></Guard>} />
-          <Route path="/inventory" element={<Guard need="staff"><InventoryDashboard /></Guard>} />
-          <Route path="/ops" element={<Guard need="ops"><OpsPage /></Guard>} />
-          <Route path="/ops/inspect/:itemId" element={<Guard need="ops"><InspectPage /></Guard>} />
-          <Route path="/ops/items" element={<Guard need="ops"><ItemsPage /></Guard>} />
-
-          {/* People and Fulfilment are their own screens, not pages of the
-              Operations one — nothing nests, and they are gated on staff where
-              /ops is gated on ops. They lived under /ops/ only because that
-              prefix had become shorthand for "a staff screen". The old paths
-              redirect so anything already bookmarked still lands. */}
-          <Route path="/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
+          {/* The admin / staff console, all under /admin.
+              The URL prefix is organisational, not a permission: each screen
+              keeps its own role guard, so a technician reaching /admin/operations
+              is let in and /admin/money is not. /admin itself is the console
+              home (what used to be /today), open to staff and admin alike. */}
+          <Route path="/admin" element={<Guard need="staff"><StaffHomePage /></Guard>} />
+          <Route path="/admin/inventory" element={<Guard need="staff"><InventoryDashboard /></Guard>} />
+          <Route path="/admin/operations" element={<Guard need="ops"><OpsPage /></Guard>} />
+          <Route path="/admin/operations/inspect/:itemId" element={<Guard need="ops"><InspectPage /></Guard>} />
+          <Route path="/admin/operations/items" element={<Guard need="ops"><ItemsPage /></Guard>} />
           {/* Ops, not staff: the bench check on a returned unit is a technician's. */}
-          <Route path="/returns" element={<Guard need="ops"><ReturnsPage /></Guard>} />
-          <Route path="/people" element={<Guard need="staff"><StaffUsersPage /></Guard>} />
-          <Route path="/people/:id" element={<Guard need="staff"><StaffUserDetailPage /></Guard>} />
-          <Route path="/ops/fulfilment" element={<Navigate to="/fulfilment" replace />} />
-          <Route path="/ops/users" element={<Navigate to="/people" replace />} />
-          <Route path="/ops/users/:id" element={<RedirectPerson />} />
+          <Route path="/admin/returns" element={<Guard need="ops"><ReturnsPage /></Guard>} />
+          <Route path="/admin/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
+          <Route path="/admin/people" element={<Guard need="staff"><StaffUsersPage /></Guard>} />
+          <Route path="/admin/people/:id" element={<Guard need="staff"><StaffUserDetailPage /></Guard>} />
 
-          {/* Money */}
-          <Route path="/admin" element={<Guard need="admin"><AdminPage /></Guard>} />
+          <Route path="/admin/money" element={<Guard need="admin"><AdminPage /></Guard>} />
           <Route path="/admin/settings" element={<Guard need="admin"><SettingsLayout /></Guard>}>
             <Route index element={<SettingsOverview />} />
             <Route path="selling" element={<SettingsGroupPage key="selling" group="selling" />} />
@@ -125,17 +113,11 @@ export function App() {
             <Route path="models" element={<AdminModelsPage />} />
           </Route>
           <Route path="/admin/models" element={<Navigate to="/admin/settings/models" replace />} />
-          <Route path="/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
+          <Route path="/admin/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
   )
-}
-
-/** Keeps a bookmarked person's old link working, id and all. */
-function RedirectPerson() {
-  const { id = '' } = useParams()
-  return <Navigate to={`/people/${id}`} replace />
 }

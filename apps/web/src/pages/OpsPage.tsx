@@ -169,7 +169,7 @@ export function OpsPage() {
           somewhere else on the page. */}
       {staff && (
         <p className="ops__aside">
-          <Link to="/people">
+          <Link to="/admin/people">
             People waiting on a selling decision
             <span className="ops__aside-count">{people.data?.length ?? 0}</span>
           </Link>
@@ -379,7 +379,7 @@ function InspectTable({
             <td>
               <span className="ops__inline">
                 {i.currentState === 'IN_INSPECTION' ? (
-                  <Link className="tg-button tg-button--primary" to={`/ops/inspect/${i.id}`}>Continue →</Link>
+                  <Link className="tg-button tg-button--primary" to={`/admin/operations/inspect/${i.id}`}>Continue →</Link>
                 ) : (
                   <button
                     className="tg-button tg-button--primary"

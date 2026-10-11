@@ -45,7 +45,7 @@ export function StaffUserDetailPage() {
   return (
     <div className="people person">
       <nav className="person__crumbs">
-        <Link to="/people">← People</Link>
+        <Link to="/admin/people">← People</Link>
       </nav>
 
       <header className="people__head">

@@ -63,15 +63,17 @@ function Header() {
             by typing its URL. A technician sees Operations alone. */}
         {!isAuthPage && isOpsUser && (
           <nav className="shell__ops" aria-label="Staff">
-            {staff && <NavLink to="/today" className="shell__ops-link">Home</NavLink>}
-            {staff && <NavLink to="/inventory" className="shell__ops-link">Inventory</NavLink>}
-            <NavLink to="/ops" className="shell__ops-link">Operations</NavLink>
-            {staff && <NavLink to="/people" className="shell__ops-link">People</NavLink>}
-            {staff && <NavLink to="/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
-            <NavLink to="/returns" className="shell__ops-link">Returns</NavLink>
-            {admin && <NavLink to="/admin" end className="shell__ops-link">Money</NavLink>}
+            {/* "end" on Home: every console screen lives under /admin, so
+                without it Home would light up on all of them. */}
+            {staff && <NavLink to="/admin" end className="shell__ops-link">Home</NavLink>}
+            {staff && <NavLink to="/admin/inventory" className="shell__ops-link">Inventory</NavLink>}
+            <NavLink to="/admin/operations" className="shell__ops-link">Operations</NavLink>
+            {staff && <NavLink to="/admin/people" className="shell__ops-link">People</NavLink>}
+            {staff && <NavLink to="/admin/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
+            <NavLink to="/admin/returns" className="shell__ops-link">Returns</NavLink>
+            {admin && <NavLink to="/admin/money" className="shell__ops-link">Money</NavLink>}
             {admin && <NavLink to="/admin/settings" className="shell__ops-link">Settings</NavLink>}
-            {admin && <NavLink to="/balance-sheet" className="shell__ops-link">Balance sheet</NavLink>}
+            {admin && <NavLink to="/admin/balance-sheet" className="shell__ops-link">Balance sheet</NavLink>}
           </nav>
         )}
 

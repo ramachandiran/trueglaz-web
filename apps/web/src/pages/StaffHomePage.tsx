@@ -119,7 +119,7 @@ export function StaffHomePage() {
                 </li>
               ))}
             </ul>
-            <Link to="/inventory" className="sh__more">See all inventory →</Link>
+            <Link to="/admin/inventory" className="sh__more">See all inventory →</Link>
           </section>
 
           <Week data={data} />

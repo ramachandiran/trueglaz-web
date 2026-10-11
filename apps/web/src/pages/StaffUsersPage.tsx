@@ -114,7 +114,7 @@ export function StaffUsersPage() {
           {shown.map((u) => (
             <tr key={u.userId}>
               <td>
-                <Link to={`/people/${u.userId}`} className="ppl__name">{u.displayName}</Link>
+                <Link to={`/admin/people/${u.userId}`} className="ppl__name">{u.displayName}</Link>
                 <span className="ppl__contact tg-muted">{u.email ?? u.phone ?? 'No contact'}</span>
                 {u.roles.length > 0 && <span className="ppl__roles">{u.roles.join(' · ')}</span>}
               </td>
@@ -146,7 +146,7 @@ function Decision({
   user, busy, onDecide,
 }: { user: StaffUserRow; busy: boolean; onDecide: (u: StaffUserRow, approve: boolean) => void }) {
   if (user.sellingState !== 'pending_review') {
-    return <Link to={`/people/${user.userId}`} className="ppl__open">Open record →</Link>
+    return <Link to={`/admin/people/${user.userId}`} className="ppl__open">Open record →</Link>
   }
   if (user.kycStatus !== 'verified') {
     return (

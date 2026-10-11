@@ -130,7 +130,7 @@ export function InspectPage() {
         overrideReason: confirm ? null : (overrideReason || 'QC adjusted the grade'),
         outcome,
       })
-      nav('/ops')
+      nav('/admin/operations')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not sign off')
     } finally { setBusy(false) }
