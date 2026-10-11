@@ -640,7 +640,10 @@
   padding: 0 0 var(--tg-space-2);
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(190px, 1fr);
+  /* Keep a consistent tile width across rails, even when a row has only one item.
+     A `1fr` column lets a lone card stretch to the full width of the section,
+     which is why the "Just in" image can look disproportionately large. */
+  grid-auto-columns: minmax(180px, 220px);
   gap: var(--tg-space-4);
   overflow-x: auto;
   scroll-snap-type: x proximity;
