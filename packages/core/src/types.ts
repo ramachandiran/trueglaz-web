@@ -599,6 +599,12 @@ export interface PlatformSetting {
   maxValue?: string | null
   updatedBy?: string | null
   updatedAt?: string | null
+  /** Which settings page it belongs on. */
+  groupCode?: 'selling' | 'fees' | 'payouts' | 'security' | null
+  /** What the page calls it, and the unit its number is in (rupees means paise underneath). */
+  label?: string | null
+  unit?: string | null
+  displayOrder?: number
 }
 
 /** One change to a setting, kept because these numbers decide money. */
@@ -1213,6 +1219,8 @@ export interface StaffBuyingRow {
  */
 export interface Meta {
   paymentsAreReal: boolean
+  /** The delivery charge a new order carries, in paise. */
+  shippingMinor: number
   /** stub (the demo gateway) or razorpay. */
   paymentGateway: string
   /** Whether an admin can refund through the gateway rather than in its dashboard. */
@@ -1512,4 +1520,39 @@ export interface ModelImageHistory {
   retiredBy: string | null
   retiredReason: 'replaced' | 'removed' | 'restored_other' | null
   image: MediaView | null
+}
+
+// --- admin settings: fees and the company on invoices -------------------------
+
+/** fromMinor inclusive, toMinor exclusive (null = no upper limit), in paise. */
+export interface CommissionBand { fromMinor: number; toMinor: number | null; percent: number }
+
+export interface FeesView {
+  commissionBands: CommissionBand[]
+  history: { validFrom: string | null; validTo: string | null; setBy: string | null; bands: CommissionBand[] }[]
+  settings: PlatformSetting[]
+}
+
+export interface CompanyProfile {
+  legalName: string
+  tradeName: string | null
+  gstin: string | null
+  pan: string | null
+  addressLine1: string
+  addressLine2: string | null
+  city: string
+  state: string
+  pincode: string
+  email: string | null
+  phone: string | null
+  website: string | null
+  invoiceFooter: string | null
+}
+
+export interface CompanyProfileView {
+  profile: CompanyProfile
+  /** settings once saved here; server while still the COMPANY_* configuration. */
+  source: 'settings' | 'server'
+  updatedAt: string | null
+  updatedBy: string | null
 }

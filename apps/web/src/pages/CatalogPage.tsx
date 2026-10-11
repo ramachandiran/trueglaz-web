@@ -28,6 +28,8 @@ export function CatalogPage() {
   const brands = useApi(() => api.brands(), [])
   const mounts = useApi(() => api.mounts(), [])
   const categories = useApi(() => api.categories(), [])
+  const meta = useApi(() => api.meta(), [])
+  const delivery = meta.data ? `+ ${money(meta.data.shippingMinor)} delivery` : '+ delivery'
   const lensTypes = useApi(() => api.lensTypes(), [])
   const lensRanges = useApi(() => api.lensRanges(), [])
   const sensorFormats = useApi(() => api.sensorFormats(), [])
@@ -220,7 +222,7 @@ export function CatalogPage() {
 
                   <div className="result__buy">
                     <span className="result__price">{money(listing.priceMinor, listing.currency)}</span>
-                    <span className="result__ship tg-muted">+ ₹400 delivery</span>
+                    <span className="result__ship tg-muted">{delivery}</span>
                     <Link to={`/listings/${listing.id}`} className="tg-button result__cta">
                       See the condition report
                     </Link>

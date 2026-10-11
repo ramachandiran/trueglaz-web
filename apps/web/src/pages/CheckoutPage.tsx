@@ -8,7 +8,6 @@ import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import { openRazorpay, type RazorpaySuccess } from '../payments/razorpay'
 import './CheckoutPage.css'
 
-const SHIPPING_MINOR = 40000
 
 type Step = 'delivery' | 'payment' | 'review' | 'done'
 const STEPS: { key: Exclude<Step, 'done'>; label: string }[] = [
@@ -339,8 +338,9 @@ export function CheckoutPage() {
   const d = listing.data
   const title = d.listing.title.split('·')[0].trim()
   const subtotal = order?.subtotalMinor ?? d.listing.priceMinor
-  const shipping = order?.shippingMinor ?? SHIPPING_MINOR
-  const total = order?.totalMinor ?? d.listing.priceMinor + SHIPPING_MINOR
+  // Before the order exists, the charge a new order would carry; after, the order's own.
+  const shipping = order?.shippingMinor ?? meta.data?.shippingMinor ?? 40000
+  const total = order?.totalMinor ?? d.listing.priceMinor + shipping
   const banks = methods.data?.banks ?? []
 
   return (

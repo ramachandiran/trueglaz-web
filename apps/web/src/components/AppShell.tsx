@@ -70,7 +70,7 @@ function Header() {
             {staff && <NavLink to="/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
             <NavLink to="/returns" className="shell__ops-link">Returns</NavLink>
             {admin && <NavLink to="/admin" end className="shell__ops-link">Money</NavLink>}
-            {admin && <NavLink to="/admin/models" className="shell__ops-link">Model photos</NavLink>}
+            {admin && <NavLink to="/admin/settings" className="shell__ops-link">Settings</NavLink>}
             {admin && <NavLink to="/balance-sheet" className="shell__ops-link">Balance sheet</NavLink>}
           </nav>
         )}

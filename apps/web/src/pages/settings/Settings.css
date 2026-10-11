@@ -1,0 +1,162 @@
+/* Admin → Settings. Prefixed st__ because every stylesheet is global. */
+.st {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--tg-space-6);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: var(--tg-space-5) var(--tg-space-4) var(--tg-space-7);
+  align-items: start;
+}
+
+.st__side { position: sticky; top: var(--tg-space-4); }
+.st__title { margin: 0 0 var(--tg-space-3); font-size: var(--tg-text-xl); }
+.st__nav { display: grid; gap: 2px; }
+.st__link {
+  padding: 9px 12px;
+  border-radius: var(--tg-radius-md);
+  color: var(--tg-text-muted);
+  text-decoration: none;
+  font-size: var(--tg-text-sm);
+  border-left: 3px solid transparent;
+}
+.st__link:hover { background: var(--tg-bg-hover); color: var(--tg-text); text-decoration: none; }
+.st__link--on { background: var(--tg-accent-soft); color: var(--tg-text); font-weight: var(--tg-weight-medium); border-left-color: var(--tg-accent); }
+
+.st__main { min-width: 0; }
+/* The model photos page brings its own frame; inside settings it uses this one. */
+.st__main .am { padding: 0; max-width: none; }
+.st__main .am__title { font-size: var(--tg-text-lg); }
+
+.st__h { margin: 0; font-size: var(--tg-text-lg); }
+.st__lede { margin: 6px 0 var(--tg-space-4); max-width: 72ch; color: var(--tg-text-muted); font-size: var(--tg-text-sm); line-height: 1.5; }
+.st__kicker { margin: var(--tg-space-5) 0 var(--tg-space-2); font-size: var(--tg-text-xs); text-transform: uppercase; letter-spacing: 0.07em; color: var(--tg-text-muted); }
+.st__muted { color: var(--tg-text-muted); font-size: var(--tg-text-xs); }
+.st__note { margin-top: var(--tg-space-3); }
+.st__spacer { flex: 1; }
+
+.st__card {
+  padding: var(--tg-space-4);
+  margin-bottom: var(--tg-space-4);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+}
+.st__card-title { margin: 0 0 4px; font-size: var(--tg-text-md); }
+
+.st__banner {
+  padding: var(--tg-space-3) var(--tg-space-4);
+  border: 1px solid var(--tg-warn);
+  border-left-width: 5px;
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-warn-soft);
+  font-size: var(--tg-text-sm);
+}
+
+/* --- one setting ----------------------------------------------------------- */
+
+.st__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--tg-space-2) var(--tg-space-5);
+  padding: var(--tg-space-3) 0;
+  border-bottom: 1px solid var(--tg-border);
+  align-items: center;
+}
+.st__row:last-child { border-bottom: 0; }
+.st__row-label { font-weight: var(--tg-weight-bold); }
+.st__row-desc { margin: 2px 0; font-size: var(--tg-text-sm); color: var(--tg-text-muted); line-height: 1.45; }
+.st__row-meta { margin: 0; font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
+.st__row-edit { display: flex; align-items: center; gap: var(--tg-space-2); flex-wrap: wrap; justify-content: flex-end; }
+.st__row .st__error { grid-column: 1 / -1; }
+
+.st__field { display: inline-flex; align-items: center; gap: 6px; }
+.st__input { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+.st__input--pct { width: 80px; }
+.st__prefix, .st__suffix { color: var(--tg-text-muted); font-size: var(--tg-text-sm); white-space: nowrap; }
+.st__undo { border: 0; background: none; color: var(--tg-text-muted); font: inherit; font-size: var(--tg-text-sm); cursor: pointer; text-decoration: underline; padding: 4px; }
+.st__ok { color: var(--tg-good); font-size: var(--tg-text-sm); font-weight: var(--tg-weight-medium); }
+.st__error { margin: 6px 0 0; color: var(--tg-bad); font-size: var(--tg-text-sm); }
+.st__good { color: var(--tg-good); }
+.st__bad { color: var(--tg-bad); }
+
+.st__actions { display: flex; align-items: center; gap: var(--tg-space-2); flex-wrap: wrap; margin-top: var(--tg-space-3); }
+
+.st__changes { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: var(--tg-text-sm); }
+
+/* --- fees ------------------------------------------------------------------ */
+
+.st__bands { width: 100%; border-collapse: collapse; margin-top: var(--tg-space-3); font-size: var(--tg-text-sm); }
+.st__bands th { text-align: left; font-size: var(--tg-text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--tg-text-muted); padding: 6px 8px; border-bottom: 1px solid var(--tg-border); }
+.st__bands td { padding: 8px; border-bottom: 1px solid var(--tg-border); }
+.st__money { font-variant-numeric: tabular-nums; font-weight: var(--tg-weight-medium); }
+
+.st__calc { display: grid; gap: var(--tg-space-2); }
+.st__calc-input { gap: 8px; font-size: var(--tg-text-sm); }
+.st__calc-input .st__input { width: 140px; }
+.st__calc-lines { margin: 0; display: grid; gap: 4px; max-width: 460px; font-size: var(--tg-text-sm); }
+.st__calc-lines div { display: flex; justify-content: space-between; gap: var(--tg-space-3); }
+.st__calc-lines dt { color: var(--tg-text-muted); }
+.st__calc-lines dd { margin: 0; font-variant-numeric: tabular-nums; }
+.st__calc-net { padding-top: 6px; border-top: 1px solid var(--tg-border); font-weight: var(--tg-weight-bold); }
+.st__calc-net dt { color: var(--tg-text); }
+
+/* --- company --------------------------------------------------------------- */
+
+.st__company { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: var(--tg-space-4); align-items: start; }
+.st__form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--tg-space-3); }
+.st__f { display: grid; gap: 4px; font-size: var(--tg-text-xs); color: var(--tg-text-muted); align-content: start; }
+.st__f > span { font-weight: var(--tg-weight-medium); }
+.st__f--wide { grid-column: 1 / -1; }
+.st__f .tg-input, .st__f .tg-select { width: 100%; font-size: var(--tg-text-md); color: var(--tg-text); }
+
+.st__invoice { position: sticky; top: var(--tg-space-4); }
+.st__invoice .st__kicker { margin-top: 0; }
+.st__inv { display: flex; justify-content: space-between; gap: var(--tg-space-3); padding: var(--tg-space-3); background: #fff; color: #233e50; border: 1px solid #e2ddc4; border-radius: var(--tg-radius-md); }
+.st__inv-brand { font-weight: 800; font-size: 16px; }
+.st__inv-sub { font-size: 11px; color: #50697a; }
+.st__inv-meta { text-align: right; font-size: 13px; }
+.st__inv-foot { margin: 8px 0 0; font-size: 11px; color: #50697a; }
+
+/* --- overview -------------------------------------------------------------- */
+
+.st__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--tg-space-3); }
+.st__tile {
+  display: grid;
+  gap: var(--tg-space-2);
+  align-content: start;
+  padding: var(--tg-space-4);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  color: var(--tg-text);
+  text-decoration: none;
+  transition: border-color var(--tg-transition);
+}
+.st__tile:hover { border-color: var(--tg-accent); text-decoration: none; color: var(--tg-text); }
+.st__tile-title { font-weight: var(--tg-weight-bold); display: flex; justify-content: space-between; gap: var(--tg-space-2); }
+.st__tile dl { margin: 0; display: grid; gap: 4px; font-size: var(--tg-text-sm); }
+.st__tile dl div { display: flex; justify-content: space-between; gap: var(--tg-space-2); }
+.st__tile dt { color: var(--tg-text-muted); white-space: nowrap; }
+.st__tile dd { margin: 0; text-align: right; font-weight: var(--tg-weight-medium); }
+.st__tile-warn { font-size: var(--tg-text-xs); color: var(--tg-warn); background: var(--tg-warn-soft); padding: 4px 8px; border-radius: var(--tg-radius-sm); }
+
+@media (max-width: 860px) {
+  .st { grid-template-columns: minmax(0, 1fr); gap: var(--tg-space-4); padding: var(--tg-space-3) var(--tg-space-3) var(--tg-space-7); }
+  .st__side { position: static; min-width: 0; }
+  .st__nav { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  .st__link { white-space: nowrap; border-left: 0; border-bottom: 3px solid transparent; }
+  .st__link--on { border-bottom-color: var(--tg-accent); }
+  .st__company { grid-template-columns: 1fr; }
+  .st__invoice { position: static; }
+  .st__row { grid-template-columns: 1fr; }
+  .st__row-edit { justify-content: flex-start; }
+}
+
+@media (max-width: 560px) {
+  .st__form { grid-template-columns: 1fr; }
+  .st__bands th:nth-child(1), .st__bands td:nth-child(1) { display: none; }
+  .st__bands td { padding: 8px 4px; }
+  .st__bands .st__input { width: 100px; }
+  .st__bands .st__input--pct { width: 64px; }
+}

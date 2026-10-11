@@ -18,6 +18,7 @@ export function ListingDetailPage() {
   const nav = useNavigate()
   const { session, ready } = useSession()
   const listing = useApi(() => api.listing(id), [id])
+  const meta = useApi(() => api.meta(), [])
 
   const itemId = listing.data?.listing.consignmentItemId
   // The lifecycle lives on the item, and the item record is the seller's — it
@@ -112,7 +113,7 @@ export function ListingDetailPage() {
 
         <aside className="buybox" aria-label="Buy">
           <p className="buybox__price">{money(d.listing.priceMinor, d.listing.currency)}</p>
-          <p className="buybox__ship tg-muted">+ ₹400 delivery · arrives in 3–5 working days</p>
+          <p className="buybox__ship tg-muted">+ {meta.data ? money(meta.data.shippingMinor) : ''} delivery · arrives in 3–5 working days</p>
 
           {d.listing.state === 'published' ? (
             <>

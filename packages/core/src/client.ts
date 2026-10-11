@@ -3,7 +3,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail,
-  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -434,6 +434,12 @@ export const api = {
   setSetting: (key: string, value: string) =>
     put<PlatformSetting>(`/admin/settings/${encodeURIComponent(key)}`, { value }),
   settingHistory: () => get<SettingChange[]>('/admin/settings/history'),
+  adminFees: () => get<FeesView>('/admin/fees'),
+  setCommissionBands: (bands: CommissionBand[]) => put<CommissionBand[]>('/admin/fees/commission', { bands }),
+  adminCompany: () => get<CompanyProfileView>('/admin/company'),
+  setCompany: (profile: CompanyProfile) => put<CompanyProfileView>('/admin/company', profile),
+  companyHistory: () => get<{ profile: CompanyProfile; changedAt: string | null; changedBy: string | null }[]>('/admin/company/history'),
+  companyStates: () => get<Record<string, string>>('/admin/company/states'),
 
 
   // -- staff: people -------------------------------------------------------

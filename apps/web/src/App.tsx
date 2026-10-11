@@ -8,6 +8,11 @@ import { BalanceSheetPage } from './pages/BalanceSheetPage'
 import { Loading } from './components/ui'
 import { AdminPage } from './pages/AdminPage'
 import { AdminModelsPage } from './pages/AdminModelsPage'
+import { SettingsLayout } from './pages/settings/SettingsLayout'
+import { SettingsOverview } from './pages/settings/SettingsOverview'
+import { SettingsGroupPage } from './pages/settings/SettingsGroupPage'
+import { FeesSettingsPage } from './pages/settings/FeesSettingsPage'
+import { CompanySettingsPage } from './pages/settings/CompanySettingsPage'
 import { StaffUsersPage } from './pages/StaffUsersPage'
 import { StaffUserDetailPage } from './pages/StaffUserDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
@@ -110,7 +115,16 @@ export function App() {
 
           {/* Money */}
           <Route path="/admin" element={<Guard need="admin"><AdminPage /></Guard>} />
-          <Route path="/admin/models" element={<Guard need="admin"><AdminModelsPage /></Guard>} />
+          <Route path="/admin/settings" element={<Guard need="admin"><SettingsLayout /></Guard>}>
+            <Route index element={<SettingsOverview />} />
+            <Route path="selling" element={<SettingsGroupPage key="selling" group="selling" />} />
+            <Route path="fees" element={<FeesSettingsPage />} />
+            <Route path="payouts" element={<SettingsGroupPage key="payouts" group="payouts" />} />
+            <Route path="company" element={<CompanySettingsPage />} />
+            <Route path="security" element={<SettingsGroupPage key="security" group="security" />} />
+            <Route path="models" element={<AdminModelsPage />} />
+          </Route>
+          <Route path="/admin/models" element={<Navigate to="/admin/settings/models" replace />} />
           <Route path="/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
