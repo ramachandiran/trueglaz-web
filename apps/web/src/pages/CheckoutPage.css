@@ -100,6 +100,15 @@
   font-size: var(--tg-text-sm);
 }
 
+.co__note {
+  padding: var(--tg-space-3) var(--tg-space-4);
+  border: 1px solid var(--tg-accent);
+  border-left-width: 5px;
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-accent-soft);
+  font-size: var(--tg-text-sm);
+}
+
 .co__tag {
   display: inline-block;
   margin-left: 8px;

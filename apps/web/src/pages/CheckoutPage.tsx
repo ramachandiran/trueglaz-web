@@ -60,6 +60,8 @@ export function CheckoutPage() {
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [order, setOrder] = useState<Order | null>(null)
   const [paid, setPaid] = useState(false)
+  const [resumed, setResumed] = useState<string | null>(null) // the order number picked back up, if any
+  const resumedAddr = useRef<Addr | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -103,13 +105,22 @@ export function CheckoutPage() {
   // has not started typing.
   const prefilled = useRef(false)
   useEffect(() => {
-    if (prefilled.current || saved.loading) return
+    if (saved.loading) return
+    // A resumed order brings its own address; show it as the saved one it came from, if any.
+    if (resumedAddr.current) {
+      const same = saved.data?.find((a) => sameAddress(fromSaved(a), resumedAddr.current!))
+      setMode(same ? { kind: 'saved', id: same.id } : { kind: 'new' })
+      if (!same) setKeep(false)
+      prefilled.current = true
+      return
+    }
+    if (prefilled.current) return
     prefilled.current = true
     const fallback = saved.data?.find((a) => a.isDefault) ?? saved.data?.[0]
     if (!fallback || touched) return
     setMode({ kind: 'saved', id: fallback.id })
     setAddress(fromSaved(fallback))
-  }, [saved.loading, saved.data, touched])
+  }, [saved.loading, saved.data, touched, resumed])
 
   // Hold the item as soon as the page opens. Fired once via a ref (React runs
   // mount effects twice in development) and applied unconditionally.
@@ -119,7 +130,22 @@ export function CheckoutPage() {
     reserving.current = true
     setBusy(true)
     api.reserve(listingId)
-      .then((r) => { setReservationId(r.id); setExpiresAt(r.expiresAt) })
+      .then(async (r) => {
+        setReservationId(r.id)
+        // The hold already carries an unpaid order of theirs: they left checkout
+        // part-way (a reload, the back button, another tab). Pick it back up.
+        if (r.orderId) {
+          const d = await api.order(r.orderId)
+          if (d.order.state === 'pending_payment') {
+            resume(d.order, d.payments)
+            // Past the hold, an open payment still has a grace period; a countdown
+            // stuck at 0:00 would say otherwise, so none is shown.
+            setExpiresAt(new Date(r.expiresAt).getTime() > Date.now() ? r.expiresAt : null)
+            return
+          }
+        }
+        setExpiresAt(r.expiresAt)
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setBusy(false))
   }, [listingId])
@@ -139,6 +165,25 @@ export function CheckoutPage() {
   const partner = meta.data?.paymentGateway === 'razorpay' ? 'Razorpay' : 'our payment partner'
 
   // -- actions ---------------------------------------------------------------
+
+  /** Puts an unpaid order of theirs back on the page: its address, and the method last chosen. */
+  function resume(o: Order, tries: { method: string | null; state: string }[]) {
+    const a = fromOrder(o.deliveryAddress)
+    resumedAddr.current = a
+    setAddress(a)
+    sentToOrder.current = JSON.stringify(orderAddress(a))
+    setOrder(o)
+    setResumed(o.orderNumber)
+    const last = [...tries].reverse().find((t) => t.method)
+    if (last && (last.method === 'upi' || last.method === 'card' || last.method === 'netbanking')) {
+      const pref = ((last as unknown as { rawResponse?: { preference?: { upiVpa?: string; bankCode?: string } } }).rawResponse?.preference) ?? {}
+      setPay((p) => ({
+        ...p, method: last.method as PaymentMethod,
+        upiMode: pref.upiVpa ? 'id' : 'app', vpa: pref.upiVpa ?? '', bank: pref.bankCode ?? '',
+      }))
+    }
+    setReached(2)
+  }
 
   async function continueFromDelivery() {
     setTouched(true)
@@ -318,6 +363,12 @@ export function CheckoutPage() {
           </ol>
         </nav>
 
+        {resumed && step !== 'done' && (
+          <div className="co__note" role="status">
+            You were part-way through paying for order <strong>{resumed}</strong>. Carry on where you left off — the
+            address is what you chose then, and you can change it.
+          </div>
+        )}
         {error && <div className="co__error" role="alert">{error}</div>}
         {left === 0 && !paid && (
           <div className="co__error" role="alert">
@@ -377,8 +428,10 @@ export function CheckoutPage() {
 
             <div className="co__nav">
               <Link to={`/listings/${listingId}`} className="co__back">← Back to the item</Link>
+              {/* Disabled only while the item is being held, or when it could not be:
+                  the reason is in the message above, so the button says so too. */}
               <button className="tg-button tg-button--primary co__next" disabled={busy || !reservationId} onClick={continueFromDelivery}>
-                {busy ? 'Working…' : 'Continue to payment'}
+                {busy ? 'Working…' : !reservationId ? (error ? 'Not available' : 'Holding the item…') : 'Continue to payment'}
               </button>
             </div>
           </section>
@@ -727,6 +780,16 @@ function fromSaved(a: Address): Addr {
     recipientName: a.recipientName, line1: a.line1, line2: a.line2 ?? '', city: a.city,
     state: a.state ?? '', pincode: a.pincode, phone: a.phoneE164 ?? '',
   }
+}
+
+function fromOrder(d: Record<string, unknown> | null): Addr {
+  const v = (k: string) => (typeof d?.[k] === 'string' ? (d![k] as string) : '')
+  return { recipientName: v('recipientName'), line1: v('line1'), line2: v('line2'), city: v('city'), state: v('state'), pincode: v('pincode'), phone: v('phone') }
+}
+
+function sameAddress(a: Addr, b: Addr): boolean {
+  const k = (x: Addr) => [x.recipientName, x.line1, x.line2, x.city, x.pincode].map((s) => s.trim().toLowerCase()).join('|')
+  return k(a) === k(b)
 }
 
 function oneLine(a: Addr): string {
