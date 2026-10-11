@@ -3,7 +3,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail,
-  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -358,8 +358,14 @@ export const api = {
    * client call that can say "this order is paid" — there used to be, and a
    * buyer could call it without paying.
    */
-  paymentSession: (orderId: string) =>
-    post<PaymentSessionView>(`/orders/${orderId}/payment-session`),
+  paymentSession: (orderId: string, pref?: PaymentPreference) =>
+    post<PaymentSessionView>(`/orders/${orderId}/payment-session`, pref),
+  /** Where the latest try at paying stands, as the gateway told the API. Read-only. */
+  paymentStatus: (orderId: string) => get<PaymentStatusView>(`/orders/${orderId}/payment-status`),
+  paymentMethods: () => get<PaymentMethods>('/payments/methods'),
+  /** A new address for an order that is still waiting for payment. */
+  changeOrderAddress: (orderId: string, deliveryAddress: Record<string, unknown>) =>
+    put<Order>(`/orders/${orderId}/delivery-address`, { deliveryAddress }),
 
   /**
    * Pays your own order where the gateway is the stub, which is development and
@@ -367,7 +373,8 @@ export const api = {
    * the browser is sent to the gateway's own page instead, and this is never
    * called.
    */
-  stubPay: (orderId: string) => post<{ status: string }>(`/payments/stub/pay/${orderId}`),
+  stubPay: (orderId: string, outcome: 'approve' | 'decline' = 'approve') =>
+    post<{ status: string }>(`/payments/stub/pay/${orderId}`, { outcome }),
   /** Everything the orders list draws, in one call. */
   myOrders: () => get<OrderSummary[]>('/orders'),
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
@@ -521,6 +528,17 @@ export const api = {
     phone?: string | null
     isDefault?: boolean
   }) => post<Address[]>('/profile/addresses', body),
+  updateAddress: (id: string, body: {
+    label?: string | null
+    recipientName: string
+    line1: string
+    line2?: string | null
+    city: string
+    state?: string
+    pincode: string
+    phone?: string | null
+    isDefault?: boolean
+  }) => put<Address[]>(`/profile/addresses/${id}`, body),
   makeDefaultAddress: (id: string) => post<Address[]>(`/profile/addresses/${id}/default`),
   removeAddress: (id: string) => del<Address[]>(`/profile/addresses/${id}`),
 

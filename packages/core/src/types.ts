@@ -1089,6 +1089,32 @@ export interface PaymentSessionView {
   /** The gateway's hosted page. Null for a provider that has none. */
   url: string | null
   expiresAt: string | null
+  /** 1 for the first try at paying this order; higher after a decline. */
+  attempt: number
+  method: PaymentMethod | null
+}
+
+export type PaymentMethod = 'upi' | 'card' | 'netbanking'
+
+/** How the buyer chose to pay: a method and at most one non-secret detail. Never card details. */
+export interface PaymentPreference {
+  method: PaymentMethod
+  upiVpa?: string | null
+  bankCode?: string | null
+}
+
+export interface PaymentStatusView {
+  orderId: string
+  orderState: string
+  attempts: number
+  state: 'none' | 'pending' | 'failed' | 'captured' | 'reversed'
+  method: PaymentMethod | null
+  reason: string | null
+}
+
+export interface PaymentMethods {
+  methods: PaymentMethod[]
+  banks: { code: string; name: string }[]
 }
 
 /* -- staff: people ---------------------------------------------------------- */
@@ -1168,6 +1194,8 @@ export interface StaffBuyingRow {
  */
 export interface Meta {
   paymentsAreReal: boolean
+  /** The platform's return window after delivery, in hours. */
+  returnWindowHours: number
 }
 
 /** One option on the signup form's genre box. */
