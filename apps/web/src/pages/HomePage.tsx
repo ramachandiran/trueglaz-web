@@ -119,6 +119,7 @@ export function HomePage() {
               {d.topModels.map((m, i) => (
                 <li key={`${m.brandName}-${m.modelName}`} className="model">
                   <span className="model__rank">{i + 1}</span>
+                  <ModelPhoto slug={m.modelSlug} kind="gear" size="mini" alt="" badge={false} />
                   <div className="model__name">
                     <span className="tg-muted">{m.brandName}</span> {m.modelName}
                     <span className="model__stat tg-muted"> · {m.soldCount} sold</span>
@@ -381,7 +382,7 @@ function MyAsk({ a }: { a: BuyerAsk }) {
   return (
     <li className={`myask${a.matchCount > 0 ? ' myask--hit' : ''}`}>
       <div className="myask__top">
-        <strong>{a.wanted}</strong>
+        <strong className="myask__what"><ModelPhoto slug={a.modelSlug} kind="gear" size="mini" alt="" badge={false} />{a.wanted}</strong>
         {a.state === 'submitted' && <span className="myask__review">Being reviewed</span>}
       </div>
       <p className="myask__terms tg-muted">
@@ -433,7 +434,7 @@ function AskPanel({ d, signedIn }: { d: HomeView; signedIn: boolean }) {
           <ul className="home__asks">
             {d.wanted.map((w) => (
               <li key={w.id} className="ask">
-                <span className="ask__what">{w.wanted}</span>
+                <span className="ask__what"><ModelPhoto slug={w.modelSlug} kind="gear" size="mini" alt="" badge={false} />{w.wanted}</span>
                 <span className="ask__terms tg-muted">
                   {[w.minGradeCode && `${w.minGradeCode}+`, w.maxPriceMinor != null && `≤ ${money(w.maxPriceMinor)}`].filter(Boolean).join(' · ')}
                 </span>

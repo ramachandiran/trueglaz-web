@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { api, money, relative, STATE_LABELS, useApi, useSession, type StaffHome } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
 import './StaffHomePage.css'
+import { ModelPhoto } from '../components/ModelPhoto'
 
 const GROUPS = ['Intake', 'Workshop', 'Orders', 'Returns', 'People', 'Money'] as const
 
@@ -102,6 +103,7 @@ export function StaffHomePage() {
                 <li key={r.itemId}>
                   <Link to={`/items/${r.itemId}`} className="sh__feed-item">
                     <span className={`sh__dot sh__dot--${dotFor(r.toState)}`} aria-hidden="true" />
+                    <ModelPhoto slug={r.modelSlug} kind="gear" size="mini" alt="" />
                     <span className="sh__feed-body">
                       <span className="sh__feed-title">
                         {r.title}

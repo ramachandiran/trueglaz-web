@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { MediaView } from '@trueglaz/core'
 import { ModelPhoto } from './ModelPhoto'
+import { useModelImage } from './modelImages'
 import './Gallery.css'
 
 /**
@@ -19,6 +20,8 @@ export function Gallery({ photos, kind, alt, modelSlug }: {
   modelSlug?: string | null
 }) {
   const [active, setActive] = useState(0)
+  const stock = useModelImage(modelSlug)
+  const isPhoto = !!stock && !stock.placeholder
 
   if (photos.length === 0) {
     return (
@@ -29,8 +32,8 @@ export function Gallery({ photos, kind, alt, modelSlug }: {
             an unlabelled studio shot would be the one dishonest thing on it. */}
         <ModelPhoto slug={modelSlug} kind={kind} size="hero" alt={alt} />
         <p className="product__photo-note tg-muted">
-          {modelSlug
-            ? 'That is a stock picture of this model, not of this unit. Photographs of ' +
+          {isPhoto
+            ? 'That is a picture of this model, not of this unit. Photographs of ' +
               'the actual item are coming; until then the condition report below is the ' +
               'whole truth about it.'
             : 'Photographs of this exact unit are coming. Until then the condition report ' +

@@ -33,6 +33,8 @@
   flex-wrap: wrap;
 }
 
+.detail__ident { display: flex; gap: var(--tg-space-3); align-items: flex-start; }
+
 .detail__eyebrow { margin: 0 0 var(--tg-space-1); }
 
 .detail__title {

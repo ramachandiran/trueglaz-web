@@ -1,47 +1,68 @@
 import { useState } from 'react'
-import { modelImage, STOCK_IMAGE_BADGE, STOCK_IMAGE_NOTE } from '@trueglaz/core'
+import { STOCK_IMAGE_BADGE, STOCK_IMAGE_NOTE, type MediaView } from '@trueglaz/core'
 import { GearPhoto } from './GearPhoto'
+import { useModelImage } from './modelImages'
 import './ModelPhoto.css'
 
 /**
- * The catalogue's stock picture of a model, standing in for a unit that has no
- * photographs of its own.
+ * A catalogue model's picture, as set by an admin; the drawn placeholder when
+ * it has none.
  *
- * It is always labelled. A studio shot of a mint camera, shown without comment
- * against a used one, tells the buyer something false about the thing in the
- * box — and the grade is the whole product here. The badge is small but it is
- * never optional, which is why it lives in this component rather than being
- * left to each caller to remember.
+ * Where it stands in for a unit being sold (a listing, an order, a seller's
+ * item) it is labelled "Not this unit": a studio shot of a mint camera, shown
+ * without comment against a used one, tells the buyer something false about
+ * the thing in the box. Where it only names a model (the Wanted board, the
+ * model picker), pass `badge={false}`.
  *
- * Falls through to [GearPhoto] when the model has no image shipped yet, so a
- * missing file degrades to the existing placeholder art rather than a broken
- * image icon.
+ * Exactly the same box as GearPhoto at every size, so swapping one for the
+ * other never moves a layout.
  */
 export function ModelPhoto({
   slug,
+  modelId,
   kind,
   alt,
   size = 'tile',
+  badge = true,
 }: {
-  slug: string | null | undefined
+  slug?: string | null
+  modelId?: string | null
   kind: 'camera' | 'lens' | 'gear'
   alt: string
-  size?: 'thumb' | 'tile' | 'hero'
+  size?: 'mini' | 'thumb' | 'tile' | 'hero'
+  badge?: boolean
 }) {
+  const entry = useModelImage(modelId ?? slug)
   const [failed, setFailed] = useState(false)
-  const src = modelImage(slug)
 
-  if (!src || failed) return <GearPhoto kind={kind} alt={alt} size={size} />
+  if (entry === undefined) return <span className={`model-photo model-photo--${size} model-photo--loading`} aria-hidden="true" />
+  if (!entry || failed) return <GearPhoto kind={kind} alt={alt} size={size} />
 
+  const img = entry.image
   return (
     <span className={`model-photo model-photo--${size}`}>
       <img
-        src={src}
+        src={pick(img, size)}
+        srcSet={srcSet(img)}
+        sizes={size === 'mini' ? '40px' : size === 'thumb' ? '54px' : size === 'tile' ? '(max-width: 720px) 120px, 180px' : '(max-width: 860px) 100vw, 480px'}
         alt={alt}
         loading="lazy"
         onError={() => setFailed(true)}
       />
-      <span className="model-photo__badge" title={STOCK_IMAGE_NOTE}>{STOCK_IMAGE_BADGE}</span>
+      {badge && !entry.placeholder && (
+        <span className="model-photo__badge" title={STOCK_IMAGE_NOTE}>{STOCK_IMAGE_BADGE}</span>
+      )}
     </span>
   )
+}
+
+function pick(m: MediaView, size: string): string {
+  const want = size === 'mini' || size === 'thumb' ? 200 : size === 'tile' ? 400 : 1200
+  const widths = Object.keys(m.sizes).map(Number).sort((a, b) => a - b)
+  const w = widths.find((x) => x >= want) ?? widths[widths.length - 1]
+  return (w != null ? m.sizes[w] : undefined) ?? m.url
+}
+
+function srcSet(m: MediaView): string {
+  return Object.entries(m.sizes).map(([w, url]) => `${url} ${w}w`).concat(m.width ? [`${m.url} ${m.width}w`] : []).join(', ')
 }

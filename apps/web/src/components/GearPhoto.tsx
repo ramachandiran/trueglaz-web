@@ -15,7 +15,7 @@ export function GearPhoto({
   alt = '',
 }: {
   kind: 'camera' | 'lens' | 'gear'
-  size?: 'thumb' | 'tile' | 'hero'
+  size?: 'mini' | 'thumb' | 'tile' | 'hero'
   alt?: string
 }) {
   return (

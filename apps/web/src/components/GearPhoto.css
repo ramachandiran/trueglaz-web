@@ -11,6 +11,9 @@
 }
 
 .photo--thumb { width: 54px; height: 54px; }
+.photo--mini { width: 40px; height: 40px; border-radius: var(--tg-radius-sm); }
+.photo--mini .photo__art { width: 74%; }
+.photo--mini .photo__note { display: none; }
 .photo--tile { width: 180px; height: 180px; }
 .photo--hero { width: 100%; aspect-ratio: 4 / 3; }
 

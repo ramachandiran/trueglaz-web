@@ -6,6 +6,7 @@ import {
 } from '@trueglaz/core'
 import { Empty, ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './WantedPage.css'
+import { ModelPhoto } from '../components/ModelPhoto'
 
 /**
  * The other half of the market.
@@ -115,7 +116,10 @@ function BoardCard({ request, match, canConsign }: { request: WantedRequest; mat
           {match.kind === 'close' && <span className="tg-muted"> · {match.reason}</span>}
         </p>
       )}
-      <h3 className="want__title">{request.wanted}</h3>
+      <div className="want__head">
+        <ModelPhoto modelId={request.productModelId} kind="gear" size="thumb" alt={request.wanted} badge={false} />
+        <h3 className="want__title">{request.wanted}</h3>
+      </div>
       <div className="want__terms">
         {request.maxPriceMinor != null && (
           <span className="want__budget">up to {money(request.maxPriceMinor)}</span>

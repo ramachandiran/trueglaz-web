@@ -4,10 +4,11 @@ import {
   api, ApiError, dateOnly, money, useApi, HAPPY_PATH, STATE_LABELS,
   type SellerApprovalView,
 } from '@trueglaz/core'
-import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { photoKindFor } from '../components/GearPhoto'
 import { Empty, ErrorNote, GradeBadge, Loading, StateBadge } from '../components/ui'
 import { KycPanel } from '../components/KycPanel'
 import './SellPage.css'
+import { ModelPhoto } from '../components/ModelPhoto'
 
 type Tab = 'items' | 'approvals' | 'payouts'
 
@@ -314,7 +315,7 @@ function MyItems() {
           {visibleRows.map(({ item, title, kind, category }) => (
             <Link key={item.id} to={`/items/${item.id}`} className="sell__widget tg-card">
               <div className="sell__widget-image">
-                <GearPhoto kind={kind} size="thumb" alt={title} />
+                <ModelPhoto modelId={item.productModelId} kind={kind} size="thumb" alt={title} />
               </div>
               <div className="sell__widget-content">
                 <div className="sell__widget-header">

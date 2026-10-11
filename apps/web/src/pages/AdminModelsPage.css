@@ -1,0 +1,116 @@
+/* Admin → Model photos. Prefixed am__ because every stylesheet is global. */
+.am {
+  display: grid;
+  gap: var(--tg-space-4);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--tg-space-5) var(--tg-space-4) var(--tg-space-7);
+}
+
+.am__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--tg-space-4); flex-wrap: wrap; }
+.am__title { margin: 0; font-size: var(--tg-text-xl); }
+.am__lede { margin: 4px 0 0; max-width: 70ch; color: var(--tg-text-muted); font-size: var(--tg-text-sm); line-height: 1.5; }
+
+.am__progress p { margin: 6px 0 0; font-size: var(--tg-text-sm); color: var(--tg-text-muted); }
+.am__progress strong { color: var(--tg-text); }
+.am__bar { height: 10px; border-radius: var(--tg-radius-pill); background: var(--tg-bg-sunken); overflow: hidden; }
+.am__bar span { display: block; height: 100%; background: var(--tg-good); border-radius: inherit; transition: width 300ms ease; }
+
+.am__tag { display: inline-block; padding: 1px 8px; border-radius: var(--tg-radius-pill); font-size: var(--tg-text-xs); }
+.am__tag--placeholder { background: var(--tg-warn-soft); color: var(--tg-warn); }
+.am__tag--missing { background: var(--tg-bg-sunken); color: var(--tg-text-muted); }
+
+.am__tools { display: flex; flex-wrap: wrap; gap: var(--tg-space-2); align-items: center; }
+.am__search { flex: 1 1 260px; }
+
+.am__seg { display: inline-flex; border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); overflow: hidden; }
+.am__seg button {
+  border: 0; background: var(--tg-bg-raised); color: var(--tg-text-muted);
+  padding: 8px 12px; font: inherit; font-size: var(--tg-text-sm); cursor: pointer;
+}
+.am__seg button + button { border-left: 1px solid var(--tg-border); }
+.am__seg button.on { background: var(--tg-accent-soft); color: var(--tg-text); font-weight: var(--tg-weight-medium); }
+
+.am__empty { color: var(--tg-text-muted); }
+
+/* --- the grid ---------------------------------------------------------------- */
+
+.am__grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--tg-space-3);
+}
+
+.am__card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+  overflow: hidden;
+}
+.am__card--photo { border-color: color-mix(in srgb, var(--tg-good) 45%, var(--tg-border)); }
+
+/* 4:3 on white: the shop's own tile, so what you see here is what buyers see. */
+.am__frame { position: relative; aspect-ratio: 4 / 3; background: #fff; border-bottom: 1px solid var(--tg-border); }
+.am__frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.am__frame .photo { width: 100%; height: 100%; border: 0; border-radius: 0; }
+
+.am__state {
+  position: absolute; top: 8px; left: 8px;
+  padding: 2px 9px; border-radius: var(--tg-radius-pill);
+  font-size: var(--tg-text-xs); font-weight: var(--tg-weight-bold);
+}
+.am__state--photo { background: var(--tg-good); color: #fff; }
+.am__state--placeholder { background: var(--tg-warn); color: #fff; }
+.am__state--missing { background: var(--tg-bg-sunken); color: var(--tg-text-muted); border: 1px solid var(--tg-border); }
+.am__state--new { background: var(--tg-accent); color: var(--tg-on-accent); }
+
+.am__body { display: grid; gap: 6px; align-content: start; padding: var(--tg-space-3); }
+.am__brand { margin: 0; font-size: var(--tg-text-xs); color: var(--tg-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.am__name { margin: 0; font-size: var(--tg-text-md); }
+.am__meta { margin: 0; font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
+.am__hint { color: var(--tg-text-muted); font-size: var(--tg-text-xs); }
+
+.am__actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.am__actions .tg-button { padding: 6px 12px; font-size: var(--tg-text-sm); }
+.am__danger { color: var(--tg-bad); }
+.am__link { border: 0; background: none; padding: 4px; color: var(--tg-accent); font: inherit; font-size: var(--tg-text-sm); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.am__error { margin: 0; color: var(--tg-bad); font-size: var(--tg-text-sm); }
+
+.am__preview { display: grid; gap: 6px; }
+.am__preview p { margin: 0; }
+.am__sizes { display: flex; gap: var(--tg-space-3); align-items: flex-end; }
+.am__tile, .am__thumb { display: block; background: #fff; border: 1px solid var(--tg-border); overflow: hidden; }
+.am__tile { width: 120px; height: 120px; border-radius: var(--tg-radius-md); }
+.am__thumb { width: 54px; height: 54px; border-radius: var(--tg-radius-sm); }
+.am__tile img, .am__thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.am__history { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; font-size: var(--tg-text-sm); }
+.am__history li { display: flex; gap: 8px; align-items: center; }
+.am__history img { width: 44px; height: 44px; object-fit: contain; background: #fff; border: 1px solid var(--tg-border); border-radius: var(--tg-radius-sm); flex: none; }
+
+/* --- bulk ------------------------------------------------------------------- */
+
+.am__bulk { display: grid; gap: var(--tg-space-3); padding: var(--tg-space-4); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-lg); background: var(--tg-bg-raised); }
+.am__drop {
+  display: grid; gap: 4px; place-items: center; text-align: center;
+  padding: var(--tg-space-5);
+  border: 2px dashed var(--tg-border-strong); border-radius: var(--tg-radius-lg);
+  cursor: pointer; font-size: var(--tg-text-sm); color: var(--tg-text-muted);
+}
+.am__drop strong { color: var(--tg-text); font-size: var(--tg-text-md); }
+.am__drop--over { border-color: var(--tg-accent); background: var(--tg-accent-soft); }
+.am__table { width: 100%; border-collapse: collapse; font-size: var(--tg-text-sm); }
+.am__table th, .am__table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--tg-border); }
+.am__table td.tg-mono { word-break: break-all; }
+.am__row--done td:last-child { color: var(--tg-good); font-weight: var(--tg-weight-medium); }
+.am__row--error td:last-child { color: var(--tg-bad); }
+.am__row--skipped td { color: var(--tg-text-muted); }
+
+@media (max-width: 560px) {
+  .am { padding: var(--tg-space-3) var(--tg-space-3) var(--tg-space-7); }
+  .am__grid { grid-template-columns: 1fr 1fr; }
+  .am__seg button { padding: 7px 9px; }
+}

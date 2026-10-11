@@ -322,6 +322,12 @@
 .shell__ops-link:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
 .shell__ops-link.active { color: #fff; background: rgba(255, 255, 255, 0.18); }
 
+/* An admin's nav is the longest; beside it the catalogue search never gets
+   enough room to be usable, so it gives way entirely (the catalogue is one
+   click away from any listing link, and admins work from their queues). */
+.shell__bar--admin .search { display: none; }
+.shell__bar--admin .shell__ops { flex: 1; }
+
 @media (max-width: 1100px) {
   /* The search box is the first thing to give up its room: a staff member
      needs to reach their queues more than they need to search the catalogue. */

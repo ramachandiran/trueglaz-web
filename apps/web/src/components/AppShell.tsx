@@ -49,7 +49,9 @@ function Header() {
 
   return (
     <header className={`shell__header${isAuthPage ? ' shell__header--auth' : ''}`}>
-      <div className="shell__bar">
+      {/* An admin has the longest staff nav; it takes the search box's room
+          entirely rather than squeezing it to a sliver. */}
+      <div className={`shell__bar${admin ? ' shell__bar--admin' : ''}`}>
         <NavLink to="/" className="shell__brand" aria-label="TrueGlaz — home">
           <Logo className="shell__logo" />
         </NavLink>
@@ -67,7 +69,8 @@ function Header() {
             {staff && <NavLink to="/people" className="shell__ops-link">People</NavLink>}
             {staff && <NavLink to="/fulfilment" className="shell__ops-link">Fulfilment</NavLink>}
             <NavLink to="/returns" className="shell__ops-link">Returns</NavLink>
-            {admin && <NavLink to="/admin" className="shell__ops-link">Money</NavLink>}
+            {admin && <NavLink to="/admin" end className="shell__ops-link">Money</NavLink>}
+            {admin && <NavLink to="/admin/models" className="shell__ops-link">Model photos</NavLink>}
             {admin && <NavLink to="/balance-sheet" className="shell__ops-link">Balance sheet</NavLink>}
           </nav>
         )}

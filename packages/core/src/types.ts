@@ -435,6 +435,8 @@ export interface OrderLineSummary {
   title: string
   /** Picks the placeholder artwork while real photographs are not served. */
   categoryName: string | null
+  /** For the model's picture. */
+  modelSlug?: string | null
 
   itemPriceMinor: number
   gradeCodeAtSale: string
@@ -1003,6 +1005,7 @@ export interface HomeFacet {
 export interface HomeModel {
   brandName: string
   modelName: string
+  modelSlug?: string | null
   soldCount: number
   liveCount: number
   fromPriceMinor: number | null
@@ -1012,6 +1015,7 @@ export interface HomeModel {
 export interface HomeWanted {
   id: string
   wanted: string
+  modelSlug?: string | null
   minGradeCode: string | null
   maxPriceMinor: number | null
 }
@@ -1376,6 +1380,7 @@ export interface StaffHome {
   recent: {
     itemId: string; sku: string; title: string; fromState: string | null; toState: string
     actorRole: string | null; at: string | null; grade: string | null; priceMinor: number | null
+    modelSlug?: string | null
   }[]
 }
 
@@ -1385,7 +1390,7 @@ export interface SellerHome {
   pipeline: { key: string; label: string; count: number; tone: string }[]
   money: { paidOutMinor: number; owedMinor: number; expectedMinor: number; soldCount: number; itemCount: number }
   actions: { key: string; title: string; hint: string; count: number; href: string; tone: 'urgent' | 'normal' | 'quiet' }[]
-  recent: { itemId: string; sku: string; title: string; toState: string; at: string | null; grade: string | null; priceMinor: number | null }[]
+  recent: { itemId: string; sku: string; title: string; toState: string; at: string | null; grade: string | null; priceMinor: number | null; modelSlug?: string | null }[]
   /** Open Wanted asks read against this seller's unsold gear. */
   wantedMatches: WantedMatch[]
 }
@@ -1436,6 +1441,7 @@ export interface BuyerAskMatch {
 export interface BuyerAsk {
   id: string
   wanted: string
+  modelSlug?: string | null
   state: 'submitted' | 'published'
   minGradeCode: string | null
   maxPriceMinor: number | null
@@ -1462,4 +1468,48 @@ export interface BuyerHome {
   asks: BuyerAsk[]
   stats: { inProgress: number; bought: number; spentMinor: number; openAsks: number }
   returnWindowHours: number
+}
+
+// --- model pictures ------------------------------------------------------------
+
+/** One model's current picture, as the shop reads it. */
+export interface ModelImageEntry {
+  modelId: string
+  slug: string
+  /** One of the old bundled drawings rather than a photograph. */
+  placeholder: boolean
+  image: MediaView
+}
+
+export interface AdminModelRow {
+  id: string
+  slug: string
+  name: string
+  brand: string
+  /** cameras | lenses */
+  category: string
+  categoryName: string
+  placeholder: boolean
+  updatedAt: string | null
+  updatedBy: string | null
+  previousCount: number
+  liveListings: number
+  image: MediaView | null
+}
+
+export interface AdminModelList {
+  counts: { total: number; photo: number; placeholder: number; missing: number }
+  brands: string[]
+  models: AdminModelRow[]
+}
+
+export interface ModelImageHistory {
+  id: string
+  placeholder: boolean
+  uploadedAt: string | null
+  uploadedBy: string | null
+  retiredAt: string | null
+  retiredBy: string | null
+  retiredReason: 'replaced' | 'removed' | 'restored_other' | null
+  image: MediaView | null
 }

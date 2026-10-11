@@ -4,12 +4,13 @@ import { api, isOps, useSession } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { Timeline } from '../components/Timeline'
 import { InspectionReport } from '../components/InspectionReport'
-import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { photoKindFor } from '../components/GearPhoto'
 import { RecentlySold } from '../components/RecentlySold'
 import { ErrorNote, GradeBadge, Loading, SeverityBadge } from '../components/ui'
 import { buildTimeline, type RenderedReport } from '@trueglaz/core'
 import { dateTime, money } from '@trueglaz/core'
 import './DetailPage.css'
+import { Gallery } from '../components/Gallery'
 
 export function ListingDetailPage() {
   const { id = '' } = useParams()
@@ -60,16 +61,7 @@ export function ListingDetailPage() {
       </nav>
 
       <div className="product">
-        <div className="product__gallery">
-          <GearPhoto kind={kind} size="hero" alt={title} />
-          <div className="product__thumbs">
-            {[0, 1, 2].map((i) => <GearPhoto key={i} kind={kind} size="thumb" />)}
-          </div>
-          <p className="product__photo-note tg-muted">
-            Photographs of this exact unit are coming. Until then the condition report
-            below is the whole truth about it.
-          </p>
-        </div>
+        <Gallery photos={[]} kind={kind} alt={title} modelSlug={d.modelSlug} />
 
         <div className="product__main">
           <h1 className="product__title">{title}</h1>

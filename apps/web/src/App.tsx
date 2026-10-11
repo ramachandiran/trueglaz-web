@@ -7,6 +7,7 @@ import { Guard } from './components/Guard'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
 import { Loading } from './components/ui'
 import { AdminPage } from './pages/AdminPage'
+import { AdminModelsPage } from './pages/AdminModelsPage'
 import { StaffUsersPage } from './pages/StaffUsersPage'
 import { StaffUserDetailPage } from './pages/StaffUserDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
@@ -109,6 +110,7 @@ export function App() {
 
           {/* Money */}
           <Route path="/admin" element={<Guard need="admin"><AdminPage /></Guard>} />
+          <Route path="/admin/models" element={<Guard need="admin"><AdminModelsPage /></Guard>} />
           <Route path="/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />

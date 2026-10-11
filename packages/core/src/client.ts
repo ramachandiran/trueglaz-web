@@ -3,7 +3,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail,
-  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -301,7 +301,7 @@ export const api = {
    */
   uploadPhoto: async (
     file: File,
-    target: { ownerType: 'item' | 'order' | 'kyc'; ownerId: string; role: string; defectId?: string },
+    target: { ownerType: 'item' | 'order' | 'kyc' | 'model'; ownerId: string; role: string; defectId?: string },
   ): Promise<MediaView> => {
     const intent = await post<UploadIntent>('/media/intent', {
       ...target,
@@ -325,6 +325,13 @@ export const api = {
   mounts: () => get<Mount[]>('/mounts'),
   categories: () => get<Category[]>('/categories'),
   models: () => get<Page<ProductModel>>('/models?size=1000'),
+  /** Every model's current picture. Public; read once by the web app (see useModelImage). */
+  modelImages: () => get<{ models: ModelImageEntry[] }>('/models/images'),
+  adminModels: (q: { q?: string; brand?: string; category?: string; show?: string } = {}) =>
+    get<AdminModelList>('/admin/models?' + new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString()),
+  modelImageHistory: (modelId: string) => get<ModelImageHistory[]>(`/admin/models/${modelId}/images`),
+  removeModelImage: (modelId: string) => del<{ status: string }>(`/admin/models/${modelId}/image`),
+  restoreModelImage: (modelId: string) => post<{ status: string }>(`/admin/models/${modelId}/image/restore`),
   /** Type-ahead for the consignment form. Matches the brand as well as the name. */
   searchModels: (q: string, size = 12) =>
     get<Page<ProductModel>>(`/models?q=${encodeURIComponent(q)}&size=${size}`),

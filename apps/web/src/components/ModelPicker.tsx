@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { Brand, Category, ProductModel } from '@trueglaz/core'
 import './ModelPicker.css'
+import { ModelPhoto } from './ModelPhoto'
 
 /**
  * Finding your own gear in the catalogue.
@@ -134,8 +135,11 @@ export function ModelPicker({
                 // before a click ever landed on it.
                 onMouseDown={(e) => { e.preventDefault(); choose(m) }}
               >
-                <span className="mp__name">{m.name}</span>
-                <span className="mp__meta">{describe(m, brandName.get(m.brandId ?? ''), categories)}</span>
+                <ModelPhoto modelId={m.id} kind={categories.find((c) => c.id === m.categoryId)?.name === 'Lenses' ? 'lens' : 'camera'} size="mini" alt="" badge={false} />
+                <span className="mp__text">
+                  <span className="mp__name">{m.name}</span>
+                  <span className="mp__meta">{describe(m, brandName.get(m.brandId ?? ''), categories)}</span>
+                </span>
               </button>
             </li>
           ))}

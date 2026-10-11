@@ -12,6 +12,7 @@ import { ErrorNote, GradeBadge, Loading, SeverityBadge, StateBadge } from '../co
 import { buildTimeline, progressOf, STATE_BLURBS, STATE_LABELS } from '@trueglaz/core'
 import { dateTime, money } from '@trueglaz/core'
 import './DetailPage.css'
+import { ModelPhoto } from '../components/ModelPhoto'
 
 /** Where naming a technician is still a live question. */
 const BENCH_STATES = ['RECEIVED', 'IN_INSPECTION', 'RE_INSPECTION', 'RETURN_RECEIVED', 'INSPECTION_FAILED']
@@ -62,7 +63,9 @@ export function ItemDetailPage() {
       </div>
 
       <header className="detail__head">
-        <div>
+        <div className="detail__ident">
+          <ModelPhoto modelId={item.productModelId} kind="gear" size="thumb" alt={modelName ?? 'Model picture'} />
+          <div>
           <p className="detail__eyebrow tg-mono tg-muted">{item.internalSku}</p>
           <h1 className="detail__title">
             {modelName ?? item.modelFreeText ?? 'Consigned item'}
@@ -71,6 +74,7 @@ export function ItemDetailPage() {
             <StateBadge state={item.currentState} />
             {item.assignedGradeCode && <GradeBadge code={item.assignedGradeCode} />}
             {currentBinCode && <span className="tg-badge">Bin {currentBinCode}</span>}
+          </div>
           </div>
         </div>
         <div className="detail__figures">

@@ -4,9 +4,10 @@ import {
   api, ApiError, dateOnly, dateTime, money, relative, useApi,
   type OrderLineSummary, type OrderSummary, type ReturnForBuyer,
 } from '@trueglaz/core'
-import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { photoKindFor } from '../components/GearPhoto'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import './OrdersPage.css'
+import { ModelPhoto } from '../components/ModelPhoto'
 
 /**
  * The buyer's orders.
@@ -247,7 +248,7 @@ function LineRow({
         tabIndex={-1}
         aria-hidden="true"
       >
-        <GearPhoto kind={photoKindFor(line.categoryName)} size="thumb" />
+        <ModelPhoto slug={line.modelSlug} kind={photoKindFor(line.categoryName)} size="thumb" alt={line.title} />
       </Link>
 
       <div className="line__main">

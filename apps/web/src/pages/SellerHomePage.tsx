@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { api, dateOnly, money, relative, STATE_LABELS, useApi, useSession, type SellerHome, type WantedMatch, type WantedRequest } from '@trueglaz/core'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './SellerHomePage.css'
+import { ModelPhoto } from '../components/ModelPhoto'
 
 /**
  * Where a seller lands.
@@ -91,6 +92,7 @@ export function SellerHomePage() {
                     <li key={r.itemId}>
                       <Link to={`/items/${r.itemId}`} className="sl__feed-item">
                         <span className={`sl__dot sl__dot--${dotFor(r.toState)}`} aria-hidden="true" />
+                        <ModelPhoto slug={r.modelSlug} kind="gear" size="mini" alt="" />
                         <span className="sl__feed-body">
                           <span className="sl__feed-title">{r.title}{r.grade && <span className="sl__grade">{r.grade}</span>}</span>
                           <span className="sl__feed-meta">
@@ -231,7 +233,10 @@ function WantedWidget({ rows, loading, canSell, matches }: {
                   {m.kind === 'match' ? '★ You have this' : 'You have a similar one'}: <span className="tg-mono">{m.sku}</span>
                 </Link>
               )}
-              <strong className="sl__ask-what">{r.wanted}</strong>
+              <span className="sl__ask-top">
+                <ModelPhoto modelId={r.productModelId} kind="gear" size="mini" alt="" badge={false} />
+                <strong className="sl__ask-what">{r.wanted}</strong>
+              </span>
               <span className="sl__ask-meta">
                 {r.minGradeCode && <GradeBadge code={r.minGradeCode} />}
                 {r.maxPriceMinor != null && <span>up to {money(r.maxPriceMinor)}</span>}

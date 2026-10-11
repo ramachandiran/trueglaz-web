@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { FilterSidebar } from '../components/FilterSidebar'
-import { GearPhoto, photoKindFor } from '../components/GearPhoto'
+import { photoKindFor } from '../components/GearPhoto'
 import { GradeBadge, Empty, ErrorNote, Loading } from '../components/ui'
 import {
   applyFilters, buildModelIndex, countBy, EMPTY_FILTERS,
@@ -14,6 +14,7 @@ import {
 const SORTS: Sort[] = ['newest', 'price-asc', 'price-desc', 'grade-desc']
 import { money } from '@trueglaz/core'
 import './CatalogPage.css'
+import { ModelPhoto } from '../components/ModelPhoto'
 
 export function CatalogPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
@@ -191,7 +192,7 @@ export function CatalogPage() {
               return (
                 <li key={listing.id} className="result">
                   <Link to={`/listings/${listing.id}`} className="result__photo-link" tabIndex={-1} aria-hidden="true">
-                    <GearPhoto kind={photoKindFor(category?.name)} />
+                    <ModelPhoto slug={model?.slug} kind={photoKindFor(category?.name)} alt={listing.title.split('·')[0].trim()} />
                   </Link>
 
                   <div className="result__body">

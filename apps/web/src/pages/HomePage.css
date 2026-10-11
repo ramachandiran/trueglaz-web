@@ -939,7 +939,13 @@
 
 .ask__what {
   font-weight: var(--tg-weight-medium);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tg-space-2);
 }
+
+.myask__what { display: inline-flex; align-items: center; gap: var(--tg-space-2); }
+.model { align-items: center; }
 
 .ask__terms {
   font-size: var(--tg-text-xs);

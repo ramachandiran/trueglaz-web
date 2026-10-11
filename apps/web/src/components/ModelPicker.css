@@ -19,8 +19,9 @@
 
 .mp__option {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--tg-space-3);
   width: 100%;
   padding: var(--tg-space-2);
   font: inherit;
@@ -52,3 +53,5 @@
   color: var(--tg-text-muted);
   line-height: 1.4;
 }
+
+.mp__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }

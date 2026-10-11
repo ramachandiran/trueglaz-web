@@ -105,3 +105,5 @@
 .sl__ask-flag { font-size: var(--tg-text-xs); font-weight: var(--tg-weight-bold); color: var(--tg-good); text-decoration: none; }
 .sl__ask--close .sl__ask-flag { color: var(--tg-warn); }
 .sl__ask-why { font-size: var(--tg-text-xs); color: var(--tg-warn); }
+
+.sl__ask-top { display: flex; align-items: center; gap: var(--tg-space-2); }
