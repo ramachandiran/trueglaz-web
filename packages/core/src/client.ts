@@ -363,6 +363,16 @@ export const api = {
   /** Where the latest try at paying stands, as the gateway told the API. Read-only. */
   paymentStatus: (orderId: string) => get<PaymentStatusView>(`/orders/${orderId}/payment-status`),
   paymentMethods: () => get<PaymentMethods>('/payments/methods'),
+  /**
+   * Hands the API what the gateway's in-page checkout (Razorpay) returned. The
+   * API checks the gateway's signature and fetches the payment from the gateway
+   * before booking anything; this cannot mark an unpaid order paid.
+   */
+  paymentConfirm: (orderId: string, fields: Record<string, string>) =>
+    post<{ status: 'captured' | 'duplicate' | 'failed' | 'pending' | string }>(`/orders/${orderId}/payment-confirm`, fields),
+  /** Admin: send a cancelled order's money back through the gateway, and record it. */
+  refundViaGateway: (orderId: string, note?: string) =>
+    post<{ refundId: string }>(`/orders/${orderId}/refund-via-gateway`, { note: note ?? null }),
   /** A new address for an order that is still waiting for payment. */
   changeOrderAddress: (orderId: string, deliveryAddress: Record<string, unknown>) =>
     put<Order>(`/orders/${orderId}/delivery-address`, { deliveryAddress }),

@@ -348,12 +348,26 @@ function PayoutSection({
  */
 function RefundsDue({ onChanged }: { onChanged: () => void }) {
   const due = useApi(() => api.refundsDue(), [])
+  const meta = useApi(() => api.meta(), [])
+  const viaGateway = meta.data?.gatewayRefunds === true
+  const gatewayName = meta.data?.paymentGateway === 'razorpay' ? 'Razorpay' : 'the gateway'
   const [refs, setRefs] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const rows = due.data ?? []
   if (due.loading || rows.length === 0) return null
+
+  async function refundThroughGateway(orderId: string, orderNumber: string, amount: number) {
+    if (!window.confirm(`Refund ${money(amount)} for ${orderNumber} through ${gatewayName}? The money goes back to the buyer's original payment method.`)) return
+    setBusy(orderId); setError(null)
+    try {
+      await api.refundViaGateway(orderId)
+      due.reload(); onChanged()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'That did not work')
+    } finally { setBusy(null) }
+  }
 
   async function record(orderId: string) {
     setBusy(orderId); setError(null)
@@ -369,8 +383,9 @@ function RefundsDue({ onChanged }: { onChanged: () => void }) {
     <section className="tg-card ops__card">
       <h2 className="ops__subtitle">Refunds due ({rows.length})</h2>
       <p className="tg-muted ops__fineprint">
-        Orders cancelled after the buyer paid. Refund each in the gateway's dashboard, then enter
-        the gateway's reference here to clear it from escrow.
+        {viaGateway
+          ? `Orders cancelled after the buyer paid. Refund each through ${gatewayName} here (it goes back to the buyer's original method and clears escrow), or, if you refunded it in the dashboard, enter that reference instead.`
+          : "Orders cancelled after the buyer paid. Refund each in the gateway's dashboard, then enter the gateway's reference here to clear it from escrow."}
       </p>
       {error && <p className="ops__error" role="alert">{error}</p>}
       {rows.map((r) => (
@@ -381,7 +396,17 @@ function RefundsDue({ onChanged }: { onChanged: () => void }) {
             <strong> {money(r.amountMinor)}</strong>
             {r.paidAt && <span className="tg-muted"> · paid {dateTime(r.paidAt)}</span>}
           </div>
-          <span style={{ display: 'flex', gap: 8 }}>
+          <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {viaGateway && (
+              <button
+                className="tg-button tg-button--primary"
+                style={{ whiteSpace: 'nowrap' }}
+                disabled={busy === r.orderId}
+                onClick={() => refundThroughGateway(r.orderId, r.orderNumber, r.amountMinor)}
+              >
+                {busy === r.orderId ? 'Refunding…' : `Refund through ${gatewayName}`}
+              </button>
+            )}
             <input
               className="tg-input"
               placeholder="Gateway refund reference"
@@ -389,7 +414,7 @@ function RefundsDue({ onChanged }: { onChanged: () => void }) {
               onChange={(e) => setRefs({ ...refs, [r.orderId]: e.target.value })}
             />
             <button
-              className="tg-button tg-button--primary"
+              className={`tg-button${viaGateway ? '' : ' tg-button--primary'}`}
               style={{ whiteSpace: 'nowrap' }}
               disabled={busy === r.orderId || !(refs[r.orderId] ?? '').trim()}
               onClick={() => record(r.orderId)}

@@ -5,6 +5,7 @@ import {
   type Address, type Order, type PaymentMethod, type PaymentPreference,
 } from '@trueglaz/core'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
+import { openRazorpay, type RazorpaySuccess } from '../payments/razorpay'
 import './CheckoutPage.css'
 
 const SHIPPING_MINOR = 40000
@@ -135,6 +136,7 @@ export function CheckoutPage() {
 
   const left = useCountdown(paid ? null : expiresAt)
   const hours = meta.data?.returnWindowHours ?? 24
+  const partner = meta.data?.paymentGateway === 'razorpay' ? 'Razorpay' : 'our payment partner'
 
   // -- actions ---------------------------------------------------------------
 
@@ -204,14 +206,60 @@ export function CheckoutPage() {
       // Opening a payment says nothing about whether it worked: that arrives
       // from the gateway, signed, straight to the API.
       const s = await api.paymentSession(order.id, preferenceOf(pay))
+      if (s.checkout?.kind === 'razorpay') {
+        // Razorpay's modal takes it from here; busy stays on until it reports back.
+        const orderId = order.id
+        await openRazorpay(
+          s.checkout,
+          (r) => { void finishRazorpay(orderId, r) },
+          (lastFailure) => {
+            setBusy(false)
+            setError(lastFailure
+              ? `${clause(lastFailure)}. No money was taken — try again, or choose another way to pay.`
+              : 'The payment window was closed before paying. Nothing was charged; you can try again.')
+          },
+        )
+        return
+      }
       if (s.url) {
         // A real gateway: its own page takes the card, the bank login or the UPI approval.
         window.location.assign(s.url)
         return
       }
       setGateway(true) // the demo gateway, on this page
+      setBusy(false)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not start the payment')
+      setError(e instanceof ApiError || e instanceof Error ? e.message : 'Could not start the payment')
+      setBusy(false)
+    }
+  }
+
+  /**
+   * Razorpay says it was paid. The API checks that with Razorpay (signature,
+   * then the payment itself) before the order is marked paid. A bank that is
+   * still deciding leaves it pending; the webhook settles it, and we poll.
+   */
+  async function finishRazorpay(orderId: string, r: RazorpaySuccess) {
+    setBusy(true); setError(null)
+    try {
+      const res = await api.paymentConfirm(orderId, { ...r })
+      if (res.status === 'captured' || res.status === 'duplicate') {
+        setPaid(true); go('done', true); return
+      }
+      if (res.status === 'failed') {
+        const st = await api.paymentStatus(orderId)
+        setError(`${clause(st.reason ?? 'The payment did not go through')}. No money was taken — try again, or choose another way to pay.`)
+        return
+      }
+      for (let i = 0; i < 15; i++) {
+        await new Promise((ok) => setTimeout(ok, 2000))
+        const st = await api.paymentStatus(orderId)
+        if (st.state === 'captured') { setPaid(true); go('done', true); return }
+        if (st.state === 'failed') { setError(`${clause(st.reason ?? 'The payment did not go through')}. No money was taken.`); return }
+      }
+      setError('Your bank has not confirmed the payment yet. If money left your account, your order will update by itself as soon as it does — see Orders.')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'We could not confirm the payment. If money left your account, your order will update by itself shortly.')
     } finally {
       setBusy(false)
     }
@@ -229,7 +277,7 @@ export function CheckoutPage() {
         return
       }
       const st = await api.paymentStatus(order.id)
-      setError(`${st.reason ?? 'The payment did not go through'}. No money was taken — try again, or choose another way to pay.`)
+      setError(`${clause(st.reason ?? 'The payment did not go through')}. No money was taken — try again, or choose another way to pay.`)
     } catch (e) {
       setGateway(false)
       setError(e instanceof ApiError ? e.message : 'Payment failed')
@@ -366,7 +414,7 @@ export function CheckoutPage() {
 
               <Method id="card" pay={pay} setPay={setPay} title="Credit or debit card" sub="Visa, Mastercard, RuPay, American Express" icon={<IconCard />}>
                 <p className="co__secure">
-                  <IconLock /> You'll type your card on our payment partner's secure page, with your bank's OTP check.
+                  <IconLock /> You'll type your card in {partner}'s secure payment window, with your bank's OTP check.
                   TrueGlaz never sees or stores your card number, expiry or CVV.
                 </p>
                 <ul className="co__networks" aria-label="Cards accepted">
@@ -422,7 +470,7 @@ export function CheckoutPage() {
                 <div>
                   <h2 className="co__kicker">Paying by</h2>
                   <p className="co__recap-main">{methodLabel(pay, banks)}</p>
-                  {pay.method === 'card' && <p className="co__muted">Card details are entered on the payment partner's secure page.</p>}
+                  {pay.method === 'card' && <p className="co__muted">Card details are entered in {partner}'s secure payment window.</p>}
                 </div>
                 <button type="button" className="co__link" onClick={() => go('payment')}>Change</button>
               </div>
@@ -443,7 +491,7 @@ export function CheckoutPage() {
             <div className="co__nav">
               <button type="button" className="co__back" onClick={() => go('payment')}>← Back to payment</button>
               <button className="tg-button tg-button--primary co__next co__pay" disabled={busy || left === 0} onClick={startPayment}>
-                {busy ? 'Opening payment…' : `Pay ${money(total)}`}
+                {busy ? 'Waiting for payment…' : `Pay ${money(total)}`}
               </button>
             </div>
           </section>
@@ -687,6 +735,11 @@ function oneLine(a: Addr): string {
 
 function initials(name: string): string {
   return name.replace(/ Bank$| of India$/, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 3).toUpperCase()
+}
+
+/** A gateway's sentence, ready to be followed by one of ours ("…bank." + ". No money…" reads as a typo). */
+function clause(s: string): string {
+  return s.trim().replace(/[.!\s]+$/, '')
 }
 
 function windowText(hours: number): string {

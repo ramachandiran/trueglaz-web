@@ -1092,6 +1092,21 @@ export interface PaymentSessionView {
   /** 1 for the first try at paying this order; higher after a decline. */
   attempt: number
   method: PaymentMethod | null
+  /** Options for a checkout that opens in the page (Razorpay Standard Checkout). Public values only. */
+  checkout: RazorpayCheckout | null
+}
+
+export interface RazorpayCheckout {
+  kind: 'razorpay'
+  key: string
+  order_id: string
+  amount: number
+  currency: string
+  name: string
+  description: string
+  prefill: Record<string, string>
+  notes: Record<string, string>
+  theme: { color: string }
 }
 
 export type PaymentMethod = 'upi' | 'card' | 'netbanking'
@@ -1194,6 +1209,10 @@ export interface StaffBuyingRow {
  */
 export interface Meta {
   paymentsAreReal: boolean
+  /** stub (the demo gateway) or razorpay. */
+  paymentGateway: string
+  /** Whether an admin can refund through the gateway rather than in its dashboard. */
+  gatewayRefunds: boolean
   /** The platform's return window after delivery, in hours. */
   returnWindowHours: number
 }
