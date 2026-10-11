@@ -305,7 +305,7 @@ export const api = {
   ): Promise<MediaView> => {
     const intent = await post<UploadIntent>('/media/intent', {
       ...target,
-      contentType: file.type || 'image/jpeg',
+      contentType: file.type || (/\.png$/i.test(file.name) ? 'image/png' : /\.webp$/i.test(file.name) ? 'image/webp' : 'image/jpeg'),
       bytes: file.size,
     })
 

@@ -193,7 +193,7 @@ function ModelCard({ m, onChanged }: { m: AdminModelRow; onChanged: () => void }
             </button>
           </div>
         )}
-        <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden
+        <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden
           onChange={(e) => { void choose(e.target.files?.[0]); e.target.value = '' }} />
         {error && <p className="am__error" role="alert">{error}</p>}
 
@@ -229,7 +229,7 @@ type BulkRow = { file: File; model: AdminModelRow | null; status: 'ready' | 'upl
 
 /**
  * Drop a folder's worth of pictures named after their models
- * (canon-eos-r5-mark-ii.jpg, or "Canon EOS R5 Mark II.jpg"). Each is matched to
+ * (canon-eos-r5-mark-ii.png, or "Canon EOS R5 Mark II.jpg"; JPEG, PNG or WebP). Each is matched to
  * its model by name; anything that does not match is listed, never guessed.
  */
 function BulkUpload({ models, onDone }: { models: AdminModelRow[]; onDone: () => void }) {
@@ -281,10 +281,10 @@ function BulkUpload({ models, onDone }: { models: AdminModelRow[]; onDone: () =>
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); add(e.dataTransfer.files) }}
       >
-        <input type="file" multiple accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { add(e.target.files); e.target.value = '' }} />
+        <input type="file" multiple accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden onChange={(e) => { add(e.target.files); e.target.value = '' }} />
         <strong>Drop photos here, or click to choose</strong>
-        <span>Name each file after its model — <code>canon-eos-r5-mark-ii.jpg</code> or <code>Canon EOS R5 Mark II.jpg</code>.
-          Each replaces that model's current picture. At least {MIN_EDGE}px on the long edge.</span>
+        <span>Name each file after its model — <code>canon-eos-r5-mark-ii.png</code> or <code>Canon EOS R5 Mark II.jpg</code>.
+          JPEG, PNG or WebP, at least {MIN_EDGE}px on the long edge. Each replaces that model's current picture.</span>
       </label>
 
       {rows.length > 0 && (
@@ -325,7 +325,9 @@ function slugOf(filename: string): string {
 
 /** Reads the picture's size in the browser, so a too-small one is turned away before it is sent. */
 function checkImage(file: File): Promise<{ url: string; w: number; h: number } | { error: string }> {
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return Promise.resolve({ error: 'Use a JPEG, PNG or WebP picture' })
+  // Some systems hand over a file with no type at all; the extension then decides, and the server checks the bytes.
+  const typed = /^image\/(jpeg|pjpeg|png|x-png|webp)$/.test(file.type) || (!file.type && /\.(jpe?g|png|webp)$/i.test(file.name))
+  if (!typed) return Promise.resolve({ error: 'Use a JPEG, PNG or WebP picture' })
   if (file.size > 15 * 1024 * 1024) return Promise.resolve({ error: 'That file is over 15 MB' })
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file)
