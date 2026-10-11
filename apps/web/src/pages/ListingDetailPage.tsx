@@ -139,16 +139,7 @@ export function ListingDetailPage() {
             </p>
           )}
 
-          <hr className="product__rule" />
 
-          <dl className="buybox__terms">
-            <div><dt>Sold by</dt><dd>TrueGlaz</dd></div>
-            <div><dt>Graded by</dt><dd>TrueGlaz, then checked again by QC</dd></div>
-            <div><dt>Your money</dt><dd>Held in escrow until you accept the parcel</dd></div>
-            <div><dt>Returns</dt><dd>If it is not as graded, it goes back</dd></div>
-          </dl>
-
-          <RecentlySold excludeId={d.listing.id} />
         </aside>
       </div>
 
