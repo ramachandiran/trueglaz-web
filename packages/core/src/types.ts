@@ -189,6 +189,36 @@ export interface ProductModel {
   msrpMinor: number | null
 }
 
+/** One live listing, as the staff reprice screen sees it. */
+export interface ManagedListing {
+  listingId: string
+  internalSku: string
+  title: string
+  brandName: string | null
+  modelName: string | null
+  gradeCode: string | null
+  gradeLabel: string | null
+  priceMinor: number
+  /** The seller's floor; a reprice cannot go below it. */
+  floorMinor: number | null
+  sellerName: string | null
+  listedAt: string | null
+}
+
+/** What an admin fills in to add a model to a brand. */
+export interface NewModel {
+  brandId: string
+  categoryId: string
+  name: string
+  mountId?: string | null
+  sensorFormat?: string | null
+  lensTypeCode?: string | null
+  lensRangeCode?: string | null
+  focalLengthMinMm?: number | null
+  focalLengthMaxMm?: number | null
+  msrpMinor?: number | null
+}
+
 /** A code-and-label list the filters and forms draw from. */
 export interface LensType {
   code: string

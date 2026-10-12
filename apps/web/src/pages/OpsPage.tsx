@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, isStaff, money, useApi, useSession,
-  type ConsignmentItem, type ReviewRequest, type Submission, type Technician,
+  type ConsignmentItem, type ManagedListing, type ReviewRequest, type Submission, type Technician,
 } from '@trueglaz/core'
 import { StateBadge } from '../components/ui'
 import { QueueScreen } from '../components/QueueScreen'
 import './OpsPage.css'
 
-type Queue = 'intake' | 'inbound' | 'inspect' | 'price' | 'wanted'
+type Queue = 'intake' | 'inbound' | 'inspect' | 'price' | 'listed' | 'wanted'
 
 const REJECT_REASONS = [
   { code: 'too_vague', label: 'Too vague to act on' },
@@ -56,6 +56,8 @@ export function OpsPage() {
   // waiting on, and receiving is the same act either way.
   const preApproved = useApi(() => (staff ? api.itemQueue('PRE_APPROVED') : Promise.resolve([])), [staff])
   const inTransit = useApi(() => (staff ? api.itemQueue('IN_TRANSIT_INBOUND') : Promise.resolve([])), [staff])
+  // Live listings, so staff can reprice one without leaving Operations.
+  const listed = useApi(() => (staff ? api.managedListings() : Promise.resolve([])), [staff])
 
   /** One row per submission, because a box is received whole, not item by item. */
   const inboundRows = useMemo(() => {
@@ -73,7 +75,7 @@ export function OpsPage() {
 
   // The session arrives after the first render, so the open queue is derived
   // rather than stored — a technician must never land on a tab that is not there.
-  const allowed: Queue[] = staff ? ['intake', 'inbound', 'inspect', 'price', 'wanted'] : ['inspect']
+  const allowed: Queue[] = staff ? ['intake', 'inbound', 'inspect', 'price', 'listed', 'wanted'] : ['inspect']
   const active = allowed.includes(queue) ? queue : allowed[0]
 
   const tabs = [
@@ -81,6 +83,7 @@ export function OpsPage() {
     staff && { key: 'inbound', label: 'Inbound', count: inboundRows.length },
     { key: 'inspect', label: 'Inspection', count: inspectRows.length },
     staff && { key: 'price', label: 'Pricing', count: graded.data?.length ?? 0 },
+    staff && { key: 'listed', label: 'Listed', count: listed.data?.length ?? 0 },
     staff && { key: 'wanted', label: 'Requests', count: wanted.data?.length ?? 0 },
   ].filter(Boolean) as Array<{ key: string; label: string; count: number }>
 
@@ -96,6 +99,7 @@ export function OpsPage() {
                loading: received.loading || inInspection.loading,
                reload: () => { received.reload(); inInspection.reload() } },
     price: graded,
+    listed,
     wanted,
   }[active]
 
@@ -108,6 +112,7 @@ export function OpsPage() {
     const hay = active === 'intake' ? [r.id, r.pricingMode]
       : active === 'inbound' ? [r.id, ...r.items.map((i: ConsignmentItem) => i.internalSku)]
       : active === 'wanted' ? [r.wanted, r.note, r.minGradeCode]
+      : active === 'listed' ? [r.internalSku, r.title, r.brandName, r.modelName, r.gradeCode, r.sellerName]
         : [r.internalSku, r.serialNumber, r.declaredGradeCode, r.assignedGradeCode]
     return hay.some((v: string | null) => v?.toLowerCase().includes(t))
   }
@@ -120,16 +125,18 @@ export function OpsPage() {
   const onSearch = (v: string) => { setSearch(v); setPage(1) }
 
   const unit = active === 'intake' || active === 'inbound' ? 'submissions'
-    : active === 'wanted' ? 'requests' : 'items'
+    : active === 'wanted' ? 'requests' : active === 'listed' ? 'listings' : 'items'
   const placeholder = active === 'intake' ? 'Search by submission id…'
     : active === 'inbound' ? 'Search by submission or SKU…'
     : active === 'wanted' ? 'Search what buyers asked for…'
+    : active === 'listed' ? 'Search by item, SKU, grade or seller…'
       : 'Search by SKU, serial or grade…'
   const empty = {
     intake: 'Nothing waiting on pre-approval',
     inbound: 'Nothing on its way in',
     inspect: 'Nothing to inspect',
     price: 'Nothing waiting on a price',
+    listed: 'Nothing is on sale right now',
     wanted: 'Nothing waiting',
   }[active]
 
@@ -161,6 +168,7 @@ export function OpsPage() {
           <InspectTable rows={shown} roster={roster.data ?? []} reload={source.reload} />
         )}
         {active === 'price' && <PricingTable rows={shown} reload={graded.reload} />}
+        {active === 'listed' && <ListedTable rows={shown} reload={listed.reload} />}
         {active === 'wanted' && <RequestTable rows={shown} reload={wanted.reload} />}
       </QueueScreen>
 
@@ -472,6 +480,85 @@ function PricingTable({ rows, reload }: { rows: ConsignmentItem[]; reload: () =>
             </td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  )
+}
+
+/**
+ * Live listings, with an inline reprice.
+ *
+ * Repricing is a staff action — the backend retakes the fee snapshot and tells
+ * the seller — so it is here, not something a technician sees. The seller's
+ * floor is shown and the input is held above it, because the backend refuses a
+ * price under the floor (that is the seller's promised minimum) and a form that
+ * lets you type a number it will only reject is a worse form.
+ */
+function ListedTable({ rows, reload }: { rows: ManagedListing[]; reload: () => void }) {
+  const { busy, error, act } = useAction(reload)
+  const [open, setOpen] = useState<string | null>(null)
+  const [draft, setDraft] = useState<Record<string, string>>({})
+
+  const save = (l: ManagedListing) => {
+    const minor = Math.round(Number(draft[l.listingId]) * 100)
+    act(l.listingId, async () => {
+      await api.changeListingPrice(l.listingId, minor, 'staff_override')
+      setOpen(null)
+    })
+  }
+
+  return (
+    <table className="q__table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Grade</th>
+          <th>Seller</th>
+          <th className="q__num">Floor</th>
+          <th className="q__num">Price</th>
+          <th>Reprice</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ErrorRow error={error} span={6} />
+        {rows.map((l) => {
+          const belowFloor = l.floorMinor != null && Number(draft[l.listingId]) * 100 < l.floorMinor
+          const valid = Number(draft[l.listingId]) > 0 && !belowFloor
+          return (
+            <tr key={l.listingId}>
+              <td>
+                <Link to={`/listings/${l.listingId}`} className="ops__id">{l.title}</Link>
+                <span className="ops__gear tg-mono">{l.internalSku}</span>
+              </td>
+              <td><span className="tg-badge tg-badge--accent">{l.gradeCode}</span></td>
+              <td>{l.sellerName ?? '—'}</td>
+              <td className="q__num">{l.floorMinor != null ? money(l.floorMinor) : '—'}</td>
+              <td className="q__num"><strong>{money(l.priceMinor)}</strong></td>
+              <td>
+                {open === l.listingId ? (
+                  <span className="ops__inline">
+                    <input
+                      className="tg-input ops__amount" type="number" min={1} autoFocus
+                      placeholder="New price (₹)" aria-label={`New price for ${l.title}`}
+                      value={draft[l.listingId] ?? ''}
+                      onChange={(e) => setDraft({ ...draft, [l.listingId]: e.target.value })}
+                    />
+                    <button className="tg-button tg-button--primary" disabled={busy === l.listingId || !valid} onClick={() => save(l)}>
+                      {busy === l.listingId ? 'Saving…' : 'Save'}
+                    </button>
+                    <button className="tg-button" onClick={() => setOpen(null)}>Cancel</button>
+                    {belowFloor && <span className="ops__gear">below the seller's floor</span>}
+                  </span>
+                ) : (
+                  <button className="tg-button" disabled={busy === l.listingId}
+                    onClick={() => { setOpen(l.listingId); setDraft({ ...draft, [l.listingId]: String(Math.round(l.priceMinor / 100)) }) }}>
+                    Change price
+                  </button>
+                )}
+              </td>
+            </tr>
+          )
+        })}
       </tbody>
     </table>
   )

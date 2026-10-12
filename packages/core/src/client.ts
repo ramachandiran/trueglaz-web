@@ -2,7 +2,7 @@ import { getStorage } from './storage'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
-  Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail,
+  Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail, ManagedListing, NewModel,
   Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
@@ -637,6 +637,12 @@ export const api = {
   itemSnapshots: (itemId: string) => get<FeeSnapshot[]>(`/items/${itemId}/fee-snapshots`),
   changeListingPrice: (listingId: string, newAmountMinor: number, reason: string) =>
     post<Listing>(`/listings/${listingId}/price`, { newAmountMinor, reason }),
+  /** Every live listing, for the staff reprice screen. */
+  managedListings: () => get<ManagedListing[]>('/listings/managed'),
+
+  /** Admin: add to the gear catalogue. A new model is consignable at once. */
+  createBrand: (name: string) => post<Brand>('/admin/brands', { name }),
+  createModel: (body: NewModel) => post<ProductModel>('/admin/models', body),
 
   orderLines: (state?: string) =>
     get<OrderLine[]>(`/order-lines${state ? `?state=${encodeURIComponent(state)}` : ''}`),

@@ -12,6 +12,7 @@ import { SettingsOverview } from './pages/settings/SettingsOverview'
 import { SettingsGroupPage } from './pages/settings/SettingsGroupPage'
 import { FeesSettingsPage } from './pages/settings/FeesSettingsPage'
 import { CompanySettingsPage } from './pages/settings/CompanySettingsPage'
+import { CatalogueSettingsPage } from './pages/settings/CatalogueSettingsPage'
 import { StaffUsersPage } from './pages/StaffUsersPage'
 import { StaffUserDetailPage } from './pages/StaffUserDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
@@ -109,6 +110,7 @@ export function App() {
             <Route path="fees" element={<FeesSettingsPage />} />
             <Route path="payouts" element={<SettingsGroupPage key="payouts" group="payouts" />} />
             <Route path="company" element={<CompanySettingsPage />} />
+            <Route path="catalogue" element={<CatalogueSettingsPage />} />
             <Route path="security" element={<SettingsGroupPage key="security" group="security" />} />
             <Route path="models" element={<AdminModelsPage />} />
           </Route>
