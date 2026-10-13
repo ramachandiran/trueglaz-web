@@ -15,10 +15,14 @@ const COPY: Record<string, { title: string; lede: string }> = {
     title: 'Sign-in & security',
     lede: 'Sign-in codes and sessions. Loosening these makes accounts easier to break into; tightening them makes sign-in harder for real people on shared networks.',
   },
+  notifications: {
+    title: 'Notifications',
+    lede: 'Sellers and buyers always see events in the app. Switch on email or WhatsApp to send the same updates over those channels too, and set the sender they come from. The sending credentials themselves (the verified email identity, the WhatsApp provider) are configured on the server.',
+  },
 }
 
 /** One group of settings, each editable in place, with its recent changes underneath. */
-export function SettingsGroupPage({ group }: { group: 'selling' | 'payouts' | 'security' }) {
+export function SettingsGroupPage({ group }: { group: 'selling' | 'payouts' | 'security' | 'notifications' }) {
   const rows = useApi(() => api.adminSettings(), [])
   const changes = useApi(() => api.settingHistory(), [])
   const mine = (rows.data ?? []).filter((s) => s.groupCode === group)

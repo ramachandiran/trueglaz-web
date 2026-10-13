@@ -10,6 +10,7 @@ export const SETTINGS_PAGES = [
   { to: 'company', label: 'Company & invoices', end: false, blurb: 'Legal name, GSTIN, address on invoices' },
   { to: 'catalogue', label: 'Catalogue', end: false, blurb: 'Add brands and models to the gear list' },
   { to: 'security', label: 'Sign-in & security', end: false, blurb: 'Sign-in codes and sessions' },
+  { to: 'notifications', label: 'Notifications', end: false, blurb: 'Email and WhatsApp updates, and their sender' },
   { to: 'models', label: 'Model photos', end: false, blurb: 'The picture of each catalogue model' },
 ] as const
 

@@ -112,6 +112,7 @@ export function App() {
             <Route path="company" element={<CompanySettingsPage />} />
             <Route path="catalogue" element={<CatalogueSettingsPage />} />
             <Route path="security" element={<SettingsGroupPage key="security" group="security" />} />
+            <Route path="notifications" element={<SettingsGroupPage key="notifications" group="notifications" />} />
             <Route path="models" element={<AdminModelsPage />} />
           </Route>
           <Route path="/admin/models" element={<Navigate to="/admin/settings/models" replace />} />

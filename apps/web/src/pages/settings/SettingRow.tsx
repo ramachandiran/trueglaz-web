@@ -9,17 +9,21 @@ import { api, ApiError, dateTime, type PlatformSetting } from '@trueglaz/core'
  */
 export function SettingRow({ s, onSaved }: { s: PlatformSetting; onSaved: () => void }) {
   const rupees = s.unit === 'rupees'
+  const isBool = s.valueType === 'boolean'
+  // Free text: a sender name, a reply-to email, a WhatsApp number. No rupees, no
+  // decimal keypad, no unit or range beside it.
+  const isText = s.valueType === 'string'
   const shown = rupees ? fromPaise(s.value) : s.value
   const [draft, setDraft] = useState(shown)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-  const dirty = draft.trim() !== shown
+  const dirty = draft.trim() !== shown.trim()
 
-  async function save() {
+  async function commit(raw: string) {
     setBusy(true); setError(null); setSaved(false)
     try {
-      const value = rupees ? toPaise(draft) : draft.trim()
+      const value = rupees ? toPaise(raw) : raw.trim()
       if (value == null) throw new Error('Enter an amount in rupees, like 400 or 399.50')
       await api.setSetting(s.key, value)
       setSaved(true)
@@ -45,15 +49,25 @@ export function SettingRow({ s, onSaved }: { s: PlatformSetting; onSaved: () => 
         </p>
       </div>
       <div className="st__row-edit">
-        <span className="st__field">
-          {rupees && <span className="st__prefix">₹</span>}
-          <input id={`set-${s.key}`} className="tg-input st__input" inputMode="decimal" value={draft}
-            onChange={(e) => { setDraft(e.target.value); setSaved(false) }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && dirty) void save() }} />
-          {!rupees && <span className="st__suffix">{unitWord(s.unit)}</span>}
-        </span>
-        <button className="tg-button tg-button--primary" disabled={!dirty || busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</button>
-        {dirty && <button className="st__undo" onClick={() => { setDraft(shown); setError(null) }}>Undo</button>}
+        {isBool ? (
+          // A switch saves on the spot: there is nothing to type, so a Save
+          // button beside it would only be a second click for the same choice.
+          <select id={`set-${s.key}`} className="tg-input st__input" value={shown} disabled={busy}
+            onChange={(e) => void commit(e.target.value)}>
+            <option value="true">On</option>
+            <option value="false">Off</option>
+          </select>
+        ) : (
+          <span className="st__field">
+            {rupees && <span className="st__prefix">₹</span>}
+            <input id={`set-${s.key}`} className="tg-input st__input" inputMode={isText ? 'text' : 'decimal'} value={draft}
+              onChange={(e) => { setDraft(e.target.value); setSaved(false) }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && dirty) void commit(draft) }} />
+            {!rupees && !isText && <span className="st__suffix">{unitWord(s.unit)}</span>}
+          </span>
+        )}
+        {!isBool && <button className="tg-button tg-button--primary" disabled={!dirty || busy} onClick={() => void commit(draft)}>{busy ? 'Saving…' : 'Save'}</button>}
+        {!isBool && dirty && <button className="st__undo" onClick={() => { setDraft(shown); setError(null) }}>Undo</button>}
         {saved && !dirty && <span className="st__ok" role="status">Saved</span>}
       </div>
       {error && <p className="st__error" role="alert">{error}</p>}
