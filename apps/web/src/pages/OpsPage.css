@@ -100,6 +100,14 @@
   max-width: 28rem;
 }
 
+/* A SKU inside the muted gear line, still clearly a link into the item. */
+.ops__skulink {
+  color: var(--tg-accent);
+  text-decoration: none;
+  font-family: var(--tg-font-mono, monospace);
+}
+.ops__skulink:hover { text-decoration: underline; }
+
 .ops__wanted {
   font-weight: var(--tg-weight-medium);
   margin-right: var(--tg-space-2);

@@ -283,11 +283,36 @@ function IntakeTable({ rows, reload }: { rows: Submission[]; reload: () => void 
 function SubmissionItems({ submissionId }: { submissionId: string }) {
   const view = useApi(() => api.submission(submissionId), [submissionId])
   if (!view.data) return null
+  const items = view.data.items
   return (
     <span className="ops__gear">
-      {view.data.items.map((i) => i.internalSku).join(', ')}
+      {items.map((i, n) => (
+        <span key={i.id}>
+          {n > 0 && ', '}
+          <Link to={`/items/${i.id}`} className="ops__skulink">{i.internalSku}</Link>
+        </span>
+      ))}
       {' · '}
-      {money(view.data.items.reduce((t, i) => t + i.askingAmountMinor, 0))} asked
+      {money(items.reduce((t, i) => t + i.askingAmountMinor, 0))} asked
+    </span>
+  )
+}
+
+/**
+ * What pre-approval produced, shown where the box now waits.
+ *
+ * Pre-approve issues an inbound label and a tracking number, but nothing in the
+ * queue said so — the row simply moved here, which read as "nothing happened".
+ * This is the proof it did: the courier and the tracking number the seller is
+ * shipping under.
+ */
+function InboundInfo({ submissionId }: { submissionId: string }) {
+  const ships = useApi(() => api.submissionShipments(submissionId), [submissionId])
+  const s = ships.data?.[0]
+  if (!s) return null
+  return (
+    <span className="ops__gear">
+      Label issued · {s.courierCode}{s.trackingNumber ? ` · ${s.trackingNumber}` : ''}
     </span>
   )
 }
@@ -332,9 +357,15 @@ function InboundTable({
             <td>
               <span className="ops__id tg-mono">{r.id.slice(0, 8)}</span>
               <span className="ops__gear">
-                {r.items.map((i) => i.internalSku).join(', ')}
+                {r.items.map((i, n) => (
+                  <span key={i.id}>
+                    {n > 0 && ', '}
+                    <Link to={`/items/${i.id}`} className="ops__skulink">{i.internalSku}</Link>
+                  </span>
+                ))}
                 {' · '}{r.items.length} item{r.items.length === 1 ? '' : 's'}
               </span>
+              <InboundInfo submissionId={r.id} />
             </td>
             <td><StateBadge state={r.items[0].currentState} /></td>
             <td>
@@ -418,6 +449,26 @@ function PricingTable({ rows, reload }: { rows: ConsignmentItem[]; reload: () =>
       staffOverrideReason: amount ? 'Priced off comparable recent sales' : null,
     }))
 
+  /**
+   * The guided price needs a reference price for this model and grade, and most
+   * of the catalogue has none — a widened model list outran the reference data.
+   * When that is why it fails, this is not a dead end: open the by-hand field
+   * right here with a message, rather than leaving a staff member staring at a
+   * refusal with nowhere to go.
+   */
+  const priceGuided = (id: string) =>
+    act(id, async () => {
+      try {
+        await api.propose(id, {})
+      } catch (e) {
+        if (e instanceof ApiError && /guided price/i.test(e.message)) {
+          setOpen(id)
+          throw new Error('No guided price for this model and grade yet — set one by hand below.')
+        }
+        throw e
+      }
+    })
+
   return (
     <table className="q__table">
       <thead>
@@ -468,7 +519,7 @@ function PricingTable({ rows, reload }: { rows: ConsignmentItem[]; reload: () =>
                   <button
                     className="tg-button tg-button--primary"
                     disabled={busy === i.id}
-                    onClick={() => price(i.id)}
+                    onClick={() => priceGuided(i.id)}
                   >
                     {busy === i.id ? 'Pricing…' : 'Use the guided price'}
                   </button>
