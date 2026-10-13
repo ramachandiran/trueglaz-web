@@ -74,6 +74,7 @@ function Header() {
             {admin && <NavLink to="/admin/money" className="shell__ops-link">Money</NavLink>}
             {admin && <NavLink to="/admin/settings" className="shell__ops-link">Settings</NavLink>}
             {admin && <NavLink to="/admin/balance-sheet" className="shell__ops-link">Balance sheet</NavLink>}
+            {admin && <NavLink to="/admin/audit" className="shell__ops-link">Audit</NavLink>}
           </nav>
         )}
 

@@ -646,6 +646,46 @@ export interface SettingChange {
   changedAt: string | null
 }
 
+/** One line in the application-wide audit trail. */
+export interface AuditEntry {
+  id: string
+  occurredAt: string
+  actorUserId: string | null
+  actorName: string | null
+  actorEmail: string | null
+  actorRole: string | null
+  action: string
+  entityType: string | null
+  entityId: string | null
+  /** 'request' (an HTTP call) or 'domain' (a service describing an event). */
+  source: string
+  httpMethod: string | null
+  httpPath: string | null
+  httpStatus: number | null
+  reason: string | null
+  /** JSON text, for a domain event that carried a before/after. */
+  before: string | null
+  after: string | null
+  ip: string | null
+}
+
+export interface AuditPage {
+  total: number
+  entries: AuditEntry[]
+}
+
+export interface AuditQuery {
+  actorUserId?: string
+  action?: string
+  entityType?: string
+  entityId?: string
+  source?: string
+  from?: string
+  to?: string
+  limit?: number
+  offset?: number
+}
+
 export interface KycStatus {
   status: 'not_started' | 'in_review' | 'verified' | 'rejected' | 'expired' | string
   canSell: boolean

@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell'
 import { storedMarketView } from './state/useMarketView'
 import { Guard } from './components/Guard'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
+import { AuditPage } from './pages/AuditPage'
 import { Loading } from './components/ui'
 import { AdminPage } from './pages/AdminPage'
 import { AdminModelsPage } from './pages/AdminModelsPage'
@@ -117,6 +118,7 @@ export function App() {
           </Route>
           <Route path="/admin/models" element={<Navigate to="/admin/settings/models" replace />} />
           <Route path="/admin/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
+          <Route path="/admin/audit" element={<Guard need="admin"><AuditPage /></Guard>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

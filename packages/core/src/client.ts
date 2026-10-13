@@ -4,7 +4,7 @@ import type {
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail, ManagedListing, NewModel,
   Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
-  Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest,
+  Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
@@ -340,6 +340,13 @@ export const api = {
   sensorFormats: () => get<SensorFormat[]>('/sensor-formats'),
   transitionRules: () => get<TransitionRule[]>('/transition-rules'),
   settings: () => get<PlatformSetting[]>('/settings'),
+  /** The application-wide audit trail, newest first. Admin only. */
+  auditLog: (q: AuditQuery = {}) => {
+    const p = new URLSearchParams()
+    for (const [k, v] of Object.entries(q)) if (v != null && v !== '') p.set(k, String(v))
+    const qs = p.toString()
+    return get<AuditPage>(`/admin/audit${qs ? `?${qs}` : ''}`)
+  },
   feeQuote: (salePriceMinor: number) => get<FeeQuote>(`/fee-quote?salePriceMinor=${salePriceMinor}`),
   feeRules: () => get<FeeRule[]>('/fee-rules'),
   actors: () => get<ActorHint[]>('/dev/actors'),
