@@ -4,6 +4,13 @@ import { api, ApiError, useSession, type AuthResult, type PhotographyGenre } fro
 import { Logo } from '../components/Logo'
 import './SignInPage.css'
 
+/** A deliberately loose email shape: enough to catch "notacontact", not a validator. */
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+/** A string a person meant as a phone number: digits, maybe a leading +, spaces or dashes. */
+function looksLikePhone(value: string): boolean {
+  return /^\+?\d[\d\s-]{6,}$/.test(value)
+}
+
 /**
  * OTP sign-in.
  *
@@ -54,10 +61,27 @@ export function SignInPage() {
 
   async function sendCode(e: FormEvent) {
     e.preventDefault()
+    const entered = contact.trim()
+
+    // Phone sign-in has no SMS provider yet: a code would be generated and never
+    // arrive, which is indistinguishable from a broken site. Say so here rather
+    // than advance to a code screen for a code that cannot come.
+    if (!entered.includes('@') && looksLikePhone(entered)) {
+      setError('Phone sign-in isn’t available yet — please sign in with your email address.')
+      return
+    }
+    // Neither an email nor a phone: there is nowhere to send a code. Catch it
+    // here instead of showing a "code is on its way" screen for an address that
+    // can never receive one.
+    if (!EMAIL_RE.test(entered)) {
+      setError('Enter a valid email address.')
+      return
+    }
+
     setBusy(true)
     setError(null)
     try {
-      const res = await api.requestCode(contact.trim())
+      const res = await api.requestCode(entered)
       setDevCode(res.devCode)
       setStep('code')
     } catch (err) {

@@ -1,0 +1,13 @@
+.spd { padding: var(--tg-space-5); display: flex; flex-direction: column; gap: var(--tg-space-4); }
+.spd__because { margin: 0; font-size: var(--tg-text-md); font-weight: var(--tg-weight-medium); }
+.spd__figures { display: flex; gap: var(--tg-space-6); flex-wrap: wrap; }
+.spd__figure { display: flex; flex-direction: column; }
+.spd__figure-label { font-size: var(--tg-text-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.spd__figure-value { font-size: var(--tg-text-lg); font-variant-numeric: tabular-nums; }
+.spd__figure-value--strong { font-weight: var(--tg-weight-bold); }
+.spd__fineprint { font-size: var(--tg-text-xs); margin: 0; }
+.spd__decide { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; align-items: center; }
+.spd__counter { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; }
+.spd__counter-input { width: 150px; }
+.spd__decline { color: var(--tg-bad); }
+.spd__error { color: var(--tg-bad); font-size: var(--tg-text-sm); margin: 0; }

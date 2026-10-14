@@ -163,11 +163,19 @@ export function NextActions({
   currentState,
   nextLegalStates,
   onDone,
+  /**
+   * Hide the "nothing here is yours to do" line when another control on the
+   * page already owns the action — a seller's price decision, for instance,
+   * which these legal moves describe as "the seller decides this" but cannot
+   * themselves perform.
+   */
+  suppressEmptyNote = false,
 }: {
   itemId: string
   currentState: string
   nextLegalStates: NextState[]
   onDone: () => void
+  suppressEmptyNote?: boolean
 }) {
   const { session } = useSession()
   // Only fetched when something on offer needs one, but the list is four rows
@@ -303,7 +311,7 @@ export function NextActions({
         </p>
       )}
 
-      {nothingToDo && (
+      {nothingToDo && !suppressEmptyNote && (
         <p className="tg-muted next__none">
           {isOps(session)
             ? 'Nothing here is yours to press — these moves follow from events elsewhere.'

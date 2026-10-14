@@ -5,6 +5,7 @@ import { useApi } from '@trueglaz/core'
 import { InspectionReport } from '../components/InspectionReport'
 import { ShipmentLegs } from '../components/ShipmentLegs'
 import { NextActions } from '../components/NextActions'
+import { SellerPriceDecision } from '../components/SellerPriceDecision'
 import { AssignTechnician } from '../components/AssignTechnician'
 import { WithdrawListing } from '../components/WithdrawListing'
 import { Timeline } from '../components/Timeline'
@@ -31,6 +32,10 @@ export function ItemDetailPage() {
   // Four rows, cached by the browser. Without it the history printed the stored
   // codes — ist_grading_error — at the one moment a person is reading for why.
   const reasons = useApi(() => api.reasonCodes('item_transition'), [])
+  // The seller's own pending price decisions. Fetched so that if THIS item is
+  // one of them, the accept/counter/decline lands right here — the place the
+  // price-proposed notification points to — instead of a dead "nothing to do".
+  const approvals = useApi(() => (session ? api.myApprovals() : Promise.resolve([])), [session?.userId])
 
   const steps = useMemo(
     () => (data ? buildTimeline(data.history, data.item.currentState, data.nextLegalStates) : []),
@@ -53,6 +58,11 @@ export function ItemDetailPage() {
 
   const { item, history, nextLegalStates, defects, inspections, listings, currentBinCode } = data
   const progress = progressOf(steps)
+
+  // A price waiting on this seller, for this item. Only the owner can answer it.
+  const pendingApproval = session?.userId === item.sellerUserId
+    ? (approvals.data ?? []).find((a) => a.approval.consignmentItemId === id && a.approval.decision === 'pending')
+    : undefined
 
   return (
     <article className="detail">
@@ -111,6 +121,16 @@ export function ItemDetailPage() {
           </div>
         )}
 
+        {/* A price waiting on this seller is answered right here: the
+            price-proposed notification links to the item, so the decision has to
+            live on the item, not only on the Selling page. */}
+        {pendingApproval && (
+          <SellerPriceDecision
+            a={pendingApproval}
+            onDone={() => { reload(); report.reload(); approvals.reload() }}
+          />
+        )}
+
         {/* The move out of the current state is the only question anyone has
             while looking at the line, so the buttons live on it. */}
         <NextActions
@@ -118,6 +138,7 @@ export function ItemDetailPage() {
           currentState={item.currentState}
           nextLegalStates={nextLegalStates}
           onDone={() => { reload(); report.reload() }}
+          suppressEmptyNote={!!pendingApproval}
         />
 
         {/* The owner's own exit, only while the item is simply on sale. */}

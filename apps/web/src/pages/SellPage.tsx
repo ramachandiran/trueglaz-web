@@ -7,6 +7,7 @@ import {
 import { photoKindFor } from '../components/GearPhoto'
 import { Empty, ErrorNote, GradeBadge, Loading, StateBadge } from '../components/ui'
 import { KycPanel } from '../components/KycPanel'
+import { SellerPriceDecision } from '../components/SellerPriceDecision'
 import './SellPage.css'
 import { ModelPhoto } from '../components/ModelPhoto'
 
@@ -357,28 +358,12 @@ function MyItems() {
 }
 
 function Approvals({ state }: { state: ReturnType<typeof useApi<SellerApprovalView[]>> }) {
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [counter, setCounter] = useState<Record<string, string>>({})
-
   if (state.loading) return <Loading label="Loading approvals" />
   if (state.error) return <ErrorNote error={state.error} onRetry={state.reload} />
 
   const rows = (state.data ?? []).filter((a) => a.approval.decision === 'pending')
   if (rows.length === 0) {
     return <Empty title="Nothing waiting on you" hint="We only ask when a price lands below your floor, the grade came back lower than you declared, or you chose manual pricing." />
-  }
-
-  async function decide(id: string, decision: string, amount?: number) {
-    setBusy(id); setError(null)
-    try {
-      await api.decideApproval(id, decision, amount ?? null)
-      state.reload()
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not record that')
-    } finally {
-      setBusy(null)
-    }
   }
 
   return (
@@ -393,72 +378,10 @@ function Approvals({ state }: { state: ReturnType<typeof useApi<SellerApprovalVi
         </p>
       </div>
 
-      {error && <p className="sell__error" role="alert">{error}</p>}
       <div className="sell__list">
-      {rows.map((a) => {
-        const id = a.approval.id
-        const typed = Number(counter[id] ?? '')
-        const canCounter = a.approval.counterRound < 1
-        return (
-          <article key={id} className="sell__approval tg-card">
-            <p className="sell__because">{a.requiredBecause}</p>
-
-            <div className="sell__figures">
-              <Figure label="We'd list it at" value={money(a.proposedAmountMinor)} strong />
-              <Figure label="Our commission" value={money(a.commissionMinor)} />
-              <Figure label="You'd receive" value={money(a.expectedNetMinor)} strong />
-            </div>
-
-            <p className="tg-muted sell__fineprint">
-              You declared {a.declaredGradeCode}; we graded {a.assignedGradeCode ?? '—'}.
-              These figures are locked in — changing our fee table later cannot alter them.
-            </p>
-
-            <div className="sell__decide">
-              <button
-                className="tg-button tg-button--primary"
-                disabled={busy === id}
-                onClick={() => decide(id, 'accepted')}
-              >
-                Accept and list
-              </button>
-
-              {canCounter && (
-                <div className="sell__counter">
-                  <input
-                    className="tg-input sell__counter-input"
-                    type="number"
-                    min={1}
-                    placeholder="Your price (₹)"
-                    value={counter[id] ?? ''}
-                    onChange={(e) => setCounter({ ...counter, [id]: e.target.value })}
-                  />
-                  <button
-                    className="tg-button"
-                    disabled={busy === id || !typed || typed <= 0}
-                    onClick={() => decide(id, 'countered', Math.round(typed * 100))}
-                  >
-                    Counter once
-                  </button>
-                </div>
-              )}
-
-              <button
-                className="tg-button sell__decline"
-                disabled={busy === id}
-                onClick={() => decide(id, 'declined')}
-              >
-                Decline
-              </button>
-            </div>
-            {canCounter && (
-              <p className="tg-muted sell__fineprint">
-                You get one counter. Declining sends the item back to you.
-              </p>
-            )}
-          </article>
-        )
-      })}
+        {rows.map((a) => (
+          <SellerPriceDecision key={a.approval.id} a={a} onDone={state.reload} />
+        ))}
       </div>
     </div>
   )
@@ -552,11 +475,3 @@ function Payouts() {
   )
 }
 
-function Figure({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div className="sell__figure">
-      <span className="sell__figure-label tg-muted">{label}</span>
-      <span className={`sell__figure-value${strong ? ' sell__figure-value--strong' : ''}`}>{value}</span>
-    </div>
-  )
-}
