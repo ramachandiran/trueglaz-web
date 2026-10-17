@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, useApi, HAPPY_PATH, STATE_LABELS,
-  type SellerApprovalView,
+  type SellerApprovalView, type KycStatus,
 } from '@trueglaz/core'
 import { photoKindFor } from '../components/GearPhoto'
 import { Empty, ErrorNote, GradeBadge, Loading, StateBadge } from '../components/ui'
@@ -18,27 +18,43 @@ type Tab = 'items' | 'approvals' | 'payouts'
  * you've been paid. Approvals lead because they are the only thing here that
  * blocks money moving — an item sits unlisted until the seller answers.
  */
+type Phase = 'loading' | 'open' | 'identity' | 'awaiting' | 'declined'
+
 export function SellPage() {
   const [searchParams] = useSearchParams()
   const asked = searchParams.get('tab')
   const [tab, setTab] = useState<Tab>(asked === 'approvals' || asked === 'payouts' ? asked : 'items')
   const approvals = useApi(() => api.myApprovals(), [])
   const kyc = useApi(() => api.myKyc(), [])
+  // The authoritative selling state (approved / pending_review / rejected /
+  // not_requested) lives here, not on the KYC record — it is what separates
+  // "verified, waiting on us" from "not verified yet".
+  const home = useApi(() => api.sellerHome(), [])
   const pending = (approvals.data ?? []).filter((a) => a.approval.decision === 'pending')
   const submitted = searchParams.get('submitted') === 'true'
 
-  const canSell = kyc.data?.canSell ?? false
-  // Locked once we know the answer. Read from `data`, not `loading`: useApi
+  // Decided once we know the answer. Read from `data`, not `loading`: useApi
   // keeps `data` across a reload but flips `loading`, and gating on it
   // unmounted the KYC panel every time a photograph finished uploading —
-  // taking the half-filled form with it. `data` is null only before the first
-  // answer and after an error, which is when `loading` has to decide.
-  const sellingLocked = !canSell && (kyc.data !== null || !kyc.loading)
+  // taking the half-filled form with it.
+  const kycLoaded = kyc.data !== null || !kyc.loading
+  const canSell = kyc.data?.canSell ?? false
+  const verified = kyc.data?.status === 'verified'
+  const sellingState = home.data?.status.sellingState
 
-  return (
-    <div className="sell">
-      <aside className="sell__sidebar">
-        {!sellingLocked && (
+  // Three gated states, not one. A verified seller waiting on our approval must
+  // not be told to "complete the identity check" — they already did; the hold
+  // is on us. Only an unverified seller sees the document form.
+  const phase: Phase =
+    !kycLoaded ? 'loading'
+      : canSell ? 'open'
+        : verified ? (sellingState === 'rejected' ? 'declined' : 'awaiting')
+          : 'identity'
+
+  if (phase === 'open') {
+    return (
+      <div className="sell">
+        <aside className="sell__sidebar">
           <div className="sell__aside-card tg-card">
             <h1 className="sell__title">Selling</h1>
             <p className="tg-muted sell__blurb">
@@ -48,91 +64,144 @@ export function SellPage() {
               Consign an item
             </Link>
           </div>
-        )}
-
-        {/* Verified sellers keep the check in the sidebar as a small status
-            line. An unverified one gets it as the page: the panel asks for
-            photographs of a document, and two upload slots in a 230px column
-            is a form nobody can fill in. */}
-        {canSell && (
           <div className="sell__aside-card tg-card">
             <h2 className="sell__aside-title">Identity check</h2>
             <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
           </div>
-        )}
+        </aside>
 
-        {sellingLocked && (
-          <section className="sell__aside-card tg-card">
-            <h2 className="sell__aside-title">Why identity verification matters</h2>
-            <p className="tg-muted sell__blurb">
-              We take custody of your gear and send you money when it sells, so we need to know who we are dealing with.
-            </p>
-            <ul className="sell__kyc-points">
-              <li>Protects sellers and buyers from fraud.</li>
-              <li>Ensures payouts go to the right person.</li>
-              <li>Helps us meet financial and marketplace requirements.</li>
-            </ul>
-            <p className="tg-muted sell__blurb">
-              We keep only the last four digits of your document after the check.
-            </p>
-          </section>
-        )}
-      </aside>
+        <section className="sell__main" aria-label="Seller sections">
+          <div className="sell__head">
+            <div>
+              <Link to="/sell" className="tg-muted">← Back to your home</Link>
+              <p className="sell__eyebrow tg-muted">Your selling workspace</p>
+              <h2 className="sell__main-title">Manage inventory, approvals, and payouts</h2>
+            </div>
+          </div>
 
-      <section className="sell__main" aria-label="Seller sections">
-        {sellingLocked ? (
-          <>
-            <div className="tg-card sell__locked">
-              <h3 className="sell__panel-title">Selling is locked</h3>
-              <p className="tg-muted sell__blurb">
-                Complete the identity check below to unlock your items, approvals, and payouts.
+          {submitted && (
+            <div className="tg-card sell__success">
+              <p className="sell__success-text">✓ Item submitted and waiting for approval</p>
+            </div>
+          )}
+
+          <p className="sell__wanted tg-muted">
+            Not sure what to send in? <Link to="/wanted">See what buyers are asking for</Link> —
+            every one of them is somebody waiting.
+          </p>
+
+          <nav className="sell__tabs" aria-label="Seller sections">
+            <TabButton active={tab === 'items'} onClick={() => setTab('items')} label="My items" />
+            <TabButton
+              active={tab === 'approvals'}
+              onClick={() => setTab('approvals')}
+              label="Price approvals"
+              badge={pending.length || undefined}
+            />
+            <TabButton active={tab === 'payouts'} onClick={() => setTab('payouts')} label="Payouts" />
+          </nav>
+
+          {tab === 'items' && <MyItems />}
+          {tab === 'approvals' && <Approvals state={approvals} />}
+          {tab === 'payouts' && <Payouts />}
+        </section>
+      </div>
+    )
+  }
+
+  return <SellGate phase={phase} kyc={kyc} legalName={kyc.data?.legalName ?? null} rejectedReason={kyc.data?.rejectedReasonCode ?? null} onChanged={() => { approvals.reload(); home.reload() }} />
+}
+
+/**
+ * The pre-workspace experience: a single centered column that says exactly where
+ * the seller is in getting switched on — verify, wait on us, or (rarely) a
+ * decline — with a four-step tracker so the hold never feels like a dead end.
+ */
+function SellGate({
+  phase, kyc, legalName, rejectedReason, onChanged,
+}: {
+  phase: Phase
+  kyc: ReturnType<typeof useApi<KycStatus>>
+  legalName: string | null
+  rejectedReason: string | null
+  onChanged: () => void
+}) {
+  if (phase === 'loading') {
+    return <div className="sell sell--gate"><div className="sellgate"><Loading label="Loading your selling status" /></div></div>
+  }
+
+  const steps = [
+    { key: 'verify', label: 'Verify identity' },
+    { key: 'review', label: 'TrueGlaz reviews' },
+    { key: 'consign', label: 'Consign your gear' },
+    { key: 'paid', label: 'Get paid when it sells' },
+  ]
+  const activeIndex = phase === 'identity' ? 0 : 1 // declined also sits at step 2
+
+  return (
+    <div className="sell sell--gate">
+      <div className="sellgate">
+        <div className="tg-card sellgate__hero">
+          {phase === 'identity' && (
+            <>
+              <span className="tg-badge tg-badge--accent sellgate__badge">Step 1 of 2 to start selling</span>
+              <h1 className="sellgate__title">Verify your identity to start selling</h1>
+              <p className="tg-muted sellgate__lede">
+                We take custody of your gear and send you the money when it sells, so we confirm who we’re dealing with first.
+                We keep only the last four digits of your document afterwards.
               </p>
-            </div>
-
-            <div className="sell__locked-center">
-              <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="sell__head">
-              <div>
-                <Link to="/sell" className="tg-muted">← Back to your home</Link>
-                <p className="sell__eyebrow tg-muted">Your selling workspace</p>
-                <h2 className="sell__main-title">Manage inventory, approvals, and payouts</h2>
+              <div className="sellgate__panel">
+                <KycPanel kyc={kyc} onChanged={onChanged} />
               </div>
-            </div>
+            </>
+          )}
 
-            {submitted && (
-              <div className="tg-card sell__success">
-                <p className="sell__success-text">✓ Item submitted and waiting for approval</p>
+          {phase === 'awaiting' && (
+            <>
+              <span className="tg-badge tg-badge--warn sellgate__badge">Awaiting approval</span>
+              <h1 className="sellgate__title">You’re verified — waiting for TrueGlaz to approve your selling account</h1>
+              <p className="tg-muted sellgate__lede">
+                Your identity check passed{legalName ? <> as <strong>{legalName}</strong></> : null}. Our team is reviewing your
+                account to switch on selling. This is usually done within a day, and we’ll email you the moment it’s approved —
+                you don’t need to do anything else.
+              </p>
+              <div className="sellgate__reassure">
+                <span>✓ Identity verified</span>
+                <span className="sellgate__dot">·</span>
+                <span>⏳ Selling approval in progress</span>
               </div>
-            )}
+            </>
+          )}
 
-            {/* The one thing a seller cannot work out for themselves is what anybody
-                actually wants, so the board is offered before the tabs. */}
-            <p className="sell__wanted tg-muted">
-              Not sure what to send in? <Link to="/wanted">See what buyers are asking for</Link> —
-              every one of them is somebody waiting.
-            </p>
+          {phase === 'declined' && (
+            <>
+              <span className="tg-badge tg-badge--bad sellgate__badge">Not approved</span>
+              <h1 className="sellgate__title">Your selling account wasn’t approved</h1>
+              <p className="tg-muted sellgate__lede">
+                Your identity is verified, but we weren’t able to enable selling on your account
+                {rejectedReason ? <> (<code>{rejectedReason}</code>)</> : null}. If you think this is a mistake, contact us and
+                we’ll take another look. You can still buy on TrueGlaz in the meantime.
+              </p>
+              <Link to="/" className="tg-button tg-button--primary sellgate__cta">Browse the shop</Link>
+            </>
+          )}
+        </div>
 
-            <nav className="sell__tabs" aria-label="Seller sections">
-              <TabButton active={tab === 'items'} onClick={() => setTab('items')} label="My items" />
-              <TabButton
-                active={tab === 'approvals'}
-                onClick={() => setTab('approvals')}
-                label="Price approvals"
-                badge={pending.length || undefined}
-              />
-              <TabButton active={tab === 'payouts'} onClick={() => setTab('payouts')} label="Payouts" />
-            </nav>
-
-            {tab === 'items' && <MyItems />}
-            {tab === 'approvals' && <Approvals state={approvals} />}
-            {tab === 'payouts' && <Payouts />}
-          </>
-        )}
-      </section>
+        <ol className="sellgate__steps" aria-label="How selling works">
+          {steps.map((s, i) => {
+            const state = phase === 'declined' && i === 1 ? 'error'
+              : i < activeIndex ? 'done'
+                : i === activeIndex ? 'current'
+                  : 'upcoming'
+            return (
+              <li key={s.key} className={`sellgate__step sellgate__step--${state}`}>
+                <span className="sellgate__step-mark">{state === 'done' ? '✓' : state === 'error' ? '✕' : i + 1}</span>
+                <span className="sellgate__step-label">{s.label}</span>
+              </li>
+            )
+          })}
+        </ol>
+      </div>
     </div>
   )
 }

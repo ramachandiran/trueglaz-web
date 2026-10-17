@@ -570,3 +570,114 @@
   font-size: var(--tg-text-xs);
   color: var(--tg-text-muted);
 }
+
+/* ---- selling gate: the pre-workspace states (identity / awaiting / declined) ---- */
+.sell--gate {
+  display: block;
+}
+.sellgate {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-5);
+}
+.sellgate__hero {
+  padding: var(--tg-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-3);
+  align-items: flex-start;
+}
+.sellgate__badge { align-self: flex-start; }
+.sellgate__title {
+  margin: 0;
+  font-size: var(--tg-text-xxl);
+  line-height: 1.2;
+}
+.sellgate__lede {
+  margin: 0;
+  font-size: var(--tg-text-md);
+  line-height: 1.65;
+  max-width: 56ch;
+}
+.sellgate__panel {
+  width: 100%;
+  margin-top: var(--tg-space-3);
+}
+.sellgate__reassure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tg-space-2);
+  margin-top: var(--tg-space-2);
+  padding: var(--tg-space-3) var(--tg-space-4);
+  background: var(--tg-bg-sunken);
+  border-radius: var(--tg-radius-md);
+  font-size: var(--tg-text-sm);
+  color: var(--tg-text);
+}
+.sellgate__dot { color: var(--tg-text-muted); }
+.sellgate__cta { margin-top: var(--tg-space-2); align-self: flex-start; }
+
+/* four-step tracker */
+.sellgate__steps {
+  list-style: none;
+  margin: 0;
+  padding: var(--tg-space-4);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--tg-space-3);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+}
+.sellgate__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--tg-space-2);
+}
+.sellgate__step-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--tg-radius-pill);
+  display: grid;
+  place-items: center;
+  font-size: var(--tg-text-sm);
+  font-weight: 650;
+  border: 2px solid var(--tg-border);
+  color: var(--tg-text-muted);
+  background: var(--tg-bg);
+}
+.sellgate__step-label {
+  font-size: var(--tg-text-xs);
+  line-height: 1.3;
+  color: var(--tg-text-muted);
+}
+.sellgate__step--done .sellgate__step-mark {
+  background: var(--tg-good);
+  border-color: var(--tg-good);
+  color: var(--tg-text-inverted);
+}
+.sellgate__step--current .sellgate__step-mark {
+  background: var(--tg-accent);
+  border-color: var(--tg-accent);
+  color: var(--tg-text-inverted);
+}
+.sellgate__step--current .sellgate__step-label {
+  color: var(--tg-text);
+  font-weight: 500;
+}
+.sellgate__step--error .sellgate__step-mark {
+  background: var(--tg-bad);
+  border-color: var(--tg-bad);
+  color: var(--tg-text-inverted);
+}
+
+@media (max-width: 640px) {
+  .sellgate__hero { padding: var(--tg-space-5); }
+  .sellgate__title { font-size: var(--tg-text-xl); }
+  .sellgate__steps { grid-template-columns: 1fr 1fr; }
+}
