@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Pressable, ScrollView, View } from 'react-native'
+import { Alert, Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api, isSeller, money, STATE_LABELS, useApi, useSession } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -95,7 +95,11 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
       // 'guided' lets TrueGlaz propose the price; must be 'guided' or 'manual'.
       const s = await api.createSubmission('guided')
       navigation.navigate('Submission', { id: s.id })
-    } catch (e) { setCreateError((e as Error).message) } finally { setCreating(false) }
+    } catch (e) {
+      const msg = (e as Error).message || 'Could not start a submission.'
+      setCreateError(msg)
+      Alert.alert('Could not start a submission', msg)
+    } finally { setCreating(false) }
   }
 
   if (home.loading && !home.data) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
