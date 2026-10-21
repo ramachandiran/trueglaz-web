@@ -16,10 +16,13 @@ import { API_ORIGIN } from '../config'
  * rows right, a trust line, and an action row), kept entirely in the TrueGlaz
  * palette. The facets still open in a sheet; `applyFilters` does the filtering.
  */
-export function CatalogScreen({ navigation }: { navigation: any }) {
+export function CatalogScreen({ navigation, route }: { navigation: any; route?: any }) {
   const t = useTheme()
   const insets = useSafeAreaInsets()
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+  // The Home screen can deep-link in with a search term (e.g. a category name).
+  const [filters, setFilters] = useState<Filters>(
+    route?.params?.q ? { ...EMPTY_FILTERS, q: route.params.q } : EMPTY_FILTERS,
+  )
   const [sheetOpen, setSheetOpen] = useState(false)
 
   const listings = useApi(() => api.listings({ q: filters.q, size: 200 }), [filters.q])
