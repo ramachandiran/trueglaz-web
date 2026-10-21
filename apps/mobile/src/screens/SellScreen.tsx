@@ -82,6 +82,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   const subs = useApi(() => api.mySubmissions(), [])
   const approvals = useApi(() => api.myApprovals(), [])
   const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
   useEffect(() => {
     const unsub = navigation.addListener('focus', () => { items.reload(); subs.reload(); approvals.reload(); home.reload() })
@@ -89,11 +90,12 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   }, [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startSubmission = async () => {
-    setCreating(true)
+    setCreateError(null); setCreating(true)
     try {
-      const s = await api.createSubmission('platform')
+      // 'guided' lets TrueGlaz propose the price; must be 'guided' or 'manual'.
+      const s = await api.createSubmission('guided')
       navigation.navigate('Submission', { id: s.id })
-    } catch { /* surfaced by the list reload */ } finally { setCreating(false) }
+    } catch (e) { setCreateError((e as Error).message) } finally { setCreating(false) }
   }
 
   if (home.loading && !home.data) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
@@ -133,6 +135,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
       <Card style={{ gap: t.space.x2 }}>
         <SectionTitle>Consign an item</SectionTitle>
         <Muted>Start a submission, add your gear, and ship it to us.</Muted>
+        {createError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{createError}</Txt>}
         <Button label="New submission" onPress={startSubmission} loading={creating} />
       </Card>
 
