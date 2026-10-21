@@ -10,7 +10,8 @@ import {
   api, setApiOrigin, setStorage, SessionProvider, useApi, useSession, type Storage,
 } from '@trueglaz/core'
 import { API_ORIGIN } from './src/config'
-import { Txt } from './src/components/Txt'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import type { ComponentProps } from 'react'
 import { Loading } from './src/components/ui'
 import { mobileFontAssets, mobileFontFamily } from './src/theme/fonts'
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext'
@@ -41,8 +42,11 @@ setApiOrigin(API_ORIGIN)
 const Tabs = createBottomTabNavigator()
 const Root = createNativeStackNavigator()
 
-function tabIcon(glyph: string) {
-  return ({ color }: { color: string }) => <Txt style={{ color, fontSize: 18 }}>{glyph}</Txt>
+type IoniconName = ComponentProps<typeof Ionicons>['name']
+/** A tab icon that fills in when the tab is focused and outlines when it isn't. */
+function tabIcon(outline: IoniconName, filled: IoniconName) {
+  return ({ color, size, focused }: { color: string; size: number; focused: boolean }) =>
+    <Ionicons name={focused ? filled : outline} size={size ?? 24} color={color} />
 }
 
 function MainTabs() {
@@ -61,11 +65,11 @@ function MainTabs() {
         tabBarStyle: { backgroundColor: t.colors.bgRaised, borderTopColor: t.colors.border },
       }}
     >
-      <Tabs.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: tabIcon('🏠') }} />
-      <Tabs.Screen name="Shop" component={CatalogScreen} options={{ tabBarIcon: tabIcon('🔍') }} />
-      <Tabs.Screen name="Sell" component={SellScreen} options={{ tabBarIcon: tabIcon('📦') }} />
-      <Tabs.Screen name="Orders" component={OrdersScreen} options={{ tabBarIcon: tabIcon('🧾') }} />
-      <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('👤'), tabBarBadge: unread }} />
+      <Tabs.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: tabIcon('home-outline', 'home') }} />
+      <Tabs.Screen name="Shop" component={CatalogScreen} options={{ tabBarIcon: tabIcon('search-outline', 'search') }} />
+      <Tabs.Screen name="Sell" component={SellScreen} options={{ tabBarIcon: tabIcon('cube-outline', 'cube') }} />
+      <Tabs.Screen name="Orders" component={OrdersScreen} options={{ tabBarIcon: tabIcon('receipt-outline', 'receipt') }} />
+      <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread }} />
     </Tabs.Navigator>
   )
 }
