@@ -1,14 +1,18 @@
-import { ScrollView, View } from 'react-native'
+import { Image, ScrollView, View } from 'react-native'
 import { api, money, useApi } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button } from '../components/form'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle } from '../components/ui'
+import { API_ORIGIN } from '../config'
 
 export function ListingDetailScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
   const id: string = route.params.id
   const { data, error, loading, reload } = useApi(() => api.listing(id), [id])
+  // The admin-configured model pictures, shared with the web app and used here
+  // as the fallback when the unit has no photo of its own yet.
+  const images = useApi(() => api.modelImages(), [])
 
   if (loading) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
   if (error) return <View style={{ flex: 1, backgroundColor: t.colors.bg, padding: t.space.x4 }}><ErrorNote error={error} onRetry={reload} /></View>
@@ -19,9 +23,31 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
   // this is the same check the API's checkout uses.
   const buyable = d.listing.state === 'published'
 
+  // The admin-configured picture of this model (the same one the web app
+  // shows). MediaView urls are relative, so they are resolved against the API
+  // origin — the web app is served from that origin and needs no prefix.
+  const stock = d.modelSlug ? images.data?.models.find((m) => m.slug === d.modelSlug)?.image : null
+  const heroUrl = stock ? API_ORIGIN + stock.url : null
+
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+        {heroUrl && (
+          <View style={{ gap: t.space.x2 }}>
+            <View style={{ position: 'relative' }}>
+              <Image
+                source={{ uri: heroUrl }}
+                style={{ width: '100%', height: 280, borderRadius: t.radius.lg, backgroundColor: t.colors.bgSunken }}
+                resizeMode="contain"
+              />
+              <View style={{ position: 'absolute', top: t.space.x2, left: t.space.x2 }}>
+                <Badge label="Not this unit" tone="warn" />
+              </View>
+            </View>
+            <Muted size={t.size.xs}>A picture of this model, not of the item being sold.</Muted>
+          </View>
+        )}
+
         <View style={{ gap: t.space.x2 }}>
           <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{d.internalSku}</Txt>
           <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>{d.listing.title.split('·')[0].trim()}</Txt>
@@ -38,7 +64,6 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
           <SectionTitle>What TrueGlaz found</SectionTitle>
           {d.listing.descriptionGenerated && <Muted>{d.listing.descriptionGenerated}</Muted>}
           {d.gradeDefinition && <Muted size={t.size.xs}>{d.listing.gradeCode} — {d.gradeDefinition}</Muted>}
-          <Muted size={t.size.xs}>A picture of this model, not of the item being sold.</Muted>
         </Card>
 
         {d.defects.length > 0 && (
