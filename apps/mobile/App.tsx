@@ -28,6 +28,8 @@ import { NewItemScreen } from './src/screens/NewItemScreen'
 import { StartSellingScreen } from './src/screens/StartSellingScreen'
 import { ProfileScreen } from './src/screens/ProfileScreen'
 import { NotificationsScreen } from './src/screens/NotificationsScreen'
+import { AddressesScreen } from './src/screens/AddressesScreen'
+import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
 
 /** The React Native adapter for core's storage port (web uses localStorage). */
 const nativeStorage: Storage = {
@@ -92,6 +94,8 @@ function AppStack() {
       <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />
       <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
+      <Root.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Addresses' }} />
+      <Root.Screen name="PayoutAccount" component={PayoutAccountScreen} options={{ title: 'Payout account' }} />
     </Root.Navigator>
   )
 }

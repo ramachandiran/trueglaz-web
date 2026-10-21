@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api, dateOnly, isSeller, useApi, useSession } from '@trueglaz/core'
@@ -15,6 +16,9 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   const profile = useApi(() => api.profile(), [])
   const seller = isSeller(session)
   const unread = profile.data?.unreadNotifications ?? 0
+
+  // Counts can change on the Addresses / Payout screens, so refresh on return.
+  useEffect(() => navigation.addListener('focus', () => profile.reload()), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ paddingTop: insets.top + t.space.x3, padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
@@ -48,10 +52,27 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
           <Line label="Phone" value={profile.data.phone ?? '—'} />
           <Line label="Member since" value={dateOnly(profile.data.memberSince)} />
           <Line label="Identity" value={profile.data.kycStatus.replace(/_/g, ' ')} />
-          <Line label="Saved addresses" value={String(profile.data.addressCount)} />
-          {seller && <Line label="Payout account" value={profile.data.payoutAccount ? 'Set up' : 'Not set'} />}
         </Card>
       )}
+
+      <View style={{ gap: t.space.x3 }}>
+        <SectionTitle>Manage</SectionTitle>
+        <NavRow
+          icon="📍"
+          label="Addresses"
+          value={profile.data ? (profile.data.addressCount > 0 ? `${profile.data.addressCount} saved` : 'None yet') : undefined}
+          onPress={() => navigation.navigate('Addresses')}
+        />
+        {seller && (
+          <NavRow
+            icon="🏦"
+            label="Payout account"
+            value={profile.data ? (profile.data.payoutAccount ? 'Set up' : 'Not set') : undefined}
+            tone={profile.data && !profile.data.payoutAccount ? 'warn' : undefined}
+            onPress={() => navigation.navigate('PayoutAccount')}
+          />
+        )}
+      </View>
 
       <Card style={{ gap: t.space.x3 }}>
         <SectionTitle>Appearance</SectionTitle>
@@ -82,5 +103,23 @@ function Line({ label, value }: { label: string; value: string }) {
       <Muted>{label}</Muted>
       <Txt style={{ color: t.colors.text }}>{value}</Txt>
     </View>
+  )
+}
+
+function NavRow({ icon, label, value, tone, onPress }: { icon: string; label: string; value?: string; tone?: 'warn'; onPress: () => void }) {
+  const t = useTheme()
+  return (
+    <Pressable onPress={onPress}>
+      <Card style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+          <Txt style={{ fontSize: 20 }}>{icon}</Txt>
+          <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>{label}</Txt>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}>
+          {value && <Txt style={{ color: tone === 'warn' ? t.colors.warn : t.colors.textMuted, fontSize: t.size.sm }}>{value}</Txt>}
+          <Txt style={{ color: t.colors.textMuted }}>›</Txt>
+        </View>
+      </Card>
+    </Pressable>
   )
 }
