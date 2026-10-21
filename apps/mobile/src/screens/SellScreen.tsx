@@ -17,6 +17,11 @@ export function SellScreen({ navigation }: { navigation: any }) {
 function SellerGate({ navigation, insets }: { navigation: any; insets: { top: number } }) {
   const t = useTheme()
   const kyc = useApi(() => api.myKyc(), [])
+  const { refresh } = useSession()
+
+  // Re-check identity whenever we land back here (e.g. returning from eKYC), so a
+  // just-verified seller sees "awaiting approval", not "verify identity" again.
+  useEffect(() => navigation.addListener('focus', () => { kyc.reload(); refresh() }), [navigation, kyc.reload, refresh])
 
   // Verified but not yet a seller = waiting on staff approval, NOT "go verify".
   const verified = kyc.data?.status === 'verified'
