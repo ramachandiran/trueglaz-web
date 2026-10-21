@@ -313,6 +313,11 @@ export interface InboundShipment {
   state: string
   shippedAt: string | null
   deliveredAt: string | null
+  /** trueglaz | third_party — who the seller said arranged the courier. */
+  arrangedBy: string | null
+  /** The courier's display name when shipped with a third party. */
+  courierName: string | null
+  packageWeightGrams: number | null
 }
 
 export interface Intake {

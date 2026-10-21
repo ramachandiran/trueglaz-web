@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { ScrollView, View } from 'react-native'
+import { Image, Pressable, ScrollView, View } from 'react-native'
+import * as ImagePicker from 'expo-image-picker'
 import {
   api, dateTime, HAPPY_PATH, money, OFF_PATH_TERMINALS, STATE_BLURBS, STATE_LABELS, useApi,
   type ItemStateTransition, type SellerApprovalView,
@@ -53,6 +54,8 @@ export function SellerItemScreen({ route }: { route: any }) {
       </View>
 
       {isDraft && <SubmitForApproval submissionId={it.submissionId} onDone={reloadAll} />}
+
+      {it.currentState === 'PRE_APPROVED' && <ShipToUs submissionId={it.submissionId} itemId={it.id} onDone={reloadAll} />}
 
       {pending && <PriceDecision a={pending} onDone={reloadAll} />}
 
@@ -108,6 +111,90 @@ export function SellerItemScreen({ route }: { route: any }) {
         ))}
       </Card>
     </ScrollView>
+  )
+}
+
+type Arranged = 'third_party' | 'trueglaz'
+
+function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; itemId: string; onDone: () => void }) {
+  const t = useTheme()
+  const today = new Date().toISOString().slice(0, 10)
+  const [arrangedBy, setArrangedBy] = useState<Arranged>('third_party')
+  const [courierName, setCourierName] = useState('')
+  const [consignmentId, setConsignmentId] = useState('')
+  const [shippedDate, setShippedDate] = useState(today)
+  const [weightKg, setWeightKg] = useState('')
+  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const pickPhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!perm.granted) { setError('Allow photo access to attach a package photo.'); return }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 })
+    if (!res.canceled) setPhoto(res.assets[0])
+  }
+
+  const submit = async () => {
+    if (arrangedBy === 'third_party') {
+      if (!courierName.trim()) { setError('Which courier did you use?'); return }
+      if (!consignmentId.trim()) { setError('Enter the consignment / tracking id.'); return }
+    }
+    if (shippedDate && !/^\d{4}-\d{2}-\d{2}$/.test(shippedDate)) { setError('Date must be YYYY-MM-DD.'); return }
+    if (weightKg && !(Number(weightKg) > 0)) { setError('Weight must be a positive number.'); return }
+    setError(null); setBusy(true)
+    try {
+      // Attach the optional package photo to the item before marking shipped,
+      // so a failed upload does not leave the parcel "shipped" without it.
+      if (photo) await api.uploadPhotoRN(photo, { ownerType: 'item', ownerId: itemId, role: 'seller_submission' })
+      await api.shipSubmission(submissionId, {
+        arrangedBy,
+        courierName: arrangedBy === 'third_party' ? courierName.trim() : null,
+        consignmentId: arrangedBy === 'third_party' ? consignmentId.trim() : null,
+        shippedDate: shippedDate || null,
+        weightGrams: weightKg ? Math.round(Number(weightKg) * 1000) : null,
+      })
+      onDone()
+    } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+  }
+
+  return (
+    <Card style={{ borderColor: t.colors.accent, gap: t.space.x3 }}>
+      <SectionTitle>Ship it to us</SectionTitle>
+      <Muted>You're pre-approved. Hand the parcel to a courier, then record it here so we know it's on the way.</Muted>
+
+      <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
+        {([['third_party', 'Courier by third party'], ['trueglaz', 'Courier by TG']] as [Arranged, string][]).map(([v, label]) => {
+          const on = arrangedBy === v
+          return (
+            <Pressable key={v} onPress={() => { setArrangedBy(v); setError(null) }}
+              style={{ flex: 1, alignItems: 'center', paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
+              <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm, textAlign: 'center' }}>{label}</Txt>
+            </Pressable>
+          )
+        })}
+      </View>
+
+      {arrangedBy === 'third_party' ? (
+        <>
+          <Field label="Courier vendor" value={courierName} onChangeText={setCourierName} placeholder="e.g. Blue Dart, DTDC" />
+          <Field label="Consignment id" value={consignmentId} onChangeText={setConsignmentId} placeholder="Tracking number from the courier" autoCapitalize="characters" />
+          <Field label="Date of shipment" value={shippedDate} onChangeText={setShippedDate} placeholder="YYYY-MM-DD" />
+        </>
+      ) : (
+        <Muted size={t.size.xs}>TrueGlaz's courier collects using the label from pre-approval. We'll mark it on its way.</Muted>
+      )}
+
+      <Field label="Package weight in kg (optional)" value={weightKg} onChangeText={setWeightKg} keyboardType="decimal-pad" />
+
+      <View style={{ gap: t.space.x2 }}>
+        {photo && <Image source={{ uri: photo.uri }} style={{ width: '100%', height: 160, borderRadius: t.radius.md }} resizeMode="cover" />}
+        <Button label={photo ? 'Change package photo' : 'Add package photo (optional)'} variant="ghost" onPress={pickPhoto} />
+      </View>
+
+      {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
+      <Button label="Mark as shipped" variant="cta" loading={busy} onPress={submit} />
+    </Card>
   )
 }
 

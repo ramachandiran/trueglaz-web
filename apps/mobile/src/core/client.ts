@@ -318,6 +318,28 @@ export const api = {
 
     return post<MediaView>('/media/seal', { ticket: intent.ticket })
   },
+
+  /**
+   * Upload a photograph from React Native, where there is no browser `File`.
+   * The picked asset is a local `uri`; we read it to a blob and PUT that at the
+   * signed target, otherwise identical to `uploadPhoto`.
+   */
+  uploadPhotoRN: async (
+    asset: { uri: string; mimeType?: string | null; fileName?: string | null; fileSize?: number | null },
+    target: { ownerType: 'item' | 'order' | 'kyc' | 'model'; ownerId: string; role: string; defectId?: string },
+  ): Promise<MediaView> => {
+    const blob = await (await fetch(asset.uri)).blob()
+    const contentType = asset.mimeType || blob.type
+      || (/\.png$/i.test(asset.fileName ?? '') ? 'image/png' : /\.webp$/i.test(asset.fileName ?? '') ? 'image/webp' : 'image/jpeg')
+    const intent = await post<UploadIntent>('/media/intent', {
+      ...target,
+      contentType,
+      bytes: asset.fileSize ?? blob.size,
+    })
+    const put = await fetch(intent.url, { method: intent.method, headers: intent.headers, body: blob })
+    if (!put.ok) throw new ApiError(put.status, 'The upload did not go through — please try again')
+    return post<MediaView>('/media/seal', { ticket: intent.ticket })
+  },
   recentlySold: (limit = 6) => get<SoldListing[]>(`/listings/recently-sold?limit=${limit}`),
   grades: () => get<Grade[]>('/grades'),
   reasonCodes: (domain: string) => get<ReasonCode[]>(`/reason-codes?domain=${encodeURIComponent(domain)}`),
@@ -508,6 +530,17 @@ export const api = {
     },
   ) => post<ConsignmentItem>(`/submissions/${submissionId}/items`, body),
   submitSubmission: (id: string) => post<Submission>(`/submissions/${id}/submit`),
+  /** The seller records the courier handoff for a pre-approved parcel. */
+  shipSubmission: (
+    id: string,
+    body: {
+      arrangedBy: 'trueglaz' | 'third_party'
+      courierName?: string | null
+      consignmentId?: string | null
+      shippedDate?: string | null
+      weightGrams?: number | null
+    },
+  ) => post<InboundShipment>(`/submissions/${id}/ship`, body),
   myItems: () => get<ConsignmentItem[]>('/items/mine'),
   item: (id: string) => get<ItemDetail>(`/items/${id}`),
   myApprovals: () => get<SellerApprovalView[]>('/seller-approvals'),
