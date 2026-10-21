@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import {
-  api, buildTimeline, dateTime, money, progressOf, STATE_BLURBS, STATE_LABELS, useApi,
-  type SellerApprovalView,
+  api, dateTime, HAPPY_PATH, money, OFF_PATH_TERMINALS, STATE_BLURBS, STATE_LABELS, useApi,
+  type ItemStateTransition, type SellerApprovalView,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
-import { Timeline } from '../components/Timeline'
+import { StatusTracker, type TrackState, type TrackStep } from '../components/StatusTracker'
 import { Button, Field } from '../components/form'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge } from '../components/ui'
 
@@ -17,8 +17,8 @@ export function SellerItemScreen({ route }: { route: any }) {
   const approvals = useApi(() => api.myApprovals(), [])
   const models = useApi(() => api.models(), [])
 
-  const steps = useMemo(
-    () => (item.data ? buildTimeline(item.data.history, item.data.item.currentState, item.data.nextLegalStates) : []),
+  const track = useMemo(
+    () => (item.data ? sellerTrack(item.data.history, item.data.item.currentState) : []),
     [item.data],
   )
   const modelName = useMemo(() => {
@@ -36,7 +36,7 @@ export function SellerItemScreen({ route }: { route: any }) {
   if (!item.data) return null
 
   const { item: it, defects, inspections } = item.data
-  const progress = progressOf(steps)
+  const reached = track.filter((s) => s.state === 'done' || s.state === 'current').length
   const reloadAll = () => { item.reload(); approvals.reload() }
   const isDraft = it.currentState === 'DRAFT'
 
@@ -59,10 +59,10 @@ export function SellerItemScreen({ route }: { route: any }) {
       <Card style={{ gap: t.space.x3 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <SectionTitle>Where it is</SectionTitle>
-          <Muted size={t.size.xs}>{progress.done} of {progress.total}</Muted>
+          <Muted size={t.size.xs}>{reached} of {track.length}</Muted>
         </View>
         <Muted>{STATE_BLURBS[it.currentState] ?? STATE_LABELS[it.currentState] ?? it.currentState}</Muted>
-        <Timeline steps={steps} />
+        <StatusTracker steps={track} />
       </Card>
 
       {inspections.length > 0 && (
@@ -171,6 +171,80 @@ function PriceDecision({ a, onDone }: { a: SellerApprovalView; onDone: () => voi
     </Card>
   )
 }
+
+/**
+ * The seller's journey, condensed from the 14 internal lifecycle states into
+ * seven milestones the seller actually cares about, rendered with the same
+ * StatusTracker as the Verification screen. `from`/`through` are indices into
+ * HAPPY_PATH: the milestone is current while the item sits anywhere in that
+ * span, and done once it has moved past `through`.
+ */
+const SELLER_MILESTONES: { title: string; desc: string; from: number; through: number; states: string[] }[] = [
+  { title: 'Submitted', desc: 'Sent to TrueGlaz for pre-approval.', from: 1, through: 1, states: ['SUBMITTED'] },
+  { title: 'Pre-approved', desc: 'Inbound label issued; ship it to us.', from: 2, through: 3, states: ['PRE_APPROVED', 'IN_TRANSIT_INBOUND'] },
+  { title: 'Received at TrueGlaz', desc: 'In our custody and assigned a bin.', from: 4, through: 4, states: ['RECEIVED'] },
+  { title: 'Inspection & grading', desc: 'A technician works through the checklist.', from: 5, through: 6, states: ['IN_INSPECTION', 'GRADED'] },
+  { title: 'Price proposed', desc: 'We propose a price; you approve it.', from: 7, through: 7, states: ['PRICE_PROPOSED', 'AWAITING_SELLER_APPROVAL'] },
+  { title: 'Listed', desc: 'Live in the catalogue and buyable.', from: 8, through: 9, states: ['LISTED', 'RESERVED'] },
+  { title: 'Sold & paid', desc: 'You get paid once the sale completes.', from: 10, through: 13, states: ['SOLD', 'DISPATCHED', 'DELIVERED', 'ACCEPTED'] },
+]
+
+// A terminal that ends the journey early marks the milestone it stalled at as
+// cancelled (a red ✕), with a seller-facing explanation. `at` is an index into
+// SELLER_MILESTONES.
+const SELLER_TERMINALS: Record<string, { at: number; title: string; desc: string }> = {
+  REJECTED_PRE_INTAKE: { at: 1, title: 'Not pre-approved', desc: "TrueGlaz couldn't approve this submission." },
+  INSPECTION_FAILED: { at: 3, title: 'Inspection failed', desc: 'It did not pass inspection.' },
+  QUARANTINED: { at: 3, title: 'Quarantined', desc: 'Held back after inspection.' },
+  SELLER_DECLINED: { at: 4, title: 'You declined the price', desc: 'The item is being returned to you.' },
+  RETURN_REQUESTED: { at: 4, title: 'Return requested', desc: 'The item is being returned to you.' },
+  RETURN_TO_SELLER: { at: 4, title: 'Returning to you', desc: 'On its way back to you.' },
+  RETURN_IN_TRANSIT: { at: 4, title: 'Returning to you', desc: 'On its way back to you.' },
+  RETURN_RECEIVED: { at: 4, title: 'Return received', desc: 'Back with TrueGlaz.' },
+  RETURNED: { at: 4, title: 'Returned', desc: 'Back in your hands.' },
+  UNSOLD_REVIEW: { at: 5, title: 'Unsold — under review', desc: "Didn't sell; we're reviewing next steps." },
+  ARCHIVED: { at: 1, title: 'Archived', desc: 'This item was archived.' },
+}
+
+const dayMonth = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+
+function sellerTrack(history: ItemStateTransition[], currentState: string): TrackStep[] {
+  // When each state was last entered, for the date chips.
+  const when = new Map<string, string>()
+  for (const h of history) when.set(h.toState, h.occurredAt)
+
+  // How far the item got along the happy path — from history, not just the
+  // current state, so a declined/returned item still shows the stages it passed.
+  const idxOf = (s: string) => HAPPY_PATH.indexOf(s as (typeof HAPPY_PATH)[number])
+  let reached = idxOf(currentState)
+  for (const h of history) reached = Math.max(reached, idxOf(h.toState))
+
+  const terminal = OFF_PATH_TERMINALS.has(currentState) ? SELLER_TERMINALS[currentState] : undefined
+
+  const steps: TrackStep[] = SELLER_MILESTONES.map((m, mi) => {
+    const date = m.states.map((s) => when.get(s)).filter(Boolean).pop()
+
+    if (terminal && mi === terminal.at) {
+      return { title: terminal.title, desc: terminal.desc, state: 'cancelled', meta: date ? dayMonth(date) : undefined, tone: 'bad' }
+    }
+
+    const done = reached > m.through
+    const current = !terminal && reached >= m.from && reached <= m.through
+    const state: TrackState = done ? 'done' : current ? 'current' : 'upcoming'
+    if (state === 'done') return { ...base(m), state, meta: date ? dayMonth(date) : 'Done', tone: 'ok' }
+    if (state === 'current') return { ...base(m), state, meta: 'In progress', tone: 'now' }
+    return { ...base(m), state }
+  })
+
+  // Flag the next step to come, unless the journey has stalled at a terminal.
+  if (!terminal) {
+    const next = steps.findIndex((s) => s.state === 'upcoming')
+    if (next >= 0) { steps[next].meta = 'Next'; steps[next].tone = 'next' }
+  }
+  return steps
+}
+
+const base = (m: { title: string; desc: string }) => ({ title: m.title, desc: m.desc })
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   const t = useTheme()
