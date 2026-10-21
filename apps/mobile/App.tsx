@@ -1,7 +1,7 @@
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import { View } from 'react-native'
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native'
+import { NavigationContainer, DefaultTheme, DarkTheme, useNavigation } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -11,7 +11,7 @@ import {
 } from '@trueglaz/core'
 import { API_ORIGIN } from './src/config'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import type { ComponentProps } from 'react'
+import { useEffect, type ComponentProps } from 'react'
 import { Loading } from './src/components/ui'
 import { mobileFontAssets, mobileFontFamily } from './src/theme/fonts'
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext'
@@ -52,9 +52,12 @@ function tabIcon(outline: IoniconName, filled: IoniconName) {
 
 function MainTabs() {
   const t = useTheme()
-  // The unread badge on the Profile tab. One fetch per session; the
-  // Notifications screen reloads it when you read something.
+  const navigation = useNavigation()
+  // The unread badge on the Profile tab. Refetch whenever the tabs regain
+  // focus — i.e. coming back from the Notifications screen after reading
+  // something, or any other stacked screen — so the count never goes stale.
   const notif = useApi(() => api.notifications(), [])
+  useEffect(() => navigation.addListener('focus', () => notif.reload()), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
   const unread = notif.data?.unread || undefined
   return (
     <Tabs.Navigator
