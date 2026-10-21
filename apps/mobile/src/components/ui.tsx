@@ -67,9 +67,9 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function Muted({ children, size }: { children: React.ReactNode; size?: number }) {
+export function Muted({ children, size, style }: { children: React.ReactNode; size?: number; style?: object }) {
   const t = useTheme()
-  return <Txt style={{ color: t.colors.textMuted, fontSize: size ?? t.size.sm }}>{children}</Txt>
+  return <Txt style={{ color: t.colors.textMuted, fontSize: size ?? t.size.sm, ...style }}>{children}</Txt>
 }
 
 export function Loading() {

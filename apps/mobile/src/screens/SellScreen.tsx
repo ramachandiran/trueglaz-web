@@ -80,6 +80,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   const home = useApi(() => api.sellerHome(), [])
   const items = useApi(() => api.myItems(), [])
   const approvals = useApi(() => api.myApprovals(), [])
+  const models = useApi(() => api.models(), [])
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -87,6 +88,17 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
     const unsub = navigation.addListener('focus', () => { items.reload(); approvals.reload(); home.reload() })
     return unsub
   }, [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A readable name for an item: the catalog model, else what the seller typed.
+  const nameOf = (i: { productModelId: string | null; modelFreeText: string | null; description: string | null; internalSku: string }) =>
+    (i.productModelId ? models.data?.content.find((m) => m.id === i.productModelId)?.name : null)
+    || i.modelFreeText || i.description || i.internalSku
+
+  // Item ids waiting on a price decision from the seller.
+  const pendingIds = new Set((approvals.data ?? []).filter((a) => a.approval.decision === 'pending').map((a) => a.approval.consignmentItemId))
+  // What the seller must do next, if anything — used to flag the row.
+  const actionOf = (i: { id: string; currentState: string }) =>
+    pendingIds.has(i.id) ? 'Price to approve' : i.currentState === 'DRAFT' ? 'Draft — finish & submit' : null
 
   const startSubmission = async () => {
     setCreateError(null); setCreating(true)
@@ -124,8 +136,10 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
           {approvals.data!.filter((a) => a.approval.decision === 'pending').map((a) => (
             <Pressable key={a.approval.id} onPress={() => navigation.navigate('SellerItem', { id: a.approval.consignmentItemId })}>
               <Card style={{ borderColor: t.colors.warn, gap: t.space.x2 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>Price to approve</Txt>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.space.x2 }}>
+                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, flex: 1 }}>
+                    {(() => { const it = (items.data ?? []).find((i) => i.id === a.approval.consignmentItemId); return it ? nameOf(it) : 'Price to approve' })()}
+                  </Txt>
                   <Badge label="Action needed" tone="warn" />
                 </View>
                 <Txt style={{ color: t.colors.text }}>Proposed {money(a.proposedAmountMinor)} · you net {money(a.expectedNetMinor)}</Txt>
@@ -147,20 +161,25 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
         <SectionTitle>My items</SectionTitle>
         {items.loading && !items.data && <Loading />}
         {items.data && items.data.length === 0 && <Empty title="No items yet" hint="Tap “List an item” to consign your first piece of gear." />}
-        {(items.data ?? []).map((i) => (
-          <Pressable key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}>
-            <Card style={{ gap: t.space.x2 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
-                <Txt style={{ color: t.colors.text, fontFamily: t.font.mono, fontWeight: t.weight.medium as never }}>{i.internalSku}</Txt>
-                <StateBadge state={i.currentState} />
-              </View>
-              <Muted size={t.size.xs}>
-                {STATE_LABELS[i.currentState] ?? i.currentState} · asking {money(i.askingAmountMinor)}
-                {i.assignedGradeCode ? ` · graded ${i.assignedGradeCode}` : ''}
-              </Muted>
-            </Card>
-          </Pressable>
-        ))}
+        {(items.data ?? []).map((i) => {
+          const action = actionOf(i)
+          return (
+            <Pressable key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}>
+              <Card style={{ gap: t.space.x2, borderColor: action ? t.colors.warn : t.colors.border }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}>
+                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, flex: 1 }}>{nameOf(i)}</Txt>
+                  {action ? <Badge label="Action needed" tone="warn" /> : <StateBadge state={i.currentState} />}
+                </View>
+                {action && <Txt style={{ color: t.colors.warn, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>{action}</Txt>}
+                <Muted size={t.size.xs}>
+                  {STATE_LABELS[i.currentState] ?? i.currentState} · asking {money(i.askingAmountMinor)}
+                  {i.assignedGradeCode ? ` · graded ${i.assignedGradeCode}` : ''}
+                </Muted>
+                <Muted size={t.size.xs} style={{ fontFamily: t.font.mono }}>{i.internalSku}</Muted>
+              </Card>
+            </Pressable>
+          )
+        })}
       </View>
     </ScrollView>
   )
