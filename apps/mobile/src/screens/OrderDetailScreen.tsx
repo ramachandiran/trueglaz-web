@@ -5,6 +5,41 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge } from '../components/ui'
+import { StatusTracker, type TrackStep } from '../components/StatusTracker'
+
+/** The buyer-facing order journey, derived from the line's fulfilment state. */
+function orderSteps(orderState: string, line: OrderLine | undefined): TrackStep[] {
+  const s = line?.state ?? 'open'
+  if (orderState === 'cancelled' || s === 'cancelled') {
+    return [
+      { title: 'Order placed', state: 'done' },
+      { title: 'Cancelled', desc: 'This order was cancelled.', state: 'cancelled', meta: 'Cancelled' },
+    ]
+  }
+  if (s === 'return_requested' || s === 'returned') {
+    return [
+      { title: 'Order placed', state: 'done' },
+      { title: 'Delivered', state: 'done' },
+      s === 'returned'
+        ? { title: 'Returned', desc: 'Item returned to TrueGlaz.', state: 'done', tone: 'bad', meta: 'Returned' }
+        : { title: 'Return requested', desc: "We'll be in touch about your return.", state: 'current', tone: 'bad', meta: 'In progress' },
+    ]
+  }
+  const order = ['open', 'packing', 'dispatched', 'delivered', 'accepted']
+  const stage = Math.max(0, order.indexOf(s)) + 1 // +1 for the always-done "placed" step
+  const defs = [
+    { title: 'Order placed', desc: undefined as string | undefined },
+    { title: 'Payment confirmed', desc: undefined },
+    { title: 'Preparing to ship', desc: undefined },
+    { title: 'On the way', desc: undefined },
+    { title: 'Delivered', desc: line?.acceptanceWindowEndsAt ? `Accept by ${dateTime(line.acceptanceWindowEndsAt)}` : undefined },
+    { title: 'Completed', desc: 'Sale finalised.' },
+  ]
+  return defs.map((d, i): TrackStep => {
+    const state: TrackStep['state'] = i < stage ? 'done' : i === stage ? 'current' : 'upcoming'
+    return { title: d.title, desc: d.desc, state, meta: state === 'current' ? 'In progress' : i === 5 && state === 'done' ? 'Completed' : undefined }
+  })
+}
 
 export function OrderDetailScreen({ route }: { route: any }) {
   const t = useTheme()
@@ -65,6 +100,11 @@ export function OrderDetailScreen({ route }: { route: any }) {
             <Muted size={t.size.xs}>{dateTime(order.createdAt)}</Muted>
           </View>
         </View>
+
+        <Card style={{ gap: t.space.x3 }}>
+          <SectionTitle>Order status</SectionTitle>
+          <StatusTracker steps={orderSteps(order.state, lines[0])} />
+        </Card>
 
         <Card style={{ gap: t.space.x3 }}>
           <SectionTitle>Items</SectionTitle>

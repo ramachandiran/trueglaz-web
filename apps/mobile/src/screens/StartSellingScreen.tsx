@@ -5,10 +5,10 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Badge, Card, Muted, SectionTitle } from '../components/ui'
+import { StatusTracker, type TrackStep } from '../components/StatusTracker'
 import { demoAadhaar } from '../aadhaar'
 
 type Step = 'aadhaar' | 'otp'
-type StepState = 'done' | 'current' | 'upcoming'
 
 export function StartSellingScreen({ navigation }: { navigation: any }) {
   const t = useTheme()
@@ -47,7 +47,7 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
   }
 
   // The journey to a working seller account, with the current position marked.
-  const steps: { title: string; desc: string; state: StepState; meta: string; tone: 'ok' | 'now' | 'next' }[] = [
+  const steps: TrackStep[] = [
     { title: 'Account created', desc: 'Signed in with your email.', state: 'done', meta: 'Done', tone: 'ok' },
     {
       title: 'Identity verified',
@@ -95,11 +95,7 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
       {/* the status tracker */}
       <View style={{ gap: t.space.x2 }}>
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>YOUR PROGRESS</Txt>
-        <View>
-          {steps.map((s, i) => (
-            <TrackStep key={s.title} index={i + 1} step={s} last={i === steps.length - 1} />
-          ))}
-        </View>
+        <StatusTracker steps={steps} />
       </View>
 
       {/* contextual action: the eKYC form only while unverified */}
@@ -131,51 +127,5 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
 
       <Muted size={t.size.xs}>Tip: on the demo server, seller@trueglaz.demo is already an approved seller if you want to try consigning right away.</Muted>
     </ScrollView>
-  )
-}
-
-function TrackStep({ index, step, last }: {
-  index: number
-  step: { title: string; desc: string; state: StepState; meta: string; tone: 'ok' | 'now' | 'next' }
-  last: boolean
-}) {
-  const t = useTheme()
-  const done = step.state === 'done'
-  const current = step.state === 'current'
-
-  const node = done
-    ? { bg: t.colors.good, border: t.colors.good, fg: '#ffffff' }
-    : current
-      ? { bg: t.colors.accent, border: t.colors.accent, fg: '#ffffff' }
-      : { bg: t.colors.bgRaised, border: t.colors.border, fg: t.colors.textMuted }
-
-  const meta = step.tone === 'ok'
-    ? { bg: t.colors.goodSoft, fg: t.colors.good }
-    : step.tone === 'now'
-      ? { bg: t.colors.accentSoft, fg: t.colors.accent }
-      : { bg: t.colors.bgSunken, fg: t.colors.textMuted }
-
-  return (
-    <View style={{ flexDirection: 'row', gap: t.space.x3 }}>
-      <View style={{ alignItems: 'center', width: 32 }}>
-        <View style={[
-          { width: 30, height: 30, borderRadius: 15, borderWidth: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: node.bg, borderColor: node.border },
-          current && { shadowColor: t.colors.accent, shadowOpacity: 0.35, shadowRadius: 5, elevation: 3 },
-        ]}>
-          <Txt style={{ color: node.fg, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{done ? '✓' : index}</Txt>
-        </View>
-        {!last && <View style={{ width: 2, flex: 1, minHeight: 22, marginVertical: 3, backgroundColor: done ? t.colors.good : t.colors.border }} />}
-      </View>
-
-      <View style={{ flex: 1, paddingBottom: last ? 4 : t.space.x4 }}>
-        <Txt style={{ color: step.state === 'upcoming' ? t.colors.textMuted : t.colors.text, fontWeight: (step.state === 'upcoming' ? t.weight.medium : t.weight.bold) as never, fontSize: t.size.md }}>
-          {step.title}
-        </Txt>
-        <Muted size={t.size.xs}>{step.desc}</Muted>
-        <View style={{ alignSelf: 'flex-start', marginTop: 6, backgroundColor: meta.bg, borderRadius: t.radius.pill, paddingHorizontal: t.space.x3, paddingVertical: 3 }}>
-          <Txt style={{ color: meta.fg, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>{step.meta}</Txt>
-        </View>
-      </View>
-    </View>
   )
 }
