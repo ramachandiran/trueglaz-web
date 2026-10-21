@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, isStaff, money, useApi, useSession,
@@ -58,6 +58,12 @@ export function OpsPage() {
   const inTransit = useApi(() => (staff ? api.itemQueue('IN_TRANSIT_INBOUND') : Promise.resolve([])), [staff])
   // Live listings, so staff can reprice one without leaving Operations.
   const listed = useApi(() => (staff ? api.managedListings() : Promise.resolve([])), [staff])
+  // The catalogue, to turn an item's productModelId into a readable model name.
+  const models = useApi(() => api.models(), [])
+  const names = useMemo(
+    () => new Map((models.data?.content ?? []).map((m) => [m.id, m.name] as const)),
+    [models.data],
+  )
 
   /** One row per submission, because a box is received whole, not item by item. */
   const inboundRows = useMemo(() => {
@@ -177,12 +183,12 @@ export function OpsPage() {
         pages={pages}
         onPage={setPage}
       >
-        {active === 'intake' && <IntakeTable rows={shown} reload={pending.reload} />}
-        {active === 'inbound' && <InboundTable rows={shown} reload={source.reload} />}
+        {active === 'intake' && <IntakeTable rows={shown} names={names} reload={pending.reload} />}
+        {active === 'inbound' && <InboundTable rows={shown} names={names} reload={source.reload} />}
         {active === 'inspect' && (
-          <InspectTable rows={shown} roster={roster.data ?? []} reload={source.reload} />
+          <InspectTable rows={shown} names={names} roster={roster.data ?? []} reload={source.reload} />
         )}
-        {active === 'price' && <PricingTable rows={shown} reload={graded.reload} />}
+        {active === 'price' && <PricingTable rows={shown} names={names} reload={graded.reload} />}
         {active === 'listed' && <ListedTable rows={shown} reload={listed.reload} />}
         {active === 'wanted' && <RequestTable rows={shown} reload={wanted.reload} />}
       </QueueScreen>
@@ -215,6 +221,36 @@ function useAction(reload: () => void) {
   return { busy, error, act }
 }
 
+/**
+ * The best human name for an item: its catalogue model, else what the seller
+ * typed, else null — the caller then uses the SKU as the title.
+ */
+function itemTitle(i: { productModelId: string | null; modelFreeText: string | null }, names: Map<string, string>): string | null {
+  return (i.productModelId ? names.get(i.productModelId) ?? null : null) || i.modelFreeText || null
+}
+
+/**
+ * The leading cell every item queue shares: the model as the row title, the SKU
+ * as a muted second line. The SKU only appears there when there is a real name
+ * above it — otherwise it is the title, and printing it twice was the bug this
+ * replaces.
+ */
+function ItemCell({ item, names, meta }: { item: ConsignmentItem; names: Map<string, string>; meta?: ReactNode }) {
+  const name = itemTitle(item, names)
+  return (
+    <td>
+      <span className="ops__model">{name ?? item.internalSku}</span>
+      {(name || meta) && (
+        <span className="ops__gear">
+          {name && <span className="tg-mono">{item.internalSku}</span>}
+          {name && meta ? ' · ' : null}
+          {meta}
+        </span>
+      )}
+    </td>
+  )
+}
+
 function ErrorRow({ error, span }: { error: string | null; span: number }) {
   if (!error) return null
   return (
@@ -223,7 +259,7 @@ function ErrorRow({ error, span }: { error: string | null; span: number }) {
 }
 
 /** Pre-approve, issue the label, or turn it away with a reason the seller sees. */
-function IntakeTable({ rows, reload }: { rows: Submission[]; reload: () => void }) {
+function IntakeTable({ rows, names, reload }: { rows: Submission[]; names: Map<string, string>; reload: () => void }) {
   return (
     <table className="q__table">
       <thead>
@@ -235,14 +271,14 @@ function IntakeTable({ rows, reload }: { rows: Submission[]; reload: () => void 
         </tr>
       </thead>
       <tbody>
-        {rows.map((s) => <IntakeRow key={s.id} s={s} reload={reload} />)}
+        {rows.map((s) => <IntakeRow key={s.id} s={s} names={names} reload={reload} />)}
       </tbody>
     </table>
   )
 }
 
 /** One submission row: the model leads, and the whole row opens the item. */
-function IntakeRow({ s, reload }: { s: Submission; reload: () => void }) {
+function IntakeRow({ s, names, reload }: { s: Submission; names: Map<string, string>; reload: () => void }) {
   const navigate = useNavigate()
   const { busy, error, act } = useAction(reload)
   const [rejecting, setRejecting] = useState(false)
@@ -252,7 +288,8 @@ function IntakeRow({ s, reload }: { s: Submission; reload: () => void }) {
 
   const items = view.data?.items ?? []
   const first = items[0]
-  const title = first ? (first.modelFreeText || first.internalSku) : 'Loading…'
+  const name = first ? itemTitle(first, names) : null
+  const title = first ? (name ?? first.internalSku) : 'Loading…'
   const open = () => { if (first) navigate(`/items/${first.id}`) }
 
   return (
@@ -260,10 +297,12 @@ function IntakeRow({ s, reload }: { s: Submission; reload: () => void }) {
       <tr className={first ? 'q__row--click' : undefined} onClick={open}>
         <td>
           <span className="ops__model">{title}{items.length > 1 ? ` +${items.length - 1} more` : ''}</span>
-          <span className="ops__gear">
-            <span className="tg-mono">{items.map((i) => i.internalSku).join(', ')}</span>
-            {items.length > 0 && ` · ${money(items.reduce((t, i) => t + i.askingAmountMinor, 0))} asked`}
-          </span>
+          {first && (
+            <span className="ops__gear">
+              {name && <span className="tg-mono">{items.map((i) => i.internalSku).join(', ')} · </span>}
+              {money(items.reduce((t, i) => t + i.askingAmountMinor, 0))} asked
+            </span>
+          )}
         </td>
         <td><span className="tg-badge">{s.pricingMode}</span></td>
         <td className="tg-muted">{s.submittedAt ? dateOnly(s.submittedAt) : '—'}</td>
@@ -351,8 +390,8 @@ function InboundInfo({ submissionId }: { submissionId: string }) {
  * transition would skip the intake record and the bin assignment.
  */
 function InboundTable({
-  rows, reload,
-}: { rows: Array<{ id: string; items: ConsignmentItem[] }>; reload: () => void }) {
+  rows, names, reload,
+}: { rows: Array<{ id: string; items: ConsignmentItem[] }>; names: Map<string, string>; reload: () => void }) {
   const navigate = useNavigate()
   const { busy, error, act } = useAction(reload)
   const bins = useApi(() => api.storageBins(), [])
@@ -381,14 +420,15 @@ function InboundTable({
         <ErrorRow error={error} span={3} />
         {rows.map((r) => {
           const first = r.items[0]
-          const title = first.modelFreeText || first.internalSku
+          const name = itemTitle(first, names)
+          const title = name ?? first.internalSku
           return (
             <tr key={r.id} className="q__row--click" onClick={() => navigate(`/items/${first.id}`)}>
               <td>
                 <span className="ops__model">{title}{r.items.length > 1 ? ` +${r.items.length - 1} more` : ''}</span>
                 <span className="ops__gear">
-                  <span className="tg-mono">{r.items.map((i) => i.internalSku).join(', ')}</span>
-                  {' · '}{r.items.length} item{r.items.length === 1 ? '' : 's'}
+                  {name && <span className="tg-mono">{r.items.map((i) => i.internalSku).join(', ')} · </span>}
+                  {r.items.length} item{r.items.length === 1 ? '' : 's'}
                 </span>
                 <InboundInfo submissionId={r.id} />
               </td>
@@ -414,8 +454,9 @@ function InboundTable({
 
 /** Received and in progress in one list, because it is one bench. */
 function InspectTable({
-  rows, roster, reload,
-}: { rows: ConsignmentItem[]; roster: Technician[]; reload: () => void }) {
+  rows, names, roster, reload,
+}: { rows: ConsignmentItem[]; names: Map<string, string>; roster: Technician[]; reload: () => void }) {
+  const navigate = useNavigate()
   const { busy, error, act } = useAction(reload)
   const bench = (id?: string | null) => roster.find((t) => t.id === id)?.displayName ?? null
 
@@ -433,15 +474,15 @@ function InspectTable({
       <tbody>
         <ErrorRow error={error} span={5} />
         {rows.map((i) => (
-          <tr key={i.id}>
-            <td><Link to={`/items/${i.id}`} className="ops__id tg-mono">{i.internalSku}</Link></td>
+          <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
+            <ItemCell item={i} names={names} />
             <td>{i.declaredGradeCode}</td>
             <td>
               {bench(i.assignedTechnicianUserId)
                 ?? <span className="tg-muted">unassigned</span>}
             </td>
             <td><StateBadge state={i.currentState} /></td>
-            <td>
+            <td onClick={(e) => e.stopPropagation()}>
               <span className="ops__inline">
                 {i.currentState === 'IN_INSPECTION' ? (
                   <Link className="tg-button tg-button--primary" to={`/admin/operations/inspect/${i.id}`}>Continue →</Link>
@@ -464,7 +505,8 @@ function InspectTable({
 }
 
 /** Graded items waiting on a price. */
-function PricingTable({ rows, reload }: { rows: ConsignmentItem[]; reload: () => void }) {
+function PricingTable({ rows, names, reload }: { rows: ConsignmentItem[]; names: Map<string, string>; reload: () => void }) {
+  const navigate = useNavigate()
   const { busy, error, act } = useAction(reload)
   const [override, setOverride] = useState<Record<string, string>>({})
   const [open, setOpen] = useState<string | null>(null)
@@ -509,17 +551,14 @@ function PricingTable({ rows, reload }: { rows: ConsignmentItem[]; reload: () =>
       <tbody>
         <ErrorRow error={error} span={5} />
         {rows.map((i) => (
-          <tr key={i.id}>
-            <td>
-              <Link to={`/items/${i.id}`} className="ops__id tg-mono">{i.internalSku}</Link>
-              {/* Pricing takes the fee snapshot: it is what the payout will read,
-                  whatever the fee table says later. */}
-              <span className="ops__gear">declared {i.declaredGradeCode} · takes the fee snapshot</span>
-            </td>
+          <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
+            {/* Pricing takes the fee snapshot: it is what the payout will read,
+                whatever the fee table says later. */}
+            <ItemCell item={i} names={names} meta={`declared ${i.declaredGradeCode} · takes the fee snapshot`} />
             <td><span className="tg-badge tg-badge--accent">{i.assignedGradeCode}</span></td>
             <td className="q__num">{money(i.askingAmountMinor)}</td>
             <td className="q__num">{i.floorAmountMinor != null ? money(i.floorAmountMinor) : '—'}</td>
-            <td>
+            <td onClick={(e) => e.stopPropagation()}>
               {open === i.id ? (
                 <span className="ops__inline">
                   <input
