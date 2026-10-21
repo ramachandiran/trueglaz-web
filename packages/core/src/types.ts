@@ -295,6 +295,7 @@ export interface Submission {
   submittedAt: string | null
   preApprovedAt: string | null
   rejectedReasonCode: string | null
+  rejectedNote: string | null
   expiresAt: string | null
   createdAt: string
 }

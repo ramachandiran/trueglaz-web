@@ -228,6 +228,9 @@ export function SignInPage() {
               <button className="tg-button tg-button--primary signin__submit" disabled={busy || !contact.trim()}>
                 {busy ? 'Sending…' : 'Send code'}
               </button>
+              <p className="tg-muted signin__newuser">
+                New to TrueGlaz? Enter your email above — we'll create your account after the code.
+              </p>
             </form>
           ) : step === 'code' ? (
             <form onSubmit={verify} className="signin__form">

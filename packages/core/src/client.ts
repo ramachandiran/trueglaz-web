@@ -579,8 +579,8 @@ export const api = {
   pendingSubmissions: () => get<Submission[]>('/ops/submissions/pending'),
   preApprove: (id: string, courierCode: string) =>
     post<InboundShipment>(`/ops/submissions/${id}/pre-approve`, { courierCode }),
-  rejectSubmission: (id: string, reasonCode: string) =>
-    post<Submission>(`/ops/submissions/${id}/reject`, { reasonCode }),
+  rejectSubmission: (id: string, reasonCode: string, note?: string) =>
+    post<Submission>(`/ops/submissions/${id}/reject`, { reasonCode, note: note ?? null }),
   markInTransit: (shipmentId: string) =>
     post<InboundShipment>(`/ops/inbound-shipments/${shipmentId}/in-transit`),
   receive: (

@@ -212,6 +212,7 @@ function IntakeTable({ rows, reload }: { rows: Submission[]; reload: () => void 
   const { busy, error, act } = useAction(reload)
   const [rejecting, setRejecting] = useState<string | null>(null)
   const [reason, setReason] = useState('')
+  const [note, setNote] = useState('')
 
   return (
     <table className="q__table">
@@ -235,7 +236,7 @@ function IntakeTable({ rows, reload }: { rows: Submission[]; reload: () => void 
             <td className="tg-muted">{s.submittedAt ? dateOnly(s.submittedAt) : '—'}</td>
             <td>
               {rejecting === s.id ? (
-                <span className="ops__inline">
+                <span className="ops__inline ops__reject">
                   <select
                     className="tg-select ops__reason"
                     value={reason}
@@ -247,16 +248,27 @@ function IntakeTable({ rows, reload }: { rows: Submission[]; reload: () => void 
                       <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
                     ))}
                   </select>
-                  <button
-                    className="tg-button"
-                    disabled={!reason || busy === s.id}
-                    onClick={() => act(s.id, () => api.rejectSubmission(s.id, reason))}
-                  >
-                    Confirm
-                  </button>
-                  <button className="tg-button" onClick={() => { setRejecting(null); setReason('') }}>
-                    Cancel
-                  </button>
+                  <textarea
+                    className="tg-input ops__reject-note"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Add a note for the seller — what exactly was wrong? (optional)"
+                    rows={2}
+                    maxLength={1000}
+                    aria-label="Note to the seller"
+                  />
+                  <span className="ops__inline">
+                    <button
+                      className="tg-button"
+                      disabled={!reason || busy === s.id}
+                      onClick={() => act(s.id, () => api.rejectSubmission(s.id, reason, note.trim() || undefined))}
+                    >
+                      Confirm
+                    </button>
+                    <button className="tg-button" onClick={() => { setRejecting(null); setReason(''); setNote('') }}>
+                      Cancel
+                    </button>
+                  </span>
                 </span>
               ) : (
                 <span className="ops__inline">

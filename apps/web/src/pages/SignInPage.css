@@ -304,3 +304,12 @@
   outline: 2px solid var(--tg-accent);
   outline-offset: 2px;
 }
+
+/* A plain reassurance that new users don't need a separate sign-up. */
+.signin__newuser {
+  margin: var(--tg-space-3) 0 0;
+  padding-top: var(--tg-space-3);
+  border-top: 1px solid var(--tg-border);
+  font-size: var(--tg-text-sm);
+  text-align: center;
+}

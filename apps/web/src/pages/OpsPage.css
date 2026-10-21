@@ -155,3 +155,16 @@
   background: var(--tg-accent-soft);
   font-variant-numeric: tabular-nums;
 }
+
+/* Reject-with-note: stack the reason, the free-text note, and the buttons. */
+.ops__reject {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--tg-space-2);
+  min-width: 260px;
+}
+.ops__reject-note {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+}
