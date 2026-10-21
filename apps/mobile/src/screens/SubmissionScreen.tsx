@@ -38,6 +38,17 @@ export function SubmissionScreen({ route, navigation }: { route: any; navigation
 
         {submission.shipBy && <Muted size={t.size.xs}>Ship by {submission.shipBy}</Muted>}
 
+        {submission.state === 'rejected' && (
+          <Card style={{ borderColor: t.colors.bad, gap: 4 }}>
+            <Txt style={{ color: t.colors.bad, fontWeight: t.weight.bold as never }}>This submission was not accepted</Txt>
+            {submission.rejectedNote
+              ? <Muted>{submission.rejectedNote}</Muted>
+              : submission.rejectedReasonCode
+                ? <Muted>Reason: {submission.rejectedReasonCode.replace(/_/g, ' ')}</Muted>
+                : null}
+          </Card>
+        )}
+
         <View style={{ gap: t.space.x3 }}>
           <SectionTitle>Items ({items.length})</SectionTitle>
           {items.length === 0 && <Muted>No items yet — add your first one.</Muted>}

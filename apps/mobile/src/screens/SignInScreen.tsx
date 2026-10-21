@@ -93,6 +93,9 @@ export function SignInScreen() {
               <Field label="Email" value={contact} onChangeText={setContact} autoCapitalize="none" keyboardType="email-address" autoCorrect={false} placeholder="you@example.com" onSubmitEditing={sendCode} />
               <Button label="Send code" onPress={sendCode} loading={busy} />
               <Muted>We'll email you a one-time code. No password needed.</Muted>
+              <View style={{ borderTopWidth: 1, borderTopColor: t.colors.border, paddingTop: t.space.x3 }}>
+                <Muted>New to TrueGlaz? Enter your email — we'll create your account after the code.</Muted>
+              </View>
             </>
           )}
 
