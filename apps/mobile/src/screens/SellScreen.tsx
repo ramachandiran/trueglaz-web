@@ -79,22 +79,20 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   const t = useTheme()
   const home = useApi(() => api.sellerHome(), [])
   const items = useApi(() => api.myItems(), [])
-  const subs = useApi(() => api.mySubmissions(), [])
   const approvals = useApi(() => api.myApprovals(), [])
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
   useEffect(() => {
-    const unsub = navigation.addListener('focus', () => { items.reload(); subs.reload(); approvals.reload(); home.reload() })
+    const unsub = navigation.addListener('focus', () => { items.reload(); approvals.reload(); home.reload() })
     return unsub
   }, [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startSubmission = async () => {
     setCreateError(null); setCreating(true)
     try {
-      // 'guided' lets TrueGlaz propose the price; must be 'guided' or 'manual'.
-      // A submission holds one item (1:1), so go straight to the item form rather
-      // than an empty submission page.
+      // One item per submission (1:1), so create the submission behind the scenes
+      // and go straight to the item form. 'guided' lets TrueGlaz propose the price.
       const s = await api.createSubmission('guided')
       navigation.navigate('NewItem', { submissionId: s.id })
     } catch (e) {
@@ -140,38 +138,15 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
 
       <Card style={{ gap: t.space.x2 }}>
         <SectionTitle>Consign an item</SectionTitle>
-        <Muted>Start a submission, add your gear, and ship it to us.</Muted>
+        <Muted>Add your gear and ship it to us. One form, start to finish.</Muted>
         {createError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{createError}</Txt>}
-        <Button label="New submission" onPress={startSubmission} loading={creating} />
+        <Button label="List an item" onPress={startSubmission} loading={creating} />
       </Card>
-
-      <View style={{ gap: t.space.x3 }}>
-        <SectionTitle>My submissions</SectionTitle>
-        {subs.loading && !subs.data && <Loading />}
-        {subs.data && subs.data.length === 0 && <Muted>No submissions yet.</Muted>}
-        {(subs.data ?? []).map((s) => {
-          const it = (items.data ?? []).find((i) => i.submissionId === s.id)
-          const title = it ? (it.modelFreeText || it.description || it.internalSku) : 'Empty draft'
-          return (
-            <Pressable key={s.id} onPress={() => navigation.navigate('Submission', { id: s.id })}>
-              <Card style={{ gap: t.space.x2 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.space.x2 }}>
-                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.medium as never, flex: 1 }}>{title}</Txt>
-                  <StateBadge state={s.state} />
-                </View>
-                {it
-                  ? <Muted size={t.size.xs}>{it.declaredGradeCode} · asking {money(it.askingAmountMinor)} · {s.pricingMode} pricing</Muted>
-                  : <Muted size={t.size.xs}>No item added yet — tap to add one.</Muted>}
-              </Card>
-            </Pressable>
-          )
-        })}
-      </View>
 
       <View style={{ gap: t.space.x3 }}>
         <SectionTitle>My items</SectionTitle>
         {items.loading && !items.data && <Loading />}
-        {items.data && items.data.length === 0 && <Empty title="No items yet" hint="They appear once a submission is sent." />}
+        {items.data && items.data.length === 0 && <Empty title="No items yet" hint="Tap “List an item” to consign your first piece of gear." />}
         {(items.data ?? []).map((i) => (
           <Pressable key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}>
             <Card style={{ gap: t.space.x2 }}>

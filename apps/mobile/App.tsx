@@ -24,7 +24,6 @@ import { OrdersScreen } from './src/screens/OrdersScreen'
 import { OrderDetailScreen } from './src/screens/OrderDetailScreen'
 import { SellScreen } from './src/screens/SellScreen'
 import { SellerItemScreen } from './src/screens/SellerItemScreen'
-import { SubmissionScreen } from './src/screens/SubmissionScreen'
 import { NewItemScreen } from './src/screens/NewItemScreen'
 import { StartSellingScreen } from './src/screens/StartSellingScreen'
 import { ProfileScreen } from './src/screens/ProfileScreen'
@@ -90,7 +89,6 @@ function AppStack() {
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Order' }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
-      <Root.Screen name="Submission" component={SubmissionScreen} options={{ title: 'Submission' }} />
       <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />
       <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />

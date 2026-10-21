@@ -45,17 +45,16 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
 
     setError(null); setBusy(true)
     try {
-      await api.addItem(submissionId, {
+      const created = await api.addItem(submissionId, {
         modelFreeText: modelFreeText.trim(), categoryId, brandId,
         description: description.trim(), reasonToSell: reasonToSell.trim(),
         underWarranty, hasBill, hasBox, hasAccessories,
         serialNumber: serialNumber.trim(), declaredGradeCode,
         askingAmountMinor: askingMinor, floorAmountMinor: floorMinor,
       })
-      // 1:1 flow: land on the submission (now holding this item) to review and
-      // submit for pre-approval. replace() so Back goes to the dashboard, not
-      // this form.
-      navigation.replace('Submission', { id: submissionId })
+      // 1:1 flow: land straight on the item (now a draft) to review and submit
+      // for pre-approval. replace() so Back goes to the dashboard, not this form.
+      navigation.replace('SellerItem', { id: created.id })
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
 

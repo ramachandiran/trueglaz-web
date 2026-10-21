@@ -38,6 +38,7 @@ export function SellerItemScreen({ route }: { route: any }) {
   const { item: it, defects, inspections } = item.data
   const progress = progressOf(steps)
   const reloadAll = () => { item.reload(); approvals.reload() }
+  const isDraft = it.currentState === 'DRAFT'
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
@@ -50,6 +51,8 @@ export function SellerItemScreen({ route }: { route: any }) {
         </View>
         <Muted>Asking {money(it.askingAmountMinor)} · declared {it.declaredGradeCode}</Muted>
       </View>
+
+      {isDraft && <SubmitForApproval submissionId={it.submissionId} onDone={reloadAll} />}
 
       {pending && <PriceDecision a={pending} onDone={reloadAll} />}
 
@@ -105,6 +108,27 @@ export function SellerItemScreen({ route }: { route: any }) {
         ))}
       </Card>
     </ScrollView>
+  )
+}
+
+function SubmitForApproval({ submissionId, onDone }: { submissionId: string; onDone: () => void }) {
+  const t = useTheme()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setBusy(true); setError(null)
+    try { await api.submitSubmission(submissionId); onDone() }
+    catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+  }
+
+  return (
+    <Card style={{ borderColor: t.colors.accent, gap: t.space.x3 }}>
+      <SectionTitle>Ready to send?</SectionTitle>
+      <Muted>This is still a draft. Send it to TrueGlaz for pre-approval, then ship it to us to be inspected and graded.</Muted>
+      {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
+      <Button label="Submit for pre-approval" variant="cta" loading={busy} onPress={submit} />
+    </Card>
   )
 }
 
