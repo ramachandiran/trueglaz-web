@@ -52,7 +52,10 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
         serialNumber: serialNumber.trim(), declaredGradeCode,
         askingAmountMinor: askingMinor, floorAmountMinor: floorMinor,
       })
-      navigation.goBack()
+      // 1:1 flow: land on the submission (now holding this item) to review and
+      // submit for pre-approval. replace() so Back goes to the dashboard, not
+      // this form.
+      navigation.replace('Submission', { id: submissionId })
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
 

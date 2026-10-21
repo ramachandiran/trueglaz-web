@@ -93,8 +93,10 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
     setCreateError(null); setCreating(true)
     try {
       // 'guided' lets TrueGlaz propose the price; must be 'guided' or 'manual'.
+      // A submission holds one item (1:1), so go straight to the item form rather
+      // than an empty submission page.
       const s = await api.createSubmission('guided')
-      navigation.navigate('Submission', { id: s.id })
+      navigation.navigate('NewItem', { submissionId: s.id })
     } catch (e) {
       const msg = (e as Error).message || 'Could not start a submission.'
       setCreateError(msg)
@@ -147,17 +149,23 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
         <SectionTitle>My submissions</SectionTitle>
         {subs.loading && !subs.data && <Loading />}
         {subs.data && subs.data.length === 0 && <Muted>No submissions yet.</Muted>}
-        {(subs.data ?? []).map((s) => (
-          <Pressable key={s.id} onPress={() => navigation.navigate('Submission', { id: s.id })}>
-            <Card style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ gap: 2 }}>
-                <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>Submission</Txt>
-                <Muted size={t.size.xs}>{s.pricingMode} pricing</Muted>
-              </View>
-              <StateBadge state={s.state} />
-            </Card>
-          </Pressable>
-        ))}
+        {(subs.data ?? []).map((s) => {
+          const it = (items.data ?? []).find((i) => i.submissionId === s.id)
+          const title = it ? (it.modelFreeText || it.description || it.internalSku) : 'Empty draft'
+          return (
+            <Pressable key={s.id} onPress={() => navigation.navigate('Submission', { id: s.id })}>
+              <Card style={{ gap: t.space.x2 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.space.x2 }}>
+                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.medium as never, flex: 1 }}>{title}</Txt>
+                  <StateBadge state={s.state} />
+                </View>
+                {it
+                  ? <Muted size={t.size.xs}>{it.declaredGradeCode} · asking {money(it.askingAmountMinor)} · {s.pricingMode} pricing</Muted>
+                  : <Muted size={t.size.xs}>No item added yet — tap to add one.</Muted>}
+              </Card>
+            </Pressable>
+          )
+        })}
       </View>
 
       <View style={{ gap: t.space.x3 }}>
