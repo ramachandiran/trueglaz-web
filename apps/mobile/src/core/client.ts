@@ -1,0 +1,715 @@
+import { getStorage } from './storage'
+import type {
+  ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
+  FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
+  Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail, ManagedListing, NewModel,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
+  Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
+  PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
+  EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
+  StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
+  CourierCharge, MonthCount, NewCourierCharge, Statement,
+} from './types'
+
+/**
+ * Identity is a bearer token issued by the API's OTP flow.
+ *
+ * The roles that come back are used only to decide what to SHOW. Every call is
+ * enforced server-side against `user_role`, because a browser cannot be trusted
+ * to police itself — hiding a button is a courtesy, not a control.
+ */
+const SESSION_KEY = 'trueglaz.session'
+
+let session: Session | null = null
+let onExpired: (() => void) | null = null
+
+export const currentSession = (): Session | null => session
+
+/** Called when the API rejects the token, so the app can send the user to sign in. */
+export function onSessionExpired(handler: () => void) {
+  onExpired = handler
+}
+
+export async function loadSession(): Promise<Session | null> {
+  try {
+    const raw = await getStorage().get(SESSION_KEY)
+    session = raw ? (JSON.parse(raw) as Session) : null
+  } catch {
+    session = null
+  }
+  return session
+}
+
+export async function saveSession(next: Session | null): Promise<void> {
+  session = next
+  try {
+    if (next) await getStorage().set(SESSION_KEY, JSON.stringify(next))
+    else await getStorage().remove(SESSION_KEY)
+  } catch {
+    /* storage unavailable — the session still works for this tab */
+  }
+}
+
+export function hasRole(s: Session | null, ...roles: string[]): boolean {
+  if (!s) return false
+  if (s.roles.includes('admin')) return true
+  return roles.some((r) => s.roles.includes(r))
+}
+
+/**
+ * Whether this person has a selling side at all.
+ *
+ * Not a role: an ordinary buyer and an ordinary seller both hold none. It is
+ * the KYC gate's own output, so nobody is ever asked to declare which they are
+ * — and nobody can answer it wrong.
+ */
+export const isSeller = (s: Session | null) => !!s?.sellerActivatedAt
+
+export const isStaff = (s: Session | null) => hasRole(s, 'staff')
+export const isTechnician = (s: Session | null) => hasRole(s, 'technician')
+export const isAdmin = (s: Session | null) => !!s?.roles.includes('admin')
+export const isOps = (s: Session | null) => isStaff(s) || isTechnician(s)
+
+/**
+ * Where the API lives. Web stays relative behind the dev proxy; a deployment
+ * serving the app from another origin sets this to the API's URL.
+ */
+let origin = ''
+export function setApiOrigin(value: string) {
+  origin = value.replace(/\/$/, '')
+}
+const url = (p: string) => `${origin}/api/v1${p}`
+
+/**
+ * What to say when nothing answered.
+ *
+ * Relative calls go through whatever server delivered the page, so the address
+ * in the URL is that server, not the API — say so, rather than pointing someone
+ * at a port the API was never on.
+ */
+function unreachable(endpoint: string): string {
+  if (origin) return `Could not reach the API at ${origin}. Is it running?`
+  if (typeof location === 'undefined') return `No answer for ${url(endpoint)}.`
+  return `No answer from ${location.origin}, the server this page came from. ` +
+    'The API is reached through it, so check that it is still running and that ' +
+    'this tab is on the port it is using.'
+}
+
+/** Carries the server's own explanation, which is usually the useful part. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+    /** A machine-readable reason, where the status alone is ambiguous. */
+    readonly code?: string,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
+  let res: Response
+  try {
+    res = await fetch(url(endpoint), {
+      ...init,
+      headers: {
+        Accept: 'application/json',
+        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
+        ...(init?.headers as Record<string, string> | undefined),
+      },
+    })
+  } catch {
+    // fetch only rejects when the request never got an answer at all: nothing
+    // listening, DNS gone, the connection dropped. That is a different fault
+    // from the API returning an error, and naming it precisely matters —
+    // the old message read "Could not reach the API at http://localhost:5174/…"
+    // when the API was on 8080 and the thing that had gone away was the dev
+    // server the page itself came from.
+    throw new ApiError(0, unreachable(endpoint))
+  }
+
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`
+    let code: string | undefined
+    try {
+      const body = await res.json()
+      if (body?.message) detail = body.message
+      if (body?.code) code = body.code
+    } catch {
+      /* non-JSON error body; the status line is all we have */
+    }
+
+    // Two very different things answer 401: the session is gone, and the
+    // one-time code you just typed was wrong. Signing someone out for a typo
+    // loses whatever they were in the middle of, so only the first clears it.
+    if (res.status === 401 && session && code !== 'code_invalid') {
+      void saveSession(null)
+      onExpired?.()
+    }
+
+    throw new ApiError(res.status, detail, code)
+  }
+
+  if (res.status === 204) return undefined as T
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
+}
+
+const get = <T,>(p: string) => request<T>(p)
+const post = <T,>(p: string, body?: unknown) =>
+  request<T>(p, { method: 'POST', body: JSON.stringify(body ?? {}) })
+const patch = <T,>(p: string, body?: unknown) =>
+  request<T>(p, { method: 'PATCH', body: JSON.stringify(body ?? {}) })
+const del = <T,>(p: string) => request<T>(p, { method: 'DELETE' })
+const put = <T,>(p: string, body?: unknown) =>
+  request<T>(p, { method: 'PUT', body: JSON.stringify(body ?? {}) })
+
+/**
+ * Fetches a file rather than JSON.
+ *
+ * The statement is an attachment, so the JSON helpers do not fit — but it still
+ * has to carry the bearer token, which is why this is not simply a link the
+ * browser follows. The caller gets the bytes and the name the server chose.
+ */
+async function download(endpoint: string): Promise<{ blob: Blob; filename: string }> {
+  let res: Response
+  try {
+    res = await fetch(url(endpoint), {
+      headers: session ? { Authorization: `Bearer ${session.token}` } : {},
+    })
+  } catch {
+    throw new ApiError(0, unreachable(endpoint))
+  }
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`
+    try { const body = await res.json(); if (body?.message) detail = body.message } catch { /* status line only */ }
+    throw new ApiError(res.status, detail)
+  }
+  // filename*= is the encoded form; filename= the plain one. Either will do for
+  // a name made of ASCII, which the server's is.
+  const disposition = res.headers.get('Content-Disposition') ?? ''
+  const filename = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1] ?? 'statement.xlsx'
+  return { blob: await res.blob(), filename: decodeURIComponent(filename) }
+}
+
+const dateRange = (from?: string | null, to?: string | null) => {
+  const q = new URLSearchParams()
+  if (from) q.set('from', from)
+  if (to) q.set('to', to)
+  const text = q.toString()
+  return text ? `?${text}` : ''
+}
+
+export interface BrowseParams {
+  q?: string
+  grade?: string
+  maxPriceMinor?: number
+  page?: number
+  size?: number
+}
+
+export const api = {
+  // -- what this deployment is ---------------------------------------------
+  /**
+   * Answers one question: does paying here move real money? The API derives it
+   * from the payment provider it actually has wired, so it cannot disagree with
+   * reality the way a build-time flag in this bundle could.
+   */
+  meta: () => get<Meta>('/meta'),
+
+  // -- auth ---------------------------------------------------------------
+  requestCode: (contact: string) =>
+    post<{ sent: boolean; expiresAt: string; devCode: string | null }>('/auth/request-code', { contact }),
+  /**
+   * A correct code either signs you in or tells you there is no account yet.
+   *
+   * token and user are null exactly when newUser is true — the code is still
+   * live at that point, and signUp is what spends it.
+   */
+  verifyCode: (contact: string, code: string) =>
+    post<AuthResult>('/auth/verify', { contact, code }),
+  /**
+   * Follows a verify that answered newUser, with the same code.
+   *
+   * `contact` is whichever one the code went to, and the server refuses the
+   * request unless it is one of the two on the form — so an account cannot be
+   * registered under contacts nobody proved.
+   */
+  signUp: (contact: string, code: string, details: SignUpDetails) =>
+    post<AuthResult>('/auth/sign-up', { contact, code, ...details }),
+
+  /** Fills the signup form's genre box. Public: nobody is signed in yet. */
+  photographyGenres: () => get<PhotographyGenre[]>('/auth/photography-genres'),
+  me: () => get<{
+    userId: string
+    displayName: string
+    email: string | null
+    roles: string[]
+    // Restoring a session on boot rebuilds it from here, so this has to be
+    // declared or a later refactor drops the selling side on every reload.
+    sellerActivatedAt: string | null
+  }>('/auth/me'),
+  logout: () => post<{ ok: boolean }>('/auth/logout'),
+
+  // -- catalogue (public) --------------------------------------------------
+  listings(p: BrowseParams = {}) {
+    const qs = new URLSearchParams()
+    if (p.q) qs.set('q', p.q)
+    if (p.grade) qs.set('grade', p.grade)
+    if (p.maxPriceMinor) qs.set('maxPriceMinor', String(p.maxPriceMinor))
+    qs.set('page', String(p.page ?? 0))
+    qs.set('size', String(p.size ?? 60))
+    return get<Page<Listing>>(`/listings?${qs}`)
+  },
+  listing: (id: string) => get<ListingDetail>(`/listings/${id}`),
+  /** What has recently gone, and for how much. Public; carries no identities. */
+  /** The whole shop front in one call. Public; carries no identities. */
+  home: () => get<HomeView>('/home'),
+
+  /** Ask UIDAI to send a code to the mobile registered against this Aadhaar. */
+  startEkyc: (aadhaarNumber: string) =>
+    post<EkycStarted>('/kyc/ekyc/start', { aadhaarNumber }),
+
+  /** Exchange the code for the identity. Verifies on the spot — no queue. */
+  verifyEkyc: (otp: string) => post<KycStatus>('/kyc/ekyc/verify', { otp }),
+
+  /** Someone's identity documents. Theirs, or ops — nobody else. */
+  kycDocuments: (userId: string) => get<KycDocumentView[]>(`/kyc/${userId}/documents`),
+  myKycDocuments: () => get<KycDocumentView[]>('/kyc/mine/documents'),
+
+  /** The photographs on a unit that the caller is allowed to see. */
+  itemMedia: (itemId: string) => get<MediaView[]>(`/items/${itemId}/media`),
+
+  /** One cover photograph per unit, batched — the catalogue draws many tiles. */
+  covers: (itemIds: string[]) =>
+    itemIds.length === 0
+      ? Promise.resolve({} as Record<string, MediaView>)
+      : get<Record<string, MediaView>>(`/media/covers?itemIds=${itemIds.join(',')}`),
+
+  /**
+   * Upload a photograph.
+   *
+   * Three steps, hidden here because every caller wants the same three: ask the
+   * API for somewhere to put the bytes, PUT them straight at it, then have the
+   * API check what actually landed.
+   *
+   * The middle step deliberately does not go through `request` — it carries no
+   * Authorization header and no JSON, and in production it is not even our
+   * origin. The upload target is signed; that is what authorises it.
+   */
+  uploadPhoto: async (
+    file: File,
+    target: { ownerType: 'item' | 'order' | 'kyc' | 'model'; ownerId: string; role: string; defectId?: string },
+  ): Promise<MediaView> => {
+    const intent = await post<UploadIntent>('/media/intent', {
+      ...target,
+      contentType: file.type || (/\.png$/i.test(file.name) ? 'image/png' : /\.webp$/i.test(file.name) ? 'image/webp' : 'image/jpeg'),
+      bytes: file.size,
+    })
+
+    const put = await fetch(intent.url, {
+      method: intent.method,
+      headers: intent.headers,
+      body: file,
+    })
+    if (!put.ok) throw new ApiError(put.status, 'The upload did not go through — please try again')
+
+    return post<MediaView>('/media/seal', { ticket: intent.ticket })
+  },
+  recentlySold: (limit = 6) => get<SoldListing[]>(`/listings/recently-sold?limit=${limit}`),
+  grades: () => get<Grade[]>('/grades'),
+  reasonCodes: (domain: string) => get<ReasonCode[]>(`/reason-codes?domain=${encodeURIComponent(domain)}`),
+  brands: () => get<Brand[]>('/brands'),
+  mounts: () => get<Mount[]>('/mounts'),
+  categories: () => get<Category[]>('/categories'),
+  models: () => get<Page<ProductModel>>('/models?size=1000'),
+  /** Every model's current picture. Public; read once by the web app (see useModelImage). */
+  modelImages: () => get<{ models: ModelImageEntry[] }>('/models/images'),
+  adminModels: (q: { q?: string; brand?: string; category?: string; show?: string } = {}) =>
+    get<AdminModelList>('/admin/models?' + new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString()),
+  modelImageHistory: (modelId: string) => get<ModelImageHistory[]>(`/admin/models/${modelId}/images`),
+  removeModelImage: (modelId: string) => del<{ status: string }>(`/admin/models/${modelId}/image`),
+  restoreModelImage: (modelId: string) => post<{ status: string }>(`/admin/models/${modelId}/image/restore`),
+  /** Type-ahead for the consignment form. Matches the brand as well as the name. */
+  searchModels: (q: string, size = 12) =>
+    get<Page<ProductModel>>(`/models?q=${encodeURIComponent(q)}&size=${size}`),
+  lensTypes: () => get<LensType[]>('/lens-types'),
+  lensRanges: () => get<LensRange[]>('/lens-ranges'),
+  sensorFormats: () => get<SensorFormat[]>('/sensor-formats'),
+  transitionRules: () => get<TransitionRule[]>('/transition-rules'),
+  settings: () => get<PlatformSetting[]>('/settings'),
+  /** The application-wide audit trail, newest first. Admin only. */
+  auditLog: (q: AuditQuery = {}) => {
+    const p = new URLSearchParams()
+    for (const [k, v] of Object.entries(q)) if (v != null && v !== '') p.set(k, String(v))
+    const qs = p.toString()
+    return get<AuditPage>(`/admin/audit${qs ? `?${qs}` : ''}`)
+  },
+  feeQuote: (salePriceMinor: number) => get<FeeQuote>(`/fee-quote?salePriceMinor=${salePriceMinor}`),
+  feeRules: () => get<FeeRule[]>('/fee-rules'),
+  actors: () => get<ActorHint[]>('/dev/actors'),
+
+  // -- buyer ---------------------------------------------------------------
+  reserve: (listingId: string) => post<Reservation>(`/listings/${listingId}/reserve`),
+  releaseReservation: (id: string) => post<Reservation>(`/reservations/${id}/release`),
+  checkout: (
+    reservationId: string,
+    deliveryAddress: Record<string, unknown>,
+  ) =>
+    post<Order>(`/reservations/${reservationId}/checkout`, {
+      deliveryAddress,
+      // Omitted rather than sent empty: the server treats a blank code as
+      // "no code", but a request that says nothing is clearer than one that
+      // says nothing twice.
+    }),
+  /**
+   * Opens a payment with the gateway and returns somewhere to pay.
+   *
+   * It does NOT report success: whether money moved arrives separately and
+   * signed, straight from the gateway to the API. There is deliberately no
+   * client call that can say "this order is paid" — there used to be, and a
+   * buyer could call it without paying.
+   */
+  paymentSession: (orderId: string, pref?: PaymentPreference) =>
+    post<PaymentSessionView>(`/orders/${orderId}/payment-session`, pref),
+  /** Where the latest try at paying stands, as the gateway told the API. Read-only. */
+  paymentStatus: (orderId: string) => get<PaymentStatusView>(`/orders/${orderId}/payment-status`),
+  paymentMethods: () => get<PaymentMethods>('/payments/methods'),
+  /**
+   * Hands the API what the gateway's in-page checkout (Razorpay) returned. The
+   * API checks the gateway's signature and fetches the payment from the gateway
+   * before booking anything; this cannot mark an unpaid order paid.
+   */
+  paymentConfirm: (orderId: string, fields: Record<string, string>) =>
+    post<{ status: 'captured' | 'duplicate' | 'failed' | 'pending' | string }>(`/orders/${orderId}/payment-confirm`, fields),
+  /** Admin: send a cancelled order's money back through the gateway, and record it. */
+  refundViaGateway: (orderId: string, note?: string) =>
+    post<{ refundId: string }>(`/orders/${orderId}/refund-via-gateway`, { note: note ?? null }),
+  /** A new address for an order that is still waiting for payment. */
+  changeOrderAddress: (orderId: string, deliveryAddress: Record<string, unknown>) =>
+    put<Order>(`/orders/${orderId}/delivery-address`, { deliveryAddress }),
+
+  /**
+   * Pays your own order where the gateway is the stub, which is development and
+   * the demo environment. Absent wherever a real gateway is configured — there
+   * the browser is sent to the gateway's own page instead, and this is never
+   * called.
+   */
+  stubPay: (orderId: string, outcome: 'approve' | 'decline' = 'approve') =>
+    post<{ status: string }>(`/payments/stub/pay/${orderId}`, { outcome }),
+  /** Everything the orders list draws, in one call. */
+  myOrders: () => get<OrderSummary[]>('/orders'),
+  order: (id: string) => get<OrderDetail>(`/orders/${id}`),
+  acceptLine: (lineId: string, byWindowExpiry = false) =>
+    post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`),
+  staffHome: () => get<StaffHome>('/staff/home'),
+  sellerHome: () => get<SellerHome>('/seller/home'),
+  buyerHome: () => get<BuyerHome>('/buyer/home'),
+
+  // -- returns -------------------------------------------------------------
+  returnRequest: (lineId: string, reasonCode: string, note?: string) =>
+    post<ReturnCase>(`/order-lines/${lineId}/return-request`, { reasonCode, note: note?.trim() || null }),
+  returnForLine: (lineId: string) => get<ReturnForBuyer | null>(`/order-lines/${lineId}/return`),
+  returns: (state?: string) => get<ReturnCaseView[]>(`/returns${state ? `?state=${state}` : ''}`),
+  returnApprove: (lineId: string, courierCode?: string, trackingNumber?: string) =>
+    post<ReturnCase>(`/returns/${lineId}/approve`, { courierCode: courierCode || null, trackingNumber: trackingNumber || null }),
+  returnDecline: (lineId: string, note: string) => post<ReturnCase>(`/returns/${lineId}/decline`, { note }),
+  returnReceive: (lineId: string) => post<ReturnCase>(`/returns/${lineId}/receive`, {}),
+  returnInspect: (lineId: string, body: { serialMatches: boolean; conditionOk: boolean; accessoriesOk: boolean; note?: string }) =>
+    post<ReturnCase>(`/returns/${lineId}/inspect`, body),
+  returnResolve: (lineId: string, outcome: 'refund' | 'reject', note?: string) =>
+    post<ReturnCase>(`/returns/${lineId}/resolve`, { outcome, note: note?.trim() || null }),
+  returnClose: (lineId: string, outcome: 'refund' | 'sale_stands', note: string) =>
+    post<ReturnCase>(`/returns/${lineId}/close`, { outcome, note }),
+  /** The seller calls off a submission that has not shipped. */
+  withdrawSubmission: (submissionId: string) => post<unknown>(`/submissions/${submissionId}/withdraw`),
+  /** The seller takes their own listed item off sale; it is then returned to them. */
+  withdrawItem: (itemId: string, note?: string) =>
+    post<unknown>(`/items/${itemId}/withdraw`, { note: note?.trim() || null }),
+  /** Admin: where an approved payout is to be sent. Audited. */
+  payoutDestination: (payoutId: string) => get<PayoutDestination>(`/payouts/${payoutId}/destination`),
+  /** Money we hold for cancelled orders, owed back to buyers. */
+  refundsDue: () => get<RefundDue[]>('/refunds/due'),
+  /** Admin: record that the gateway has sent the refund. */
+  refundOrder: (orderId: string, reference: string, note?: string) =>
+    post<unknown>(`/orders/${orderId}/refund`, { reference, note: note?.trim() || null }),
+
+  // -- admin settings ------------------------------------------------------
+  adminSettings: () => get<PlatformSetting[]>('/admin/settings'),
+  setSetting: (key: string, value: string) =>
+    put<PlatformSetting>(`/admin/settings/${encodeURIComponent(key)}`, { value }),
+  settingHistory: () => get<SettingChange[]>('/admin/settings/history'),
+  adminFees: () => get<FeesView>('/admin/fees'),
+  setCommissionBands: (bands: CommissionBand[]) => put<CommissionBand[]>('/admin/fees/commission', { bands }),
+  adminCompany: () => get<CompanyProfileView>('/admin/company'),
+  setCompany: (profile: CompanyProfile) => put<CompanyProfileView>('/admin/company', profile),
+  companyHistory: () => get<{ profile: CompanyProfile; changedAt: string | null; changedBy: string | null }[]>('/admin/company/history'),
+  companyStates: () => get<Record<string, string>>('/admin/company/states'),
+
+
+  // -- staff: people -------------------------------------------------------
+  staffUsers: (q = '', sellingState = '') =>
+    get<StaffUserRow[]>(`/staff/users?q=${encodeURIComponent(q)}&sellingState=${encodeURIComponent(sellingState)}`),
+  staffUser: (userId: string) => get<StaffUserDetail>(`/staff/users/${userId}`),
+  staffUserSelling: (userId: string) => get<StaffSellingRow[]>(`/staff/users/${userId}/selling`),
+  staffUserBuying: (userId: string) => get<StaffBuyingRow[]>(`/staff/users/${userId}/buying`),
+  approveSelling: (userId: string, note?: string) =>
+    post<StaffUserDetail>(`/staff/users/${userId}/selling/approve`, { note: note ?? null }),
+  rejectSelling: (userId: string, note?: string) =>
+    post<StaffUserDetail>(`/staff/users/${userId}/selling/reject`, { note: note ?? null }),
+
+  // -- admin: balance sheet ------------------------------------------------
+  balanceSheet: (from?: string | null, to?: string | null) =>
+    get<Statement>(`/admin/balance-sheet${dateRange(from, to)}`),
+  balanceSheetMonths: () => get<MonthCount[]>('/admin/balance-sheet/months'),
+  downloadStatement: (from?: string | null, to?: string | null) =>
+    download(`/admin/balance-sheet/export${dateRange(from, to)}`),
+  addCourierCharge: (itemId: string, body: NewCourierCharge) =>
+    post<CourierCharge>(`/admin/balance-sheet/items/${itemId}/courier-charges`, body),
+  voidCourierCharge: (id: string) => del<void>(`/admin/balance-sheet/courier-charges/${id}`),
+
+  // -- identity ------------------------------------------------------------
+  myKyc: () => get<KycStatus>('/kyc/mine'),
+  submitKyc: (body: {
+    legalName: string; dob?: string | null; idType: string; idNumber: string; gstin?: string | null
+  }) => post<KycStatus>('/kyc', body),
+  kycQueue: () => get<KycReview[]>('/kyc/queue'),
+  verifyKyc: (userId: string) => post<KycReview>(`/kyc/${userId}/verify`),
+  rejectKyc: (userId: string, reasonCode: string) =>
+    post<KycReview>(`/kyc/${userId}/reject`, { reasonCode }),
+
+  // -- seller --------------------------------------------------------------
+  createSubmission: (pricingMode: string) => post<Submission>('/submissions', { pricingMode }),
+  mySubmissions: () => get<Submission[]>('/submissions'),
+  submission: (id: string) => get<SubmissionView>(`/submissions/${id}`),
+  addItem: (
+    submissionId: string,
+    body: {
+      productModelId?: string | null
+      modelFreeText?: string | null
+      categoryId: string
+      brandId: string
+      // The API refuses an item with any of these blank: they are what a buyer
+      // reads and what we check the serial against, so they are not optional.
+      description: string
+      reasonToSell: string
+      underWarranty: boolean
+      hasBill: boolean
+      hasBox: boolean
+      hasAccessories: boolean
+      serialNumber: string
+      declaredGradeCode: string
+      askingAmountMinor: number
+      floorAmountMinor: number
+      declaredValueMinor?: number | null
+      includedAccessories?: string[] | null
+    },
+  ) => post<ConsignmentItem>(`/submissions/${submissionId}/items`, body),
+  submitSubmission: (id: string) => post<Submission>(`/submissions/${id}/submit`),
+  myItems: () => get<ConsignmentItem[]>('/items/mine'),
+  item: (id: string) => get<ItemDetail>(`/items/${id}`),
+  myApprovals: () => get<SellerApprovalView[]>('/seller-approvals'),
+  approval: (id: string) => get<SellerApprovalView>(`/seller-approvals/${id}`),
+  decideApproval: (id: string, decision: string, counterAmountMinor?: number | null) =>
+    post<SellerApproval>(`/seller-approvals/${id}/decision`, {
+      decision,
+      counterAmountMinor: counterAmountMinor ?? null,
+    }),
+  myPayouts: () => get<Payout[]>('/payouts/mine'),
+  myPayoutAccount: () => get<PayoutAccountView | null>('/profile/payout-account'),
+
+  // -- my account ----------------------------------------------------------
+  profile: () => get<Profile>('/profile'),
+
+  notifications: () => get<Notifications>('/profile/notifications'),
+  /** Both of these answer with the whole list, so the badge and the rows stay in step. */
+  markNotificationRead: (id: string) =>
+    post<Notifications>(`/profile/notifications/${id}/read`),
+  markAllNotificationsRead: () => post<Notifications>('/profile/notifications/read-all'),
+  updateProfile: (displayName: string) => patch<Profile>('/profile', { displayName }),
+
+  /** Sends a code to the NEW contact: what needs proving is that you can read mail there. */
+  requestContactCode: (contact: string) => post<CodeSent>('/profile/contact/request-code', { contact }),
+  confirmContact: (contact: string, code: string) =>
+    post<Profile>('/profile/contact/confirm', { contact, code }),
+
+  /** Sends a code to the contact already on file, before money is redirected. */
+  requestPayoutCode: () => post<CodeSent>('/profile/payout-account/request-code'),
+  savePayoutAccount: (body: {
+    code: string
+    method: string
+    accountHolderName: string
+    accountNumber?: string | null
+    ifsc?: string | null
+    upiVpa?: string | null
+  }) => post<PayoutAccountView>('/profile/payout-account', body),
+
+  myAddresses: () => get<Address[]>('/profile/addresses'),
+  addAddress: (body: {
+    label?: string | null
+    recipientName: string
+    line1: string
+    line2?: string | null
+    city: string
+    state?: string
+    pincode: string
+    phone?: string | null
+    isDefault?: boolean
+  }) => post<Address[]>('/profile/addresses', body),
+  updateAddress: (id: string, body: {
+    label?: string | null
+    recipientName: string
+    line1: string
+    line2?: string | null
+    city: string
+    state?: string
+    pincode: string
+    phone?: string | null
+    isDefault?: boolean
+  }) => put<Address[]>(`/profile/addresses/${id}`, body),
+  makeDefaultAddress: (id: string) => post<Address[]>(`/profile/addresses/${id}/default`),
+  removeAddress: (id: string) => del<Address[]>(`/profile/addresses/${id}`),
+
+  mySessions: () => get<SessionInfo[]>('/profile/sessions'),
+  signOutOtherSessions: () => post<{ revoked: number }>('/profile/sessions/revoke-others'),
+
+  // -- ops -----------------------------------------------------------------
+  pendingSubmissions: () => get<Submission[]>('/ops/submissions/pending'),
+  preApprove: (id: string, courierCode: string) =>
+    post<InboundShipment>(`/ops/submissions/${id}/pre-approve`, { courierCode }),
+  rejectSubmission: (id: string, reasonCode: string) =>
+    post<Submission>(`/ops/submissions/${id}/reject`, { reasonCode }),
+  markInTransit: (shipmentId: string) =>
+    post<InboundShipment>(`/ops/inbound-shipments/${shipmentId}/in-transit`),
+  receive: (
+    shipmentId: string,
+    body: { outcomes: Record<string, string>; binCode?: string | null; notes?: string | null },
+  ) => post<Intake>(`/ops/inbound-shipments/${shipmentId}/receive`, body),
+  storageBins: () => get<StorageBin[]>('/ops/storage-bins'),
+  technicians: () => get<Technician[]>('/ops/technicians'),
+  submissionShipments: (submissionId: string) =>
+    get<InboundShipment[]>(`/ops/submissions/${submissionId}/shipments`),
+
+  itemQueue: (state?: string) =>
+    get<ConsignmentItem[]>(`/items${state ? `?state=${encodeURIComponent(state)}` : ''}`),
+  /** Hand a unit to a bench, or pass null to take the assignment off. */
+  assignTechnician: (itemId: string, technicianUserId: string | null) =>
+    post<ConsignmentItem>(`/items/${itemId}/assign`, { technicianUserId }),
+  myBench: () => get<ConsignmentItem[]>('/items/mine/to-inspect'),
+  startInspection: (itemId: string) =>
+    post<InspectionReport>(`/items/${itemId}/inspections?purpose=initial`),
+  itemInspections: (itemId: string) => get<InspectionReport[]>(`/items/${itemId}/inspections`),
+  checklistItems: (templateId: string) => get<ChecklistItem[]>(`/checklist-templates/${templateId}/items`),
+  checklistTemplates: () => get<ChecklistTemplate[]>('/checklist-templates'),
+  saveAnswers: (
+    reportId: string,
+    answers: Array<{
+      checklistItemCode: string
+      valueBoolean?: boolean | null
+      valueNumeric?: number | null
+      valueText?: string | null
+      valueOption?: string | null
+    }>,
+  ) => put<InspectionAnswer[]>(`/inspections/${reportId}/answers`, answers),
+  readAnswers: (reportId: string) => get<InspectionAnswer[]>(`/inspections/${reportId}/answers`),
+  /** The item's latest report, rendered for reading. Null until something is inspected. */
+  itemReport: (itemId: string) => get<RenderedReport | null>(`/items/${itemId}/inspection-report`),
+  renderedReport: (reportId: string) => get<RenderedReport>(`/inspections/${reportId}/report`),
+  addDefect: (
+    reportId: string,
+    body: {
+      title: string
+      severity: string
+      descriptionPublic: string
+      descriptionInternal?: string | null
+      checklistItemCode?: string | null
+    },
+  ) => post<Defect>(`/inspections/${reportId}/defects`, body),
+  suggestedGrade: (reportId: string) =>
+    get<{ suggestedGradeCode: string | null }>(`/inspections/${reportId}/suggested-grade`),
+  submitReport: (
+    reportId: string,
+    body: { proposedGradeCode: string; overrideReason?: string | null; verifiedShutterCount?: number | null },
+  ) => post<InspectionReport>(`/inspections/${reportId}/submit`, body),
+  qc: (
+    reportId: string,
+    body: { confirm: boolean; finalGradeCode?: string | null; overrideReason?: string | null; outcome: string },
+  ) => post<InspectionReport>(`/inspections/${reportId}/qc`, body),
+
+  propose: (itemId: string, body: { staffAmountMinor?: number | null; staffOverrideReason?: string | null }) =>
+    post<ProposalOutcome>(`/items/${itemId}/price-proposals`, body),
+  itemProposals: (itemId: string) => get<PriceProposal[]>(`/items/${itemId}/price-proposals`),
+  itemSnapshots: (itemId: string) => get<FeeSnapshot[]>(`/items/${itemId}/fee-snapshots`),
+  changeListingPrice: (listingId: string, newAmountMinor: number, reason: string) =>
+    post<Listing>(`/listings/${listingId}/price`, { newAmountMinor, reason }),
+  /** Every live listing, for the staff reprice screen. */
+  managedListings: () => get<ManagedListing[]>('/listings/managed'),
+
+  /** Admin: add to the gear catalogue. A new model is consignable at once. */
+  createBrand: (name: string) => post<Brand>('/admin/brands', { name }),
+  createModel: (body: NewModel) => post<ProductModel>('/admin/models', body),
+
+  orderLines: (state?: string) =>
+    get<OrderLine[]>(`/order-lines${state ? `?state=${encodeURIComponent(state)}` : ''}`),
+  dispatchLine: (id: string) => post<OrderLine>(`/order-lines/${id}/dispatch`),
+  deliverLine: (id: string) => post<OrderLine>(`/order-lines/${id}/deliver`),
+  transitionItem: (id: string, toState: string, reasonCode?: string | null, note?: string | null) =>
+    post<ConsignmentItem>(`/items/${id}/transition`, {
+      toState,
+      reasonCode: reasonCode ?? null,
+      note: note ?? null,
+    }),
+
+  // -- wanted: what buyers are asking for ----------------------------------
+  wantedBoard: () => get<WantedRequest[]>('/requests'),
+  myRequests: () => get<MyRequests>('/requests/mine'),
+  askFor: (body: {
+    productModelId?: string | null
+    modelFreeText?: string | null
+    minGradeCode?: string | null
+    maxPriceMinor?: number | null
+    note?: string | null
+  }) => post<MyRequests>('/requests', body),
+  withdrawRequest: (id: string) => post<MyRequests>(`/requests/${id}/withdraw`),
+  requestQueue: () => get<ReviewRequest[]>('/requests/queue'),
+  publishRequest: (id: string) => post<ReviewRequest>(`/requests/${id}/publish`),
+  rejectRequest: (id: string, reasonCode: string) =>
+    post<ReviewRequest>(`/requests/${id}/reject`, { reasonCode }),
+
+  // -- admin ---------------------------------------------------------------
+  payoutQueue: (state?: string) =>
+    get<Payout[]>(`/payouts${state ? `?state=${encodeURIComponent(state)}` : ''}`),
+  approvePayout: (id: string) => post<Payout>(`/payouts/${id}/approve`),
+  payPayout: (id: string, transferRef: string) => post<Payout>(`/payouts/${id}/pay`, { transferRef }),
+  ledgerAccounts: () => get<LedgerAccountBalance[]>('/ledger/accounts'),
+  ledgerTransactions: (limit = 50) => get<LedgerTransactionView[]>(`/ledger/transactions?limit=${limit}`),
+  reconciliation: () => get<Reconciliation>('/ledger/reconciliation'),
+
+  /** Every unit with everything known about it, one row each. Admin only. */
+  inventory: () => get<InventoryRow[]>('/admin/inventory'),
+
+  // -- invoices and shipments ----------------------------------------------
+  /** Everything addressed to me: purchases, and commission if I sell. */
+  myInvoices: () => get<Invoice[]>('/invoices'),
+  invoice: (id: string) => get<InvoiceDetail>(`/invoices/${id}`),
+  /**
+   * The printable copy, as a blob.
+   *
+   * Not a plain link: the session token travels in a header, and a browser
+   * following an <a href> sends none of them, so the document came back 401.
+   * Fetching it here and handing back a blob keeps authentication where it is
+   * rather than inventing a second way in through the URL.
+   */
+  invoiceDocument: async (id: string): Promise<Blob> => {
+    const res = await fetch(url(`/invoices/${id}/download`), {
+      headers: session ? { Authorization: `Bearer ${session.token}` } : {},
+    })
+    if (!res.ok) throw new ApiError(res.status, `Could not fetch that invoice (${res.status})`)
+    return res.blob()
+  },
+  itemShipments: (itemId: string) => get<ShipmentLeg[]>(`/items/${itemId}/shipments`),
+  shipToSeller: (itemId: string, body: { courierCode: string; trackingNumber?: string | null; notes?: string | null }) =>
+    post(`/items/${itemId}/ship-to-seller`, body),
+}

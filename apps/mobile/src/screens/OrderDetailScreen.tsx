@@ -1,0 +1,142 @@
+import { useState } from 'react'
+import { Modal, Pressable, ScrollView, View } from 'react-native'
+import { api, dateTime, money, useApi, type OrderLine } from '@trueglaz/core'
+import { Txt } from '../components/Txt'
+import { useTheme } from '../theme/ThemeContext'
+import { Button, Field } from '../components/form'
+import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge } from '../components/ui'
+
+export function OrderDetailScreen({ route }: { route: any }) {
+  const t = useTheme()
+  const id: string = route.params.id
+  const justPaid: boolean = !!route.params?.justPaid
+  const awaitingPayment: boolean = !!route.params?.awaitingPayment
+
+  const { data, error, loading, reload } = useApi(() => api.order(id), [id])
+  const reasons = useApi(() => api.reasonCodes('return'), [])
+
+  const [busyLine, setBusyLine] = useState<string | null>(null)
+  const [returnFor, setReturnFor] = useState<OrderLine | null>(null)
+  const [reasonCode, setReasonCode] = useState<string | null>(null)
+  const [note, setNote] = useState('')
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const accept = async (line: OrderLine) => {
+    setActionError(null); setBusyLine(line.id)
+    try { await api.acceptLine(line.id); reload() }
+    catch (e) { setActionError((e as Error).message) } finally { setBusyLine(null) }
+  }
+
+  const submitReturn = async () => {
+    if (!returnFor || !reasonCode) { setActionError('Pick a reason.'); return }
+    setActionError(null); setBusyLine(returnFor.id)
+    try {
+      await api.returnRequest(returnFor.id, reasonCode, note.trim() || undefined)
+      setReturnFor(null); setReasonCode(null); setNote(''); reload()
+    } catch (e) { setActionError((e as Error).message) } finally { setBusyLine(null) }
+  }
+
+  if (loading && !data) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
+  if (error) return <View style={{ flex: 1, backgroundColor: t.colors.bg, padding: t.space.x4 }}><ErrorNote error={error} onRetry={reload} /></View>
+  if (!data) return null
+
+  const { order, lines } = data
+
+  return (
+    <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
+      <ScrollView contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+        {justPaid && (
+          <Card style={{ borderColor: t.colors.good, gap: 4 }}>
+            <Txt style={{ color: t.colors.good, fontWeight: t.weight.bold as never }}>Payment confirmed 🎉</Txt>
+            <Muted size={t.size.xs}>We'll prepare your item for dispatch.</Muted>
+          </Card>
+        )}
+        {awaitingPayment && (
+          <Card style={{ borderColor: t.colors.warn, gap: 4 }}>
+            <Txt style={{ color: t.colors.warn, fontWeight: t.weight.bold as never }}>Awaiting payment</Txt>
+            <Muted size={t.size.xs}>This order is placed but not yet paid.</Muted>
+          </Card>
+        )}
+
+        <View style={{ gap: t.space.x2 }}>
+          <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{order.orderNumber}</Txt>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+            <StateBadge state={order.state} />
+            <Muted size={t.size.xs}>{dateTime(order.createdAt)}</Muted>
+          </View>
+        </View>
+
+        <Card style={{ gap: t.space.x3 }}>
+          <SectionTitle>Items</SectionTitle>
+          {lines.map((l) => (
+            <View key={l.id} style={{ gap: t.space.x2, borderBottomWidth: 1, borderBottomColor: t.colors.border, paddingBottom: t.space.x3 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Badge label={l.gradeCodeAtSale} tone="accent" />
+                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{money(l.itemPriceMinor)}</Txt>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}><StateBadge state={l.state} /></View>
+              {l.acceptanceWindowEndsAt && l.state === 'delivered' && (
+                <Muted size={t.size.xs}>Accept by {dateTime(l.acceptanceWindowEndsAt)}, or it accepts automatically.</Muted>
+              )}
+              {l.state === 'delivered' && (
+                <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
+                  <Button label="Accept delivery" onPress={() => accept(l)} loading={busyLine === l.id} style={{ flex: 1 }} />
+                  <Button label="Return" variant="ghost" onPress={() => { setReturnFor(l); setActionError(null) }} style={{ flex: 1 }} />
+                </View>
+              )}
+              {l.state === 'return_requested' && <Muted size={t.size.xs}>Return requested — we'll be in touch.</Muted>}
+              {l.acceptedAt && <Muted size={t.size.xs}>Accepted {dateTime(l.acceptedAt)}</Muted>}
+            </View>
+          ))}
+        </Card>
+
+        <Card style={{ gap: t.space.x2 }}>
+          <SectionTitle>Summary</SectionTitle>
+          <Row label="Subtotal" value={money(order.subtotalMinor)} />
+          {order.shippingMinor > 0 && <Row label="Delivery" value={money(order.shippingMinor)} />}
+          {order.taxMinor > 0 && <Row label="Tax" value={money(order.taxMinor)} />}
+          {order.discountMinor > 0 && <Row label="Discount" value={`− ${money(order.discountMinor)}`} />}
+          <View style={{ height: 1, backgroundColor: t.colors.border, marginVertical: 4 }} />
+          <Row label="Total" value={money(order.totalMinor)} bold />
+        </Card>
+
+        {actionError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{actionError}</Txt>}
+      </ScrollView>
+
+      <Modal visible={!!returnFor} transparent animationType="slide" onRequestClose={() => setReturnFor(null)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <View style={{ backgroundColor: t.colors.bgRaised, borderTopLeftRadius: t.radius.lg, borderTopRightRadius: t.radius.lg, padding: t.space.x4, gap: t.space.x3 }}>
+            <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Request a return</Txt>
+            <Muted size={t.size.xs}>Within the acceptance window you can send it back. Tell us why.</Muted>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
+              {(reasons.data ?? []).map((r) => {
+                const on = reasonCode === r.code
+                return (
+                  <Pressable key={r.code} onPress={() => setReasonCode(r.code)}
+                    style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
+                    <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{r.label}</Txt>
+                  </Pressable>
+                )
+              })}
+            </View>
+            <Field label="Note (optional)" value={note} onChangeText={setNote} multiline />
+            <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
+              <Button label="Cancel" variant="ghost" onPress={() => setReturnFor(null)} style={{ flex: 1 }} />
+              <Button label="Request return" variant="danger" onPress={submitReturn} loading={busyLine === returnFor?.id} style={{ flex: 1 }} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  )
+}
+
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  const t = useTheme()
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <Txt style={{ color: bold ? t.colors.text : t.colors.textMuted, fontWeight: (bold ? t.weight.bold : t.weight.normal) as never }}>{label}</Txt>
+      <Txt style={{ color: t.colors.text, fontWeight: (bold ? t.weight.bold : t.weight.normal) as never }}>{value}</Txt>
+    </View>
+  )
+}
