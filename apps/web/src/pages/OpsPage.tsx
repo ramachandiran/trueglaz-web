@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, isStaff, money, useApi, useSession,
   type ConsignmentItem, type ManagedListing, type ReviewRequest, type Submission, type Technician,
@@ -224,104 +224,103 @@ function ErrorRow({ error, span }: { error: string | null; span: number }) {
 
 /** Pre-approve, issue the label, or turn it away with a reason the seller sees. */
 function IntakeTable({ rows, reload }: { rows: Submission[]; reload: () => void }) {
-  const { busy, error, act } = useAction(reload)
-  const [rejecting, setRejecting] = useState<string | null>(null)
-  const [reason, setReason] = useState('')
-  const [note, setNote] = useState('')
-
   return (
     <table className="q__table">
       <thead>
         <tr>
-          <th>Submission</th>
+          <th>Item</th>
           <th>Pricing</th>
           <th>Submitted</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={4} />
-        {rows.map((s) => (
-          <tr key={s.id}>
-            <td>
-              <span className="ops__id tg-mono">{s.id.slice(0, 8)}</span>
-              <SubmissionItems submissionId={s.id} />
-            </td>
-            <td><span className="tg-badge">{s.pricingMode}</span></td>
-            <td className="tg-muted">{s.submittedAt ? dateOnly(s.submittedAt) : '—'}</td>
-            <td>
-              {rejecting === s.id ? (
-                <span className="ops__inline ops__reject">
-                  <select
-                    className="tg-select ops__reason"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    aria-label="Reason for turning it away"
-                  >
-                    <option value="">Pick a reason…</option>
-                    {INTAKE_REASONS.map((r) => (
-                      <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
-                    ))}
-                  </select>
-                  <textarea
-                    className="tg-input ops__reject-note"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Add a note for the seller — what exactly was wrong? (optional)"
-                    rows={2}
-                    maxLength={1000}
-                    aria-label="Note to the seller"
-                  />
-                  <span className="ops__inline">
-                    <button
-                      className="tg-button"
-                      disabled={!reason || busy === s.id}
-                      onClick={() => act(s.id, () => api.rejectSubmission(s.id, reason, note.trim() || undefined))}
-                    >
-                      Confirm
-                    </button>
-                    <button className="tg-button" onClick={() => { setRejecting(null); setReason(''); setNote('') }}>
-                      Cancel
-                    </button>
-                  </span>
-                </span>
-              ) : (
-                <span className="ops__inline">
-                  <button
-                    className="tg-button tg-button--primary"
-                    disabled={busy === s.id}
-                    onClick={() => act(s.id, () => api.preApprove(s.id, 'bluedart'))}
-                  >
-                    {busy === s.id ? 'Working…' : 'Pre-approve and label'}
-                  </button>
-                  <button className="tg-button" disabled={busy === s.id} onClick={() => setRejecting(s.id)}>
-                    Reject
-                  </button>
-                </span>
-              )}
-            </td>
-          </tr>
-        ))}
+        {rows.map((s) => <IntakeRow key={s.id} s={s} reload={reload} />)}
       </tbody>
     </table>
   )
 }
 
-function SubmissionItems({ submissionId }: { submissionId: string }) {
-  const view = useApi(() => api.submission(submissionId), [submissionId])
-  if (!view.data) return null
-  const items = view.data.items
+/** One submission row: the model leads, and the whole row opens the item. */
+function IntakeRow({ s, reload }: { s: Submission; reload: () => void }) {
+  const navigate = useNavigate()
+  const { busy, error, act } = useAction(reload)
+  const [rejecting, setRejecting] = useState(false)
+  const [reason, setReason] = useState('')
+  const [note, setNote] = useState('')
+  const view = useApi(() => api.submission(s.id), [s.id])
+
+  const items = view.data?.items ?? []
+  const first = items[0]
+  const title = first ? (first.modelFreeText || first.internalSku) : 'Loading…'
+  const open = () => { if (first) navigate(`/items/${first.id}`) }
+
   return (
-    <span className="ops__gear">
-      {items.map((i, n) => (
-        <span key={i.id}>
-          {n > 0 && ', '}
-          <Link to={`/items/${i.id}`} className="ops__skulink">{i.internalSku}</Link>
-        </span>
-      ))}
-      {' · '}
-      {money(items.reduce((t, i) => t + i.askingAmountMinor, 0))} asked
-    </span>
+    <>
+      <tr className={first ? 'q__row--click' : undefined} onClick={open}>
+        <td>
+          <span className="ops__model">{title}{items.length > 1 ? ` +${items.length - 1} more` : ''}</span>
+          <span className="ops__gear">
+            <span className="tg-mono">{items.map((i) => i.internalSku).join(', ')}</span>
+            {items.length > 0 && ` · ${money(items.reduce((t, i) => t + i.askingAmountMinor, 0))} asked`}
+          </span>
+        </td>
+        <td><span className="tg-badge">{s.pricingMode}</span></td>
+        <td className="tg-muted">{s.submittedAt ? dateOnly(s.submittedAt) : '—'}</td>
+        <td onClick={(e) => e.stopPropagation()}>
+          {rejecting ? (
+            <span className="ops__inline ops__reject">
+              <select
+                className="tg-select ops__reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                aria-label="Reason for turning it away"
+              >
+                <option value="">Pick a reason…</option>
+                {INTAKE_REASONS.map((r) => (
+                  <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+              <textarea
+                className="tg-input ops__reject-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Add a note for the seller — what exactly was wrong? (optional)"
+                rows={2}
+                maxLength={1000}
+                aria-label="Note to the seller"
+              />
+              <span className="ops__inline">
+                <button
+                  className="tg-button"
+                  disabled={!reason || busy === s.id}
+                  onClick={() => act(s.id, () => api.rejectSubmission(s.id, reason, note.trim() || undefined))}
+                >
+                  Confirm
+                </button>
+                <button className="tg-button" onClick={() => { setRejecting(false); setReason(''); setNote('') }}>
+                  Cancel
+                </button>
+              </span>
+            </span>
+          ) : (
+            <span className="ops__inline">
+              <button
+                className="tg-button tg-button--primary"
+                disabled={busy === s.id}
+                onClick={() => act(s.id, () => api.preApprove(s.id, 'bluedart'))}
+              >
+                {busy === s.id ? 'Working…' : 'Pre-approve and label'}
+              </button>
+              <button className="tg-button" disabled={busy === s.id} onClick={() => setRejecting(true)}>
+                Reject
+              </button>
+            </span>
+          )}
+        </td>
+      </tr>
+      {error && <tr><td colSpan={4}><p className="ops__error" role="alert">{error}</p></td></tr>}
+    </>
   )
 }
 
@@ -354,6 +353,7 @@ function InboundInfo({ submissionId }: { submissionId: string }) {
 function InboundTable({
   rows, reload,
 }: { rows: Array<{ id: string; items: ConsignmentItem[] }>; reload: () => void }) {
+  const navigate = useNavigate()
   const { busy, error, act } = useAction(reload)
   const bins = useApi(() => api.storageBins(), [])
   const bin = bins.data?.[0]
@@ -372,42 +372,41 @@ function InboundTable({
     <table className="q__table">
       <thead>
         <tr>
-          <th>Submission</th>
+          <th>Item</th>
           <th>Status</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
         <ErrorRow error={error} span={3} />
-        {rows.map((r) => (
-          <tr key={r.id}>
-            <td>
-              <span className="ops__id tg-mono">{r.id.slice(0, 8)}</span>
-              <span className="ops__gear">
-                {r.items.map((i, n) => (
-                  <span key={i.id}>
-                    {n > 0 && ', '}
-                    <Link to={`/items/${i.id}`} className="ops__skulink">{i.internalSku}</Link>
-                  </span>
-                ))}
-                {' · '}{r.items.length} item{r.items.length === 1 ? '' : 's'}
-              </span>
-              <InboundInfo submissionId={r.id} />
-            </td>
-            <td><StateBadge state={r.items[0].currentState} /></td>
-            <td>
-              <span className="ops__inline">
-                <button
-                  className="tg-button tg-button--primary"
-                  disabled={busy === r.id}
-                  onClick={() => act(r.id, () => receive(r.id))}
-                >
-                  {busy === r.id ? 'Receiving…' : `Receive into ${bin?.code ?? 'a bin'}`}
-                </button>
-              </span>
-            </td>
-          </tr>
-        ))}
+        {rows.map((r) => {
+          const first = r.items[0]
+          const title = first.modelFreeText || first.internalSku
+          return (
+            <tr key={r.id} className="q__row--click" onClick={() => navigate(`/items/${first.id}`)}>
+              <td>
+                <span className="ops__model">{title}{r.items.length > 1 ? ` +${r.items.length - 1} more` : ''}</span>
+                <span className="ops__gear">
+                  <span className="tg-mono">{r.items.map((i) => i.internalSku).join(', ')}</span>
+                  {' · '}{r.items.length} item{r.items.length === 1 ? '' : 's'}
+                </span>
+                <InboundInfo submissionId={r.id} />
+              </td>
+              <td><StateBadge state={first.currentState} /></td>
+              <td onClick={(e) => e.stopPropagation()}>
+                <span className="ops__inline">
+                  <button
+                    className="tg-button tg-button--primary"
+                    disabled={busy === r.id}
+                    onClick={() => act(r.id, () => receive(r.id))}
+                  >
+                    {busy === r.id ? 'Receiving…' : `Receive into ${bin?.code ?? 'a bin'}`}
+                  </button>
+                </span>
+              </td>
+            </tr>
+          )
+        })}
       </tbody>
     </table>
   )

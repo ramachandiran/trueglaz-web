@@ -90,6 +90,17 @@
 
 .ops__id:hover { text-decoration: underline; }
 
+/* The model name leading a queue row — what a person recognises at a glance. */
+.ops__model {
+  display: block;
+  font-weight: var(--tg-weight-medium);
+  color: var(--tg-text);
+}
+
+/* A whole row that opens the item when clicked. The action cell stops the
+   click, so its buttons still behave as buttons. */
+.q__table tbody tr.q__row--click { cursor: pointer; }
+
 /* The second line under an identifier: the SKUs in a submission, the note a
    buyer wrote, what pricing is about to take a snapshot of. */
 .ops__gear {
