@@ -117,9 +117,24 @@ export function OpsPage() {
     return hay.some((v: string | null) => v?.toLowerCase().includes(t))
   }
   const filtered = rows.filter(matches)
-  const pages = Math.ceil(filtered.length / perPage)
+
+  // Most recently touched first, so the latest activity is at the top of every
+  // queue. Each row type carries its own "when": submissions have no updatedAt,
+  // so they fall back to when they were submitted/created; an inbound box takes
+  // the newest timestamp among its items.
+  const timeOf = (r: any): number => {
+    const v = active === 'intake' ? (r.submittedAt ?? r.createdAt)
+      : active === 'inbound' ? r.items.reduce((m: string, i: ConsignmentItem) => (i.updatedAt > m ? i.updatedAt : m), '')
+      : active === 'listed' ? r.listedAt
+      : active === 'wanted' ? r.createdAt
+      : r.updatedAt
+    return v ? new Date(v).getTime() : 0
+  }
+  const sorted = [...filtered].sort((a, b) => timeOf(b) - timeOf(a))
+
+  const pages = Math.ceil(sorted.length / perPage)
   const validPage = Math.min(Math.max(1, page), pages || 1)
-  const shown = filtered.slice((validPage - 1) * perPage, validPage * perPage)
+  const shown = sorted.slice((validPage - 1) * perPage, validPage * perPage)
 
   const go = (next: string) => { setQueue(next as Queue); setPage(1); setSearch('') }
   const onSearch = (v: string) => { setSearch(v); setPage(1) }
