@@ -4,8 +4,9 @@ import { api, useApi } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
-import { Badge, Card, Muted, SectionTitle } from '../components/ui'
-import { StatusTracker, type TrackStep } from '../components/StatusTracker'
+import { Card, Muted, SectionTitle } from '../components/ui'
+import { type TrackStep } from '../components/StatusTracker'
+import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { demoAadhaar } from '../aadhaar'
 
 type Step = 'aadhaar' | 'otp'
@@ -73,30 +74,24 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
     <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
       {/* status hero */}
       {verified && !canSell && (
-        <Card style={{ borderColor: t.colors.warn, gap: t.space.x2 }}>
-          <Badge label="Awaiting approval" tone="warn" />
-          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
-            You're verified — waiting for TrueGlaz to approve your selling account
-          </Txt>
-          <Muted>Usually done within a day. We'll notify you the moment it's approved — there's nothing else you need to do.</Muted>
-        </Card>
+        <StatusHero
+          tone="warn"
+          badge="Awaiting approval"
+          title="You're verified — waiting for TrueGlaz to approve your selling account"
+          body="Usually done within a day. We'll notify you the moment it's approved — there's nothing else you need to do."
+        />
       )}
       {canSell && (
-        <Card style={{ borderColor: t.colors.good, gap: t.space.x2 }}>
-          <Badge label="Approved" tone="good" />
-          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>You're all set to sell</Txt>
+        <StatusHero tone="good" badge="Approved" title="You're all set to sell">
           <Button label="Go to selling" onPress={() => navigation.goBack()} />
-        </Card>
+        </StatusHero>
       )}
       {!verified && (
         <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>Start selling</Txt>
       )}
 
       {/* the status tracker */}
-      <View style={{ gap: t.space.x2 }}>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>YOUR PROGRESS</Txt>
-        <StatusTracker steps={steps} />
-      </View>
+      <ProgressSection steps={steps} />
 
       {/* contextual action: the eKYC form only while unverified */}
       {showForm && step === 'aadhaar' && (

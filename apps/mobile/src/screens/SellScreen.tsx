@@ -6,6 +6,7 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button } from '../components/form'
 import { Badge, Card, Empty, ErrorNote, Loading, Muted, SectionTitle, StateBadge } from '../components/ui'
+import { StatusHero } from '../components/StatusViews'
 
 export function SellScreen({ navigation }: { navigation: any }) {
   const { session } = useSession()
@@ -32,29 +33,27 @@ function SellerGate({ navigation, insets }: { navigation: any; insets: { top: nu
       <Txt style={{ color: t.colors.text, fontSize: t.size.xxl, fontWeight: t.weight.bold as never }}>Sell your gear</Txt>
 
       {verified ? (
-        <Card style={{ borderColor: t.colors.warn, gap: t.space.x3 }}>
-          <Badge label="Awaiting approval" tone="warn" />
-          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
-            You're verified — waiting for TrueGlaz to approve your selling account
-          </Txt>
-          <Muted>
-            Your identity check passed{kyc.data?.legalName ? ` as ${kyc.data.legalName}` : ''}. Our team is reviewing your
-            account to switch on selling — usually within a day. We'll notify you the moment it's approved; there's nothing
-            else you need to do.
-          </Muted>
+        <StatusHero
+          tone="warn"
+          badge="Awaiting approval"
+          title="You're verified — waiting for TrueGlaz to approve your selling account"
+          body={`Your identity check passed${kyc.data?.legalName ? ` as ${kyc.data.legalName}` : ''}. Our team is reviewing your account to switch on selling — usually within a day. We'll notify you the moment it's approved; there's nothing else you need to do.`}
+        >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
             <Txt style={{ color: t.colors.good, fontSize: t.size.sm }}>✓ Identity verified</Txt>
             <Muted size={t.size.sm}>·</Muted>
             <Txt style={{ color: t.colors.warn, fontSize: t.size.sm }}>⏳ Selling approval in progress</Txt>
           </View>
-        </Card>
+        </StatusHero>
       ) : rejected ? (
-        <Card style={{ borderColor: t.colors.bad, gap: t.space.x2 }}>
-          <Badge label="Not approved" tone="bad" />
-          <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>We couldn't verify your identity</Txt>
-          <Muted>{kyc.data?.rejectedReasonCode ? `Reason: ${kyc.data.rejectedReasonCode}. ` : ''}You can try again.</Muted>
+        <StatusHero
+          tone="bad"
+          badge="Not approved"
+          title="We couldn't verify your identity"
+          body={`${kyc.data?.rejectedReasonCode ? `Reason: ${kyc.data.rejectedReasonCode}. ` : ''}You can try again.`}
+        >
           <Button label="Try identity again" onPress={() => navigation.navigate('StartSelling')} />
-        </Card>
+        </StatusHero>
       ) : (
         <>
           <Card style={{ gap: t.space.x3 }}>

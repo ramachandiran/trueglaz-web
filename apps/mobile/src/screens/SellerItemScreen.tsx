@@ -7,9 +7,10 @@ import {
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
-import { StatusTracker, type TrackState, type TrackStep } from '../components/StatusTracker'
+import { type TrackState, type TrackStep } from '../components/StatusTracker'
+import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { Button, Field } from '../components/form'
-import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge } from '../components/ui'
+import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
 
 export function SellerItemScreen({ route }: { route: any }) {
   const t = useTheme()
@@ -37,7 +38,6 @@ export function SellerItemScreen({ route }: { route: any }) {
   if (!item.data) return null
 
   const { item: it, defects, inspections } = item.data
-  const reached = track.filter((s) => s.state === 'done' || s.state === 'current').length
   const reloadAll = () => { item.reload(); approvals.reload() }
   const isDraft = it.currentState === 'DRAFT'
 
@@ -59,14 +59,13 @@ export function SellerItemScreen({ route }: { route: any }) {
 
       {pending && <PriceDecision a={pending} onDone={reloadAll} />}
 
-      <Card style={{ gap: t.space.x3 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <SectionTitle>Where it is</SectionTitle>
-          <Muted size={t.size.xs}>{reached} of {track.length}</Muted>
-        </View>
-        <Muted>{STATE_BLURBS[it.currentState] ?? STATE_LABELS[it.currentState] ?? it.currentState}</Muted>
-        <StatusTracker steps={track} />
-      </Card>
+      <StatusHero
+        tone={stateTone(it.currentState)}
+        badge={STATE_LABELS[it.currentState] ?? it.currentState}
+        title="Where your item is"
+        body={STATE_BLURBS[it.currentState] ?? STATE_LABELS[it.currentState] ?? it.currentState}
+      />
+      <ProgressSection steps={track} />
 
       {inspections.length > 0 && (
         <Card style={{ gap: t.space.x3 }}>

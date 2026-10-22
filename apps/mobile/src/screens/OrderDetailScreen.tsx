@@ -4,8 +4,21 @@ import { api, dateTime, money, useApi, type OrderLine } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
-import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge } from '../components/ui'
-import { StatusTracker, type TrackStep } from '../components/StatusTracker'
+import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
+import { type TrackStep } from '../components/StatusTracker'
+import { ProgressSection, StatusHero } from '../components/StatusViews'
+
+/** A one-line summary of where a buyer's order line stands, for the status hero. */
+const ORDER_BLURB: Record<string, string> = {
+  open: 'Your payment is confirmed and we are getting it ready.',
+  packing: 'We are preparing your item for dispatch.',
+  dispatched: 'On its way to you.',
+  delivered: 'Delivered — accept it to finalise the sale.',
+  accepted: 'Sale finalised. Enjoy your gear!',
+  cancelled: 'This order was cancelled.',
+  return_requested: "We'll be in touch about your return.",
+  returned: 'This item was returned to TrueGlaz.',
+}
 
 /** The buyer-facing order journey, derived from the line's fulfilment state. */
 function orderSteps(orderState: string, line: OrderLine | undefined): TrackStep[] {
@@ -80,31 +93,25 @@ export function OrderDetailScreen({ route }: { route: any }) {
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
-        {justPaid && (
-          <Card style={{ borderColor: t.colors.good, gap: 4 }}>
-            <Txt style={{ color: t.colors.good, fontWeight: t.weight.bold as never }}>Payment confirmed 🎉</Txt>
-            <Muted size={t.size.xs}>We'll prepare your item for dispatch.</Muted>
-          </Card>
-        )}
-        {awaitingPayment && (
-          <Card style={{ borderColor: t.colors.warn, gap: 4 }}>
-            <Txt style={{ color: t.colors.warn, fontWeight: t.weight.bold as never }}>Awaiting payment</Txt>
-            <Muted size={t.size.xs}>This order is placed but not yet paid.</Muted>
-          </Card>
-        )}
-
         <View style={{ gap: t.space.x2 }}>
           <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{order.orderNumber}</Txt>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
-            <StateBadge state={order.state} />
-            <Muted size={t.size.xs}>{dateTime(order.createdAt)}</Muted>
-          </View>
+          <Muted size={t.size.xs}>Placed {dateTime(order.createdAt)}</Muted>
         </View>
 
-        <Card style={{ gap: t.space.x3 }}>
-          <SectionTitle>Order status</SectionTitle>
-          <StatusTracker steps={orderSteps(order.state, lines[0])} />
-        </Card>
+        {justPaid ? (
+          <StatusHero tone="good" badge="Paid" title="Payment confirmed 🎉" body="We'll prepare your item for dispatch." />
+        ) : awaitingPayment ? (
+          <StatusHero tone="warn" badge="Awaiting payment" title="This order is placed but not yet paid" />
+        ) : (
+          <StatusHero
+            tone={stateTone(lines[0]?.state ?? order.state)}
+            badge={(lines[0]?.state ?? order.state).replace(/_/g, ' ')}
+            title="Where your order is"
+            body={ORDER_BLURB[lines[0]?.state ?? order.state]}
+          />
+        )}
+
+        <ProgressSection steps={orderSteps(order.state, lines[0])} label="ORDER STATUS" />
 
         <Card style={{ gap: t.space.x3 }}>
           <SectionTitle>Items</SectionTitle>
