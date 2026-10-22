@@ -6,6 +6,7 @@ import { InspectionReport } from '../components/InspectionReport'
 import { ShipmentLegs } from '../components/ShipmentLegs'
 import { NextActions } from '../components/NextActions'
 import { SellerPriceDecision } from '../components/SellerPriceDecision'
+import { ShipToUs } from '../components/ShipToUs'
 import { AssignTechnician } from '../components/AssignTechnician'
 import { WithdrawListing } from '../components/WithdrawListing'
 import { Timeline } from '../components/Timeline'
@@ -95,6 +96,12 @@ export function ItemDetailPage() {
           <Figure label="Declared" value={item.declaredGradeCode} />
         </div>
       </header>
+
+      {/* The seller's courier handoff, while the parcel is pre-approved and
+          waiting to be sent. Only its owner sees it. */}
+      {session?.userId === item.sellerUserId && item.currentState === 'PRE_APPROVED' && (
+        <ShipToUs submissionId={item.submissionId} itemId={item.id} onDone={reload} />
+      )}
 
       {/* The requirement: completed and upcoming states on one line. */}
       <section className="tg-card detail__section">

@@ -61,6 +61,16 @@ export function NewSubmissionPage() {
     packagingAnswered: false,
   })
 
+  // Default the Type to Cameras — the most common consignment — once the
+  // categories load and nothing has been chosen or prefilled yet.
+  const defaulted = useRef(false)
+  useEffect(() => {
+    if (defaulted.current || !categories.data) return
+    if (params.get('model') || params.get('text')) { defaulted.current = true; return }
+    const cam = categories.data.find((c) => c.slug === 'cameras') ?? categories.data.find((c) => /camera/i.test(c.name))
+    if (cam) { defaulted.current = true; setItem((prev) => (prev.categoryId ? prev : { ...prev, categoryId: cam.id })) }
+  }, [categories.data, params])
+
   // Arriving from a Wanted ask: start with the model they asked for, so the seller
   // is describing the unit rather than hunting for it in the catalogue.
   const prefilled = useRef(false)

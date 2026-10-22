@@ -508,6 +508,17 @@ export const api = {
     },
   ) => post<ConsignmentItem>(`/submissions/${submissionId}/items`, body),
   submitSubmission: (id: string) => post<Submission>(`/submissions/${id}/submit`),
+  /** The seller records the courier handoff for a pre-approved parcel. */
+  shipSubmission: (
+    id: string,
+    body: {
+      arrangedBy: 'trueglaz' | 'third_party'
+      courierName?: string | null
+      consignmentId?: string | null
+      shippedDate?: string | null
+      weightGrams?: number | null
+    },
+  ) => post<InboundShipment>(`/submissions/${id}/ship`, body),
   myItems: () => get<ConsignmentItem[]>('/items/mine'),
   item: (id: string) => get<ItemDetail>(`/items/${id}`),
   myApprovals: () => get<SellerApprovalView[]>('/seller-approvals'),

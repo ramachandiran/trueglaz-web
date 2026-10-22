@@ -313,6 +313,9 @@ export interface InboundShipment {
   state: string
   shippedAt: string | null
   deliveredAt: string | null
+  arrangedBy: string | null
+  courierName: string | null
+  packageWeightGrams: number | null
 }
 
 export interface Intake {
