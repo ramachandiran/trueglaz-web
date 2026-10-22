@@ -1,3 +1,4 @@
+import * as ImageManipulator from 'expo-image-manipulator'
 import { getStorage } from './storage'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
@@ -321,20 +322,29 @@ export const api = {
 
   /**
    * Upload a photograph from React Native, where there is no browser `File`.
-   * The picked asset is a local `uri`; we read it to a blob and PUT that at the
-   * signed target, otherwise identical to `uploadPhoto`.
+   *
+   * A phone hands us whatever it captured — often HEIC, and often many
+   * megapixels — which the server cannot decode (no HEIC reader) and would be
+   * wasteful to send at full size. So every picked image is first normalised to
+   * a reasonably sized JPEG: HEIC is transcoded, anything wider than 2000px is
+   * downscaled, and it is re-compressed. The server then makes its own display
+   * renditions from that, and the UI renders it anywhere.
    */
   uploadPhotoRN: async (
-    asset: { uri: string; mimeType?: string | null; fileName?: string | null; fileSize?: number | null },
+    asset: { uri: string; width?: number; height?: number; mimeType?: string | null; fileName?: string | null; fileSize?: number | null },
     target: { ownerType: 'item' | 'order' | 'kyc' | 'model'; ownerId: string; role: string; defectId?: string },
   ): Promise<MediaView> => {
-    const blob = await (await fetch(asset.uri)).blob()
-    const contentType = asset.mimeType || blob.type
-      || (/\.png$/i.test(asset.fileName ?? '') ? 'image/png' : /\.webp$/i.test(asset.fileName ?? '') ? 'image/webp' : 'image/jpeg')
+    const MAX_EDGE = 2000
+    const actions = asset.width && asset.width > MAX_EDGE ? [{ resize: { width: MAX_EDGE } }] : []
+    const out = await ImageManipulator.manipulateAsync(asset.uri, actions, {
+      compress: 0.7,
+      format: ImageManipulator.SaveFormat.JPEG,
+    })
+    const blob = await (await fetch(out.uri)).blob()
     const intent = await post<UploadIntent>('/media/intent', {
       ...target,
-      contentType,
-      bytes: asset.fileSize ?? blob.size,
+      contentType: 'image/jpeg',
+      bytes: blob.size,
     })
     const put = await fetch(intent.url, { method: intent.method, headers: intent.headers, body: blob })
     if (!put.ok) throw new ApiError(put.status, 'The upload did not go through — please try again')
