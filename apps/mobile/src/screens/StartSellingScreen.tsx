@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ScrollView, View } from 'react-native'
-import { api, useApi } from '@trueglaz/core'
+import { Image, ScrollView, View } from 'react-native'
+import * as ImagePicker from 'expo-image-picker'
+import { api, useApi, useSession } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
@@ -14,10 +15,12 @@ type Step = 'aadhaar' | 'otp'
 export function StartSellingScreen({ navigation }: { navigation: any }) {
   const t = useTheme()
   const kyc = useApi(() => api.myKyc(), [])
+  const { session } = useSession()
 
   const [step, setStep] = useState<Step>('aadhaar')
   const [aadhaar, setAadhaar] = useState('')
   const [otp, setOtp] = useState('')
+  const [selfie, setSelfie] = useState<ImagePicker.ImagePickerAsset | null>(null)
   const [devCode, setDevCode] = useState<string | null>(null)
   const [mobileHint, setMobileHint] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -40,11 +43,23 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
 
+  const takeSelfie = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync()
+    if (!perm.granted) { setError('Allow camera access to take your verification selfie.'); return }
+    const res = await ImagePicker.launchCameraAsync({ cameraType: ImagePicker.CameraType.front, quality: 0.6 })
+    if (!res.canceled) { setSelfie(res.assets[0]); setError(null) }
+  }
+
   const verify = async () => {
     if (otp.replace(/\D/g, '').length < 4) { setError('Enter the OTP.'); return }
+    if (!selfie) { setError('Take a verification selfie to finish.'); return }
     setError(null); setBusy(true)
-    try { await api.verifyEkyc(otp.replace(/\D/g, '')); setJustVerified(true); kyc.reload() }
-    catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+    try {
+      // Attach the selfie to the identity check before verifying — once it is
+      // verified the record is locked and no longer accepts uploads.
+      if (session?.userId) await api.uploadPhotoRN(selfie, { ownerType: 'kyc', ownerId: session.userId, role: 'selfie' })
+      await api.verifyEkyc(otp.replace(/\D/g, '')); setJustVerified(true); kyc.reload()
+    } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
 
   // The journey to a working seller account, with the current position marked.
@@ -115,6 +130,14 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
             </View>
           )}
           <Field label="OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" />
+
+          <View style={{ gap: t.space.x2 }}>
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Verification selfie (required)</Txt>
+            <Muted size={t.size.xs}>A quick photo of your face confirms it's really you. We keep it with your identity check.</Muted>
+            {selfie && <Image source={{ uri: selfie.uri }} style={{ width: 120, height: 120, borderRadius: t.radius.md, alignSelf: 'flex-start' }} resizeMode="cover" />}
+            <Button label={selfie ? 'Retake selfie' : 'Take a selfie'} variant="ghost" onPress={takeSelfie} />
+          </View>
+
           {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
           <Button label="Verify" loading={busy} onPress={verify} />
         </Card>

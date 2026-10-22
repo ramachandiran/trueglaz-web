@@ -141,6 +141,7 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
     }
     if (shippedDate && !/^\d{4}-\d{2}-\d{2}$/.test(shippedDate)) { setError('Date must be YYYY-MM-DD.'); return }
     if (weightKg && !(Number(weightKg) > 0)) { setError('Weight must be a positive number.'); return }
+    if (!photo) { setError('A photo of the handed-over parcel is required.'); return }
     setError(null); setBusy(true)
     try {
       // Attach the optional package photo to the item before marking shipped,
@@ -187,8 +188,9 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
       <Field label="Package weight in kg (optional)" value={weightKg} onChangeText={setWeightKg} keyboardType="decimal-pad" />
 
       <View style={{ gap: t.space.x2 }}>
+        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Package photo (required)</Txt>
         {photo && <Image source={{ uri: photo.uri }} style={{ width: '100%', height: 160, borderRadius: t.radius.md }} resizeMode="cover" />}
-        <Button label={photo ? 'Change package photo' : 'Add package photo (optional)'} variant="ghost" onPress={pickPhoto} />
+        <Button label={photo ? 'Change package photo' : 'Add package photo'} variant="ghost" onPress={pickPhoto} />
       </View>
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}

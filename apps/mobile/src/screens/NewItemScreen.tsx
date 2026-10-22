@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { Pressable, ScrollView, Switch, View } from 'react-native'
-import { api, useApi } from '@trueglaz/core'
+import { useEffect, useMemo, useState } from 'react'
+import { Image, Pressable, ScrollView, Switch, View } from 'react-native'
+import * as ImagePicker from 'expo-image-picker'
+import { api, useApi, type ProductModel } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
@@ -13,10 +14,12 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   const categories = useApi(() => api.categories(), [])
   const brands = useApi(() => api.brands(), [])
   const grades = useApi(() => api.grades(), [])
+  const models = useApi(() => api.models(), [])
 
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [brandId, setBrandId] = useState<string | null>(null)
   const [modelFreeText, setModelFreeText] = useState('')
+  const [productModelId, setProductModelId] = useState<string | null>(null)
   const [description, setDescription] = useState('')
   const [reasonToSell, setReasonToSell] = useState('')
   const [serialNumber, setSerialNumber] = useState('')
@@ -27,8 +30,25 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   const [hasBill, setHasBill] = useState(false)
   const [hasBox, setHasBox] = useState(false)
   const [hasAccessories, setHasAccessories] = useState(false)
+  const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([])
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Default the type to Cameras — the most common consignment — once the
+  // categories load, matching the web form.
+  useEffect(() => {
+    if (categoryId || !categories.data) return
+    const cam = categories.data.find((c) => c.slug === 'cameras') ?? categories.data.find((c) => /camera/i.test(c.name))
+    if (cam) setCategoryId(cam.id)
+  }, [categories.data]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addPhotos = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!perm.granted) { setError('Allow photo access to add photos.'); return }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, selectionLimit: 12, quality: 0.7 })
+    if (!res.canceled) setPhotos((prev) => [...prev, ...res.assets].slice(0, 12))
+  }
 
   const save = async () => {
     const askingMinor = Math.round(Number(asking) * 100)
@@ -46,16 +66,22 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
     setError(null); setBusy(true)
     try {
       const created = await api.addItem(submissionId, {
-        modelFreeText: modelFreeText.trim(), categoryId, brandId,
+        productModelId, modelFreeText: modelFreeText.trim(), categoryId, brandId,
         description: description.trim(), reasonToSell: reasonToSell.trim(),
         underWarranty, hasBill, hasBox, hasAccessories,
         serialNumber: serialNumber.trim(), declaredGradeCode,
         askingAmountMinor: askingMinor, floorAmountMinor: floorMinor,
       })
-      // 1:1 flow: land straight on the item (now a draft) to review and submit
-      // for pre-approval. replace() so Back goes to the dashboard, not this form.
+      // Upload any photos onto the new item before leaving, so it never reaches
+      // the queue without the pictures the seller meant to send.
+      for (let i = 0; i < photos.length; i++) {
+        setProgress(`Uploading photo ${i + 1} of ${photos.length}…`)
+        await api.uploadPhotoRN(photos[i], { ownerType: 'item', ownerId: created.id, role: 'seller_submission' })
+      }
+      setProgress(null)
+      // 1:1 flow: land straight on the item (now a draft) to review and submit.
       navigation.replace('SellerItem', { id: created.id })
-    } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+    } catch (e) { setError((e as Error).message) } finally { setBusy(false); setProgress(null) }
   }
 
   if (categories.loading || brands.loading || grades.loading) {
@@ -63,19 +89,30 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }} keyboardShouldPersistTaps="handled">
       <Card style={{ gap: t.space.x3 }}>
         <SectionTitle>Type</SectionTitle>
-        <ChipRow options={(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))} selected={categoryId} onSelect={setCategoryId} />
+        <ChipRow options={(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))} selected={categoryId} onSelect={(v) => { setCategoryId(v); setProductModelId(null) }} />
       </Card>
 
       <Card style={{ gap: t.space.x3 }}>
         <SectionTitle>Brand</SectionTitle>
-        <ChipRow options={(brands.data ?? []).map((b) => ({ value: b.id, label: b.name }))} selected={brandId} onSelect={setBrandId} />
+        <ChipRow options={(brands.data ?? []).map((b) => ({ value: b.id, label: b.name }))} selected={brandId} onSelect={(v) => { setBrandId(v); setProductModelId(null) }} />
       </Card>
 
       <Card style={{ gap: t.space.x3 }}>
-        <Field label="Model" value={modelFreeText} onChangeText={setModelFreeText} placeholder="e.g. Sony A7 III" />
+        <View style={{ gap: t.space.x1 }}>
+          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Model</Txt>
+          <ModelAutocomplete
+            value={modelFreeText}
+            models={models.data?.content ?? []}
+            brands={brands.data ?? []}
+            brandId={brandId}
+            categoryId={categoryId}
+            onChangeText={(text) => { setModelFreeText(text); setProductModelId(null) }}
+            onPick={(m) => { setModelFreeText(m.name); setProductModelId(m.id); if (m.brandId) setBrandId(m.brandId) }}
+          />
+        </View>
         <Field label="Description" value={description} onChangeText={setDescription} multiline placeholder="Condition, shutter count, anything a buyer should know" />
         <Field label="Reason for selling" value={reasonToSell} onChangeText={setReasonToSell} multiline />
         <Field label="Serial number" value={serialNumber} onChangeText={setSerialNumber} autoCapitalize="characters" />
@@ -85,6 +122,25 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
         <SectionTitle>Condition you think it is</SectionTitle>
         <ChipRow options={(grades.data ?? []).filter((g) => g.isActive).sort((a, b) => b.rank - a.rank).map((g) => ({ value: g.code, label: g.code }))} selected={declaredGradeCode} onSelect={setDeclaredGradeCode} />
         <Muted size={t.size.xs}>We'll inspect and grade it independently — this is just your estimate.</Muted>
+      </Card>
+
+      <Card style={{ gap: t.space.x3 }}>
+        <SectionTitle>Photos</SectionTitle>
+        <Muted size={t.size.xs}>Add clear photos of the actual item — buyers trust a listing with real pictures.</Muted>
+        {photos.length > 0 && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
+            {photos.map((p, i) => (
+              <View key={p.uri + i} style={{ position: 'relative' }}>
+                <Image source={{ uri: p.uri }} style={{ width: 88, height: 88, borderRadius: t.radius.md }} resizeMode="cover" />
+                <Pressable onPress={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} hitSlop={6}
+                  style={{ position: 'absolute', top: -6, right: -6, backgroundColor: t.colors.bad, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }}>
+                  <Txt style={{ color: '#fff', fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>✕</Txt>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+        <Button label={photos.length ? 'Add more photos' : 'Add photos'} variant="ghost" onPress={addPhotos} />
       </Card>
 
       <Card style={{ gap: t.space.x3 }}>
@@ -104,8 +160,56 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       </Card>
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
+      {progress && <Muted size={t.size.xs}>{progress}</Muted>}
       <Button label="Add item" loading={busy} onPress={save} />
     </ScrollView>
+  )
+}
+
+function ModelAutocomplete({
+  value, models, brands, brandId, categoryId, onChangeText, onPick,
+}: {
+  value: string
+  models: ProductModel[]
+  brands: { id: string; name: string }[]
+  brandId: string | null
+  categoryId: string | null
+  onChangeText: (text: string) => void
+  onPick: (m: ProductModel) => void
+}) {
+  const t = useTheme()
+  const [open, setOpen] = useState(false)
+  const brandName = useMemo(() => new Map(brands.map((b) => [b.id, b.name])), [brands])
+
+  // The catalogue narrowed by what the form already knows, then token-matched on
+  // brand + model name — the same matching the web picker does.
+  const matches = useMemo(() => {
+    const pool = models.filter((m) => (!brandId || m.brandId === brandId) && (!categoryId || m.categoryId === categoryId))
+    const tokens = value.toLowerCase().split(/\s+/).filter(Boolean)
+    const exactShown = pool.some((m) => m.name.toLowerCase() === value.trim().toLowerCase())
+    if (exactShown && tokens.length) return []
+    return pool.filter((m) => {
+      if (!tokens.length) return true
+      const hay = `${brandName.get(m.brandId ?? '') ?? ''} ${m.name}`.toLowerCase()
+      return tokens.every((tok) => hay.includes(tok))
+    }).slice(0, 8)
+  }, [models, brandId, categoryId, value, brandName])
+
+  return (
+    <View>
+      <Field value={value} onChangeText={(x) => { onChangeText(x); setOpen(true) }} onFocus={() => setOpen(true)} placeholder="Start typing — e.g. R6, 70-200, X-T5" />
+      {open && matches.length > 0 && (
+        <View style={{ borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.md, marginTop: 4, overflow: 'hidden', backgroundColor: t.colors.bgRaised }}>
+          {matches.map((m) => (
+            <Pressable key={m.id} onPress={() => { onPick(m); setOpen(false) }}
+              style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x3, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
+              <Txt style={{ color: t.colors.text }}>{m.name}</Txt>
+              <Muted size={t.size.xs}>{brandName.get(m.brandId ?? '') ?? ''}</Muted>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
   )
 }
 
