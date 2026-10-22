@@ -452,6 +452,33 @@ function InboundTable({
   )
 }
 
+/** Staff picks who inspects a received unit; the technician then starts it. */
+function AssignSelect({ item, roster, reload }: { item: ConsignmentItem; roster: Technician[]; reload: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  async function set(id: string) {
+    setBusy(true); setError(null)
+    try { await api.assignTechnician(item.id, id || null); reload() }
+    catch (e) { setError(e instanceof ApiError ? e.message : 'Could not assign that') }
+    finally { setBusy(false) }
+  }
+  return (
+    <>
+      <select
+        className="tg-select"
+        aria-label="Assign a technician"
+        value={item.assignedTechnicianUserId ?? ''}
+        disabled={busy}
+        onChange={(e) => set(e.target.value)}
+      >
+        <option value="">Assign a technician…</option>
+        {roster.map((t) => <option key={t.id} value={t.id}>{t.displayName}</option>)}
+      </select>
+      {error && <p className="ops__error" role="alert">{error}</p>}
+    </>
+  )
+}
+
 /** Received and in progress in one list, because it is one bench. */
 function InspectTable({
   rows, names, roster, reload,
@@ -477,9 +504,10 @@ function InspectTable({
           <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
             <ItemCell item={i} names={names} />
             <td>{i.declaredGradeCode}</td>
-            <td>
-              {bench(i.assignedTechnicianUserId)
-                ?? <span className="tg-muted">unassigned</span>}
+            <td onClick={(e) => e.stopPropagation()}>
+              {i.currentState === 'IN_INSPECTION'
+                ? (bench(i.assignedTechnicianUserId) ?? <span className="tg-muted">unassigned</span>)
+                : <AssignSelect item={i} roster={roster} reload={reload} />}
             </td>
             <td><StateBadge state={i.currentState} /></td>
             <td onClick={(e) => e.stopPropagation()}>
