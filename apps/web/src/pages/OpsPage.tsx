@@ -47,6 +47,7 @@ export function OpsPage() {
   const staff = isStaff(session)
   const pending = useApi(() => (staff ? api.pendingSubmissions() : Promise.resolve([])), [staff])
   const received = useApi(() => api.itemQueue('RECEIVED'), [])
+  const awaitingInspection = useApi(() => api.itemQueue('AWAITING_INSPECTION'), [])
   const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
   const graded = useApi(() => (staff ? api.itemQueue('GRADED') : Promise.resolve([])), [staff])
   const wanted = useApi(() => (staff ? api.requestQueue() : Promise.resolve([])), [staff])
@@ -75,8 +76,8 @@ export function OpsPage() {
   }, [preApproved.data, inTransit.data])
 
   const inspectRows = useMemo(
-    () => [...(received.data ?? []), ...(inInspection.data ?? [])],
-    [received.data, inInspection.data],
+    () => [...(received.data ?? []), ...(awaitingInspection.data ?? []), ...(inInspection.data ?? [])],
+    [received.data, awaitingInspection.data, inInspection.data],
   )
 
   // The session arrives after the first render, so the open queue is derived
@@ -101,9 +102,9 @@ export function OpsPage() {
                // the Inspection count has to be refreshed with it or the tab
                // row contradicts the table underneath it.
                reload: () => { preApproved.reload(); inTransit.reload(); received.reload() } },
-    inspect: { ...received, data: inspectRows, error: received.error ?? inInspection.error,
-               loading: received.loading || inInspection.loading,
-               reload: () => { received.reload(); inInspection.reload() } },
+    inspect: { ...received, data: inspectRows, error: received.error ?? awaitingInspection.error ?? inInspection.error,
+               loading: received.loading || awaitingInspection.loading || inInspection.loading,
+               reload: () => { received.reload(); awaitingInspection.reload(); inInspection.reload() } },
     price: graded,
     listed,
     wanted,
@@ -505,22 +506,34 @@ function InspectTable({
             <ItemCell item={i} names={names} />
             <td>{i.declaredGradeCode}</td>
             <td onClick={(e) => e.stopPropagation()}>
-              {i.currentState === 'IN_INSPECTION'
-                ? (bench(i.assignedTechnicianUserId) ?? <span className="tg-muted">unassigned</span>)
-                : <AssignSelect item={i} roster={roster} reload={reload} />}
+              {i.currentState === 'RECEIVED'
+                ? <AssignSelect item={i} roster={roster} reload={reload} />
+                : (bench(i.assignedTechnicianUserId) ?? <span className="tg-muted">unassigned</span>)}
             </td>
             <td><StateBadge state={i.currentState} /></td>
             <td onClick={(e) => e.stopPropagation()}>
               <span className="ops__inline">
                 {i.currentState === 'IN_INSPECTION' ? (
+                  // Already on the bench — the technician resumes their report.
                   <Link className="tg-button tg-button--primary" to={`/admin/operations/inspect/${i.id}`}>Continue →</Link>
-                ) : (
+                ) : i.currentState === 'AWAITING_INSPECTION' ? (
+                  // Queued — the technician starts the checklist (not staff).
                   <button
                     className="tg-button tg-button--primary"
                     disabled={busy === i.id}
                     onClick={() => act(i.id, () => api.startInspection(i.id))}
                   >
                     {busy === i.id ? 'Starting…' : 'Start inspection'}
+                  </button>
+                ) : (
+                  // RECEIVED — staff send it to inspection once a technician is picked.
+                  <button
+                    className="tg-button tg-button--primary"
+                    disabled={busy === i.id || !i.assignedTechnicianUserId}
+                    title={i.assignedTechnicianUserId ? undefined : 'Assign a technician first'}
+                    onClick={() => act(i.id, () => api.sendToInspection(i.id, i.assignedTechnicianUserId!))}
+                  >
+                    {busy === i.id ? 'Sending…' : 'Send to inspection'}
                   </button>
                 )}
               </span>

@@ -608,6 +608,10 @@ export const api = {
   /** Hand a unit to a bench, or pass null to take the assignment off. */
   assignTechnician: (itemId: string, technicianUserId: string | null) =>
     post<ConsignmentItem>(`/items/${itemId}/assign`, { technicianUserId }),
+
+  /** Staff assign a technician and queue the unit: RECEIVED -> AWAITING_INSPECTION. */
+  sendToInspection: (itemId: string, technicianUserId: string) =>
+    post<ConsignmentItem>(`/items/${itemId}/send-to-inspection`, { technicianUserId }),
   myBench: () => get<ConsignmentItem[]>('/items/mine/to-inspect'),
   startInspection: (itemId: string) =>
     post<InspectionReport>(`/items/${itemId}/inspections?purpose=initial`),
