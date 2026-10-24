@@ -267,14 +267,17 @@ function PriceDecision({ a, onDone }: { a: SellerApprovalView; onDone: () => voi
  * HAPPY_PATH: the milestone is current while the item sits anywhere in that
  * span, and done once it has moved past `through`.
  */
-const SELLER_MILESTONES: { title: string; desc: string; from: number; through: number; states: string[] }[] = [
-  { title: 'Submitted', desc: 'Sent to TrueGlaz for pre-approval.', from: 1, through: 1, states: ['SUBMITTED'] },
-  { title: 'Pre-approved', desc: 'Inbound label issued; ship it to us.', from: 2, through: 3, states: ['PRE_APPROVED', 'IN_TRANSIT_INBOUND'] },
-  { title: 'Received at TrueGlaz', desc: 'In our custody and assigned a bin.', from: 4, through: 4, states: ['RECEIVED'] },
-  { title: 'Inspection & grading', desc: 'A technician works through the checklist.', from: 5, through: 6, states: ['IN_INSPECTION', 'GRADED'] },
-  { title: 'Price proposed', desc: 'We propose a price; you approve it.', from: 7, through: 7, states: ['PRICE_PROPOSED', 'AWAITING_SELLER_APPROVAL'] },
-  { title: 'Listed', desc: 'Live in the catalogue and buyable.', from: 8, through: 9, states: ['LISTED', 'RESERVED'] },
-  { title: 'Sold & paid', desc: 'You get paid once the sale completes.', from: 10, through: 13, states: ['SOLD', 'DISPATCHED', 'DELIVERED', 'ACCEPTED'] },
+// `from`/`through` (the HAPPY_PATH index span a milestone covers) are derived
+// from `states` at runtime, so inserting a state into HAPPY_PATH can never
+// silently shift these out of alignment.
+const SELLER_MILESTONES: { title: string; desc: string; states: string[] }[] = [
+  { title: 'Submitted', desc: 'Sent to TrueGlaz for pre-approval.', states: ['SUBMITTED'] },
+  { title: 'Pre-approved', desc: 'Inbound label issued; ship it to us.', states: ['PRE_APPROVED', 'IN_TRANSIT_INBOUND'] },
+  { title: 'Received at TrueGlaz', desc: 'In our custody and assigned a bin.', states: ['RECEIVED'] },
+  { title: 'Inspection & grading', desc: 'Queued for a technician, then checked and graded.', states: ['AWAITING_INSPECTION', 'IN_INSPECTION', 'GRADED'] },
+  { title: 'Price proposed', desc: 'We propose a price; you approve it.', states: ['PRICE_PROPOSED', 'AWAITING_SELLER_APPROVAL'] },
+  { title: 'Listed', desc: 'Live in the catalogue and buyable.', states: ['LISTED', 'RESERVED'] },
+  { title: 'Sold & paid', desc: 'You get paid once the sale completes.', states: ['SOLD', 'DISPATCHED', 'DELIVERED', 'ACCEPTED'] },
 ]
 
 // A terminal that ends the journey early marks the milestone it stalled at as
@@ -316,8 +319,13 @@ function sellerTrack(history: ItemStateTransition[], currentState: string): Trac
       return { title: terminal.title, desc: terminal.desc, state: 'cancelled', meta: date ? dayMonth(date) : undefined, tone: 'bad' }
     }
 
-    const done = reached > m.through
-    const current = !terminal && reached >= m.from && reached <= m.through
+    // The happy-path span this milestone covers, derived from its states so a
+    // newly inserted state cannot push the hardcoded numbers out of step.
+    const idxs = m.states.map(idxOf).filter((i) => i >= 0)
+    const from = Math.min(...idxs)
+    const through = Math.max(...idxs)
+    const done = reached > through
+    const current = !terminal && reached >= from && reached <= through
     const state: TrackState = done ? 'done' : current ? 'current' : 'upcoming'
     if (state === 'done') return { ...base(m), state, meta: date ? dayMonth(date) : 'Done', tone: 'ok' }
     if (state === 'current') return { ...base(m), state, meta: 'In progress', tone: 'now' }
