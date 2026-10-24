@@ -4,8 +4,8 @@ import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, ty
 import { InventoryTable } from '../components/InventoryTable'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { KycDocuments } from '../components/KycDocuments'
-import './AdminPage.css'
 import './OpsPage.css'
+import '../components/dashboard.css'
 
 const REJECT_REASONS = [
   { code: 'details_unclear', label: 'Document details unclear' },
@@ -48,12 +48,22 @@ export function AdminPage() {
     } finally { setBusy(null) }
   }
 
+  const w = useBooks(inventory.data, recon.data)
+
   return (
-    <div className="ops admin">
-      <h1 className="ops__title">Dashboard</h1>
+    <div className="ops dash">
+      <header className="dash__head">
+        <div>
+          <h1 className="dash__title">Money &amp; oversight</h1>
+          <p className="dash__date">Inventory, escrow and payouts — the whole platform in one place</p>
+        </div>
+        <p className={`dash__pill${w.attention > 0 ? '' : ' dash__pill--clear'}`}>
+          {w.attention > 0 ? `${w.attention} need${w.attention === 1 ? 's' : ''} a decision` : 'Nothing needs a decision'}
+        </p>
+      </header>
       {error && <p className="ops__error" role="alert">{error}</p>}
 
-      <Widgets inventory={inventory.data} recon={recon.data} />
+      <Widgets w={w} recon={recon.data} />
 
       <section className="tg-card ops__card">
         <h2 className="ops__subtitle">Inventory</h2>
@@ -137,22 +147,18 @@ export function AdminPage() {
 }
 
 /**
- * The numbers worth knowing before scrolling.
- *
- * Counted from the inventory rather than asked for separately, so a tile and
- * the table beneath it can never disagree — a dashboard whose headline says
- * eleven above a list of nine is worse than no headline.
+ * The numbers worth knowing before scrolling, counted from the inventory
+ * rather than asked for separately, so a tile and the table beneath it can
+ * never disagree — a dashboard whose headline says eleven above a list of nine
+ * is worse than no headline.
  */
-function Widgets({ inventory, recon }: {
-  inventory: InventoryRow[] | null
-  recon: { escrow_liability_held: number; seller_payable_total: number } | null
-}) {
-  const w = useMemo(() => {
+function useBooks(inventory: InventoryRow[] | null, _recon: unknown) {
+  return useMemo(() => {
     const rows = inventory ?? []
     const inState = (...states: string[]) => rows.filter((r) => states.includes(r.currentState))
 
     const onSale = inState('LISTED', 'RESERVED')
-    const inCustody = inState('RECEIVED', 'IN_INSPECTION', 'GRADED', 'PRICE_PROPOSED', 'AWAITING_SELLER_APPROVAL', 'LISTED', 'RESERVED', 'UNSOLD_REVIEW')
+    const inCustody = inState('RECEIVED', 'AWAITING_INSPECTION', 'IN_INSPECTION', 'GRADED', 'PRICE_PROPOSED', 'AWAITING_SELLER_APPROVAL', 'LISTED', 'RESERVED', 'UNSOLD_REVIEW')
     const inbound = inState('SUBMITTED', 'PRE_APPROVED', 'IN_TRANSIT_INBOUND')
     const sold = inState('SOLD', 'DISPATCHED', 'DELIVERED', 'ACCEPTED', 'ARCHIVED')
 
@@ -178,33 +184,40 @@ function Widgets({ inventory, recon }: {
       attention: attention.length,
     }
   }, [inventory])
+}
 
+type Books = ReturnType<typeof useBooks>
+
+function Widgets({ w, recon }: {
+  w: Books
+  recon: { escrow_liability_held: number; seller_payable_total: number } | null
+}) {
   return (
-    <div className="admin__widgets">
-      <Widget label="Units, all time" value={String(w.total)} note={`${w.inbound} on their way in`} />
-      <Widget label="On sale now" value={String(w.onSale)} note={money(w.onSaleValue)} />
-      <Widget label="In our custody" value={String(w.inCustody)} note="received, graded or listed" />
-      <Widget label="Sold" value={String(w.sold)} note={money(w.soldValue)} />
+    <div className="dash__kpis dash__kpis--auto">
+      <Widget label="On sale now" value={String(w.onSale)} note={`${money(w.onSaleValue)} of stock`} lead />
+      <Widget label="Held in escrow" value={recon ? money(recon.escrow_liability_held) : '—'} note="paid for, not yet accepted" />
+      <Widget label="Owed to sellers" value={recon ? money(recon.seller_payable_total) : '—'} note="after commission" />
       <Widget
         label="Needs a decision"
         value={String(w.attention)}
         note="quarantine, approvals, returns, payouts"
         tone={w.attention > 0 ? 'warn' : undefined}
       />
-      <Widget label="Held in escrow" value={recon ? money(recon.escrow_liability_held) : '—'} note="paid for, not yet accepted" />
-      <Widget label="Owed to sellers" value={recon ? money(recon.seller_payable_total) : '—'} note="after commission" />
+      <Widget label="Sold" value={String(w.sold)} note={money(w.soldValue)} />
+      <Widget label="In our custody" value={String(w.inCustody)} note="received, graded or listed" />
+      <Widget label="Units, all time" value={String(w.total)} note={`${w.inbound} on their way in`} />
     </div>
   )
 }
 
-function Widget({ label, value, note, tone }: {
-  label: string; value: string; note?: string; tone?: 'warn'
+function Widget({ label, value, note, tone, lead }: {
+  label: string; value: string; note?: string; tone?: 'warn'; lead?: boolean
 }) {
   return (
-    <div className={`admin__widget${tone ? ` admin__widget--${tone}` : ''}`}>
-      <span className="admin__widget-label">{label}</span>
-      <strong className="admin__widget-value">{value}</strong>
-      {note && <span className="admin__widget-note tg-muted">{note}</span>}
+    <div className={`dash__card dash__kpi${lead ? ' dash__kpi--lead' : ''}${tone ? ` dash__kpi--${tone}` : ''}`}>
+      <span className="dash__kpi-lab">{label}</span>
+      <span className="dash__kpi-val">{value}</span>
+      {note && <span className="dash__kpi-note">{note}</span>}
     </div>
   )
 }
