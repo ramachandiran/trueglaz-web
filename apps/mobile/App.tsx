@@ -27,6 +27,7 @@ import { SellerItemScreen } from './src/screens/SellerItemScreen'
 import { NewItemScreen } from './src/screens/NewItemScreen'
 import { StartSellingScreen } from './src/screens/StartSellingScreen'
 import { ProfileScreen } from './src/screens/ProfileScreen'
+import { VaultScreen } from './src/screens/VaultScreen'
 import { NotificationsScreen } from './src/screens/NotificationsScreen'
 import { AddressesScreen } from './src/screens/AddressesScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
@@ -72,6 +73,7 @@ function MainTabs() {
       <Tabs.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: tabIcon('home-outline', 'home') }} />
       <Tabs.Screen name="Shop" component={CatalogScreen} options={{ tabBarIcon: tabIcon('search-outline', 'search') }} />
       <Tabs.Screen name="Sell" component={SellScreen} options={{ tabBarIcon: tabIcon('cube-outline', 'cube') }} />
+      <Tabs.Screen name="Vault" component={VaultScreen} options={{ tabBarIcon: tabIcon('shield-checkmark-outline', 'shield-checkmark') }} />
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ tabBarIcon: tabIcon('receipt-outline', 'receipt') }} />
       <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread }} />
     </Tabs.Navigator>
