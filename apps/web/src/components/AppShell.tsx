@@ -6,6 +6,7 @@ import { AccountMenu } from './AccountMenu'
 import { DemoNotice } from './DemoNotice'
 import { HeaderSearch } from './HeaderSearch'
 import { Logo, LogoMark } from './Logo'
+import { VaultIntro } from './VaultIntro'
 import './AppShell.css'
 
 export function AppShell() {
@@ -16,6 +17,7 @@ export function AppShell() {
       <main className="shell__main">
         <Outlet />
       </main>
+      <VaultIntro />
       <footer className="shell__footer">
         <LogoMark className="shell__footer-mark" />
         <span className="tg-muted">TrueGlaz — every unit graded, every defect disclosed.</span>

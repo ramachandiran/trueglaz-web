@@ -73,3 +73,13 @@
   .gear { flex-wrap: wrap; }
   .vault__grid2 { grid-template-columns: 1fr; }
 }
+
+/* first-run intro */
+.vault-intro { max-width: 440px; gap: var(--tg-space-3); }
+.vault-intro__eyebrow { font-size: var(--tg-text-xs); font-weight: var(--tg-weight-bold); letter-spacing: 0.7px; text-transform: uppercase; color: var(--tg-accent); }
+.vault-intro__title { font-size: 24px; font-weight: var(--tg-weight-bold); letter-spacing: -0.4px; }
+.vault-intro__lead { font-size: var(--tg-text-sm); color: var(--tg-text-muted); line-height: 1.5; }
+.vault-intro__value { background: var(--tg-brand); color: var(--tg-on-brand); border-radius: var(--tg-radius-md); padding: var(--tg-space-4); display: flex; flex-direction: column; gap: 3px; }
+.vault-intro__amt { font-size: 32px; font-weight: var(--tg-weight-bold); letter-spacing: -1px; line-height: 1.1; }
+.vault-intro__range { font-size: var(--tg-text-sm); color: var(--tg-on-brand-muted); }
+.vault-intro__fine { font-size: var(--tg-text-xs); color: var(--tg-on-brand-muted); margin-top: 6px; }
