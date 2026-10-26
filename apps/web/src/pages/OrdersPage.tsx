@@ -331,11 +331,31 @@ function LineRow({
             just been sold. The catalogue is the honest version of that wish —
             searched by the model, since a search for the category's name
             ("Cameras") matches no title and always came back empty. */}
+        <AddToVaultButton line={line} />
         <Link className="tg-button line__action" to={`/catalog?q=${encodeURIComponent(modelText(line.title))}`}>
           Find another like this
         </Link>
       </div>
     </div>
+  )
+}
+
+/** Once a buyer owns a unit, one tap files it in their Gear Vault, pre-filled. */
+const OWNED_STATES = ['delivered', 'accepted']
+function AddToVaultButton({ line }: { line: OrderLineSummary }) {
+  const [status, setStatus] = useState<'idle' | 'adding' | 'added' | 'error'>('idle')
+  if (!OWNED_STATES.includes(line.state)) return null
+  if (status === 'added') {
+    return <span className="line__action" style={{ color: 'var(--tg-good)', fontWeight: 600, alignSelf: 'center' }}>✓ In your Gear Vault</span>
+  }
+  async function add() {
+    setStatus('adding')
+    try { await api.addGearFromOrderLine(line.id); setStatus('added') } catch { setStatus('error') }
+  }
+  return (
+    <button type="button" className="tg-button line__action" disabled={status === 'adding'} onClick={add}>
+      {status === 'adding' ? 'Adding…' : status === 'error' ? 'Try again' : '+ Add to my Vault'}
+    </button>
   )
 }
 

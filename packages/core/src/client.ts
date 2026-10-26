@@ -738,4 +738,6 @@ export const api = {
   insuranceQuote: (id: string) => get<InsuranceQuote>(`/vault/${id}/insurance/quote`),
   buyInsurance: (id: string, planCode: string, sumInsuredMinor?: number) =>
     post<VaultPolicy>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
+  /** Add a just-bought item to the vault, pre-filled from the order line. */
+  addGearFromOrderLine: (lineId: string) => post<VaultItem>(`/vault/from-order-line/${lineId}`),
 }
