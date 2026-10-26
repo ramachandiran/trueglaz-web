@@ -8,6 +8,27 @@ import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, state
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 
+/** Once a buyer owns a unit, one tap files it in their Gear Vault, pre-filled. */
+const OWNED_STATES = ['delivered', 'accepted']
+function VaultAdd({ lineId, state }: { lineId: string; state: string }) {
+  const t = useTheme()
+  const [status, setStatus] = useState<'idle' | 'adding' | 'added' | 'error'>('idle')
+  if (!OWNED_STATES.includes(state)) return null
+  if (status === 'added') {
+    return <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>✓ In your Gear Vault</Txt>
+  }
+  async function add() {
+    setStatus('adding')
+    try { await api.addGearFromOrderLine(lineId); setStatus('added') } catch { setStatus('error') }
+  }
+  return (
+    <Button
+      label={status === 'adding' ? 'Adding…' : status === 'error' ? 'Try again' : '+ Add to my Vault'}
+      variant="ghost" onPress={add} loading={status === 'adding'}
+    />
+  )
+}
+
 /** A one-line summary of where a buyer's order line stands, for the status hero. */
 const ORDER_BLURB: Record<string, string> = {
   open: 'Your payment is confirmed and we are getting it ready.',
@@ -133,6 +154,7 @@ export function OrderDetailScreen({ route }: { route: any }) {
               )}
               {l.state === 'return_requested' && <Muted size={t.size.xs}>Return requested — we'll be in touch.</Muted>}
               {l.acceptedAt && <Muted size={t.size.xs}>Accepted {dateTime(l.acceptedAt)}</Muted>}
+              <VaultAdd lineId={l.id} state={l.state} />
             </View>
           ))}
         </Card>
