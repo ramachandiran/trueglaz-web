@@ -1630,3 +1630,71 @@ export interface CompanyProfileView {
   updatedAt: string | null
   updatedBy: string | null
 }
+
+// -- Gear Vault --------------------------------------------------------------
+
+export interface VaultValuation {
+  lowMinor: number
+  midMinor: number
+  highMinor: number
+  sampleCount: number
+  /** sold | asking | msrp */
+  basis: string
+}
+
+export interface VaultPolicy {
+  id: string
+  policyNo: string
+  planCode: string
+  insurerName: string | null
+  sumInsuredMinor: number
+  totalMinor: number
+  status: 'active' | 'lapsed' | 'cancelled'
+  startsOn: string
+  expiresOn: string
+  /** false while a stub stands in for a real insurer. */
+  live: boolean
+}
+
+export interface VaultItem {
+  id: string
+  modelLabel: string
+  productModelId: string | null
+  serialLast4: string | null
+  purchaseCostMinor: number | null
+  purchaseDate: string | null
+  warrantyExpiry: string | null
+  warrantySource: 'derived' | 'manual' | 'none'
+  warrantyStatus: 'unknown' | 'active' | 'expiring' | 'expired'
+  notes: string | null
+  valuation: VaultValuation | null
+  policy: VaultPolicy | null
+}
+
+export interface AddGearInput {
+  productModelId?: string | null
+  modelFreeText?: string | null
+  serialNumber?: string | null
+  purchaseCostMinor?: number | null
+  purchaseDate?: string | null
+  warrantyExpiry?: string | null
+  notes?: string | null
+}
+
+export interface InsurancePlan {
+  code: string
+  title: string
+  blurb: string
+  premiumMinor: number
+  taxMinor: number
+  totalMinor: number
+  covers: string[]
+}
+
+export interface InsuranceQuote {
+  itemId: string
+  modelLabel: string
+  sumInsuredMinor: number
+  providerLive: boolean
+  plans: InsurancePlan[]
+}

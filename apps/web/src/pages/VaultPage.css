@@ -1,0 +1,75 @@
+/* The Gear Vault — a signed-in user's owned-gear list, value and insurance. */
+
+.vault { display: flex; flex-direction: column; gap: var(--tg-space-5); max-width: 860px; }
+
+.vault__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--tg-space-4); flex-wrap: wrap; }
+.vault__title { font-size: var(--tg-text-xl); font-weight: var(--tg-weight-bold); letter-spacing: -0.4px; }
+.vault__sub { color: var(--tg-text-muted); font-size: var(--tg-text-sm); margin-top: 2px; }
+
+/* hero */
+.vault__hero { background: var(--tg-brand); color: var(--tg-on-brand); border-radius: var(--tg-radius-lg); padding: var(--tg-space-4) var(--tg-space-5); display: flex; flex-direction: column; gap: 2px; }
+.vault__hero-lab { font-size: var(--tg-text-sm); color: var(--tg-on-brand-muted); }
+.vault__hero-val { font-size: 34px; font-weight: var(--tg-weight-bold); letter-spacing: -1px; line-height: 1.1; }
+.vault__hero-note { font-size: var(--tg-text-xs); color: var(--tg-on-brand-muted); margin-top: 4px; }
+
+/* empty */
+.vault__empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-lg); padding: var(--tg-space-6); }
+.vault__empty strong { font-size: var(--tg-text-lg); }
+.vault__empty span { color: var(--tg-text-muted); font-size: var(--tg-text-sm); }
+.vault__empty button { margin-top: 8px; }
+
+/* list */
+.vault__list { list-style: none; display: flex; flex-direction: column; gap: var(--tg-space-3); }
+.gear { display: flex; gap: var(--tg-space-3); align-items: center; background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-lg); padding: 14px 16px; }
+.gear__thumb { width: 46px; height: 46px; border-radius: 12px; background: var(--tg-bg-sunken); color: var(--tg-brand); display: flex; align-items: center; justify-content: center; flex: none; }
+.gear__main { flex: 1; min-width: 0; }
+.gear__name { font-size: var(--tg-text-md, 15px); font-weight: var(--tg-weight-bold); }
+.gear__meta { font-size: var(--tg-text-xs); color: var(--tg-text-muted); margin-top: 2px; }
+.gear__serial { font-family: var(--tg-font-mono); }
+.gear__warr { display: flex; align-items: center; gap: 7px; font-size: var(--tg-text-xs); color: var(--tg-text-muted); margin-top: 5px; }
+.gear__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tg-text-muted); flex: none; }
+.gear__warr--active .gear__dot { background: var(--tg-good); }
+.gear__warr--expiring { color: var(--tg-warn); }
+.gear__warr--expiring .gear__dot { background: var(--tg-warn); }
+.gear__right { text-align: right; flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.gear__val { font-size: var(--tg-text-lg); font-weight: var(--tg-weight-bold); }
+.gear__range { font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
+.gear__indic { color: var(--tg-warn); }
+.gear__actions { display: flex; gap: 6px; margin-top: 6px; }
+.gear__insured { font-size: var(--tg-text-xs); font-weight: var(--tg-weight-bold); color: var(--tg-good); background: var(--tg-good-soft); border-radius: var(--tg-radius-pill); padding: 5px 11px; align-self: center; }
+
+/* small / ghost button variants, local to the vault */
+.tg-button--small { padding: 6px 12px; font-size: var(--tg-text-sm); }
+.tg-button--ghost { background: transparent; border: 1px solid var(--tg-border); color: var(--tg-text-muted); }
+
+/* modal */
+.vault__overlay { position: fixed; inset: 0; background: rgba(20, 30, 40, 0.45); display: flex; align-items: center; justify-content: center; padding: var(--tg-space-4); z-index: 50; }
+.vault__modal { background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-lg); padding: var(--tg-space-5); width: 100%; max-width: 460px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; gap: var(--tg-space-3); }
+.vault__modal-head { display: flex; justify-content: space-between; align-items: center; }
+.vault__modal-head h2 { font-size: var(--tg-text-lg); font-weight: var(--tg-weight-bold); }
+.vault__x { background: none; border: none; font-size: 24px; line-height: 1; color: var(--tg-text-muted); cursor: pointer; }
+.vault__field { display: flex; flex-direction: column; gap: 5px; font-size: var(--tg-text-sm); }
+.vault__field > span { font-weight: var(--tg-weight-medium); color: var(--tg-text-muted); }
+.vault__grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--tg-space-3); }
+.vault__results { list-style: none; border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); overflow: hidden; margin-top: -4px; }
+.vault__results li + li { border-top: 1px solid var(--tg-border); }
+.vault__results button { width: 100%; text-align: left; background: none; border: none; padding: 9px 12px; font-size: var(--tg-text-sm); color: var(--tg-text); cursor: pointer; }
+.vault__results button:hover { background: var(--tg-bg-sunken); }
+.vault__hint { font-size: var(--tg-text-xs); color: var(--tg-text-muted); line-height: 1.4; }
+.vault__fineprint { font-size: var(--tg-text-xs); color: var(--tg-text-muted); line-height: 1.4; }
+.vault__modal-actions { display: flex; justify-content: flex-end; gap: var(--tg-space-2); margin-top: var(--tg-space-2); }
+
+/* plans */
+.vault__plans { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.vault__plan { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--tg-border); border-radius: var(--tg-radius-md); padding: 11px 13px; cursor: pointer; }
+.vault__plan--sel { border-color: var(--tg-accent); background: var(--tg-accent-soft); }
+.vault__plan-main { flex: 1; display: flex; flex-direction: column; }
+.vault__plan-blurb { font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
+.vault__plan-price { font-weight: var(--tg-weight-bold); white-space: nowrap; }
+.vault__plan-price small { color: var(--tg-text-muted); font-weight: var(--tg-weight-medium); }
+.vault__consent { display: flex; gap: 9px; align-items: flex-start; font-size: var(--tg-text-sm); line-height: 1.4; }
+
+@media (max-width: 560px) {
+  .gear { flex-wrap: wrap; }
+  .vault__grid2 { grid-template-columns: 1fr; }
+}

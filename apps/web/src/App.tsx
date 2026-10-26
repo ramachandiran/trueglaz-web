@@ -33,6 +33,7 @@ import { OrdersPage } from './pages/OrdersPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SellPage } from './pages/SellPage'
 import { SellerHomePage } from './pages/SellerHomePage'
+import { VaultPage } from './pages/VaultPage'
 import { WantedPage } from './pages/WantedPage'
 import { SignInPage } from './pages/SignInPage'
 
@@ -79,6 +80,7 @@ export function App() {
           {/* Buyer */}
           <Route path="/checkout/:listingId" element={<Guard need="signed-in"><CheckoutPage /></Guard>} />
           <Route path="/orders" element={<Guard need="signed-in"><OrdersPage /></Guard>} />
+          <Route path="/vault" element={<Guard need="signed-in"><VaultPage /></Guard>} />
           <Route path="/profile" element={<Guard need="signed-in"><ProfilePage /></Guard>} />
 
           {/* Seller */}

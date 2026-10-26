@@ -9,6 +9,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
+  VaultItem, AddGearInput, VaultPolicy, InsuranceQuote,
 } from './types'
 
 /**
@@ -727,4 +728,14 @@ export const api = {
   itemShipments: (itemId: string) => get<ShipmentLeg[]>(`/items/${itemId}/shipments`),
   shipToSeller: (itemId: string, body: { courierCode: string; trackingNumber?: string | null; notes?: string | null }) =>
     post(`/items/${itemId}/ship-to-seller`, body),
+
+  // -- gear vault ----------------------------------------------------------
+  vault: () => get<VaultItem[]>('/vault'),
+  vaultItem: (id: string) => get<VaultItem>(`/vault/${id}`),
+  addGear: (body: AddGearInput) => post<VaultItem>('/vault', body),
+  updateGear: (id: string, body: AddGearInput) => put<VaultItem>(`/vault/${id}`, body),
+  removeGear: (id: string) => del<void>(`/vault/${id}`),
+  insuranceQuote: (id: string) => get<InsuranceQuote>(`/vault/${id}/insurance/quote`),
+  buyInsurance: (id: string, planCode: string, sumInsuredMinor?: number) =>
+    post<VaultPolicy>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
 }

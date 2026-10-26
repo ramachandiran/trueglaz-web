@@ -100,6 +100,12 @@ function Header() {
 
         <div className={`shell__tools${isAuthPage ? ' shell__tools--auth' : ''}`}>
           {!isAuthPage && session && !isOpsUser && (
+            <NavLink to="/vault" className="shell__tool">
+              <span className="shell__tool-top">My</span>
+              <span className="shell__tool-main">Gear Vault</span>
+            </NavLink>
+          )}
+          {!isAuthPage && session && !isOpsUser && (
             <NavLink to="/orders" className="shell__tool">
               <span className="shell__tool-top">Returns &amp;</span>
               <span className="shell__tool-main">Orders</span>
