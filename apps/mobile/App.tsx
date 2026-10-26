@@ -28,6 +28,7 @@ import { NewItemScreen } from './src/screens/NewItemScreen'
 import { StartSellingScreen } from './src/screens/StartSellingScreen'
 import { ProfileScreen } from './src/screens/ProfileScreen'
 import { VaultScreen } from './src/screens/VaultScreen'
+import { VaultIntro } from './src/screens/VaultIntro'
 import { NotificationsScreen } from './src/screens/NotificationsScreen'
 import { AddressesScreen } from './src/screens/AddressesScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
@@ -61,6 +62,7 @@ function MainTabs() {
   useEffect(() => navigation.addListener('focus', () => notif.reload()), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
   const unread = notif.data?.unread || undefined
   return (
+    <>
     <Tabs.Navigator
       screenOptions={{
         headerShown: false,
@@ -77,6 +79,8 @@ function MainTabs() {
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ tabBarIcon: tabIcon('receipt-outline', 'receipt') }} />
       <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread }} />
     </Tabs.Navigator>
+    <VaultIntro />
+    </>
   )
 }
 
