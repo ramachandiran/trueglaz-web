@@ -1660,13 +1660,16 @@ export interface VaultItem {
   id: string
   modelLabel: string
   productModelId: string | null
-  serialLast4: string | null
-  purchaseCostMinor: number | null
+  /** false = server-managed encryption (default); true = PIN/E2EE (future opt-in). */
+  e2ee: boolean
+  /** Decrypted for the owner; stored encrypted at rest. */
+  serial: string | null
+  costMinor: number | null
+  notes: string | null
   purchaseDate: string | null
   warrantyExpiry: string | null
   warrantySource: 'derived' | 'manual' | 'none'
   warrantyStatus: 'unknown' | 'active' | 'expiring' | 'expired'
-  notes: string | null
   valuation: VaultValuation | null
   policy: VaultPolicy | null
 }
@@ -1674,11 +1677,20 @@ export interface VaultItem {
 export interface AddGearInput {
   productModelId?: string | null
   modelFreeText?: string | null
-  serialNumber?: string | null
-  purchaseCostMinor?: number | null
+  /** Sent over TLS and sealed by the server at rest. */
+  serial?: string | null
+  costMinor?: number | null
+  notes?: string | null
   purchaseDate?: string | null
   warrantyExpiry?: string | null
-  notes?: string | null
+}
+
+/** The user's wrapped vault key, as stored by the server (all opaque to it). */
+export interface VaultKeyBlobsStored {
+  kdf: string
+  salt: string
+  wrappedDekPin: string
+  wrappedDekRecovery: string
 }
 
 export interface InsurancePlan {

@@ -73,7 +73,7 @@ export function VaultPage() {
 
 /** The midpoint estimate, or the purchase cost when we have no valuation yet. */
 function estimate(it: VaultItem): number {
-  return it.valuation?.midMinor ?? it.purchaseCostMinor ?? 0
+  return it.valuation?.midMinor ?? it.costMinor ?? 0
 }
 
 const WARRANTY_LABEL: Record<VaultItem['warrantyStatus'], string> = {
@@ -96,8 +96,8 @@ function GearCard({ item, onInsure, onChanged }: { item: VaultItem; onInsure: ()
       <div className="gear__main">
         <div className="gear__name">{item.modelLabel}</div>
         <div className="gear__meta">
-          {item.purchaseCostMinor != null && <>Bought {money(item.purchaseCostMinor)}{item.purchaseDate ? ` · ${dateOnly(item.purchaseDate)}` : ''}</>}
-          {item.serialLast4 && <span className="gear__serial"> · ser ••{item.serialLast4}</span>}
+          {item.costMinor != null && <>Bought {money(item.costMinor)}{item.purchaseDate ? ` · ${dateOnly(item.purchaseDate)}` : ''}</>}
+          {item.serial && <span className="gear__serial"> · ser ••{item.serial.slice(-4)}</span>}
         </div>
         <div className={`gear__warr gear__warr--${item.warrantyStatus}`}>
           <span className="gear__dot" aria-hidden="true" />
@@ -157,8 +157,8 @@ function AddGearModal({ onClose, onAdded }: { onClose: () => void; onAdded: () =
       await api.addGear({
         productModelId: model?.id ?? null,
         modelFreeText: model ? null : q.trim() || null,
-        serialNumber: serial.trim() || null,
-        purchaseCostMinor: cost ? Math.round(parseFloat(cost) * 100) : null,
+        serial: serial.trim() || null,
+        costMinor: cost ? Math.round(parseFloat(cost) * 100) : null,
         purchaseDate: date || null,
         notes: notes.trim() || null,
       })
