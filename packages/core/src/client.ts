@@ -9,7 +9,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, VaultPolicy, InsuranceQuote, VaultKeyBlobsStored,
+  VaultItem, AddGearInput, VaultPolicy, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -746,4 +746,9 @@ export const api = {
     catch (e) { if (e instanceof ApiError && e.status === 404) return null; throw e }
   },
   setVaultKey: (blobs: VaultKeyBlobsStored) => put<void>('/vault/key', blobs),
+  /** Turn on the PIN: store the wrapped key and the re-encrypted existing items. */
+  activateVaultE2ee: (key: VaultKeyBlobsStored, items: MigratedItem[]) =>
+    post<void>('/vault/e2ee/activate', { key, items }),
+  /** Turn the PIN off (clears unreadable encrypted fields; used for a full reset). */
+  disableVaultE2ee: () => del<void>('/vault/e2ee'),
 }

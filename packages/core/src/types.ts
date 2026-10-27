@@ -1660,12 +1660,16 @@ export interface VaultItem {
   id: string
   modelLabel: string
   productModelId: string | null
-  /** false = server-managed encryption (default); true = PIN/E2EE (future opt-in). */
+  /** false = server-managed encryption (default); true = PIN/E2EE. */
   e2ee: boolean
-  /** Decrypted for the owner; stored encrypted at rest. */
+  /** Default mode: decrypted for the owner. E2EE mode: these are null. */
   serial: string | null
   costMinor: number | null
   notes: string | null
+  /** E2EE mode: opaque blobs the client decrypts. Default mode: null. */
+  serialCipher: string | null
+  costCipher: string | null
+  notesCipher: string | null
   purchaseDate: string | null
   warrantyExpiry: string | null
   warrantySource: 'derived' | 'manual' | 'none'
@@ -1677,12 +1681,24 @@ export interface VaultItem {
 export interface AddGearInput {
   productModelId?: string | null
   modelFreeText?: string | null
-  /** Sent over TLS and sealed by the server at rest. */
+  /** Default mode: plaintext, sealed server-side. */
   serial?: string | null
   costMinor?: number | null
   notes?: string | null
+  /** E2EE mode: already-encrypted blobs. */
+  serialCipher?: string | null
+  costCipher?: string | null
+  notesCipher?: string | null
   purchaseDate?: string | null
   warrantyExpiry?: string | null
+}
+
+/** One item's re-encrypted fields, sent when turning on the PIN. */
+export interface MigratedItem {
+  id: string
+  serialCipher?: string | null
+  costCipher?: string | null
+  notesCipher?: string | null
 }
 
 /** The user's wrapped vault key, as stored by the server (all opaque to it). */
