@@ -10,7 +10,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, VaultPolicy, InsuranceQuote,
+  VaultItem, AddGearInput, VaultPolicy, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -768,4 +768,15 @@ export const api = {
     post<VaultPolicy>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
   /** Add a just-bought item to the vault, pre-filled from the order line. */
   addGearFromOrderLine: (lineId: string) => post<VaultItem>(`/vault/from-order-line/${lineId}`),
+  /** The wrapped vault key for this user, or null if the vault isn't secured yet. */
+  vaultKey: async (): Promise<VaultKeyBlobsStored | null> => {
+    try { return await get<VaultKeyBlobsStored>('/vault/key') }
+    catch (e) { if (e instanceof ApiError && e.status === 404) return null; throw e }
+  },
+  setVaultKey: (blobs: VaultKeyBlobsStored) => put<void>('/vault/key', blobs),
+  /** Turn on the PIN: store the wrapped key and the re-encrypted existing items. */
+  activateVaultE2ee: (key: VaultKeyBlobsStored, items: MigratedItem[]) =>
+    post<void>('/vault/e2ee/activate', { key, items }),
+  /** Turn the PIN off (clears unreadable encrypted fields; used for a full reset). */
+  disableVaultE2ee: () => del<void>('/vault/e2ee'),
 }
