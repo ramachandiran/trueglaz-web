@@ -12,7 +12,7 @@ import { Card, Empty, ErrorNote, Loading, Muted } from '../components/ui'
 
 /** The midpoint estimate, or the purchase cost when there is no valuation yet. */
 function estimate(it: VaultItem): number {
-  return it.valuation?.midMinor ?? it.purchaseCostMinor ?? 0
+  return it.valuation?.midMinor ?? it.costMinor ?? 0
 }
 
 const WARRANTY_LABEL: Record<VaultItem['warrantyStatus'], string> = {
@@ -66,10 +66,10 @@ export function VaultScreen() {
               <Card style={{ flexDirection: 'row', gap: t.space.x3, alignItems: 'center' }}>
                 <View style={{ flex: 1 }}>
                   <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{item.modelLabel}</Txt>
-                  {item.purchaseCostMinor != null && (
+                  {item.costMinor != null && (
                     <Muted size={t.size.xs}>
-                      Bought {money(item.purchaseCostMinor)}{item.purchaseDate ? ` · ${dateOnly(item.purchaseDate)}` : ''}
-                      {item.serialLast4 ? ` · ser ••${item.serialLast4}` : ''}
+                      Bought {money(item.costMinor)}{item.purchaseDate ? ` · ${dateOnly(item.purchaseDate)}` : ''}
+                      {item.serial ? ` · ser ••${item.serial.slice(-4)}` : ''}
                     </Muted>
                   )}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
@@ -128,8 +128,8 @@ function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => vo
       await api.addGear({
         productModelId: model?.id ?? null,
         modelFreeText: model ? null : q.trim() || null,
-        serialNumber: serial.trim() || null,
-        purchaseCostMinor: cost ? Math.round(parseFloat(cost) * 100) : null,
+        serial: serial.trim() || null,
+        costMinor: cost ? Math.round(parseFloat(cost) * 100) : null,
         purchaseDate: date.trim() || null,
       })
       onAdded()

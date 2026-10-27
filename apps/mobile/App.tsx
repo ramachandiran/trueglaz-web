@@ -1,3 +1,4 @@
+import 'react-native-get-random-values' // crypto.getRandomValues for the vault's client-side encryption; must load first
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import { View } from 'react-native'
