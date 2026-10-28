@@ -1,17 +1,21 @@
 import { useEffect } from 'react'
 import { FlatList, Pressable, RefreshControl, View } from 'react-native'
-import { api, relative, useApi, type Notification } from '@trueglaz/core'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import { api, relative, useApi, type Notification, type Theme } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
-import { Badge, Empty, ErrorNote, Loading, Muted } from '../components/ui'
+import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
 
-const toneFor = (category: string): 'good' | 'warn' | 'bad' | 'accent' | 'neutral' => {
+type IconName = React.ComponentProps<typeof Ionicons>['name']
+
+/** Icon + colour per notification category, so a payout reads differently from a security alert at a glance. */
+function categoryStyle(category: string, t: Theme): { icon: IconName; fg: string; bg: string } {
   switch (category) {
-    case 'payouts': return 'good'
-    case 'security': return 'bad'
-    case 'selling': return 'accent'
-    case 'buying': return 'warn'
-    default: return 'neutral'
+    case 'payouts': return { icon: 'cash-outline', fg: t.colors.good, bg: t.colors.goodSoft }
+    case 'security': return { icon: 'shield-outline', fg: t.colors.bad, bg: t.colors.badSoft }
+    case 'selling': return { icon: 'pricetag-outline', fg: t.colors.accent, bg: t.colors.accentSoft }
+    case 'buying': return { icon: 'bag-handle-outline', fg: t.colors.warn, bg: t.colors.warnSoft }
+    default: return { icon: 'notifications-outline', fg: t.colors.textMuted, bg: t.colors.bgSunken }
   }
 }
 
@@ -52,22 +56,25 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
           ListEmptyComponent={<Empty title="No notifications" hint="Updates on your orders, items, prices and payouts show up here." />}
           renderItem={({ item: n }) => {
             const unread = !n.readAt
+            const cs = categoryStyle(n.category, t)
             return (
-              <Pressable onPress={() => markOne(n)}>
-                <View style={{
-                  backgroundColor: unread ? t.colors.accentSoft : t.colors.bgRaised,
-                  borderWidth: 1, borderColor: unread ? t.colors.accent : t.colors.border,
-                  borderRadius: t.radius.lg, padding: t.space.x3, gap: t.space.x2,
+              <Pressable onPress={() => markOne(n)}
+                style={{
+                  flexDirection: 'row', gap: t.space.x3, alignItems: 'flex-start',
+                  backgroundColor: unread ? t.colors.bgRaised : t.colors.bg,
+                  borderWidth: 1, borderColor: unread ? t.colors.borderStrong : t.colors.border,
+                  borderRadius: 16, padding: 14,
                 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.space.x2 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flex: 1 }}>
-                      {unread && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.colors.accent }} />}
-                      <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, flex: 1 }}>{n.title}</Txt>
-                    </View>
-                    <Badge label={n.category} tone={toneFor(n.category)} />
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: cs.bg, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name={cs.icon} size={19} color={cs.fg} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}>
+                    <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.md, flex: 1 }}>{n.title}</Txt>
+                    {unread && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.colors.accent }} />}
                   </View>
-                  <Muted size={t.size.sm}>{n.body}</Muted>
-                  <Muted size={t.size.xs}>{relative(n.at)}</Muted>
+                  <Muted size={t.size.sm} style={{ marginTop: 3, lineHeight: 19 }}>{n.body}</Muted>
+                  <Muted size={t.size.xs} style={{ marginTop: 5 }}>{relative(n.at)}</Muted>
                 </View>
               </Pressable>
             )
