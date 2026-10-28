@@ -97,7 +97,7 @@ function AppStack() {
       }}
     >
       <Root.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
-      <Root.Screen name="Listing" component={ListingDetailScreen} options={{ title: 'Listing' }} />
+      <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false }} />
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Order' }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
