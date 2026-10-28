@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FlatList, Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native'
+import { Alert, FlatList, Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import {
   api, money, dateOnly, useApi, ApiError,
   type VaultItem, type InsuranceQuote, type InsurancePlan, type ProductModel,
@@ -8,7 +9,7 @@ import {
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
-import { Card, Empty, ErrorNote, Loading, Muted } from '../components/ui'
+import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
 import {
   isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
   enableE2ee, unlockVault, changePin, recoverVault, disableE2ee,
@@ -60,17 +61,32 @@ export function VaultScreen() {
   const total = useMemo(() => items.reduce((n, it) => n + estimate(it), 0), [items])
   const insured = items.filter((i) => i.policy).length
 
-  function warrantyColor(s: VaultItem['warrantyStatus']) {
-    return s === 'active' ? t.colors.good : s === 'expiring' ? t.colors.warn : t.colors.textMuted
+  function afterPrivacy() { setPrivacy(null); rePrivacy(); reload() }
+
+  function remove(item: VaultItem) {
+    Alert.alert('Remove gear', `Remove ${item.modelLabel} from your vault?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: async () => { try { await api.removeGear(item.id); reload() } catch { /* ignore */ } } },
+    ])
   }
 
-  function afterPrivacy() { setPrivacy(null); rePrivacy(); reload() }
+  const warrantyTone = (s: VaultItem['warrantyStatus']) =>
+    s === 'active' ? { fg: t.colors.good, bg: t.colors.goodSoft }
+      : s === 'expiring' ? { fg: t.colors.warn, bg: t.colors.warnSoft }
+      : { fg: t.colors.textMuted, bg: t.colors.bgSunken }
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <View style={{ padding: t.space.x4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>Gear Vault</Txt>
-        <Button label="+ Add" onPress={() => setAdding(true)} style={{ paddingVertical: t.space.x2 }} />
+      <View style={{ padding: t.space.x4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View style={{ flex: 1 }}>
+          <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never, letterSpacing: -0.5 }}>Gear Vault</Txt>
+          <Muted size={t.size.xs}>What you own — valued from our market</Muted>
+        </View>
+        <Pressable onPress={() => setAdding(true)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.colors.cta, borderRadius: 13, paddingVertical: 11, paddingHorizontal: 16 }}>
+          <Ionicons name="add" size={17} color={t.colors.onCta} />
+          <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never, fontSize: t.size.sm }}>Add gear</Txt>
+        </Pressable>
       </View>
 
       <View style={{ paddingHorizontal: t.space.x4, paddingBottom: t.space.x2 }}>
@@ -96,52 +112,72 @@ export function VaultScreen() {
           refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={t.colors.accent} />}
           contentContainerStyle={{ padding: t.space.x4, gap: t.space.x3, paddingBottom: insets.bottom + t.space.x6 }}
           ListHeaderComponent={items.length > 0 ? (
-            <View style={{ backgroundColor: t.colors.brand, borderRadius: t.radius.lg, padding: t.space.x4, marginBottom: t.space.x1 }}>
-              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm }}>Estimated market value</Txt>
-              <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xxl, fontWeight: t.weight.bold as never }}>~{money(total)}</Txt>
-              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs, marginTop: 2 }}>
+            <View style={{ backgroundColor: t.colors.brand, borderRadius: 22, padding: t.space.x5, marginBottom: t.space.x3, overflow: 'hidden' }}>
+              <View style={{ position: 'absolute', right: -28, top: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: '#ffffff10' }} />
+              <View style={{ position: 'absolute', right: t.space.x4, top: t.space.x4 }}>
+                <Ionicons name="shield-checkmark-outline" size={30} color="#ffffff33" />
+              </View>
+              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>Estimated market value</Txt>
+              <Txt style={{ color: t.colors.onBrand, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -1, marginTop: 2 }}>~{money(total)}</Txt>
+              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs, marginTop: 7 }}>
                 {items.length} item{items.length === 1 ? '' : 's'} · {insured} insured · indicative, final price set at a free inspection
               </Txt>
             </View>
           ) : null}
           ListEmptyComponent={<Empty title="Your vault is empty" hint="Add gear you own to track its value, warranty and insurance." />}
           renderItem={({ item }) => {
-            const v = item.valuation
             const cost = shownCost(item)
             const serial = shownSerial(item)
             const locked = hasLockedFields(item)
+            const estVal = item.valuation?.midMinor ?? cost ?? null
+            const wt = warrantyTone(item.warrantyStatus)
             return (
-              <Card style={{ flexDirection: 'row', gap: t.space.x3, alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                  <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{item.modelLabel}</Txt>
-                  {locked ? (
-                    <Txt style={{ color: t.colors.warn, fontSize: t.size.xs, marginTop: 2 }}>🔒 Locked — unlock to see price &amp; serial</Txt>
-                  ) : cost != null && (
-                    <Muted size={t.size.xs}>
-                      Bought {money(cost)}{item.purchaseDate ? ` · ${dateOnly(item.purchaseDate)}` : ''}
-                      {serial ? ` · ser ••${serial.slice(-4)}` : ''}
-                    </Muted>
-                  )}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: warrantyColor(item.warrantyStatus) }} />
-                    <Txt style={{ color: warrantyColor(item.warrantyStatus), fontSize: t.size.xs }}>{WARRANTY_LABEL[item.warrantyStatus]}</Txt>
+              <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, padding: t.space.x4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+                  <View style={{ width: 52, height: 52, borderRadius: 13, backgroundColor: t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="camera-outline" size={24} color={t.colors.brand} />
                   </View>
-                </View>
-                <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                  <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
-                    {v ? `~${money(v.midMinor)}` : '…'}
-                  </Txt>
-                  {item.policy ? (
-                    <View style={{ backgroundColor: t.colors.goodSoft, borderRadius: t.radius.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
-                      <Txt style={{ color: t.colors.good, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>
-                        ✓ Insured{!item.policy.live ? ' (demo)' : ''}
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Txt numberOfLines={1} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: -0.2 }}>{item.modelLabel}</Txt>
+                    {locked ? (
+                      <Txt style={{ color: t.colors.warn, fontSize: t.size.xs, marginTop: 2 }}>🔒 Locked — unlock to see price &amp; serial</Txt>
+                    ) : cost != null ? (
+                      <Muted size={t.size.xs} style={{ marginTop: 2 }}>
+                        Bought {money(cost)}{item.purchaseDate ? ` · ${dateOnly(item.purchaseDate)}` : ''}{serial ? ` · ser ••${serial.slice(-4)}` : ''}
+                      </Muted>
+                    ) : null}
+                    <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7, backgroundColor: wt.bg, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: wt.fg }} />
+                      <Txt style={{ color: wt.fg, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>
+                        {WARRANTY_LABEL[item.warrantyStatus]}{item.warrantyExpiry && item.warrantyStatus !== 'expired' ? ` · to ${dateOnly(item.warrantyExpiry)}` : ''}
                       </Txt>
                     </View>
-                  ) : (
-                    <Button label="Insure" variant="ghost" onPress={() => setInsuring(item)} style={{ paddingVertical: 6, paddingHorizontal: 12 }} />
-                  )}
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, letterSpacing: -0.3 }}>
+                      {estVal != null ? `~${money(estVal)}` : locked ? '🔒' : '…'}
+                    </Txt>
+                    <Muted size={t.size.xs}>est. value</Muted>
+                  </View>
                 </View>
-              </Card>
+                <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x3, paddingTop: t.space.x3, borderTopWidth: 1, borderTopColor: t.colors.border }}>
+                  {item.policy ? (
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: t.colors.goodSoft, borderRadius: 11, paddingVertical: 10 }}>
+                      <Ionicons name="checkmark-circle" size={16} color={t.colors.good} />
+                      <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Insured{!item.policy.live ? ' (demo)' : ''}</Txt>
+                    </View>
+                  ) : (
+                    <Pressable onPress={() => setInsuring(item)}
+                      style={{ flex: 1, alignItems: 'center', borderWidth: 1.5, borderColor: t.colors.accent, borderRadius: 11, paddingVertical: 9 }}>
+                      <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Insure this gear</Txt>
+                    </Pressable>
+                  )}
+                  <Pressable onPress={() => remove(item)}
+                    style={{ width: 46, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: t.colors.border, borderRadius: 11 }}>
+                    <Ionicons name="trash-outline" size={18} color={t.colors.textMuted} />
+                  </Pressable>
+                </View>
+              </View>
             )
           }}
         />
