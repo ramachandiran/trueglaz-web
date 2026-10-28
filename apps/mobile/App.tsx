@@ -99,7 +99,7 @@ function AppStack() {
       <Root.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
       <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false }} />
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
-      <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Order' }} />
+      <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
       <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />

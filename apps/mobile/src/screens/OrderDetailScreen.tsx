@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Modal, Pressable, ScrollView, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, dateTime, money, useApi, type OrderLine } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
-import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
+import { Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 
@@ -15,17 +17,25 @@ function VaultAdd({ lineId, state }: { lineId: string; state: string }) {
   const [status, setStatus] = useState<'idle' | 'adding' | 'added' | 'error'>('idle')
   if (!OWNED_STATES.includes(state)) return null
   if (status === 'added') {
-    return <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>✓ In your Gear Vault</Txt>
+    return (
+      <View style={{ marginTop: t.space.x2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: t.colors.goodSoft, borderRadius: 12, paddingVertical: 11 }}>
+        <Ionicons name="checkmark-circle" size={16} color={t.colors.good} />
+        <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>In your Gear Vault</Txt>
+      </View>
+    )
   }
   async function add() {
     setStatus('adding')
     try { await api.addGearFromOrderLine(lineId); setStatus('added') } catch { setStatus('error') }
   }
   return (
-    <Button
-      label={status === 'adding' ? 'Adding…' : status === 'error' ? 'Try again' : '+ Add to my Vault'}
-      variant="ghost" onPress={add} loading={status === 'adding'}
-    />
+    <Pressable onPress={add} disabled={status === 'adding'}
+      style={{ marginTop: t.space.x2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.colors.accent, borderRadius: 12, paddingVertical: 10, opacity: status === 'adding' ? 0.6 : 1 }}>
+      <Ionicons name={status === 'error' ? 'refresh' : 'shield-outline'} size={16} color={t.colors.accent} />
+      <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>
+        {status === 'adding' ? 'Adding…' : status === 'error' ? 'Try again' : 'Add to my Gear Vault'}
+      </Txt>
+    </Pressable>
   )
 }
 
@@ -75,8 +85,9 @@ function orderSteps(orderState: string, line: OrderLine | undefined): TrackStep[
   })
 }
 
-export function OrderDetailScreen({ route }: { route: any }) {
+export function OrderDetailScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
+  const insets = useSafeAreaInsets()
   const id: string = route.params.id
   const justPaid: boolean = !!route.params?.justPaid
   const awaitingPayment: boolean = !!route.params?.awaitingPayment
@@ -113,7 +124,14 @@ export function OrderDetailScreen({ route }: { route: any }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+      <View style={{ paddingTop: insets.top + t.space.x1, paddingHorizontal: t.space.x4, paddingBottom: t.space.x2, flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={8}
+          style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="chevron-back" size={21} color={t.colors.text} />
+        </Pressable>
+        <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Order</Txt>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x7 }}>
         <View style={{ gap: t.space.x2 }}>
           <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{order.orderNumber}</Txt>
           <Muted size={t.size.xs}>Placed {dateTime(order.createdAt)}</Muted>
@@ -136,13 +154,20 @@ export function OrderDetailScreen({ route }: { route: any }) {
 
         <Card style={{ gap: t.space.x3 }}>
           <SectionTitle>Items</SectionTitle>
-          {lines.map((l) => (
-            <View key={l.id} style={{ gap: t.space.x2, borderBottomWidth: 1, borderBottomColor: t.colors.border, paddingBottom: t.space.x3 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Badge label={l.gradeCodeAtSale} tone="accent" />
-                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{money(l.itemPriceMinor)}</Txt>
+          {lines.map((l, i) => (
+            <View key={l.id} style={{ gap: t.space.x2, marginTop: i === 0 ? 0 : t.space.x3, paddingTop: i === 0 ? 0 : t.space.x3, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: t.colors.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="camera-outline" size={22} color={t.colors.brand} />
+                </View>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
+                  <View style={{ backgroundColor: t.colors.goodSoft, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 8 }}>
+                    <Txt style={{ color: t.colors.good, fontSize: 10.5, fontWeight: t.weight.bold as never }}>Grade {l.gradeCodeAtSale}</Txt>
+                  </View>
+                  <StateBadge state={l.state} />
+                </View>
+                <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{money(l.itemPriceMinor)}</Txt>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}><StateBadge state={l.state} /></View>
               {l.acceptanceWindowEndsAt && l.state === 'delivered' && (
                 <Muted size={t.size.xs}>Accept by {dateTime(l.acceptanceWindowEndsAt)}, or it accepts automatically.</Muted>
               )}
