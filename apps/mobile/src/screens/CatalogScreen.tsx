@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import {
-  api, applyFilters, buildModelIndex, countBy, EMPTY_FILTERS, money, resolveModel,
+  api, applyFilters, buildModelIndex, countBy, EMPTY_FILTERS, money, relative, resolveModel,
   useApi, activeFilterCount, singularCategory, type Facetable, type Filters, type Listing, type ProductModel, type Sort,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { mobileFontFamily } from '../theme/fonts'
 import { useTheme } from '../theme/ThemeContext'
-import { Badge, Empty, ErrorNote, Loading, Muted } from '../components/ui'
+import { Empty, ErrorNote, Loading } from '../components/ui'
 import { API_ORIGIN } from '../config'
 
 /**
@@ -67,27 +68,25 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <View style={[styles.bar, { padding: t.space.x4, paddingBottom: t.space.x3 }]}>
-        <TextInput
-          value={filters.q}
-          onChangeText={(q) => setFilters({ ...filters, q })}
-          placeholder="Search cameras, lenses…"
-          placeholderTextColor={t.colors.textMuted}
-          style={{
-            flex: 1, color: t.colors.text, fontFamily: mobileFontFamily.regular,
-            backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border,
-            borderRadius: t.radius.md, paddingHorizontal: t.space.x3, paddingVertical: t.space.x2,
-          }}
-        />
-        <Pressable
-          onPress={() => setSheetOpen(true)}
-          style={{
-            paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.md,
-            backgroundColor: active ? t.colors.accent : t.colors.bgRaised,
-            borderWidth: 1, borderColor: active ? t.colors.accent : t.colors.border,
-          }}
-        >
-          <Txt style={{ color: active ? t.colors.onAccent : t.colors.text }}>⚙︎ Filters{active ? ` (${active})` : ''}</Txt>
+      <View style={{ flexDirection: 'row', gap: t.space.x3, padding: t.space.x4, paddingBottom: t.space.x3 }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.space.x2, backgroundColor: t.colors.bgSunken, borderRadius: 15, paddingHorizontal: t.space.x4, height: 52 }}>
+          <Ionicons name="search" size={18} color={t.colors.textMuted} />
+          <TextInput
+            value={filters.q}
+            onChangeText={(q) => setFilters({ ...filters, q })}
+            placeholder="Search cameras, lenses…"
+            placeholderTextColor={t.colors.textMuted}
+            style={{ flex: 1, color: t.colors.text, fontFamily: mobileFontFamily.regular, fontSize: 14 }}
+          />
+        </View>
+        <Pressable onPress={() => setSheetOpen(true)}
+          style={{ width: 52, height: 52, borderRadius: 15, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="options-outline" size={23} color={t.colors.onCta} />
+          {active > 0 && (
+            <View style={{ position: 'absolute', top: -5, right: -5, minWidth: 19, height: 19, borderRadius: 10, backgroundColor: t.colors.brand, borderWidth: 2, borderColor: t.colors.bg, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+              <Txt style={{ color: t.colors.onBrand, fontSize: 10, fontWeight: t.weight.bold as never }}>{active}</Txt>
+            </View>
+          )}
         </Pressable>
       </View>
 
@@ -158,59 +157,46 @@ function ListingCard({
   const t = useTheme()
   const title = listing.title.split('·')[0].trim()
   return (
-    <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.lg, overflow: 'hidden' }}>
-      <Pressable onPress={onOpen} style={{ flexDirection: 'row', gap: t.space.x3, padding: t.space.x3 }}>
-        <View style={{ width: 104, height: 104, borderRadius: t.radius.md, overflow: 'hidden', backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, overflow: 'hidden' }}>
+      <Pressable onPress={onOpen} style={{ flexDirection: 'row', gap: t.space.x3, padding: 13 }}>
+        <View style={{ width: 100, height: 100, borderRadius: 13, overflow: 'hidden', backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
           {image
-            ? <Image source={{ uri: image }} style={{ width: 104, height: 104 }} resizeMode="cover" />
-            : <Txt style={{ fontSize: 30 }}>📷</Txt>}
-          <View style={{ position: 'absolute', top: 6, left: 6 }}>
-            <Badge label={listing.gradeCode} tone={top ? 'good' : 'accent'} />
+            ? <Image source={{ uri: image }} style={{ width: 100, height: 100 }} resizeMode="cover" />
+            : <Ionicons name="camera-outline" size={34} color={t.colors.textMuted} />}
+          <View style={{ position: 'absolute', top: 7, left: 7, backgroundColor: top ? t.colors.good : t.colors.accent, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 8 }}>
+            <Txt style={{ color: '#fff', fontSize: 10.5, fontWeight: t.weight.bold as never }}>{listing.gradeCode}</Txt>
           </View>
         </View>
 
-        <View style={{ flex: 1, gap: 2 }}>
-          <Txt numberOfLines={2} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{title}</Txt>
-          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{money(listing.priceMinor, listing.currency)}</Txt>
-          <View style={{ marginTop: 2, gap: 1 }}>
-            <Spec label="Condition" value={gradeText ? `${listing.gradeCode} · ${gradeText}` : listing.gradeCode} />
-            {brand && <Spec label="Brand" value={brand} />}
-            {category && <Spec label="Type" value={singularCategory(category)} />}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Txt numberOfLines={2} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: -0.2, lineHeight: 19 }}>{title}</Txt>
+          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, letterSpacing: -0.4, marginTop: 4 }}>{money(listing.priceMinor, listing.currency)}</Txt>
+          {(brand || category) && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 5 }}>
+              {brand && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>{brand}</Txt>}
+              {brand && category && <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: t.colors.textMuted }} />}
+              {category && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>{singularCategory(category)}</Txt>}
+            </View>
+          )}
+          <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, backgroundColor: t.colors.goodSoft, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
+            <Ionicons name="checkmark-circle" size={12} color={t.colors.good} />
+            <Txt style={{ color: t.colors.good, fontSize: 11, fontWeight: t.weight.bold as never }}>Grade {listing.gradeCode}{gradeText ? ` · ${gradeText}` : ''}</Txt>
           </View>
         </View>
       </Pressable>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderTopWidth: 1, borderTopColor: t.colors.border }}>
-        <Txt style={{ color: t.colors.good, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>✓ TrueGlaz inspected</Txt>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>★ Graded {listing.gradeCode}</Txt>
-      </View>
-
-      <View style={{ flexDirection: 'row', gap: t.space.x2, padding: t.space.x3, paddingTop: 0 }}>
-        <CardButton label="Buy now" tone="cta" onPress={onBuy} />
-        <CardButton label="View details" tone="ghost" onPress={onOpen} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 13, paddingVertical: 11, borderTopWidth: 1, borderTopColor: t.colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="time-outline" size={13} color={t.colors.textMuted} />
+          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>
+            {listing.publishedAt ? `Listed ${relative(listing.publishedAt)}` : 'Recently listed'}
+          </Txt>
+        </View>
+        <Pressable onPress={onBuy} style={{ backgroundColor: t.colors.cta, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 18 }}>
+          <Txt style={{ color: t.colors.onCta, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Buy now</Txt>
+        </Pressable>
       </View>
     </View>
-  )
-}
-
-function Spec({ label, value }: { label: string; value: string }) {
-  const t = useTheme()
-  return (
-    <View style={{ flexDirection: 'row' }}>
-      <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, width: 74 }}>{label}</Txt>
-      <Txt numberOfLines={1} style={{ color: t.colors.text, fontSize: t.size.xs, fontWeight: t.weight.medium as never, flex: 1 }}>{value}</Txt>
-    </View>
-  )
-}
-
-function CardButton({ label, tone, onPress }: { label: string; tone: 'cta' | 'ghost'; onPress: () => void }) {
-  const t = useTheme()
-  const cta = tone === 'cta'
-  return (
-    <Pressable onPress={onPress}
-      style={{ flex: 1, alignItems: 'center', paddingVertical: t.space.x2, borderRadius: t.radius.md, borderWidth: 1, backgroundColor: cta ? t.colors.cta : 'transparent', borderColor: cta ? t.colors.cta : t.colors.border }}>
-      <Txt style={{ color: cta ? t.colors.onCta : t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.sm }}>{label}</Txt>
-    </Pressable>
   )
 }
 
