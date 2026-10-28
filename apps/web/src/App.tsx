@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
+import { StaffShell } from './components/StaffShell'
 import { storedMarketView } from './state/useMarketView'
 import { Guard } from './components/Guard'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
@@ -90,11 +91,15 @@ export function App() {
           <Route path="/sell/:id" element={<Guard need="signed-in"><NewSubmissionPage /></Guard>} />
           <Route path="/items/:id" element={<Guard need="signed-in"><ItemDetailPage /></Guard>} />
 
-          {/* The admin / staff console, all under /admin.
-              The URL prefix is organisational, not a permission: each screen
-              keeps its own role guard, so a technician reaching /admin/operations
-              is let in and /admin/money is not. /admin itself is the console
-              home (what used to be /today), open to staff and admin alike. */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+
+        {/* The admin / staff console, all under /admin, in its own sidebar shell.
+            The URL prefix is organisational, not a permission: each screen
+            keeps its own role guard, so a technician reaching /admin/operations
+            is let in and /admin/money is not. /admin itself is the console
+            home (what used to be /today), open to staff and admin alike. */}
+        <Route element={<StaffShell />}>
           <Route path="/admin" element={<Guard need="staff"><StaffHomePage /></Guard>} />
           <Route path="/admin/inventory" element={<Guard need="staff"><InventoryDashboard /></Guard>} />
           <Route path="/admin/operations" element={<Guard need="ops"><OpsPage /></Guard>} />
@@ -121,8 +126,6 @@ export function App() {
           <Route path="/admin/models" element={<Navigate to="/admin/settings/models" replace />} />
           <Route path="/admin/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
           <Route path="/admin/audit" element={<Guard need="admin"><AuditPage /></Guard>} />
-
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
