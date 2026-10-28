@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Alert, Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { api, isSeller, money, STATE_LABELS, useApi, useSession } from '@trueglaz/core'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import { api, isSeller, money, STATE_LABELS, useApi, useSession, type Theme } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button } from '../components/form'
-import { Badge, Card, Empty, ErrorNote, Loading, Muted, SectionTitle, StateBadge } from '../components/ui'
+import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
 import { StatusHero } from '../components/StatusViews'
 
 export function SellScreen({ navigation }: { navigation: any }) {
@@ -20,17 +21,14 @@ function SellerGate({ navigation, insets }: { navigation: any; insets: { top: nu
   const kyc = useApi(() => api.myKyc(), [])
   const { refresh } = useSession()
 
-  // Re-check identity whenever we land back here (e.g. returning from eKYC), so a
-  // just-verified seller sees "awaiting approval", not "verify identity" again.
   useEffect(() => navigation.addListener('focus', () => { kyc.reload(); refresh() }), [navigation, kyc.reload, refresh])
 
-  // Verified but not yet a seller = waiting on staff approval, NOT "go verify".
   const verified = kyc.data?.status === 'verified'
   const rejected = kyc.data?.status === 'rejected'
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ paddingTop: insets.top + t.space.x3, padding: t.space.x4, gap: t.space.x4 }}>
-      <Txt style={{ color: t.colors.text, fontSize: t.size.xxl, fontWeight: t.weight.bold as never }}>Sell your gear</Txt>
+      <Txt style={{ color: t.colors.text, fontSize: t.size.xxl, fontWeight: t.weight.bold as never, letterSpacing: -0.6 }}>Sell your gear</Txt>
 
       {verified ? (
         <StatusHero
@@ -40,9 +38,9 @@ function SellerGate({ navigation, insets }: { navigation: any; insets: { top: nu
           body={`Your identity check passed${kyc.data?.legalName ? ` as ${kyc.data.legalName}` : ''}. Our team is reviewing your account to switch on selling — usually within a day. We'll notify you the moment it's approved; there's nothing else you need to do.`}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
-            <Txt style={{ color: t.colors.good, fontSize: t.size.sm }}>✓ Identity verified</Txt>
+            <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>✓ Identity verified</Txt>
             <Muted size={t.size.sm}>·</Muted>
-            <Txt style={{ color: t.colors.warn, fontSize: t.size.sm }}>⏳ Selling approval in progress</Txt>
+            <Txt style={{ color: t.colors.warn, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>⏳ Selling approval in progress</Txt>
           </View>
         </StatusHero>
       ) : rejected ? (
@@ -56,16 +54,18 @@ function SellerGate({ navigation, insets }: { navigation: any; insets: { top: nu
         </StatusHero>
       ) : (
         <>
-          <Card style={{ gap: t.space.x3 }}>
-            <SectionTitle>How it works</SectionTitle>
+          <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, padding: t.space.x5, gap: t.space.x4 }}>
+            <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>How selling works</Txt>
             {['Verify your identity (one-time KYC)', 'TrueGlaz reviews and enables your selling account', 'Submit your item and ship it to us', 'We inspect and grade it, then propose a price', 'You approve, we list it, and you get paid when it sells'].map((s, i) => (
-              <View key={i} style={{ flexDirection: 'row', gap: t.space.x3 }}>
-                <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>{i + 1}</Txt>
-                <Txt style={{ color: t.colors.text, flex: 1 }}>{s}</Txt>
+              <View key={i} style={{ flexDirection: 'row', gap: t.space.x3, alignItems: 'flex-start' }}>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: t.colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                  <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never, fontSize: t.size.xs }}>{i + 1}</Txt>
+                </View>
+                <Txt style={{ color: t.colors.text, flex: 1, fontSize: t.size.sm, lineHeight: 20 }}>{s}</Txt>
               </View>
             ))}
-          </Card>
-          <Button label="Start selling — verify identity" onPress={() => navigation.navigate('StartSelling')} />
+          </View>
+          <Button label="Start selling — verify identity" variant="cta" onPress={() => navigation.navigate('StartSelling')} />
         </>
       )}
 
@@ -88,22 +88,19 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
     return unsub
   }, [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // A readable name for an item: the catalog model, else what the seller typed.
   const nameOf = (i: { productModelId: string | null; modelFreeText: string | null; description: string | null; internalSku: string }) =>
     (i.productModelId ? models.data?.content.find((m) => m.id === i.productModelId)?.name : null)
     || i.modelFreeText || i.description || i.internalSku
 
-  // Item ids waiting on a price decision from the seller.
   const pendingIds = new Set((approvals.data ?? []).filter((a) => a.approval.decision === 'pending').map((a) => a.approval.consignmentItemId))
-  // What the seller must do next, if anything — used to flag the row.
   const actionOf = (i: { id: string; currentState: string }) =>
     pendingIds.has(i.id) ? 'Price to approve' : i.currentState === 'DRAFT' ? 'Draft — finish & submit' : null
+
+  const pending = useMemo(() => (approvals.data ?? []).filter((a) => a.approval.decision === 'pending'), [approvals.data])
 
   const startSubmission = async () => {
     setCreateError(null); setCreating(true)
     try {
-      // One item per submission (1:1), so create the submission behind the scenes
-      // and go straight to the item form. 'guided' lets TrueGlaz propose the price.
       const s = await api.createSubmission('guided')
       navigation.navigate('NewItem', { submissionId: s.id })
     } catch (e) {
@@ -117,65 +114,78 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ paddingTop: insets.top + t.space.x3, padding: t.space.x4, gap: t.space.x5, paddingBottom: t.space.x7 }}>
-      <Txt style={{ color: t.colors.text, fontSize: t.size.xxl, fontWeight: t.weight.bold as never }}>Selling</Txt>
+      <Txt style={{ color: t.colors.text, fontSize: t.size.xxl, fontWeight: t.weight.bold as never, letterSpacing: -0.6 }}>Selling</Txt>
 
       {home.error && <ErrorNote error={home.error} onRetry={home.reload} />}
 
       {home.data && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x3 }}>
-          <Tile label="Owed to you" value={money(home.data.money.owedMinor)} />
-          <Tile label="Paid out" value={money(home.data.money.paidOutMinor)} />
-          <Tile label="Listed / sold" value={`${home.data.money.itemCount} / ${home.data.money.soldCount}`} />
+        <View style={{ flexDirection: 'row', gap: t.space.x3 }}>
+          <Tile t={t} label="Owed to you" value={money(home.data.money.owedMinor)} highlight />
+          <Tile t={t} label="Paid out" value={money(home.data.money.paidOutMinor)} />
+          <Tile t={t} label="Listed · Sold" value={`${home.data.money.itemCount} · ${home.data.money.soldCount}`} />
         </View>
       )}
 
-      {(approvals.data ?? []).filter((a) => a.approval.decision === 'pending').length > 0 && (
+      {pending.length > 0 && (
         <View style={{ gap: t.space.x3 }}>
-          <SectionTitle>Needs your decision</SectionTitle>
-          {approvals.data!.filter((a) => a.approval.decision === 'pending').map((a) => (
-            <Pressable key={a.approval.id} onPress={() => navigation.navigate('SellerItem', { id: a.approval.consignmentItemId })}>
-              <Card style={{ borderColor: t.colors.warn, gap: t.space.x2 }}>
+          <SecLabel t={t}>Needs your decision</SecLabel>
+          {pending.map((a) => {
+            const it = (items.data ?? []).find((i) => i.id === a.approval.consignmentItemId)
+            return (
+              <Pressable key={a.approval.id} onPress={() => navigation.navigate('SellerItem', { id: a.approval.consignmentItemId })}
+                style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1.5, borderColor: t.colors.warn, borderRadius: 16, padding: t.space.x4, gap: t.space.x2 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.space.x2 }}>
-                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, flex: 1 }}>
-                    {(() => { const it = (items.data ?? []).find((i) => i.id === a.approval.consignmentItemId); return it ? nameOf(it) : 'Price to approve' })()}
-                  </Txt>
-                  <Badge label="Action needed" tone="warn" />
+                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.md, flex: 1 }}>{it ? nameOf(it) : 'Price to approve'}</Txt>
+                  <Pill t={t} tone="warn" label="Action needed" />
                 </View>
-                <Txt style={{ color: t.colors.text }}>Proposed {money(a.proposedAmountMinor)} · you net {money(a.expectedNetMinor)}</Txt>
+                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>
+                  Proposed {money(a.proposedAmountMinor)} · you net <Txt style={{ color: t.colors.good, fontWeight: t.weight.bold as never }}>{money(a.expectedNetMinor)}</Txt>
+                </Txt>
                 <Muted size={t.size.xs}>{a.requiredBecause}</Muted>
-              </Card>
-            </Pressable>
-          ))}
+              </Pressable>
+            )
+          })}
         </View>
       )}
 
-      <Card style={{ gap: t.space.x2 }}>
-        <SectionTitle>Consign an item</SectionTitle>
-        <Muted>Add your gear and ship it to us. One form, start to finish.</Muted>
-        {createError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{createError}</Txt>}
-        <Button label="List an item" onPress={startSubmission} loading={creating} />
-      </Card>
+      <View style={{ backgroundColor: t.colors.brand, borderRadius: 18, padding: t.space.x5, overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', right: -30, top: -34, width: 150, height: 150, borderRadius: 75, backgroundColor: '#ffffff10' }} />
+        <View style={{ position: 'absolute', right: t.space.x4, bottom: t.space.x3 }}>
+          <Ionicons name="cube-outline" size={54} color={t.colors.brandAlt} />
+        </View>
+        <Txt style={{ color: t.colors.onBrand, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Consign an item</Txt>
+        <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm, marginTop: 4, maxWidth: 220 }}>Add your gear and ship it to us. One form, start to finish.</Txt>
+        {createError && <Txt style={{ color: t.colors.badSoft, fontSize: t.size.sm, marginTop: t.space.x2 }}>{createError}</Txt>}
+        <Pressable onPress={startSubmission} disabled={creating}
+          style={{ alignSelf: 'flex-start', marginTop: t.space.x3, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: t.colors.cta, borderRadius: 13, paddingVertical: t.space.x3, paddingHorizontal: t.space.x5, opacity: creating ? 0.6 : 1 }}>
+          <Ionicons name="add" size={17} color={t.colors.onCta} />
+          <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>{creating ? 'Starting…' : 'List an item'}</Txt>
+        </Pressable>
+      </View>
 
       <View style={{ gap: t.space.x3 }}>
-        <SectionTitle>My items</SectionTitle>
+        <SecLabel t={t}>My items</SecLabel>
         {items.loading && !items.data && <Loading />}
         {items.data && items.data.length === 0 && <Empty title="No items yet" hint="Tap “List an item” to consign your first piece of gear." />}
         {(items.data ?? []).map((i) => {
           const action = actionOf(i)
+          const tone = action ? 'warn' : i.currentState === 'LISTED' || i.currentState === 'SOLD' ? 'good' : 'neutral'
           return (
-            <Pressable key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}>
-              <Card style={{ gap: t.space.x2, borderColor: action ? t.colors.warn : t.colors.border }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}>
-                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, flex: 1 }}>{nameOf(i)}</Txt>
-                  {action ? <Badge label="Action needed" tone="warn" /> : <StateBadge state={i.currentState} />}
+            <Pressable key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: action ? t.colors.warn : t.colors.border, borderRadius: 16, padding: 13 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="camera-outline" size={22} color={t.colors.brand} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
+                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.md, flexShrink: 1 }}>{nameOf(i)}</Txt>
+                  <Pill t={t} tone={tone} label={STATE_LABELS[i.currentState] ?? i.currentState} />
                 </View>
-                {action && <Txt style={{ color: t.colors.warn, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>{action}</Txt>}
-                <Muted size={t.size.xs}>
-                  {STATE_LABELS[i.currentState] ?? i.currentState} · asking {money(i.askingAmountMinor)}
-                  {i.assignedGradeCode ? ` · graded ${i.assignedGradeCode}` : ''}
-                </Muted>
-                <Muted size={t.size.xs} style={{ fontFamily: t.font.mono }}>{i.internalSku}</Muted>
-              </Card>
+                {action
+                  ? <Txt style={{ color: t.colors.warn, fontSize: t.size.xs, fontWeight: t.weight.bold as never, marginTop: 4 }}>{action}</Txt>
+                  : <Muted size={t.size.xs} style={{ marginTop: 4 }}>asking {money(i.askingAmountMinor)}{i.assignedGradeCode ? ` · graded ${i.assignedGradeCode}` : ''}</Muted>}
+                <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: 10.5, marginTop: 2 }}>{i.internalSku}</Txt>
+              </View>
             </Pressable>
           )
         })}
@@ -184,12 +194,29 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   )
 }
 
-function Tile({ label, value }: { label: string; value: string }) {
-  const t = useTheme()
+function Tile({ t, label, value, highlight }: { t: Theme; label: string; value: string; highlight?: boolean }) {
   return (
-    <View style={{ flexGrow: 1, minWidth: 100, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.lg, padding: t.space.x3, gap: 2 }}>
-      <Muted size={t.size.xs}>{label}</Muted>
-      <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{value}</Txt>
+    <View style={{ flex: 1, backgroundColor: highlight ? t.colors.brand : t.colors.bgRaised, borderWidth: 1, borderColor: highlight ? 'transparent' : t.colors.border, borderRadius: 15, padding: 13, gap: 3 }}>
+      <Txt style={{ color: highlight ? t.colors.onBrandMuted : t.colors.textMuted, fontSize: 10.5, fontWeight: t.weight.medium as never }}>{label}</Txt>
+      <Txt style={{ color: highlight ? t.colors.onBrand : t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, letterSpacing: -0.4 }}>{value}</Txt>
+    </View>
+  )
+}
+
+function SecLabel({ t, children }: { t: Theme; children: React.ReactNode }) {
+  return <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.7, textTransform: 'uppercase' }}>{children}</Txt>
+}
+
+function Pill({ t, tone, label }: { t: Theme; tone: 'good' | 'warn' | 'bad' | 'neutral'; label: string }) {
+  const c = {
+    good: { fg: t.colors.good, bg: t.colors.goodSoft },
+    warn: { fg: t.colors.warn, bg: t.colors.warnSoft },
+    bad: { fg: t.colors.bad, bg: t.colors.badSoft },
+    neutral: { fg: t.colors.textMuted, bg: t.colors.bgSunken },
+  }[tone]
+  return (
+    <View style={{ backgroundColor: c.bg, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
+      <Txt style={{ color: c.fg, fontSize: 10.5, fontWeight: t.weight.bold as never }}>{label}</Txt>
     </View>
   )
 }
