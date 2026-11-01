@@ -46,17 +46,17 @@ const RECIPES: Record<string, Recipe> = {
   'SUBMITTED>PRE_APPROVED': {
     label: 'Pre-approve and issue a label',
     hint: 'Issues the inbound label and starts the ship-by clock.',
-    target: { kind: 'go', to: () => '/admin/operations' },
+    target: { kind: 'go', to: () => '/admin/operations?tab=intake' },
   },
   'SUBMITTED>REJECTED_PRE_INTAKE': {
     label: 'Reject before intake',
     hint: 'Needs a templated reason, which the seller is shown.',
-    target: { kind: 'go', to: () => '/admin/operations' },
+    target: { kind: 'go', to: () => '/admin/operations?tab=intake' },
   },
   'IN_TRANSIT_INBOUND>RECEIVED': {
     label: 'Log the intake',
     hint: 'Records what actually arrived and assigns a storage bin.',
-    target: { kind: 'go', to: () => '/admin/operations' },
+    target: { kind: 'go', to: () => '/admin/operations?tab=inbound' },
   },
   'RECEIVED>IN_INSPECTION': {
     label: 'Start the inspection',
@@ -85,7 +85,7 @@ const RECIPES: Record<string, Recipe> = {
     // Guided pricing needs a reference price for this model and grade. When
     // there is none the only way through is a staff amount with a reason, and
     // the pricing queue is the screen with that form.
-    fallback: { label: 'Price it by hand in the queue', to: '/admin/operations' },
+    fallback: { label: 'Price it by hand in the queue', to: '/admin/operations?tab=price' },
   },
   'PRICE_PROPOSED>LISTED': {
     label: 'Price and list',

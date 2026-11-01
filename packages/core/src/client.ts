@@ -9,7 +9,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, VaultPolicy, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -740,7 +740,7 @@ export const api = {
   removeGear: (id: string) => del<void>(`/vault/${id}`),
   insuranceQuote: (id: string) => get<InsuranceQuote>(`/vault/${id}/insurance/quote`),
   buyInsurance: (id: string, planCode: string, sumInsuredMinor?: number) =>
-    post<VaultPolicy>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
+    post<InsuranceRequest>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
   /** Add a just-bought item to the vault, pre-filled from the order line. */
   addGearFromOrderLine: (lineId: string) => post<VaultItem>(`/vault/from-order-line/${lineId}`),
   /** The wrapped vault key for this user, or null if the vault isn't secured yet. */

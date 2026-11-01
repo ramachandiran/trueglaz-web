@@ -53,6 +53,10 @@ export interface ListingDetail {
   priceHistory: ListingPriceChange[]
   /** For the stock-image fallback. Null when the unit matched no model. */
   modelSlug: string | null
+  /** True when the signed-in viewer is this unit's seller (they cannot buy it). */
+  mine?: boolean
+  /** The seller's own item record — only given to the seller. */
+  myItemId?: string | null
 }
 
 export interface ConsignmentItem {
@@ -1672,6 +1676,26 @@ export interface VaultPolicy {
   live: boolean
 }
 
+/**
+ * A cover request. Issued at once when the insurer is instant; otherwise
+ * `authorized` (or `submitted`, with the insurer) until staff issue it, and the
+ * premium is only charged on issue.
+ */
+export interface InsuranceRequest {
+  id: string
+  itemId: string
+  status: 'authorized' | 'submitted' | 'issued' | 'declined' | 'cancelled' | 'expired'
+  planCode: string
+  sumInsuredMinor: number
+  premiumMinor: number
+  taxMinor: number
+  totalMinor: number
+  /** When manual issuance is expected by. */
+  expectedBy: string | null
+  declineReason: string | null
+  policy: VaultPolicy | null
+}
+
 export interface VaultItem {
   id: string
   modelLabel: string
@@ -1692,6 +1716,8 @@ export interface VaultItem {
   warrantyStatus: 'unknown' | 'active' | 'expiring' | 'expired'
   valuation: VaultValuation | null
   policy: VaultPolicy | null
+  /** An open request being issued by hand, if any. */
+  insuranceRequest?: InsuranceRequest | null
 }
 
 export interface AddGearInput {

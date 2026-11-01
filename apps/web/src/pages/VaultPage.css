@@ -95,3 +95,8 @@
 .vault-intro__amt { font-size: 32px; font-weight: var(--tg-weight-bold); letter-spacing: -1px; line-height: 1.1; }
 .vault-intro__range { font-size: var(--tg-text-sm); color: var(--tg-on-brand-muted); }
 .vault-intro__fine { font-size: var(--tg-text-xs); color: var(--tg-on-brand-muted); margin-top: 6px; }
+
+/* Cover requested and authorised, waiting on staff to issue it. */
+.gear__pending { font-size: var(--tg-text-xs); font-weight: var(--tg-weight-bold); color: var(--tg-warn); background: var(--tg-warn-soft); border-radius: var(--tg-radius-pill); padding: 5px 11px; align-self: center; }
+/* The item a notification linked to. */
+.gear--focused { border-color: var(--tg-accent); box-shadow: 0 0 0 3px var(--tg-accent-soft, rgba(255, 107, 53, 0.18)); }

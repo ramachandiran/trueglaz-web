@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import {
   api, money, dateOnly, useApi,
-  type VaultItem, type InsurancePlan, type InsuranceQuote, type ProductModel, ApiError,
+  type VaultItem, type InsuranceRequest, type InsurancePlan, type InsuranceQuote, type ProductModel, ApiError,
 } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
 import {
@@ -36,6 +37,7 @@ function hasLockedFields(it: VaultItem): boolean {
  * the purchase date, and each item can be insured through a partner.
  */
 export function VaultPage() {
+  const { itemId } = useParams()
   const { data, error, loading, reload } = useApi(() => api.vault(), [])
   const [adding, setAdding] = useState(false)
   const [insuring, setInsuring] = useState<VaultItem | null>(null)
@@ -98,7 +100,7 @@ export function VaultPage() {
       ) : (
         <ul className="vault__list">
           {items.map((it) => (
-            <GearCard key={it.id} item={it} onInsure={() => setInsuring(it)} onChanged={reload} />
+            <GearCard key={it.id} item={it} focused={it.id === itemId} onInsure={() => setInsuring(it)} onChanged={reload} />
           ))}
         </ul>
       )}
@@ -178,8 +180,10 @@ const WARRANTY_LABEL: Record<VaultItem['warrantyStatus'], string> = {
   active: 'Under warranty', expiring: 'Warranty ending soon', expired: 'Warranty expired', unknown: 'Warranty unknown',
 }
 
-function GearCard({ item, onInsure, onChanged }: { item: VaultItem; onInsure: () => void; onChanged: () => void }) {
+function GearCard({ item, focused, onInsure, onChanged }: { item: VaultItem; focused?: boolean; onInsure: () => void; onChanged: () => void }) {
   const [busy, setBusy] = useState(false)
+  // Opened from a notification about this item: bring it into view.
+  const ref = useFocusScroll(focused)
   const v = item.valuation
   const cost = shownCost(item)
   const serial = shownSerial(item)
@@ -192,7 +196,7 @@ function GearCard({ item, onInsure, onChanged }: { item: VaultItem; onInsure: ()
   }
 
   return (
-    <li className="gear">
+    <li ref={ref} className={`gear${focused ? ' gear--focused' : ''}`}>
       <span className="gear__thumb" aria-hidden="true"><CameraIcon /></span>
       <div className="gear__main">
         <div className="gear__name">{item.modelLabel}</div>
@@ -228,6 +232,11 @@ function GearCard({ item, onInsure, onChanged }: { item: VaultItem; onInsure: ()
           {item.policy ? (
             <span className="gear__insured" title={`Policy ${item.policy.policyNo}`}>
               ✓ Insured{!item.policy.live ? ' (demo)' : ''}
+            </span>
+          ) : item.insuranceRequest ? (
+            // Requested and authorised; staff are issuing it. No second request.
+            <span className="gear__pending" title="You are charged only when the policy is issued">
+              Cover being issued{item.insuranceRequest.expectedBy ? ` · by ${dateOnly(item.insuranceRequest.expectedBy)}` : ''}
             </span>
           ) : (
             <button className="tg-button tg-button--small" onClick={onInsure}>Insure</button>
@@ -343,12 +352,35 @@ function InsureModal({ item, onClose, onBought }: { item: VaultItem; onClose: ()
   const [agree, setAgree] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [requested, setRequested] = useState<InsuranceRequest | null>(null)
 
   async function buy() {
     setBusy(true); setErr(null)
-    try { await api.buyInsurance(item.id, plan, quote?.sumInsuredMinor); onBought() }
+    try {
+      const r = await api.buyInsurance(item.id, plan, quote?.sumInsuredMinor)
+      // Issued on the spot: done. Otherwise say what happens next before closing.
+      if (r.status === 'issued') onBought()
+      else setRequested(r)
+    }
     catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not buy cover') }
     finally { setBusy(false) }
+  }
+
+  if (requested) {
+    return (
+      <Modal title="Cover requested" onClose={onBought}>
+        <p className="vault__hint">
+          <strong>We're issuing your policy{requested.expectedBy ? ` — usually by ${dateOnly(requested.expectedBy)}` : ''}.</strong>
+        </p>
+        <p className="vault__hint">
+          {money(requested.totalMinor)} is authorised, not charged. You pay only when the policy is issued, and nothing
+          if we can't issue it. We'll notify you either way.
+        </p>
+        <div className="vault__modal-actions">
+          <button className="tg-button tg-button--primary" onClick={onBought}>Done</button>
+        </div>
+      </Modal>
+    )
   }
 
   return (
@@ -396,6 +428,13 @@ function InsureModal({ item, onClose, onBought }: { item: VaultItem; onClose: ()
 }
 
 // -- bits ----------------------------------------------------------------------
+
+/** Scroll an element into view once, when it becomes the focused one. */
+function useFocusScroll(focused?: boolean) {
+  const [el, setEl] = useState<HTMLLIElement | null>(null)
+  useEffect(() => { if (focused && el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [focused, el])
+  return setEl
+}
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (

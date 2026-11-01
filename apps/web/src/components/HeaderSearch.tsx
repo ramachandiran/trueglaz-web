@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 /**
@@ -13,6 +13,7 @@ export function HeaderSearch() {
   const [params] = useSearchParams()
   const nav = useNavigate()
   const [text, setText] = useState(params.get('q') ?? '')
+  const input = useRef<HTMLInputElement>(null)
 
   // Someone arriving on a shared link, or pressing back, should see the box
   // holding the terms the results are actually for.
@@ -21,12 +22,17 @@ export function HeaderSearch() {
   function submit(e: React.FormEvent) {
     e.preventDefault()
     const q = text.trim()
-    nav(q ? `/?q=${encodeURIComponent(q)}` : '/')
+    // Nothing typed: put the cursor in the box rather than go anywhere.
+    if (!q) { input.current?.focus(); return }
+    // The catalogue is what reads ?q=. The home page ignores it, and for a
+    // seller or staff member "/" redirects away, so the search was lost.
+    nav(`/catalog?q=${encodeURIComponent(q)}`)
   }
 
   return (
     <form className="search" role="search" onSubmit={submit}>
       <input
+        ref={input}
         className="search__input"
         type="search"
         value={text}
