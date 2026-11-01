@@ -53,6 +53,10 @@ export interface ListingDetail {
   priceHistory: ListingPriceChange[]
   /** For the stock-image fallback. Null when the unit matched no model. */
   modelSlug: string | null
+  /** True when the signed-in viewer is this unit's seller (they cannot buy it). */
+  mine?: boolean
+  /** The seller's own item record — only given to the seller. */
+  myItemId?: string | null
 }
 
 export interface ConsignmentItem {

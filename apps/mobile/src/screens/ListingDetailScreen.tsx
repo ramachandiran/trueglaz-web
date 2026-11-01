@@ -156,6 +156,14 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
             <Muted size={t.size.xs}>Price</Muted>
             <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{money(d.listing.priceMinor, d.listing.currency)}</Txt>
           </View>
+          {d.mine ? (
+            // A seller cannot buy their own unit; the reservation refuses it.
+            <Pressable
+              onPress={() => d.myItemId ? navigation.navigate('SellerItem', { id: d.myItemId }) : navigation.navigate('Tabs', { screen: 'Sell' })}
+              style={{ flex: 1, borderWidth: 1.5, borderColor: t.colors.accent, borderRadius: 14, paddingVertical: 13, alignItems: 'center' }}>
+              <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never, fontSize: t.size.md }}>Your listing · Manage it</Txt>
+            </Pressable>
+          ) : (
           <Pressable
             onPress={() => navigation.navigate('Checkout', {
               listingId: d.listing.id, title: d.listing.title.split('·')[0].trim(),
@@ -164,6 +172,7 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
             style={{ flex: 1, backgroundColor: t.colors.cta, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}>
             <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never, fontSize: t.size.md }}>Buy now</Txt>
           </Pressable>
+          )}
         </View>
       )}
     </View>
