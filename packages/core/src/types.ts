@@ -203,6 +203,8 @@ export interface ManagedListing {
   floorMinor: number | null
   sellerName: string | null
   listedAt: string | null
+  /** The latest of a change to the unit and a reprice. */
+  updatedAt?: string | null
 }
 
 /** What an admin fills in to add a model to a brand. */
@@ -298,6 +300,8 @@ export interface Submission {
   rejectedNote: string | null
   expiresAt: string | null
   createdAt: string
+  /** Latest change to the submission itself (null from an older API). */
+  updatedAt?: string | null
 }
 
 export interface SubmissionView {
@@ -905,6 +909,18 @@ export interface ReviewRequest {
   note: string | null
   rejectedReasonCode: string | null
   createdAt: string | null
+  updatedAt?: string | null
+}
+
+/** The ship-by clock for one box the hub is waiting on. */
+export interface InboundClock {
+  submissionId: string
+  shipBy: string | null
+  /** 0 until the ship-by date has passed. */
+  daysOverdue: number
+  /** The day the sweep voids it if nobody posts it or extends it. */
+  lapsesOn: string | null
+  updatedAt: string | null
 }
 
 /**

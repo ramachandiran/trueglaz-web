@@ -179,3 +179,16 @@
   resize: vertical;
   font: inherit;
 }
+
+/* When a row last changed: the relative time leads, the exact one is muted
+   underneath, so a scan reads "2 hours ago" and a dispute reads the minute. */
+.ops__updated { white-space: nowrap; }
+.ops__updated time { font-size: var(--tg-text-sm); }
+
+/* A box past its ship-by date: the one thing on Inbound that needs chasing. */
+.ops__late { display: table; margin-top: 2px; }
+
+/* Lapsing voids a seller's label, so its confirm reads as a warning. */
+.ops__confirm { flex-wrap: wrap; max-width: 26rem; font-size: var(--tg-text-sm); }
+.tg-button.ops__danger { border-color: var(--tg-bad); color: var(--tg-bad); }
+.tg-button.ops__danger:hover { background: var(--tg-bad-soft); }

@@ -1,8 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  api, ApiError, dateOnly, isStaff, money, useApi, useSession,
-  type ConsignmentItem, type ManagedListing, type ReviewRequest, type Submission, type Technician,
+  api, ApiError, dateOnly, dateTime, isStaff, money, relative, useApi, useSession,
+  type ConsignmentItem, type InboundClock, type ManagedListing, type ReviewRequest, type Submission, type Technician,
 } from '@trueglaz/core'
 import { StateBadge } from '../components/ui'
 import { QueueScreen } from '../components/QueueScreen'
@@ -59,6 +59,13 @@ export function OpsPage() {
   // waiting on, and receiving is the same act either way.
   const preApproved = useApi(() => (staff ? api.itemQueue('PRE_APPROVED') : Promise.resolve([])), [staff])
   const inTransit = useApi(() => (staff ? api.itemQueue('IN_TRANSIT_INBOUND') : Promise.resolve([])), [staff])
+  // The ship-by clock for each box. Kept out of the queue's own error: an API
+  // without it should still show and receive boxes, just without the dates.
+  const shipClock = useApi(() => (staff ? api.inboundClock() : Promise.resolve([] as InboundClock[])), [staff])
+  const clock = useMemo(
+    () => new Map((shipClock.data ?? []).map((c) => [c.submissionId, c] as const)),
+    [shipClock.data],
+  )
   // Live listings, so staff can reprice one without leaving Operations.
   const listed = useApi(() => (staff ? api.managedListings() : Promise.resolve([])), [staff])
   // The catalogue, to turn an item's productModelId into a readable model name.
@@ -103,7 +110,7 @@ export function OpsPage() {
                // Receiving a box empties this queue and fills the next one, so
                // the Inspection count has to be refreshed with it or the tab
                // row contradicts the table underneath it.
-               reload: () => { preApproved.reload(); inTransit.reload(); received.reload() } },
+               reload: () => { preApproved.reload(); inTransit.reload(); received.reload(); shipClock.reload() } },
     inspect: { ...received, data: inspectRows, error: received.error ?? awaitingInspection.error ?? inInspection.error,
                loading: received.loading || awaitingInspection.loading || inInspection.loading,
                reload: () => { received.reload(); awaitingInspection.reload(); inInspection.reload() } },
@@ -128,18 +135,19 @@ export function OpsPage() {
   const filtered = rows.filter(matches)
 
   // Most recently touched first, so the latest activity is at the top of every
-  // queue. Each row type carries its own "when": submissions have no updatedAt,
-  // so they fall back to when they were submitted/created; an inbound box takes
-  // the newest timestamp among its items.
+  // queue — except Inbound, where the box most past its ship-by date leads,
+  // because that is the one somebody has to chase today.
   const timeOf = (r: any): number => {
-    const v = active === 'intake' ? (r.submittedAt ?? r.createdAt)
-      : active === 'inbound' ? r.items.reduce((m: string, i: ConsignmentItem) => (i.updatedAt > m ? i.updatedAt : m), '')
-      : active === 'listed' ? r.listedAt
-      : active === 'wanted' ? r.createdAt
-      : r.updatedAt
+    const v = lastUpdated(active, r, clock)
     return v ? new Date(v).getTime() : 0
   }
-  const sorted = [...filtered].sort((a, b) => timeOf(b) - timeOf(a))
+  // Only a box still at the seller's is late in a way anyone can act on; one a
+  // courier has picked up is coming regardless, so it sorts by time as usual.
+  const lateness = (r: any): number =>
+    active === 'inbound' && r.items.every((i: ConsignmentItem) => i.currentState === 'PRE_APPROVED')
+      ? clock.get(r.id)?.daysOverdue ?? 0
+      : 0
+  const sorted = [...filtered].sort((a, b) => lateness(b) - lateness(a) || timeOf(b) - timeOf(a))
 
   const pages = Math.ceil(sorted.length / perPage)
   const validPage = Math.min(Math.max(1, page), pages || 1)
@@ -187,7 +195,7 @@ export function OpsPage() {
         onPage={setPage}
       >
         {active === 'intake' && <IntakeTable rows={shown} names={names} reload={pending.reload} />}
-        {active === 'inbound' && <InboundTable rows={shown} names={names} reload={source.reload} />}
+        {active === 'inbound' && <InboundTable rows={shown} names={names} clock={clock} reload={source.reload} />}
         {active === 'inspect' && (
           <InspectTable rows={shown} names={names} roster={roster.data ?? []} reload={source.reload} />
         )}
@@ -261,6 +269,64 @@ function ErrorRow({ error, span }: { error: string | null; span: number }) {
   )
 }
 
+/** The newest of several timestamps, ignoring the missing ones. */
+function latest(...at: Array<string | null | undefined>): string | null {
+  return at.reduce<string | null>((m, v) => (v && (!m || new Date(v) > new Date(m)) ? v : m), null)
+}
+
+/**
+ * When a row last changed, one rule per queue. Submissions and requests fall
+ * back to when they were made if the API predates their updatedAt; an inbound
+ * box is the newest of its items and its own ship-by changes.
+ */
+function lastUpdated(queue: Queue, r: any, clock: Map<string, InboundClock>): string | null {
+  switch (queue) {
+    case 'intake': return latest(r.updatedAt, r.submittedAt, r.createdAt)
+    case 'inbound': return latest(clock.get(r.id)?.updatedAt, ...r.items.map((i: ConsignmentItem) => i.updatedAt))
+    case 'listed': return latest(r.updatedAt, r.listedAt)
+    case 'wanted': return latest(r.updatedAt, r.createdAt)
+    default: return r.updatedAt ?? null
+  }
+}
+
+/**
+ * The ship-by date, and how it stands: due in a few days, late by some, or
+ * already posted. A late box also says when it lapses on its own, so nobody
+ * chases a seller the sweep is about to void anyway.
+ */
+function ShipByCell({ clock, unposted }: { clock?: InboundClock; unposted: boolean }) {
+  if (!clock?.shipBy) return <td className="tg-muted">—</td>
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const due = new Date(`${clock.shipBy}T00:00:00`)
+  const daysLeft = Math.round((due.getTime() - today.getTime()) / 86400000)
+  return (
+    <td>
+      <span>{dateOnly(clock.shipBy)}</span>
+      {!unposted ? (
+        <span className="ops__gear">Posted</span>
+      ) : clock.daysOverdue > 0 ? (
+        <>
+          <span className="tg-badge tg-badge--bad ops__late">{clock.daysOverdue} day{clock.daysOverdue === 1 ? '' : 's'} late</span>
+          {clock.lapsesOn && <span className="ops__gear">Lapses {dateOnly(clock.lapsesOn)}</span>}
+        </>
+      ) : (
+        <span className="ops__gear">{daysLeft === 0 ? 'Due today' : `Due in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}</span>
+      )}
+    </td>
+  )
+}
+
+/** "3 hours ago", with the exact time underneath and on hover. */
+function UpdatedCell({ at }: { at: string | null }) {
+  if (!at) return <td className="tg-muted">—</td>
+  return (
+    <td className="ops__updated">
+      <time dateTime={at} title={dateTime(at)}>{relative(at)}</time>
+      <span className="ops__gear">{dateTime(at)}</span>
+    </td>
+  )
+}
+
 /** Pre-approve, issue the label, or turn it away with a reason the seller sees. */
 function IntakeTable({ rows, names, reload }: { rows: Submission[]; names: Map<string, string>; reload: () => void }) {
   return (
@@ -270,6 +336,7 @@ function IntakeTable({ rows, names, reload }: { rows: Submission[]; names: Map<s
           <th>Item</th>
           <th>Pricing</th>
           <th>Submitted</th>
+          <th>Last updated</th>
           <th>Action</th>
         </tr>
       </thead>
@@ -309,6 +376,7 @@ function IntakeRow({ s, names, reload }: { s: Submission; names: Map<string, str
         </td>
         <td><span className="tg-badge">{s.pricingMode}</span></td>
         <td className="tg-muted">{s.submittedAt ? dateOnly(s.submittedAt) : '—'}</td>
+        <UpdatedCell at={latest(s.updatedAt, s.submittedAt, s.createdAt)} />
         <td onClick={(e) => e.stopPropagation()}>
           {rejecting ? (
             <span className="ops__inline ops__reject">
@@ -361,7 +429,7 @@ function IntakeRow({ s, names, reload }: { s: Submission; names: Map<string, str
           )}
         </td>
       </tr>
-      {error && <tr><td colSpan={4}><p className="ops__error" role="alert">{error}</p></td></tr>}
+      {error && <tr><td colSpan={5}><p className="ops__error" role="alert">{error}</p></td></tr>}
     </>
   )
 }
@@ -393,10 +461,17 @@ function InboundInfo({ submissionId }: { submissionId: string }) {
  * transition would skip the intake record and the bin assignment.
  */
 function InboundTable({
-  rows, names, reload,
-}: { rows: Array<{ id: string; items: ConsignmentItem[] }>; names: Map<string, string>; reload: () => void }) {
+  rows, names, clock, reload,
+}: {
+  rows: Array<{ id: string; items: ConsignmentItem[] }>
+  names: Map<string, string>
+  clock: Map<string, InboundClock>
+  reload: () => void
+}) {
   const navigate = useNavigate()
   const { busy, error, act } = useAction(reload)
+  // Lapsing voids the seller's label, so it takes a second, deliberate click.
+  const [confirming, setConfirming] = useState<string | null>(null)
   const bins = useApi(() => api.storageBins(), [])
   const bin = bins.data?.[0]
 
@@ -415,16 +490,23 @@ function InboundTable({
       <thead>
         <tr>
           <th>Item</th>
+          <th>Ship by</th>
           <th>Status</th>
+          <th>Last updated</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={3} />
+        <ErrorRow error={error} span={5} />
         {rows.map((r) => {
           const first = r.items[0]
           const name = itemTitle(first, names)
           const title = name ?? first.internalSku
+          const c = clock.get(r.id)
+          // Still at the seller's: nothing scanned, so the clock applies and
+          // the box can be given more time or lapsed. Once a courier has it,
+          // it is on its way however late, and only receiving makes sense.
+          const unposted = r.items.every((i) => i.currentState === 'PRE_APPROVED')
           return (
             <tr key={r.id} className="q__row--click" onClick={() => navigate(`/items/${first.id}`)}>
               <td>
@@ -435,17 +517,48 @@ function InboundTable({
                 </span>
                 <InboundInfo submissionId={r.id} />
               </td>
+              <ShipByCell clock={c} unposted={unposted} />
               <td><StateBadge state={first.currentState} /></td>
+              <UpdatedCell at={latest(c?.updatedAt, ...r.items.map((i) => i.updatedAt))} />
               <td onClick={(e) => e.stopPropagation()}>
-                <span className="ops__inline">
-                  <button
-                    className="tg-button tg-button--primary"
-                    disabled={busy === r.id}
-                    onClick={() => act(r.id, () => receive(r.id))}
-                  >
-                    {busy === r.id ? 'Receiving…' : `Receive into ${bin?.code ?? 'a bin'}`}
-                  </button>
-                </span>
+                {confirming === r.id ? (
+                  <span className="ops__inline ops__confirm">
+                    <span>Void the label? The seller is told and can submit again.</span>
+                    <button
+                      className="tg-button ops__danger"
+                      disabled={busy === r.id}
+                      onClick={() => act(r.id, async () => { await api.lapseSubmission(r.id); setConfirming(null) })}
+                    >
+                      {busy === r.id ? 'Lapsing…' : 'Yes, lapse it'}
+                    </button>
+                    <button className="tg-button" onClick={() => setConfirming(null)}>Keep it</button>
+                  </span>
+                ) : (
+                  <span className="ops__inline">
+                    <button
+                      className="tg-button tg-button--primary"
+                      disabled={busy === r.id}
+                      onClick={() => act(r.id, () => receive(r.id))}
+                    >
+                      {busy === r.id ? 'Working…' : `Receive into ${bin?.code ?? 'a bin'}`}
+                    </button>
+                    {unposted && c && (
+                      <>
+                        <button
+                          className="tg-button"
+                          disabled={busy === r.id}
+                          title="Move the ship-by date on a week and tell the seller"
+                          onClick={() => act(r.id, () => api.extendShipBy(r.id, 7))}
+                        >
+                          Extend 7 days
+                        </button>
+                        <button className="tg-button" disabled={busy === r.id} onClick={() => setConfirming(r.id)}>
+                          Lapse now
+                        </button>
+                      </>
+                    )}
+                  </span>
+                )}
               </td>
             </tr>
           )
@@ -498,11 +611,12 @@ function InspectTable({
           <th>Declared</th>
           <th>On the bench of</th>
           <th>Status</th>
+          <th>Last updated</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={5} />
+        <ErrorRow error={error} span={6} />
         {rows.map((i) => (
           <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
             <ItemCell item={i} names={names} />
@@ -513,6 +627,7 @@ function InspectTable({
                 : (bench(i.assignedTechnicianUserId) ?? <span className="tg-muted">unassigned</span>)}
             </td>
             <td><StateBadge state={i.currentState} /></td>
+            <UpdatedCell at={i.updatedAt} />
             <td onClick={(e) => e.stopPropagation()}>
               <span className="ops__inline">
                 {i.currentState === 'IN_INSPECTION' ? (
@@ -588,11 +703,12 @@ function PricingTable({ rows, names, reload }: { rows: ConsignmentItem[]; names:
           <th>Grade</th>
           <th className="q__num">Asking</th>
           <th className="q__num">Floor</th>
+          <th>Last updated</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={5} />
+        <ErrorRow error={error} span={6} />
         {rows.map((i) => (
           <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
             {/* Pricing takes the fee snapshot: it is what the payout will read,
@@ -601,6 +717,7 @@ function PricingTable({ rows, names, reload }: { rows: ConsignmentItem[]; names:
             <td><span className="tg-badge tg-badge--accent">{i.assignedGradeCode}</span></td>
             <td className="q__num">{money(i.askingAmountMinor)}</td>
             <td className="q__num">{i.floorAmountMinor != null ? money(i.floorAmountMinor) : '—'}</td>
+            <UpdatedCell at={i.updatedAt} />
             <td onClick={(e) => e.stopPropagation()}>
               {open === i.id ? (
                 <span className="ops__inline">
@@ -675,11 +792,12 @@ function ListedTable({ rows, reload }: { rows: ManagedListing[]; reload: () => v
           <th>Seller</th>
           <th className="q__num">Floor</th>
           <th className="q__num">Price</th>
+          <th>Last updated</th>
           <th>Reprice</th>
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={6} />
+        <ErrorRow error={error} span={7} />
         {rows.map((l) => {
           const belowFloor = l.floorMinor != null && Number(draft[l.listingId]) * 100 < l.floorMinor
           const valid = Number(draft[l.listingId]) > 0 && !belowFloor
@@ -693,6 +811,7 @@ function ListedTable({ rows, reload }: { rows: ManagedListing[]; reload: () => v
               <td>{l.sellerName ?? '—'}</td>
               <td className="q__num">{l.floorMinor != null ? money(l.floorMinor) : '—'}</td>
               <td className="q__num"><strong>{money(l.priceMinor)}</strong></td>
+              <UpdatedCell at={latest(l.updatedAt, l.listedAt)} />
               <td>
                 {open === l.listingId ? (
                   <span className="ops__inline">
@@ -743,11 +862,12 @@ function RequestTable({ rows, reload }: { rows: ReviewRequest[]; reload: () => v
           <th>Wanted</th>
           <th className="q__num">Up to</th>
           <th>Asked</th>
+          <th>Last updated</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={4} />
+        <ErrorRow error={error} span={5} />
         {rows.map((r) => (
           <tr key={r.id}>
             <td>
@@ -760,6 +880,7 @@ function RequestTable({ rows, reload }: { rows: ReviewRequest[]; reload: () => v
               {r.minGradeCode && <span className="ops__gear">{r.minGradeCode} or better</span>}
             </td>
             <td className="tg-muted">{r.createdAt ? dateOnly(r.createdAt) : '—'}</td>
+            <UpdatedCell at={latest(r.updatedAt, r.createdAt)} />
             <td>
               {rejecting === r.id ? (
                 <span className="ops__inline">
