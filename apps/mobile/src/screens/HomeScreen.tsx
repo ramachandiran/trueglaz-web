@@ -215,9 +215,6 @@ function GearCard({ l, t, img, onPress }: { l: HomeListing; t: Theme; img: strin
             <Ionicons name="checkmark-circle" size={13} color="#fff" />
             <Txt style={{ color: '#fff', fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Inspected</Txt>
           </View>
-          <View style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(26,46,59,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="heart-outline" size={18} color="#fff" />
-          </View>
         </View>
         <View style={{ padding: t.space.x4, gap: 7 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>

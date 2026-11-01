@@ -5,6 +5,7 @@ import { api, relative, useApi, type Notification, type Theme } from '@trueglaz/
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
+import { openRoute, routeForLink } from '../linking'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 
@@ -25,8 +26,11 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
 
   useEffect(() => navigation.addListener('focus', reload), [navigation, reload])
 
-  const markOne = (n: Notification) => {
+  // Tapping opens what it is about, and marks it read on the way.
+  const open = (n: Notification) => {
     if (!n.readAt) api.markNotificationRead(n.id).then(reload).catch(() => {})
+    const r = routeForLink(n.link)
+    if (r) openRoute(navigation, r)
   }
   const markAll = () => { api.markAllNotificationsRead().then(reload).catch(() => {}) }
 
@@ -58,7 +62,8 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
             const unread = !n.readAt
             const cs = categoryStyle(n.category, t)
             return (
-              <Pressable onPress={() => markOne(n)}
+              <Pressable onPress={() => open(n)}
+                accessibilityRole={routeForLink(n.link) ? 'link' : 'button'}
                 style={{
                   flexDirection: 'row', gap: t.space.x3, alignItems: 'flex-start',
                   backgroundColor: unread ? t.colors.bgRaised : t.colors.bg,
@@ -76,6 +81,7 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
                   <Muted size={t.size.sm} style={{ marginTop: 3, lineHeight: 19 }}>{n.body}</Muted>
                   <Muted size={t.size.xs} style={{ marginTop: 5 }}>{relative(n.at)}</Muted>
                 </View>
+                {routeForLink(n.link) && <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} style={{ alignSelf: 'center' }} />}
               </Pressable>
             )
           }}

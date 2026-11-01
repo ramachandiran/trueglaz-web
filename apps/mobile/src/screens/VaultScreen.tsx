@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
   api, money, dateOnly, useApi, ApiError,
-  type VaultItem, type InsuranceQuote, type InsurancePlan, type ProductModel,
+  type VaultItem, type InsuranceQuote, type InsuranceRequest, type InsurancePlan, type ProductModel,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -165,6 +165,14 @@ export function VaultScreen() {
                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: t.colors.goodSoft, borderRadius: 11, paddingVertical: 10 }}>
                       <Ionicons name="checkmark-circle" size={16} color={t.colors.good} />
                       <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Insured{!item.policy.live ? ' (demo)' : ''}</Txt>
+                    </View>
+                  ) : item.insuranceRequest ? (
+                    // Requested and authorised; staff are issuing it. No second request.
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: t.colors.warnSoft, borderRadius: 11, paddingVertical: 10 }}>
+                      <Ionicons name="time-outline" size={16} color={t.colors.warn} />
+                      <Txt style={{ color: t.colors.warn, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>
+                        Cover being issued{item.insuranceRequest.expectedBy ? ` · by ${dateOnly(item.insuranceRequest.expectedBy)}` : ''}
+                      </Txt>
                     </View>
                   ) : (
                     <Pressable onPress={() => setInsuring(item)}
@@ -409,11 +417,34 @@ function InsureModal({ item, onClose, onBought }: { item: VaultItem; onClose: ()
   const [agree, setAgree] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [requested, setRequested] = useState<InsuranceRequest | null>(null)
 
   async function buy() {
     setBusy(true); setErr(null)
-    try { await api.buyInsurance(item.id, plan, quote?.sumInsuredMinor); onBought() }
+    try {
+      const r = await api.buyInsurance(item.id, plan, quote?.sumInsuredMinor)
+      // Issued on the spot: done. Otherwise say what happens next before closing.
+      if (r.status === 'issued') onBought()
+      else setRequested(r)
+    }
     catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not buy cover') } finally { setBusy(false) }
+  }
+
+  if (requested) {
+    return (
+      <Sheet title="Cover requested" onClose={onBought}>
+        <View style={{ flexDirection: 'row', gap: t.space.x2, alignItems: 'center' }}>
+          <Ionicons name="time-outline" size={22} color={t.colors.warn} />
+          <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never, flex: 1 }}>
+            We're issuing your policy{requested.expectedBy ? ` — usually by ${dateOnly(requested.expectedBy)}` : ''}.
+          </Txt>
+        </View>
+        <Muted size={t.size.sm}>
+          {money(requested.totalMinor)} is authorised, not charged. You pay only when the policy is issued, and nothing if we can't issue it. We'll notify you either way.
+        </Muted>
+        <Button label="Done" onPress={onBought} style={{ marginTop: t.space.x2 }} />
+      </Sheet>
+    )
   }
 
   return (

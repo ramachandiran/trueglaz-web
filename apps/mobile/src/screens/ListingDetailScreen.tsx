@@ -44,10 +44,6 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
               style={{ position: 'absolute', top: 14, left: 14, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,254,243,0.92)', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="chevron-back" size={22} color={t.colors.text} />
             </Pressable>
-            <Pressable hitSlop={6}
-              style={{ position: 'absolute', top: 14, right: 14, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,254,243,0.92)', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="heart-outline" size={20} color={t.colors.text} />
-            </Pressable>
             {heroUrl && (
               <View style={{ position: 'absolute', left: 14, bottom: 14, backgroundColor: 'rgba(26,46,59,0.74)', borderRadius: 9, paddingVertical: 5, paddingHorizontal: 11 }}>
                 <Txt style={{ color: '#fff', fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Model photo · not this unit</Txt>

@@ -1658,6 +1658,26 @@ export interface VaultPolicy {
   live: boolean
 }
 
+/**
+ * A cover request. Issued at once when the insurer is instant; otherwise
+ * `authorized` (or `submitted`, with the insurer) until staff issue it, and the
+ * premium is only charged on issue.
+ */
+export interface InsuranceRequest {
+  id: string
+  itemId: string
+  status: 'authorized' | 'submitted' | 'issued' | 'declined' | 'cancelled' | 'expired'
+  planCode: string
+  sumInsuredMinor: number
+  premiumMinor: number
+  taxMinor: number
+  totalMinor: number
+  /** When manual issuance is expected by. */
+  expectedBy: string | null
+  declineReason: string | null
+  policy: VaultPolicy | null
+}
+
 export interface VaultItem {
   id: string
   modelLabel: string
@@ -1678,6 +1698,8 @@ export interface VaultItem {
   warrantyStatus: 'unknown' | 'active' | 'expiring' | 'expired'
   valuation: VaultValuation | null
   policy: VaultPolicy | null
+  /** An open request being issued by hand, if any. */
+  insuranceRequest?: InsuranceRequest | null
 }
 
 export interface AddGearInput {
