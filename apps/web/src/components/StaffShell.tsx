@@ -100,7 +100,9 @@ export function StaffShell() {
           ))}
         </nav>
 
-        <NavLink to="/" className="staff-side__store">
+        {/* The catalogue, not "/": the home route sends staff straight back to
+            the console, so this link used to go nowhere. */}
+        <NavLink to="/catalog" className="staff-side__store">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
           Storefront
         </NavLink>

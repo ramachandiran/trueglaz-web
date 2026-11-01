@@ -25,6 +25,19 @@ export function SubmissionLinkPage() {
   const [error, setError] = useState<string | null>(null)
 
   if (view.loading) return <Loading label="Opening your submission" />
+  // Gone — a discarded draft, or a link from before it was removed. Retrying
+  // cannot bring it back, so say so and point at Selling instead.
+  if (view.error instanceof ApiError && view.error.status === 404) {
+    return (
+      <article className="detail">
+        <header className="detail__head">
+          <h1 className="detail__title">This submission no longer exists</h1>
+          <p className="tg-muted">It may have been discarded. Everything you have with us is on Selling.</p>
+        </header>
+        <Link className="tg-button tg-button--primary" to="/sell/manage">Go to Selling</Link>
+      </article>
+    )
+  }
   if (view.error) return <ErrorNote error={view.error} onRetry={view.reload} />
   if (!view.data) return null
 
