@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, isStaff, money, useApi, useSession,
   type ConsignmentItem, type ManagedListing, type ReviewRequest, type Submission, type Technician,
@@ -36,7 +36,9 @@ const INTAKE_REASONS = ['insufficient_detail', 'prohibited_item', 'price_unreali
  */
 export function OpsPage() {
   const { session } = useSession()
-  const [queue, setQueue] = useState<Queue>('intake')
+  // ?tab= lets the control room open the exact queue a piece of work sits in.
+  const [params] = useSearchParams()
+  const [queue, setQueue] = useState<Queue>(() => (params.get('tab') as Queue | null) ?? 'intake')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const perPage = 10

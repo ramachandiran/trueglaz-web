@@ -127,6 +127,16 @@ export function App() {
           <Route path="/admin/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
           <Route path="/admin/audit" element={<Guard need="admin"><AuditPage /></Guard>} />
         </Route>
+
+        {/* The pre-console staff paths, kept as redirects so old links, bookmarks
+            and any client still sending them land on the right screen instead
+            of the storefront catch-all. */}
+        <Route path="/today" element={<Navigate to="/admin" replace />} />
+        <Route path="/ops" element={<Navigate to="/admin/operations" replace />} />
+        <Route path="/inventory" element={<Navigate to="/admin/inventory" replace />} />
+        <Route path="/fulfilment" element={<Navigate to="/admin/fulfilment" replace />} />
+        <Route path="/returns" element={<Navigate to="/admin/returns" replace />} />
+        <Route path="/people" element={<Navigate to="/admin/people" replace />} />
       </Routes>
     </BrowserRouter>
   )
