@@ -98,3 +98,15 @@
   .staff-top { padding: var(--tg-space-3) var(--tg-space-4); }
   .staff-content { padding: var(--tg-space-4); }
 }
+
+/* A phone: the tools (search, theme, account) were one 370px row beside the
+   breadcrumb, which made every console page wider than the screen — the
+   browser zoomed out and the search sat off the edge. They take their own row,
+   and the search gives way to fit. */
+@media (max-width: 640px) {
+  .staff-top { flex-wrap: wrap; row-gap: var(--tg-space-2); }
+  .staff-top__tools { margin-left: 0; width: 100%; min-width: 0; }
+  .staff-top__tools .search { flex: 1 1 auto; min-width: 0; }
+  .staff-top__tools .search__input { min-width: 0; width: 100%; }
+  .staff-top__theme { max-width: 96px; }
+}

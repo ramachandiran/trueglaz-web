@@ -429,6 +429,9 @@
 
 .parcel__body {
   display: grid;
+  /* An auto column sizes itself to the longest unbroken line; this lets it
+     shrink to the card, so the name truncates rather than overflowing. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   min-width: 0;
 }
@@ -441,6 +444,9 @@
 }
 
 .parcel__name {
+  /* A flex item will not shrink below its text without this, so a long model
+     name pushed the card past the edge of a phone instead of truncating. */
+  min-width: 0;
   font-weight: var(--tg-weight-bold);
   color: var(--tg-text);
   overflow: hidden;
