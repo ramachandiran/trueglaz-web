@@ -5,7 +5,7 @@ import { api, relative, useApi, type Notification, type Theme } from '@trueglaz/
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
-import { openRoute, routeForLink } from '../linking'
+import { openLink, routeForLink } from '../linking'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 
@@ -29,8 +29,7 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
   // Tapping opens what it is about, and marks it read on the way.
   const open = (n: Notification) => {
     if (!n.readAt) api.markNotificationRead(n.id).then(reload).catch(() => {})
-    const r = routeForLink(n.link)
-    if (r) openRoute(navigation, r)
+    openLink(navigation, n.link)
   }
   const markAll = () => { api.markAllNotificationsRead().then(reload).catch(() => {}) }
 

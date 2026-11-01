@@ -1,3 +1,5 @@
+import { api } from '@trueglaz/core'
+
 /**
  * Where a notification's link opens in the app.
  *
@@ -31,4 +33,22 @@ export function routeForLink(link?: string | null): AppRoute | null {
 export function openRoute(navigation: any, r: AppRoute) {
   if ('tab' in r) navigation.navigate('Tabs', { screen: r.tab, params: r.params })
   else navigation.navigate(r.screen, r.params)
+}
+
+/**
+ * Open a notification's link. A submission link (/sell/:id — approved, ship-by
+ * reminder, more time, lapsed) is about the gear in it, and the item screen is
+ * where its label and status live, so it is looked up and opened there.
+ */
+export async function openLink(navigation: any, link?: string | null) {
+  const m = link?.match(/^\/sell\/([0-9a-f-]{36})/)
+  if (m) {
+    try {
+      const view = await api.submission(m[1])
+      const first = view.items[0]
+      if (first) return navigation.navigate('SellerItem', { id: first.id })
+    } catch { /* fall through to the Sell tab */ }
+  }
+  const r = routeForLink(link)
+  if (r) openRoute(navigation, r)
 }
