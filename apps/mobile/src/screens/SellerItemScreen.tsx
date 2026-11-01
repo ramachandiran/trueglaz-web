@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Image, Pressable, ScrollView, View } from 'react-native'
+import { Image, Pressable, ScrollView, View, Alert } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import {
   api, dateTime, HAPPY_PATH, money, OFF_PATH_TERMINALS, STATE_BLURBS, STATE_LABELS, useApi,
@@ -254,7 +254,12 @@ function PriceDecision({ a, onDone }: { a: SellerApprovalView; onDone: () => voi
           <Button label="Counter" variant="ghost" disabled={busy || !typed || typed <= 0} onPress={() => decide('countered', Math.round(typed * 100))} />
         </View>
       )}
-      <Button label="Decline & take it back" variant="danger" loading={busy} onPress={() => decide('declined')} />
+      <Button label="Decline & take it back" variant="danger" loading={busy} onPress={() =>
+        // Return shipping and handling are charged, so confirm before committing.
+        Alert.alert('Decline this price?', 'We will send it back to you. Return shipping and handling fees apply.', [
+          { text: 'Keep deciding', style: 'cancel' },
+          { text: 'Yes, decline', style: 'destructive', onPress: () => decide('declined') },
+        ])} />
       {canCounter && <Muted size={t.size.xs}>You get one counter. Declining returns the item to you.</Muted>}
     </Card>
   )
