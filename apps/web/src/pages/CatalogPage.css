@@ -119,3 +119,6 @@
 }
 
 .results__sort > span { white-space: nowrap; }
+
+/* More results, appended under the ones already on screen. */
+.results__more { display: flex; justify-content: center; margin-top: var(--tg-space-4); }

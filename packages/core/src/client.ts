@@ -1,4 +1,5 @@
 import { getStorage } from './storage'
+import { searchQuery, type Filters } from './filters'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
@@ -9,7 +10,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, InsuranceRequest, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, ListingSearchResult, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -255,6 +256,9 @@ export const api = {
   logout: () => post<{ ok: boolean }>('/auth/logout'),
 
   // -- catalogue (public) --------------------------------------------------
+  /** The shop's search: results, total and the live filter options. */
+  searchListings: (f: Filters, page = 0, size = 24) =>
+    get<ListingSearchResult>(`/listings/search?${searchQuery(f, page, size)}`),
   listings(p: BrowseParams = {}) {
     const qs = new URLSearchParams()
     if (p.q) qs.set('q', p.q)

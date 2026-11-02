@@ -1,38 +1,46 @@
-import type { Brand, Category, Grade, LensRange, LensType, SensorFormat } from '@trueglaz/core'
-import { activeFilterCount, EMPTY_FILTERS, type Filters } from '@trueglaz/core'
+import { activeFilterCount, EMPTY_FILTERS, type FacetOption, type Filters, type SearchFacets } from '@trueglaz/core'
 import { money } from '@trueglaz/core'
 import './FilterSidebar.css'
+
+type ListKey = 'categoryIds' | 'brandIds' | 'mountIds' | 'lensTypes' | 'lensRanges' | 'sensorFormats' | 'grades'
+
+/**
+ * The groups, in the order a shopper narrows: what it is, who made it, will it
+ * fit, then the lens-only questions, then condition. The options themselves
+ * come from the API.
+ */
+const GROUPS: { key: ListKey; facet: keyof SearchFacets; title: string }[] = [
+  { key: 'categoryIds', facet: 'category', title: 'Type' },
+  { key: 'brandIds', facet: 'brand', title: 'Brand' },
+  { key: 'mountIds', facet: 'mount', title: 'Mount' },
+  { key: 'lensTypes', facet: 'lensType', title: 'Lens type' },
+  { key: 'lensRanges', facet: 'lensRange', title: 'Focal range' },
+  { key: 'sensorFormats', facet: 'sensorFormat', title: 'Sensor' },
+  { key: 'grades', facet: 'grade', title: 'Condition' },
+]
 
 interface Props {
   filters: Filters
   onChange: (next: Filters) => void
-  categories: Category[]
-  brands: Brand[]
-  grades: Grade[]
-  lensTypes: LensType[]
-  lensRanges: LensRange[]
-  sensorFormats: SensorFormat[]
-  counts: {
-    category: Map<string, number>
-    brand: Map<string, number>
-    grade: Map<string, number>
-    lensType: Map<string, number>
-    lensRange: Map<string, number>
-    sensorFormat: Map<string, number>
-  }
-  priceBounds: { min: number; max: number }
+  /** Null until the first search returns. */
+  facets: SearchFacets | null
+  /** The price span of what the other filters leave. */
+  price: { minMinor: number; maxMinor: number } | null
 }
 
-export function FilterSidebar({
-  filters, onChange, categories, brands, grades,
-  lensTypes, lensRanges, sensorFormats, counts, priceBounds,
-}: Props) {
+/**
+ * Filters built from what is actually in stock.
+ *
+ * Every option comes from the search, counted against the other selections, so
+ * the sidebar only offers choices that lead somewhere: lens groups appear when
+ * there is glass to filter, brands narrow to camera makers once Cameras is
+ * picked, and a new brand or mount shows up with its first unit. A group with
+ * nothing to offer is not drawn at all.
+ */
+export function FilterSidebar({ filters, onChange, facets, price }: Props) {
   const active = activeFilterCount(filters)
 
-  const toggle = (
-    key: 'categoryIds' | 'brandIds' | 'grades' | 'lensTypes' | 'lensRanges' | 'sensorFormats',
-    value: string,
-  ) => {
+  const toggle = (key: ListKey, value: string) => {
     const list = filters[key]
     onChange({
       ...filters,
@@ -55,102 +63,26 @@ export function FilterSidebar({
         )}
       </div>
 
-
       {/* Search lives in the header and sort above the results; repeating them
           here would be two controls for one thing, and two places to look. */}
-      <Section title="Type">
-        {categories.map((c) => (
-          <Check
-            key={c.id}
-            label={c.name}
-            count={counts.category.get(c.id) ?? 0}
-            checked={filters.categoryIds.includes(c.id)}
-            onChange={() => toggle('categoryIds', c.id)}
-          />
-        ))}
-      </Section>
 
-      {/* Only brands the current results actually contain. The catalogue now
-          carries every maker that trades here, and listing all of them against
-          a shelf of two produces a column of zeroes that buries the one brand
-          in stock. A selected brand stays visible even at zero, so a filter
-          can always be un-ticked. */}
-      <Section title="Brand">
-        {brands
-          .filter((b) => (counts.brand.get(b.id) ?? 0) > 0 || filters.brandIds.includes(b.id))
-          .map((b) => (
-          <Check
-            key={b.id}
-            label={b.name}
-            count={counts.brand.get(b.id) ?? 0}
-            checked={filters.brandIds.includes(b.id)}
-            onChange={() => toggle('brandIds', b.id)}
-          />
-        ))}
-      </Section>
-
-      {/* Shown only where the current results actually contain some. A lens
-          section above a shelf of camera bodies is a list of dead ends, and a
-          sensor section on an empty catalogue is worse. */}
-      {lensTypes.some((t) => (counts.lensType.get(t.code) ?? 0) > 0) && (
-        <Section title="Lens type">
-          {lensTypes
-            .filter((t) => (counts.lensType.get(t.code) ?? 0) > 0 || filters.lensTypes.includes(t.code))
-            .map((t) => (
+      {facets && GROUPS.map(({ key, facet, title }) => {
+        const options: FacetOption[] = facets[facet]
+        if (options.length === 0) return null
+        return (
+          <Section key={key} title={title}>
+            {options.map((o) => (
               <Check
-                key={t.code}
-                label={t.label}
-                count={counts.lensType.get(t.code) ?? 0}
-                checked={filters.lensTypes.includes(t.code)}
-                onChange={() => toggle('lensTypes', t.code)}
+                key={o.value}
+                label={o.label}
+                count={o.count}
+                checked={filters[key].includes(o.value)}
+                onChange={() => toggle(key, o.value)}
               />
             ))}
-        </Section>
-      )}
-
-      {lensRanges.some((r) => (counts.lensRange.get(r.code) ?? 0) > 0) && (
-        <Section title="Focal range">
-          {lensRanges
-            .filter((r) => (counts.lensRange.get(r.code) ?? 0) > 0 || filters.lensRanges.includes(r.code))
-            .map((r) => (
-              <Check
-                key={r.code}
-                label={r.label}
-                count={counts.lensRange.get(r.code) ?? 0}
-                checked={filters.lensRanges.includes(r.code)}
-                onChange={() => toggle('lensRanges', r.code)}
-              />
-            ))}
-        </Section>
-      )}
-
-      {sensorFormats.some((f) => (counts.sensorFormat.get(f.code) ?? 0) > 0) && (
-        <Section title="Sensor">
-          {sensorFormats
-            .filter((f) => (counts.sensorFormat.get(f.code) ?? 0) > 0 || filters.sensorFormats.includes(f.code))
-            .map((f) => (
-              <Check
-                key={f.code}
-                label={f.label}
-                count={counts.sensorFormat.get(f.code) ?? 0}
-                checked={filters.sensorFormats.includes(f.code)}
-                onChange={() => toggle('sensorFormats', f.code)}
-              />
-            ))}
-        </Section>
-      )}
-
-      <Section title="Condition">
-        {grades.map((g) => (
-          <Check
-            key={g.code}
-            label={`${g.code} · ${g.label}`}
-            count={counts.grade.get(g.code) ?? 0}
-            checked={filters.grades.includes(g.code)}
-            onChange={() => toggle('grades', g.code)}
-          />
-        ))}
-      </Section>
+          </Section>
+        )
+      })}
 
       <Section title="Price">
         <div className="fs__price">
@@ -161,7 +93,7 @@ export function FilterSidebar({
               className="tg-input"
               inputMode="numeric"
               min={0}
-              placeholder={String(Math.floor(priceBounds.min / 100))}
+              placeholder={price ? String(Math.floor(price.minMinor / 100)) : 'Min'}
               value={filters.minPriceMinor === null ? '' : filters.minPriceMinor / 100}
               onChange={(e) =>
                 onChange({
@@ -179,7 +111,7 @@ export function FilterSidebar({
               className="tg-input"
               inputMode="numeric"
               min={0}
-              placeholder={String(Math.ceil(priceBounds.max / 100))}
+              placeholder={price ? String(Math.ceil(price.maxMinor / 100)) : 'Max'}
               value={filters.maxPriceMinor === null ? '' : filters.maxPriceMinor / 100}
               onChange={(e) =>
                 onChange({
@@ -190,9 +122,11 @@ export function FilterSidebar({
             />
           </label>
         </div>
-        <p className="fs__hint tg-muted">
-          {money(priceBounds.min)} – {money(priceBounds.max)} in stock
-        </p>
+        {price && (
+          <p className="fs__hint tg-muted">
+            {money(price.minMinor)} – {money(price.maxMinor)} in stock
+          </p>
+        )}
       </Section>
     </aside>
   )
@@ -210,8 +144,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Check({
   label, count, checked, onChange,
 }: { label: string; count: number; checked: boolean; onChange: () => void }) {
-  // A zero-count option that is not selected cannot change the result, so it is
-  // disabled rather than hidden — the facet list stays stable as you filter.
+  // The API only sends options with stock, and ones already ticked; a ticked
+  // one at zero stays enabled so it can be unticked.
   const disabled = count === 0 && !checked
   return (
     <label className={`fs__check${disabled ? ' fs__check--disabled' : ''}`}>
