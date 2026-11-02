@@ -151,3 +151,20 @@ export function countBy<T>(rows: Facetable[], key: (r: Facetable) => T | null | 
   }
   return counts
 }
+
+/** The query string for /listings/search, from the filters a shopper has set. */
+export function searchQuery(f: Filters, page = 0, size = 24): string {
+  const p = new URLSearchParams()
+  if (f.q.trim()) p.set('q', f.q.trim())
+  const lists: [string, string[]][] = [
+    ['category', f.categoryIds], ['brand', f.brandIds], ['mount', f.mountIds],
+    ['lensType', f.lensTypes], ['lensRange', f.lensRanges], ['sensor', f.sensorFormats], ['grade', f.grades],
+  ]
+  for (const [key, values] of lists) if (values.length) p.set(key, values.join(','))
+  if (f.minPriceMinor !== null) p.set('minPriceMinor', String(f.minPriceMinor))
+  if (f.maxPriceMinor !== null) p.set('maxPriceMinor', String(f.maxPriceMinor))
+  p.set('sort', f.sort)
+  p.set('page', String(page))
+  p.set('size', String(size))
+  return p.toString()
+}

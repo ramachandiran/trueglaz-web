@@ -1754,3 +1754,44 @@ export interface InsuranceQuote {
   providerLive: boolean
   plans: InsurancePlan[]
 }
+
+/** One choice in a filter group: the value to send back, its label, and how many it would show. */
+export interface FacetOption {
+  value: string
+  label: string
+  count: number
+}
+
+/**
+ * The filter groups the shop offers right now. Each is counted against the
+ * other selections, and only holds options with stock (plus any already picked),
+ * so an empty group is one to hide.
+ */
+export interface SearchFacets {
+  category: FacetOption[]
+  brand: FacetOption[]
+  mount: FacetOption[]
+  lensType: FacetOption[]
+  lensRange: FacetOption[]
+  sensorFormat: FacetOption[]
+  grade: FacetOption[]
+}
+
+/** A listing in search results, with the model facts its card needs. */
+export interface SearchHit {
+  listing: Listing
+  productModelId: string | null
+  modelSlug: string | null
+  categoryId: string | null
+  brandId: string | null
+}
+
+export interface ListingSearchResult {
+  hits: SearchHit[]
+  total: number
+  page: number
+  size: number
+  facets: SearchFacets
+  /** The price span of what the other filters leave; null when nothing does. */
+  price: { minMinor: number; maxMinor: number } | null
+}
