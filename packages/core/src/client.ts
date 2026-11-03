@@ -1,15 +1,16 @@
 import { getStorage } from './storage'
+import { searchQuery, type Filters } from './filters'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail, ManagedListing, NewModel,
   Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
-  Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
+  Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, InboundClock, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, VaultPolicy, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, ListingSearchResult, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -255,6 +256,9 @@ export const api = {
   logout: () => post<{ ok: boolean }>('/auth/logout'),
 
   // -- catalogue (public) --------------------------------------------------
+  /** The shop's search: results, total and the live filter options. */
+  searchListings: (f: Filters, page = 0, size = 24) =>
+    get<ListingSearchResult>(`/listings/search?${searchQuery(f, page, size)}`),
   listings(p: BrowseParams = {}) {
     const qs = new URLSearchParams()
     if (p.q) qs.set('q', p.q)
@@ -589,6 +593,9 @@ export const api = {
 
   // -- ops -----------------------------------------------------------------
   pendingSubmissions: () => get<Submission[]>('/ops/submissions/pending'),
+  inboundClock: () => get<InboundClock[]>('/ops/submissions/inbound-clock'),
+  extendShipBy: (id: string, days: number) => post<Submission>(`/ops/submissions/${id}/extend`, { days }),
+  lapseSubmission: (id: string) => post<Submission>(`/ops/submissions/${id}/lapse`),
   preApprove: (id: string, courierCode: string) =>
     post<InboundShipment>(`/ops/submissions/${id}/pre-approve`, { courierCode }),
   rejectSubmission: (id: string, reasonCode: string, note?: string) =>
@@ -737,7 +744,7 @@ export const api = {
   removeGear: (id: string) => del<void>(`/vault/${id}`),
   insuranceQuote: (id: string) => get<InsuranceQuote>(`/vault/${id}/insurance/quote`),
   buyInsurance: (id: string, planCode: string, sumInsuredMinor?: number) =>
-    post<VaultPolicy>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
+    post<InsuranceRequest>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
   /** Add a just-bought item to the vault, pre-filled from the order line. */
   addGearFromOrderLine: (lineId: string) => post<VaultItem>(`/vault/from-order-line/${lineId}`),
   /** The wrapped vault key for this user, or null if the vault isn't secured yet. */

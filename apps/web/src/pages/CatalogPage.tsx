@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
@@ -6,42 +6,49 @@ import { FilterSidebar } from '../components/FilterSidebar'
 import { photoKindFor } from '../components/GearPhoto'
 import { GradeBadge, Empty, ErrorNote, Loading } from '../components/ui'
 import {
-  applyFilters, buildModelIndex, countBy, EMPTY_FILTERS,
-  resolveModel, singularCategory, type Facetable, type Filters, type Sort,
+  EMPTY_FILTERS, singularCategory, type Filters, type SearchHit, type Sort,
 } from '@trueglaz/core'
 
 /** The sorts the results header offers, and so the only ones a link may ask for. */
 const SORTS: Sort[] = ['newest', 'price-asc', 'price-desc', 'grade-desc']
+/** Results per "Show more"; the API serves at most 60 at once. */
+const PAGE = 24
 import { money } from '@trueglaz/core'
 import './CatalogPage.css'
 import { ModelPhoto } from '../components/ModelPhoto'
 
 export function CatalogPage() {
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+  const [filters, setFiltersState] = useState<Filters>(EMPTY_FILTERS)
   const [params] = useSearchParams()
 
-  // Text search is the one facet the API can genuinely narrow, so it is sent up.
-  // Everything else is faceted here — see lib/filters.ts for why.
-  const listings = useApi(() => api.listings({ q: filters.q, size: 200 }), [filters.q])
-  const models = useApi(() => api.models(), [])
+  // Search, sorting, paging and the filter options all come from the API, over
+  // the whole shop. Doing it here over one page of listings lost every unit
+  // past the first hundred and counted only those.
+  const key = JSON.stringify(filters)
+  const search = useApi(() => api.searchListings(filters, 0, PAGE), [key])
+
+  // Pages after the first, appended by "Show more". Tagged with the search they
+  // belong to, so a page that lands after the filters changed is dropped.
+  const [more, setMore] = useState<{ key: string; hits: SearchHit[]; next: number }>({ key: '', hits: [], next: 1 })
+  const [loadingMore, setLoadingMore] = useState(false)
+  const latestKey = useRef(key)
+  latestKey.current = key
+  const extra = more.key === key ? more : { key, hits: [], next: 1 }
+  async function showMore() {
+    const forKey = key
+    setLoadingMore(true)
+    try {
+      const page = await api.searchListings(filters, extra.next, PAGE)
+      if (latestKey.current === forKey) setMore({ key: forKey, hits: [...extra.hits, ...page.hits], next: extra.next + 1 })
+    } finally { setLoadingMore(false) }
+  }
+  const setFilters = setFiltersState
   const grades = useApi(() => api.grades(), [])
   const brands = useApi(() => api.brands(), [])
   const mounts = useApi(() => api.mounts(), [])
   const categories = useApi(() => api.categories(), [])
   const meta = useApi(() => api.meta(), [])
   const delivery = meta.data ? `+ ${money(meta.data.shippingMinor)} delivery` : '+ delivery'
-  const lensTypes = useApi(() => api.lensTypes(), [])
-  const lensRanges = useApi(() => api.lensRanges(), [])
-  const sensorFormats = useApi(() => api.sensorFormats(), [])
-
-  const rows: Facetable[] = useMemo(() => {
-    if (!listings.data) return []
-    const index = buildModelIndex(models.data?.content ?? [])
-    return listings.data.content.map((listing) => ({
-      listing,
-      model: resolveModel(listing, index),
-    }))
-  }, [listings.data, models.data])
 
   const brandById = useMemo(
     () => new Map((brands.data ?? []).map((b) => [b.id, b.name])),
@@ -85,7 +92,8 @@ export function CatalogPage() {
     }))
   }, [q, catSlug, brandName, mountName, sortParam, categories.data, brands.data, mounts.data])
 
-  const visible = useMemo(() => applyFilters(rows, filters, gradeRank), [rows, filters, gradeRank])
+  const hits = [...(search.data?.hits ?? []), ...extra.hits]
+  const total = search.data?.total ?? 0
 
   const heading = useMemo(() => {
     if (q) return `"${q}"`
@@ -96,67 +104,22 @@ export function CatalogPage() {
     return 'All gear'
   }, [q, catSlug, brandName, mountName, categories.data])
 
-  // Facet counts reflect everything else that is selected, so a count of zero
-  // genuinely means "picking this shows nothing".
-  const counts = useMemo(
-    () => ({
-      category: countBy(
-        applyFilters(rows, { ...filters, categoryIds: [] }, gradeRank),
-        (r) => r.model?.categoryId,
-      ),
-      brand: countBy(
-        applyFilters(rows, { ...filters, brandIds: [] }, gradeRank),
-        (r) => r.model?.brandId,
-      ),
-      grade: countBy(
-        applyFilters(rows, { ...filters, grades: [] }, gradeRank),
-        (r) => r.listing.gradeCode,
-      ),
-      lensType: countBy(
-        applyFilters(rows, { ...filters, lensTypes: [] }, gradeRank),
-        (r) => r.model?.lensTypeCode,
-      ),
-      lensRange: countBy(
-        applyFilters(rows, { ...filters, lensRanges: [] }, gradeRank),
-        (r) => r.model?.lensRangeCode,
-      ),
-      sensorFormat: countBy(
-        applyFilters(rows, { ...filters, sensorFormats: [] }, gradeRank),
-        (r) => r.model?.sensorFormat,
-      ),
-    }),
-    [rows, filters, gradeRank],
-  )
-
-  const priceBounds = useMemo(() => {
-    const prices = rows.map((r) => r.listing.priceMinor)
-    return prices.length
-      ? { min: Math.min(...prices), max: Math.max(...prices) }
-      : { min: 0, max: 0 }
-  }, [rows])
-
   return (
     <div className="catalog">
       <FilterSidebar
         filters={filters}
         onChange={setFilters}
-        categories={categories.data ?? []}
-        brands={brands.data ?? []}
-        grades={(grades.data ?? []).filter((g) => g.isActive).sort((a, b) => b.rank - a.rank)}
-        lensTypes={lensTypes.data ?? []}
-        lensRanges={lensRanges.data ?? []}
-        sensorFormats={sensorFormats.data ?? []}
-        counts={counts}
-        priceBounds={priceBounds}
+        facets={search.data?.facets ?? null}
+        price={search.data?.price ?? null}
       />
 
       <section className="catalog__results" aria-label="Listings">
         <div className="results__bar">
           <p className="results__count">
-            {visible.length === 0 ? 'No results' : (
+            {total === 0 ? 'No results' : (
               <>
-                <strong>{visible.length}</strong>
-                {visible.length === 1 ? ' result' : ' results'}
+                <strong>{total}</strong>
+                {total === 1 ? ' result' : ' results'}
               </>
             )}
             {' for '}<span className="results__term">{heading}</span>
@@ -177,24 +140,26 @@ export function CatalogPage() {
           </label>
         </div>
 
-        {listings.loading && <Loading label="Loading listings" />}
-        {listings.error && <ErrorNote error={listings.error} onRetry={listings.reload} />}
+        {/* Only the first load takes over; refining keeps the old results up
+            until the new ones arrive, so the page does not flash. */}
+        {search.loading && !search.data && <Loading label="Loading listings" />}
+        {search.error && <ErrorNote error={search.error} onRetry={search.reload} />}
 
-        {!listings.loading && !listings.error && visible.length === 0 && (
+        {search.data && !search.error && hits.length === 0 && (
           <Empty
             title="Nothing matches those filters"
             hint="Try clearing a filter or widening the price range."
           />
         )}
 
-        {visible.length > 0 && (
+        {hits.length > 0 && (
           <ol className="results">
-            {visible.map(({ listing, model }) => {
-              const category = categories.data?.find((c) => c.id === model?.categoryId)
+            {hits.map(({ listing, modelSlug, categoryId, brandId }) => {
+              const category = categories.data?.find((c) => c.id === categoryId)
               return (
                 <li key={listing.id} className="result">
                   <Link to={`/listings/${listing.id}`} className="result__photo-link" tabIndex={-1} aria-hidden="true">
-                    <ModelPhoto slug={model?.slug} kind={photoKindFor(category?.name)} alt={listing.title.split('·')[0].trim()} />
+                    <ModelPhoto slug={modelSlug} kind={photoKindFor(category?.name)} alt={listing.title.split('·')[0].trim()} />
                   </Link>
 
                   <div className="result__body">
@@ -202,7 +167,7 @@ export function CatalogPage() {
                       {listing.title.split('·')[0].trim()}
                     </Link>
                     <p className="result__brand tg-muted">
-                      {model?.brandId ? brandById.get(model.brandId) ?? '' : 'Unlisted model'}
+                      {brandId ? brandById.get(brandId) ?? '' : 'Unlisted model'}
                       {category && ` · ${singularCategory(category.name)}`}
                     </p>
 
@@ -231,6 +196,19 @@ export function CatalogPage() {
               )
             })}
           </ol>
+        )}
+
+        {hits.length < total && (
+          <div className="results__more">
+            <button
+              type="button"
+              className="tg-button"
+              disabled={loadingMore}
+              onClick={showMore}
+            >
+              {loadingMore ? 'Loading…' : `Show more (${total - hits.length} left)`}
+            </button>
+          </div>
         )}
       </section>
 

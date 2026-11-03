@@ -54,9 +54,9 @@ export function ListingDetailPage() {
   return (
     <article className="detail">
       <nav className="crumbs" aria-label="Breadcrumb">
-        <Link to="/">All gear</Link>
+        <Link to="/catalog">All gear</Link>
         <span aria-hidden="true">›</span>
-        <Link to={`/?cat=${kind === 'camera' ? 'cameras' : 'lenses'}`}>
+        <Link to={`/catalog?cat=${kind === 'camera' ? 'cameras' : 'lenses'}`}>
           {kind === 'camera' ? 'Cameras' : 'Lenses'}
         </Link>
         <span aria-hidden="true">›</span>
@@ -129,7 +129,15 @@ export function ListingDetailPage() {
             </div>
           )}
 
-          {d.listing.state === 'published' ? (
+          {d.mine ? (
+            // A seller cannot buy their own unit; the reservation refuses it.
+            <div className="buybox__mine" role="status">
+              <strong>This is your listing.</strong>{' '}
+              {d.myItemId
+                ? <Link to={`/items/${d.myItemId}`}>Manage it from your item</Link>
+                : <Link to="/sell/manage">Manage it from Selling</Link>}
+            </div>
+          ) : d.listing.state === 'published' ? (
             <>
               <p className="buybox__stock">In stock — and there is only one.</p>
               <button

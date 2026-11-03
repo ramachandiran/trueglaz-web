@@ -52,7 +52,7 @@ export function StaffHomePage() {
               <h2 id="dash-urgent" className="dash__sec">Needs you first</h2>
               <div className="dash__urgent">
                 {urgent.map((a) => (
-                  <Link key={a.key} to={a.href} className="dash__hot">
+                  <Link key={a.key} to={staffHref(a.key, a.href)} className="dash__hot">
                     <span className="dash__hot-c">{a.count}</span>
                     <span className="dash__hot-b">
                       <strong>{a.title}</strong>
@@ -83,7 +83,7 @@ export function StaffHomePage() {
                         <h3>{g}</h3>
                       </div>
                       {items.map((a) => (
-                        <Link key={a.key} to={a.href} className="dash__qrow">
+                        <Link key={a.key} to={staffHref(a.key, a.href)} className="dash__qrow">
                           <span className="dash__qrow-c">{a.count}</span>
                           <span>
                             <span className="dash__qrow-t">{a.title}</span>
@@ -140,6 +140,24 @@ export function StaffHomePage() {
       </div>
     </div>
   )
+}
+
+// Where each queue lives in the console, for an API that still sends the
+// pre-console paths (/ops, /returns, /admin…). Without this a click lands on a
+// route that no longer exists and bounces straight back to this page.
+const LEGACY: Record<string, string> = {
+  '/ops': '/admin/operations', '/inventory': '/admin/inventory', '/fulfilment': '/admin/fulfilment',
+  '/returns': '/admin/returns', '/people': '/admin/people', '/admin': '/admin/money',
+}
+// The Operations tab each action is worked from, so a click opens that queue.
+const OPS_TAB: Record<string, string> = {
+  submissions: 'intake', boxes_overdue: 'inbound', boxes: 'inbound',
+  to_queue: 'inspect', to_start: 'inspect', qc: 'inspect', to_price: 'price', wanted: 'wanted',
+}
+
+function staffHref(key: string, href: string): string {
+  const path = LEGACY[href] ?? href
+  return path === '/admin/operations' && OPS_TAB[key] ? `${path}?tab=${OPS_TAB[key]}` : path
 }
 
 function greeting() {

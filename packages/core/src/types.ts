@@ -53,6 +53,10 @@ export interface ListingDetail {
   priceHistory: ListingPriceChange[]
   /** For the stock-image fallback. Null when the unit matched no model. */
   modelSlug: string | null
+  /** True when the signed-in viewer is this unit's seller (they cannot buy it). */
+  mine?: boolean
+  /** The seller's own item record — only given to the seller. */
+  myItemId?: string | null
 }
 
 export interface ConsignmentItem {
@@ -203,6 +207,8 @@ export interface ManagedListing {
   floorMinor: number | null
   sellerName: string | null
   listedAt: string | null
+  /** The latest of a change to the unit and a reprice. */
+  updatedAt?: string | null
 }
 
 /** What an admin fills in to add a model to a brand. */
@@ -298,6 +304,8 @@ export interface Submission {
   rejectedNote: string | null
   expiresAt: string | null
   createdAt: string
+  /** Latest change to the submission itself (null from an older API). */
+  updatedAt?: string | null
 }
 
 export interface SubmissionView {
@@ -905,6 +913,18 @@ export interface ReviewRequest {
   note: string | null
   rejectedReasonCode: string | null
   createdAt: string | null
+  updatedAt?: string | null
+}
+
+/** The ship-by clock for one box the hub is waiting on. */
+export interface InboundClock {
+  submissionId: string
+  shipBy: string | null
+  /** 0 until the ship-by date has passed. */
+  daysOverdue: number
+  /** The day the sweep voids it if nobody posts it or extends it. */
+  lapsesOn: string | null
+  updatedAt: string | null
 }
 
 /**
@@ -1656,6 +1676,26 @@ export interface VaultPolicy {
   live: boolean
 }
 
+/**
+ * A cover request. Issued at once when the insurer is instant; otherwise
+ * `authorized` (or `submitted`, with the insurer) until staff issue it, and the
+ * premium is only charged on issue.
+ */
+export interface InsuranceRequest {
+  id: string
+  itemId: string
+  status: 'authorized' | 'submitted' | 'issued' | 'declined' | 'cancelled' | 'expired'
+  planCode: string
+  sumInsuredMinor: number
+  premiumMinor: number
+  taxMinor: number
+  totalMinor: number
+  /** When manual issuance is expected by. */
+  expectedBy: string | null
+  declineReason: string | null
+  policy: VaultPolicy | null
+}
+
 export interface VaultItem {
   id: string
   modelLabel: string
@@ -1676,6 +1716,8 @@ export interface VaultItem {
   warrantyStatus: 'unknown' | 'active' | 'expiring' | 'expired'
   valuation: VaultValuation | null
   policy: VaultPolicy | null
+  /** An open request being issued by hand, if any. */
+  insuranceRequest?: InsuranceRequest | null
 }
 
 export interface AddGearInput {
@@ -1725,4 +1767,45 @@ export interface InsuranceQuote {
   sumInsuredMinor: number
   providerLive: boolean
   plans: InsurancePlan[]
+}
+
+/** One choice in a filter group: the value to send back, its label, and how many it would show. */
+export interface FacetOption {
+  value: string
+  label: string
+  count: number
+}
+
+/**
+ * The filter groups the shop offers right now. Each is counted against the
+ * other selections, and only holds options with stock (plus any already picked),
+ * so an empty group is one to hide.
+ */
+export interface SearchFacets {
+  category: FacetOption[]
+  brand: FacetOption[]
+  mount: FacetOption[]
+  lensType: FacetOption[]
+  lensRange: FacetOption[]
+  sensorFormat: FacetOption[]
+  grade: FacetOption[]
+}
+
+/** A listing in search results, with the model facts its card needs. */
+export interface SearchHit {
+  listing: Listing
+  productModelId: string | null
+  modelSlug: string | null
+  categoryId: string | null
+  brandId: string | null
+}
+
+export interface ListingSearchResult {
+  hits: SearchHit[]
+  total: number
+  page: number
+  size: number
+  facets: SearchFacets
+  /** The price span of what the other filters leave; null when nothing does. */
+  price: { minMinor: number; maxMinor: number } | null
 }

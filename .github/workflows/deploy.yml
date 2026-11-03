@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  AWS_REGION: ap-southeast-2
-  BUCKET: trueglaz-demo-web
+  AWS_REGION: ap-south-1
+  BUCKET: trueglaz-demo-web-001
 
 permissions:
   id-token: write

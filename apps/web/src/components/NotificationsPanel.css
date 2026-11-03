@@ -164,3 +164,6 @@
 @media (max-width: 560px) {
   .notif__when { margin-left: 0; width: 100%; }
 }
+
+/* Profile shows the latest few; the rest are one tap away. */
+.notif__more { margin-top: var(--tg-space-3); }

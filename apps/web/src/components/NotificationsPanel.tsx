@@ -27,9 +27,16 @@ const GROUPS: { key: string; label: string }[] = [
   { key: 'rewards', label: 'Rewards' },
 ]
 
+/** How many notifications Profile shows before "Show all". */
+const PREVIEW = 5
+
 export function NotificationsPanel({ onChanged }: { onChanged?: () => void }) {
   const feed = useApi(() => api.notifications(), [])
   const [group, setGroup] = useState('all')
+  // Profile is also where addresses, bank and identity live. The whole feed
+  // here (a busy seller has hundreds) pushed those ten phone screens down, so
+  // show the latest few and let the rest be asked for.
+  const [expanded, setExpanded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -84,7 +91,8 @@ export function NotificationsPanel({ onChanged }: { onChanged?: () => void }) {
 
   const all = feed.data.items
   const unread = feed.data.unread
-  const shown = group === 'all' ? all : all.filter((n) => n.category === group)
+  const inGroup = group === 'all' ? all : all.filter((n) => n.category === group)
+  const shown = expanded ? inGroup : inGroup.slice(0, PREVIEW)
 
   // A tab with nothing behind it is a dead end, so only the ones that have
   // something are offered.
@@ -220,6 +228,12 @@ export function NotificationsPanel({ onChanged }: { onChanged?: () => void }) {
           </li>
         ))}
       </ul>
+
+      {inGroup.length > PREVIEW && (
+        <button type="button" className="tg-button notif__more" onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Show fewer' : `Show all ${inGroup.length}`}
+        </button>
+      )}
 
       {error && <p className="profile__error" role="alert">{error}</p>}
     </section>

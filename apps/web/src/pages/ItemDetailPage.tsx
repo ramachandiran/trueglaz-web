@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { api, useSession } from '@trueglaz/core'
+import { api, isStaff, useSession } from '@trueglaz/core'
 import { useApi } from '@trueglaz/core'
 import { InspectionReport } from '../components/InspectionReport'
 import { ShipmentLegs } from '../components/ShipmentLegs'
@@ -68,7 +68,16 @@ export function ItemDetailPage() {
   return (
     <article className="detail">
       <div className="detail__back-row">
-        <button className="detail__back" onClick={() => nav(-1)} title="Go back">
+        <button
+          className="detail__back"
+          onClick={() => {
+            // React Router numbers history entries; 0 means this tab started here.
+            const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
+            if (idx > 0) nav(-1)
+            else nav(isStaff(session) ? '/admin/inventory' : '/sell/manage')
+          }}
+          title="Go back"
+        >
           ← Back
         </button>
       </div>

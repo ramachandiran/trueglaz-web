@@ -29,6 +29,7 @@ import { ItemDetailPage } from './pages/ItemDetailPage'
 import { ItemsPage } from './pages/ItemsPage'
 import { ListingDetailPage } from './pages/ListingDetailPage'
 import { NewSubmissionPage } from './pages/NewSubmissionPage'
+import { SubmissionLinkPage } from './pages/SubmissionLinkPage'
 import { OpsPage } from './pages/OpsPage'
 import { OrdersPage } from './pages/OrdersPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -82,13 +83,16 @@ export function App() {
           <Route path="/checkout/:listingId" element={<Guard need="signed-in"><CheckoutPage /></Guard>} />
           <Route path="/orders" element={<Guard need="signed-in"><OrdersPage /></Guard>} />
           <Route path="/vault" element={<Guard need="signed-in"><VaultPage /></Guard>} />
+          {/* Notifications about one item (insurance issued, declined…) open it here. */}
+          <Route path="/vault/:itemId" element={<Guard need="signed-in"><VaultPage /></Guard>} />
           <Route path="/profile" element={<Guard need="signed-in"><ProfilePage /></Guard>} />
 
           {/* Seller */}
           <Route path="/sell" element={<Guard need="signed-in"><SellerHomePage /></Guard>} />
           <Route path="/sell/manage" element={<Guard need="signed-in"><SellPage /></Guard>} />
           <Route path="/sell/new" element={<Guard need="signed-in"><NewSubmissionPage /></Guard>} />
-          <Route path="/sell/:id" element={<Guard need="signed-in"><NewSubmissionPage /></Guard>} />
+          {/* Links about one submission: drafts are finished here, sent ones open their item. */}
+          <Route path="/sell/:id" element={<Guard need="signed-in"><SubmissionLinkPage /></Guard>} />
           <Route path="/items/:id" element={<Guard need="signed-in"><ItemDetailPage /></Guard>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -127,6 +131,16 @@ export function App() {
           <Route path="/admin/balance-sheet" element={<Guard need="admin"><BalanceSheetPage /></Guard>} />
           <Route path="/admin/audit" element={<Guard need="admin"><AuditPage /></Guard>} />
         </Route>
+
+        {/* The pre-console staff paths, kept as redirects so old links, bookmarks
+            and any client still sending them land on the right screen instead
+            of the storefront catch-all. */}
+        <Route path="/today" element={<Navigate to="/admin" replace />} />
+        <Route path="/ops" element={<Navigate to="/admin/operations" replace />} />
+        <Route path="/inventory" element={<Navigate to="/admin/inventory" replace />} />
+        <Route path="/fulfilment" element={<Navigate to="/admin/fulfilment" replace />} />
+        <Route path="/returns" element={<Navigate to="/admin/returns" replace />} />
+        <Route path="/people" element={<Navigate to="/admin/people" replace />} />
       </Routes>
     </BrowserRouter>
   )

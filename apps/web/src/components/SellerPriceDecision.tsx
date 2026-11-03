@@ -15,6 +15,9 @@ export function SellerPriceDecision({ a, onDone }: { a: SellerApprovalView; onDo
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [counter, setCounter] = useState('')
+  // Declining sends the unit home, and return shipping and handling are
+  // charged — too much to commit to on one stray tap.
+  const [confirmDecline, setConfirmDecline] = useState(false)
 
   const id = a.approval.id
   const typed = Number(counter)
@@ -74,9 +77,19 @@ export function SellerPriceDecision({ a, onDone }: { a: SellerApprovalView; onDo
           </div>
         )}
 
-        <button className="tg-button spd__decline" disabled={busy} onClick={() => decide('declined')}>
-          Decline
-        </button>
+        {confirmDecline ? (
+          <div className="spd__confirm" role="alert">
+            <span>Decline and have it sent back to you? Return shipping and handling fees apply.</span>
+            <button className="tg-button spd__decline" disabled={busy} onClick={() => decide('declined')}>
+              {busy ? 'Declining…' : 'Yes, decline'}
+            </button>
+            <button className="tg-button" disabled={busy} onClick={() => setConfirmDecline(false)}>Keep deciding</button>
+          </div>
+        ) : (
+          <button className="tg-button spd__decline" disabled={busy} onClick={() => setConfirmDecline(true)}>
+            Decline
+          </button>
+        )}
       </div>
 
       {canCounter && (

@@ -11,3 +11,6 @@
 .spd__counter-input { width: 150px; }
 .spd__decline { color: var(--tg-bad); }
 .spd__error { color: var(--tg-bad); font-size: var(--tg-text-sm); margin: 0; }
+
+/* Declining costs the seller return fees, so it asks once more. */
+.spd__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tg-space-2); font-size: var(--tg-text-sm); }
