@@ -21,7 +21,7 @@
 /* list */
 .vault__list { list-style: none; display: flex; flex-direction: column; gap: var(--tg-space-3); }
 .gear { display: flex; gap: var(--tg-space-3); align-items: center; background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-lg); padding: 14px 16px; }
-.gear__thumb { width: 46px; height: 46px; border-radius: 12px; background: var(--tg-bg-sunken); color: var(--tg-brand); display: flex; align-items: center; justify-content: center; flex: none; }
+.gear__thumb { flex: none; display: flex; }
 .gear__main { flex: 1; min-width: 0; }
 .gear__name { font-size: var(--tg-text-md, 15px); font-weight: var(--tg-weight-bold); }
 .gear__meta { font-size: var(--tg-text-xs); color: var(--tg-text-muted); margin-top: 2px; }

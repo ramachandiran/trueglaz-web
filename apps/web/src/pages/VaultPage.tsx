@@ -5,6 +5,7 @@ import {
   type VaultItem, type InsuranceRequest, type InsurancePlan, type InsuranceQuote, type ProductModel, ApiError,
 } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
+import { ModelPhoto } from '../components/ModelPhoto'
 import {
   isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
 } from '../state/vaultKey'
@@ -197,7 +198,10 @@ function GearCard({ item, focused, onInsure, onChanged }: { item: VaultItem; foc
 
   return (
     <li ref={ref} className={`gear${focused ? ' gear--focused' : ''}`}>
-      <span className="gear__thumb" aria-hidden="true"><CameraIcon /></span>
+      {/* The admin-set model picture; the drawn placeholder for free-text gear. */}
+      <span className="gear__thumb" aria-hidden="true">
+        <ModelPhoto modelId={item.productModelId} kind="camera" size="thumb" alt="" badge={false} />
+      </span>
       <div className="gear__main">
         <div className="gear__name">{item.modelLabel}</div>
         <div className="gear__meta">
@@ -461,11 +465,3 @@ function LockIcon({ open = false }: { open?: boolean }) {
   )
 }
 
-function CameraIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-      <circle cx="12" cy="13" r="4" />
-    </svg>
-  )
-}

@@ -407,6 +407,9 @@
   border-radius: var(--tg-radius-lg);
 }
 
+.co__sum-photo { margin: 0 0 var(--tg-space-3); }
+.co__sum-photo .model-photo--hero,
+.co__sum-photo .photo--hero { border-radius: var(--tg-radius-md, 10px); }
 .co__sum-title { margin: 0; font-weight: var(--tg-weight-bold); font-size: var(--tg-text-md); }
 .co__sum-badges { display: flex; gap: 8px; align-items: center; }
 

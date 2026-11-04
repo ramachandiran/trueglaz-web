@@ -3,6 +3,8 @@
 
 /* SKU above, brand and model beneath. Three columns said the same thing and
    made a staff member read sideways to answer "which one is this". */
+.inv__photo { float: left; margin: 2px var(--tg-space-2) 0 0; }
+
 .inv__sku {
   display: block;
   font-weight: var(--tg-weight-medium);

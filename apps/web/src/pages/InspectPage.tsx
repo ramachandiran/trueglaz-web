@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError, useApi, isStaff, useSession, type ChecklistItem } from '@trueglaz/core'
 import { ErrorNote, Loading, SeverityBadge } from '../components/ui'
+import { ModelPhoto } from '../components/ModelPhoto'
 import './OpsPage.css'
 
 type Answer = { valueBoolean?: boolean | null; valueNumeric?: number | null; valueText?: string | null; valueOption?: string | null }
@@ -139,7 +140,11 @@ export function InspectPage() {
   return (
     <div className="ops">
       <header className="ops__card-head">
-        <h1 className="ops__title">Inspecting {item.data.item.internalSku}</h1>
+        <div className="ops__head-id">
+          {/* What the model should look like, to compare the unit on the bench against. */}
+          <ModelPhoto modelId={item.data.item.productModelId} kind="gear" size="thumb" alt="Reference picture of this model" badge={false} />
+          <h1 className="ops__title">Inspecting {item.data.item.internalSku}</h1>
+        </div>
         <span className="tg-muted">seller declared {item.data.item.declaredGradeCode}</span>
       </header>
 
