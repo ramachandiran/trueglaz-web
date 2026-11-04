@@ -25,6 +25,8 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
   const [reserveError, setReserveError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  // No saved address: the form is the only way forward, so it starts open (TG-15).
+  useEffect(() => { if (addresses.data && addresses.data.length === 0) setAdding(true) }, [addresses.data])
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -88,7 +90,8 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
         await api.stubPay(order.id, 'approve')
         navigation.replace('OrderDetail', { id: order.id, justPaid: true })
       } else {
-        navigation.replace('OrderDetail', { id: order.id, awaitingPayment: true })
+        // A real gateway: open its checkout. The order is placed; paying is the next step.
+        navigation.replace('Pay', { orderId: order.id })
       }
     } catch (e) { setError((e as Error).message) } finally { setPlacing(false) }
   }
@@ -97,7 +100,9 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
     return (
       <View style={{ flex: 1, backgroundColor: t.colors.bg, padding: t.space.x4, gap: t.space.x3 }}>
         <ErrorNote error={new Error(reserveError)} />
-        <Muted>Someone may be buying this right now, or it has sold. Try another listing.</Muted>
+        {/checking this item out|already been sold/i.test(reserveError) && (
+          <Muted>Someone may be buying this right now, or it has sold. Try another listing.</Muted>
+        )}
         <Button label="Back to shop" variant="ghost" onPress={() => navigation.goBack()} />
       </View>
     )
@@ -123,9 +128,11 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
         <Card style={{ gap: t.space.x3 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <SectionTitle>Deliver to</SectionTitle>
-            <Pressable onPress={() => setAdding((v) => !v)}>
-              <Txt style={{ color: t.colors.accent }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
-            </Pressable>
+            {(addresses.data?.length ?? 0) > 0 && (
+              <Pressable onPress={() => setAdding((v) => !v)}>
+                <Txt style={{ color: t.colors.accent }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
+              </Pressable>
+            )}
           </View>
 
           {!adding && (addresses.data ?? []).map((a) => (

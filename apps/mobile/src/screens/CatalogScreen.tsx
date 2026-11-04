@@ -35,10 +35,7 @@ const GROUPS: { key: ListKey; facet: keyof SearchFacets; title: string }[] = [
 export function CatalogScreen({ navigation, route }: { navigation: any; route?: any }) {
   const t = useTheme()
   const insets = useSafeAreaInsets()
-  // The Home screen can deep-link in with a search term (e.g. a category name).
-  const [filters, setFilters] = useState<Filters>(
-    route?.params?.q ? { ...EMPTY_FILTERS, q: route.params.q } : EMPTY_FILTERS,
-  )
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [sheetOpen, setSheetOpen] = useState(false)
 
   // What is typed reaches the search after a short pause, not on every key.
@@ -54,6 +51,24 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
   const brands = useApi(() => api.brands(), [])
   const categories = useApi(() => api.categories(), [])
   const images = useApi(() => api.modelImages(), [])
+
+  // Home links in with a category, a search term or "open the filters". Shop is
+  // a tab that stays mounted, so this runs on every visit that carries a request
+  // (keyed on `at`), not just the first: a second category tap must apply too.
+  const params = route?.params as { category?: string; q?: string; openFilters?: boolean; at?: number } | undefined
+  const applied = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    if (!params?.at || applied.current === params.at) return
+    if (params.category && !categories.data) return // wait for the slug -> id lookup
+    applied.current = params.at
+    if (params.category || params.q !== undefined) {
+      const cat = params.category ? categories.data?.find((c) => c.slug === params.category) : undefined
+      const next = { ...EMPTY_FILTERS, sort: filters.sort, q: params.q ?? '', categoryIds: cat ? [cat.id] : [] }
+      setTyped(next.q)
+      setFilters(next)
+    }
+    if (params.openFilters) setSheetOpen(true)
+  }, [params?.at, categories.data])
 
   // Further pages, appended as the list nears its end. Tagged with the search
   // they belong to, so a page that lands after the filters changed is dropped.
@@ -147,7 +162,7 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
           ListFooterComponent={loadingMore ? <Loading /> : null}
           contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x1, gap: t.space.x3 }}
           ListEmptyComponent={<Empty title="Nothing matches those filters" hint="Try clearing one or widening the search." />}
-          renderItem={({ item: { listing, modelSlug, brandId, categoryId } }) => (
+          renderItem={({ item: { listing, modelSlug, brandId, categoryId, mine } }) => (
             <ListingCard
               listing={listing}
               image={modelSlug ? imageBySlug.get(modelSlug) : undefined}
@@ -155,6 +170,7 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
               category={categoryId ? categoryName.get(categoryId) : undefined}
               gradeText={gradeLabel.get(listing.gradeCode)}
               top={(gradeRank.get(listing.gradeCode) ?? 0) >= 9}
+              mine={!!mine}
               onOpen={() => navigation.navigate('Listing', { id: listing.id })}
               onBuy={() => navigation.navigate('Checkout', {
                 listingId: listing.id, title: listing.title.split('·')[0].trim(),
@@ -167,7 +183,9 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
 
       <FilterSheet
         open={sheetOpen} onClose={() => setSheetOpen(false)}
-        filters={filters} setFilters={setFilters} active={active}
+        filters={filters} active={active}
+        // Clearing the filters clears the search too; the box must say so (TG-12).
+        setFilters={(f) => { setFilters(f); if (f.q !== typed) setTyped(f.q) }}
         facets={search.data?.facets ?? null} price={search.data?.price ?? null} total={total} toggle={toggle}
       />
     </View>
@@ -175,10 +193,10 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
 }
 
 function ListingCard({
-  listing, image, brand, category, gradeText, top, onOpen, onBuy,
+  listing, image, brand, category, gradeText, top, mine, onOpen, onBuy,
 }: {
   listing: Listing; image?: string
-  brand?: string; category?: string; gradeText?: string; top: boolean
+  brand?: string; category?: string; gradeText?: string; top: boolean; mine: boolean
   onOpen: () => void; onBuy: () => void
 }) {
   const t = useTheme()
@@ -219,9 +237,16 @@ function ListingCard({
             {listing.publishedAt ? `Listed ${relative(listing.publishedAt)}` : 'Recently listed'}
           </Txt>
         </View>
-        <Pressable onPress={onBuy} style={{ backgroundColor: t.colors.cta, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 18 }}>
-          <Txt style={{ color: t.colors.onCta, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Buy now</Txt>
-        </Pressable>
+        {mine ? (
+          // A seller's own unit: they manage it from the listing page; buying it is refused.
+          <Pressable onPress={onOpen} style={{ borderWidth: 1.5, borderColor: t.colors.accent, borderRadius: 11, paddingVertical: 8, paddingHorizontal: 14 }}>
+            <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Your listing · Manage</Txt>
+          </Pressable>
+        ) : (
+          <Pressable onPress={onBuy} style={{ backgroundColor: t.colors.cta, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 18 }}>
+            <Txt style={{ color: t.colors.onCta, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Buy now</Txt>
+          </Pressable>
+        )}
       </View>
     </View>
   )

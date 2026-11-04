@@ -23,6 +23,7 @@ import { ListingDetailScreen } from './src/screens/ListingDetailScreen'
 import { CheckoutScreen } from './src/screens/CheckoutScreen'
 import { OrdersScreen } from './src/screens/OrdersScreen'
 import { OrderDetailScreen } from './src/screens/OrderDetailScreen'
+import { PayScreen } from './src/screens/PayScreen'
 import { SellScreen } from './src/screens/SellScreen'
 import { SellerItemScreen } from './src/screens/SellerItemScreen'
 import { NewItemScreen } from './src/screens/NewItemScreen'
@@ -100,6 +101,7 @@ function AppStack() {
       <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false }} />
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
+      <Root.Screen name="Pay" component={PayScreen} options={{ title: 'Payment' }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
       <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />

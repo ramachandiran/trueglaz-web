@@ -103,8 +103,9 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   const startSubmission = async () => {
     setCreateError(null); setCreating(true)
     try {
-      const s = await api.createSubmission('guided')
-      navigation.navigate('NewItem', { submissionId: s.id })
+      // No submission yet: NewItem creates it when the first item is saved, so
+      // opening the form and backing out leaves nothing behind (TG-9).
+      navigation.navigate('NewItem', {})
     } catch (e) {
       const msg = (e as Error).message || 'Could not start a submission.'
       setCreateError(msg)
@@ -124,7 +125,8 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
         <View style={{ flexDirection: 'row', gap: t.space.x3 }}>
           <Tile t={t} label="Owed to you" value={money(home.data.money.owedMinor)} highlight />
           <Tile t={t} label="Paid out" value={money(home.data.money.paidOutMinor)} />
-          <Tile t={t} label="Listed · Sold" value={`${home.data.money.itemCount} · ${home.data.money.soldCount}`} />
+          {/* Live in the shop now, not every item ever consigned (money.itemCount counts all states). */}
+          <Tile t={t} label="Listed · Sold" value={`${items.data ? items.data.filter((i) => i.currentState === 'LISTED').length : '–'} · ${home.data.money.soldCount}`} />
         </View>
       )}
 

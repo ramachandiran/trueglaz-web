@@ -72,7 +72,8 @@ export function HomeScreen({ navigation }: { navigation: any }) {
           <Ionicons name="search" size={18} color={t.colors.textMuted} />
           <Muted>Search camera, lens, or brand</Muted>
         </Pressable>
-        <Pressable onPress={() => navigation.navigate('Shop')}
+        <Pressable onPress={() => navigation.navigate('Shop', { openFilters: true, at: Date.now() })}
+          accessibilityLabel="Filters"
           style={{ width: 54, height: 54, borderRadius: 15, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="options-outline" size={23} color={t.colors.onCta} />
         </Pressable>
@@ -81,17 +82,20 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       {/* category circles */}
       {(d?.categories ?? []).length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: t.space.x4, gap: t.space.x4 }}>
-          {d!.categories.map((c, i) => (
-            <Pressable key={c.slug ?? c.name} onPress={() => navigation.navigate('Shop', { q: c.name })}
+          {d!.categories.map((c) => (
+            <Pressable key={c.slug ?? c.name}
+              // A category, not a search term: the name ("Lenses") matches no listing title.
+              // `at` makes a repeat tap of the same circle apply again.
+              onPress={() => navigation.navigate('Shop', c.slug ? { category: c.slug, at: Date.now() } : { q: c.name, at: Date.now() })}
               style={{ alignItems: 'center', gap: 8, width: 66 }}>
               <View style={{
                 width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center',
-                backgroundColor: i === 0 ? t.colors.accentSoft : t.colors.bgRaised,
-                borderWidth: 1, borderColor: i === 0 ? 'transparent' : t.colors.border,
+                backgroundColor: t.colors.bgRaised,
+                borderWidth: 1, borderColor: t.colors.border,
               }}>
-                <Ionicons name={categoryIcon(c.name)} size={25} color={i === 0 ? t.colors.accent : t.colors.brand} />
+                <Ionicons name={categoryIcon(c.name)} size={25} color={t.colors.brand} />
               </View>
-              <Txt numberOfLines={1} style={{ fontSize: t.size.xs, fontWeight: (i === 0 ? t.weight.bold : t.weight.medium) as never, color: i === 0 ? t.colors.accent : t.colors.textMuted }}>
+              <Txt numberOfLines={1} style={{ fontSize: t.size.xs, fontWeight: t.weight.medium as never, color: t.colors.textMuted }}>
                 {c.name}
               </Txt>
             </Pressable>
@@ -134,7 +138,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
             </Pressable>
           ))}
         </View>
-        <Pressable onPress={() => navigation.navigate('Shop')} hitSlop={6}
+        <Pressable onPress={() => navigation.navigate('Shop', { openFilters: true, at: Date.now() })} hitSlop={6}
           style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 13, paddingVertical: 10, paddingHorizontal: 15 }}>
           <Ionicons name="swap-vertical-outline" size={16} color={t.colors.text} />
           <Txt style={{ fontWeight: t.weight.bold as never, fontSize: t.size.sm }}>Sort</Txt>
@@ -160,7 +164,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
           {(d?.recentlySold ?? []).length > 0 && (
             <Section title="Recently sold" t={t}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: t.space.x4, gap: t.space.x3 }}>
-                {d!.recentlySold.map((s) => <SoldCard key={s.id} s={s} t={t} img={pic(s.cover, null)} />)}
+                {d!.recentlySold.map((s) => <SoldCard key={s.id} s={s} t={t} img={pic(s.cover, s.modelSlug)} />)}
               </ScrollView>
             </Section>
           )}
