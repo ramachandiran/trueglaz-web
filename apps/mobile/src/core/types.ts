@@ -431,6 +431,8 @@ export interface Payment {
 export interface OrderDetail {
   order: Order
   lines: OrderLine[]
+  /** Order line id to catalogue model id, for each line's model picture. */
+  lineModels?: Record<string, string>
   payments: Payment[]
 }
 

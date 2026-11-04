@@ -5,6 +5,7 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Card, ErrorNote, Loading, Muted, SectionTitle } from '../components/ui'
+import { ModelThumb, useModelImages } from '../components/ModelImage'
 
 const PINCODE = /^[1-9][0-9]{5}$/
 
@@ -15,6 +16,9 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
   }
 
   const meta = useApi(() => api.meta(), [])
+  // Only for the model picture; the price and title travel in the route params.
+  const listing = useApi(() => api.listing(listingId), [listingId])
+  const pictures = useModelImages()
   const addresses = useApi(() => api.myAddresses(), [])
 
   const [reservation, setReservation] = useState<Reservation | null>(null)
@@ -107,7 +111,10 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
       <ScrollView contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
         <Card style={{ gap: t.space.x2 }}>
           <SectionTitle>Your item</SectionTitle>
-          <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>{title}</Txt>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+            <ModelThumb image={pictures.bySlug(listing.data?.modelSlug)} size={64} want={400} />
+            <Txt style={{ flex: 1, color: t.colors.text, fontWeight: t.weight.medium as never }}>{title}</Txt>
+          </View>
           <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{money(priceMinor, currency)}</Txt>
           {meta.data && meta.data.shippingMinor > 0 && <Muted size={t.size.xs}>+ {money(meta.data.shippingMinor)} delivery</Muted>}
           <Muted size={t.size.xs}>Held for you while you check out.</Muted>

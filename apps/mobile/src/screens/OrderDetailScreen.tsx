@@ -7,6 +7,7 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
+import { ModelThumb, useModelImages } from '../components/ModelImage'
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 
@@ -93,6 +94,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   const awaitingPayment: boolean = !!route.params?.awaitingPayment
 
   const { data, error, loading, reload } = useApi(() => api.order(id), [id])
+  const pictures = useModelImages()
   const reasons = useApi(() => api.reasonCodes('return'), [])
 
   const [busyLine, setBusyLine] = useState<string | null>(null)
@@ -157,9 +159,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
           {lines.map((l, i) => (
             <View key={l.id} style={{ gap: t.space.x2, marginTop: i === 0 ? 0 : t.space.x3, paddingTop: i === 0 ? 0 : t.space.x3, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: t.colors.border }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
-                <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="camera-outline" size={22} color={t.colors.brand} />
-                </View>
+                <ModelThumb image={pictures.byId(data.lineModels?.[l.id])} size={48} />
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
                   <View style={{ backgroundColor: t.colors.goodSoft, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 8 }}>
                     <Txt style={{ color: t.colors.good, fontSize: 10.5, fontWeight: t.weight.bold as never }}>Grade {l.gradeCodeAtSale}</Txt>

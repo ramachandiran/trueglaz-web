@@ -11,9 +11,11 @@ import { type TrackState, type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { Button, Field } from '../components/form'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
+import { ModelThumb, useModelImages } from '../components/ModelImage'
 
 export function SellerItemScreen({ route }: { route: any }) {
   const t = useTheme()
+  const pictures = useModelImages()
   const id: string = route.params.id
   const item = useApi(() => api.item(id), [id])
   const approvals = useApi(() => api.myApprovals(), [])
@@ -44,6 +46,7 @@ export function SellerItemScreen({ route }: { route: any }) {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
       <View style={{ gap: t.space.x2 }}>
+        <ModelThumb image={pictures.byId(it.productModelId)} size={96} want={400} />
         <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{it.internalSku}</Txt>
         <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>{modelName ?? it.modelFreeText ?? 'Consigned item'}</Txt>
         <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
