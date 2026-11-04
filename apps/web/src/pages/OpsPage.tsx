@@ -6,6 +6,7 @@ import {
 } from '@trueglaz/core'
 import { StateBadge } from '../components/ui'
 import { QueueScreen } from '../components/QueueScreen'
+import { ModelPhoto } from '../components/ModelPhoto'
 import './OpsPage.css'
 
 type Queue = 'intake' | 'inbound' | 'inspect' | 'price' | 'listed' | 'wanted'
@@ -250,6 +251,7 @@ function ItemCell({ item, names, meta }: { item: ConsignmentItem; names: Map<str
   const name = itemTitle(item, names)
   return (
     <td>
+      <span className="ops__pic"><ModelPhoto modelId={item.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
       <span className="ops__model">{name ?? item.internalSku}</span>
       {(name || meta) && (
         <span className="ops__gear">
@@ -510,6 +512,7 @@ function InboundTable({
           return (
             <tr key={r.id} className="q__row--click" onClick={() => navigate(`/items/${first.id}`)}>
               <td>
+                <span className="ops__pic"><ModelPhoto modelId={first.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
                 <span className="ops__model">{title}{r.items.length > 1 ? ` +${r.items.length - 1} more` : ''}</span>
                 <span className="ops__gear">
                   {name && <span className="tg-mono">{r.items.map((i) => i.internalSku).join(', ')} · </span>}
@@ -804,6 +807,7 @@ function ListedTable({ rows, reload }: { rows: ManagedListing[]; reload: () => v
           return (
             <tr key={l.listingId}>
               <td>
+                <span className="ops__pic"><ModelPhoto modelId={l.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
                 <Link to={`/listings/${l.listingId}`} className="ops__id">{l.title}</Link>
                 <span className="ops__gear tg-mono">{l.internalSku}</span>
               </td>
