@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError, dateTime, money, useApi } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading } from '../components/ui'
+import { ModelPhoto } from '../components/ModelPhoto'
 import './OpsPage.css'
 
 /**
@@ -94,7 +95,10 @@ function Section({
       {lines.map((l) => (
         <div key={l.id} className="ops__inbound">
           <div>
-            <Link to={`/items/${l.consignmentItemId}`} className="tg-mono">{l.consignmentItemId.slice(0, 8)}</Link>
+            <span className="ops__pic"><ModelPhoto modelId={l.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
+            {/* What is being packed, not a bare id: the title, then the SKU on the label. */}
+            {l.title && <span className="ops__model">{l.title.split('·')[0].trim()}</span>}
+            <Link to={`/items/${l.consignmentItemId}`} className="tg-mono">{l.internalSku ?? l.consignmentItemId.slice(0, 8)}</Link>{' '}
             <span className="tg-badge tg-badge--accent">{l.gradeCodeAtSale}</span>
             <span className="tg-muted"> {money(l.itemPriceMinor)}</span>
           </div>

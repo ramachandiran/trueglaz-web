@@ -5,6 +5,7 @@ import {
   type ReturnCaseView,
 } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading } from '../components/ui'
+import { ModelPhoto } from '../components/ModelPhoto'
 import './OpsPage.css'
 
 const REASON_LABELS: Record<string, string> = {
@@ -122,6 +123,7 @@ function Summary({ row }: { row: ReturnCaseView }) {
   const f = c.inspection
   return (
     <div>
+      <span className="ops__pic"><ModelPhoto modelId={row.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
       <span className="tg-mono">{row.orderNumber}</span>{' '}
       <Link to={`/items/${c.consignmentItemId}`} className="tg-mono">{row.itemSku}</Link>
       <span className="tg-muted"> {row.itemLabel} · {money(row.amountMinor)} · {row.buyerName ?? 'buyer'} · asked {dateTime(c.requestedAt)}</span>

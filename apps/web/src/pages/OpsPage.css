@@ -195,3 +195,6 @@
 
 /* The inspection header: reference picture beside the SKU. */
 .ops__head-id { display: flex; align-items: center; gap: var(--tg-space-3); min-width: 0; }
+
+/* The model picture at the start of a queue row. */
+.ops__pic { float: left; margin: 2px var(--tg-space-2) 0 0; }

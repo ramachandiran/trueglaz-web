@@ -209,6 +209,8 @@ export interface ManagedListing {
   listedAt: string | null
   /** The latest of a change to the unit and a reprice. */
   updatedAt?: string | null
+  /** For the model's picture. */
+  productModelId?: string | null
 }
 
 /** What an admin fills in to add a model to a brand. */
@@ -417,6 +419,11 @@ export interface OrderLine {
   acceptanceWindowEndsAt: string | null
   acceptedAt: string | null
   acceptedBy: string | null
+  /** Staff queue only (GET /order-lines): what the unit is. */
+  internalSku?: string | null
+  title?: string | null
+  /** For the model's picture. */
+  productModelId?: string | null
 }
 
 export interface Payment {
@@ -433,6 +440,8 @@ export interface Payment {
 export interface OrderDetail {
   order: Order
   lines: OrderLine[]
+  /** Order line id to catalogue model id, for each line's model picture. */
+  lineModels?: Record<string, string>
   payments: Payment[]
 }
 
@@ -1470,6 +1479,8 @@ export interface ReturnCaseView {
   itemLabel: string
   amountMinor: number
   buyerName: string | null
+  /** For the model's picture. */
+  productModelId?: string | null
 }
 
 /** What staff see first: stage sizes, what is waiting on them, and what just moved. */
