@@ -192,3 +192,6 @@
 .ops__confirm { flex-wrap: wrap; max-width: 26rem; font-size: var(--tg-text-sm); }
 .tg-button.ops__danger { border-color: var(--tg-bad); color: var(--tg-bad); }
 .tg-button.ops__danger:hover { background: var(--tg-bad-soft); }
+
+/* The inspection header: reference picture beside the SKU. */
+.ops__head-id { display: flex; align-items: center; gap: var(--tg-space-3); min-width: 0; }

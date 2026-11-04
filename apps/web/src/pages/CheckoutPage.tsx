@@ -5,6 +5,8 @@ import {
   type Address, type Order, type PaymentMethod, type PaymentPreference,
 } from '@trueglaz/core'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
+import { ModelPhoto } from '../components/ModelPhoto'
+import { photoKindFor } from '../components/GearPhoto'
 import { openRazorpay, type RazorpaySuccess } from '../payments/razorpay'
 import './CheckoutPage.css'
 
@@ -570,6 +572,9 @@ export function CheckoutPage() {
 
       <aside className="co__summary" aria-label="Order summary">
         <h2 className="co__kicker">Your order</h2>
+        <div className="co__sum-photo">
+          <ModelPhoto slug={d.modelSlug} kind={photoKindFor(d.listing.title)} size="hero" alt={title} />
+        </div>
         <p className="co__sum-title">{title}</p>
         <div className="co__sum-badges">
           <GradeBadge code={d.listing.gradeCode} />

@@ -5,6 +5,7 @@ import {
   type ConsignmentItem, type NextState,
 } from '@trueglaz/core'
 import { planMove, type Planned } from '../components/NextActions'
+import { ModelPhoto } from '../components/ModelPhoto'
 import { QueueScreen } from '../components/QueueScreen'
 import { StateMenu } from '../components/StateMenu'
 import './InventoryDashboard.css'
@@ -179,6 +180,9 @@ export function InventoryDashboard() {
           {paginatedItems.map((item) => (
             <tr key={item.id}>
               <td>
+                <span className="inv__photo">
+                  <ModelPhoto modelId={item.productModelId} kind="gear" size="mini" alt="" badge={false} />
+                </span>
                 <Link to={`/items/${item.id}`} className="inv__sku tg-mono">{item.internalSku}</Link>
                 <span className="inv__gear">
                   {[brandName((item as any).brandId), modelName(item)].filter(Boolean).join(' ') || '—'}
