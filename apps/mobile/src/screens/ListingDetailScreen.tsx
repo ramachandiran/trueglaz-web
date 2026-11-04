@@ -5,7 +5,7 @@ import { api, money, relative, useApi, type ListingPriceChange, type RenderedRep
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { ErrorNote, Loading, Muted } from '../components/ui'
-import { API_ORIGIN } from '../config'
+import { sizedUri } from '../components/ModelImage'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 type Fact = { icon: IconName; big: string; small: string }
@@ -25,7 +25,7 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
   const d = data
   const buyable = d.listing.state === 'published'
   const stock = d.modelSlug ? images.data?.models.find((m) => m.slug === d.modelSlug)?.image : null
-  const heroUrl = stock ? API_ORIGIN + stock.url : null
+  const heroUrl = stock ? sizedUri(stock, 1200) : null
 
   const facts = d.inspectionReport ? aboutThisItem(d.inspectionReport, null) : []
   const tiles = keyFacts(d.inspectionReport)
@@ -36,7 +36,7 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         {/* image hero */}
         <View style={{ paddingHorizontal: t.space.x4, paddingTop: insets.top + t.space.x2 }}>
-          <View style={{ height: 250, borderRadius: 22, backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <View style={{ height: 250, borderRadius: 22, backgroundColor: heroUrl ? '#ffffff' : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
             {heroUrl
               ? <Image source={{ uri: heroUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
               : <Ionicons name="camera-outline" size={66} color={t.colors.textMuted} />}

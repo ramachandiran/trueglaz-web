@@ -6,7 +6,7 @@ import { api, isSeller, money, useApi, useSession, type HomeListing, type HomeSa
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Muted } from '../components/ui'
-import { API_ORIGIN } from '../config'
+import { mediaUri, sizedUri } from '../components/ModelImage'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 
@@ -28,11 +28,11 @@ export function HomeScreen({ navigation }: { navigation: any }) {
 
   // Admin model pictures keyed by slug, to stand in where a unit has no photo.
   const stockBySlug = useMemo(
-    () => new Map((images.data?.models ?? []).map((m) => [m.slug, API_ORIGIN + m.image.url])),
+    () => new Map((images.data?.models ?? []).map((m) => [m.slug, sizedUri(m.image, 400)])),
     [images.data],
   )
   const pic = (cover: { url: string } | null, modelSlug?: string | null) =>
-    cover ? API_ORIGIN + cover.url : (modelSlug ? stockBySlug.get(modelSlug) ?? null : null)
+    cover ? mediaUri(cover.url) : (modelSlug ? stockBySlug.get(modelSlug) ?? null : null)
 
   const d = home.data
 
@@ -207,7 +207,7 @@ function GearCard({ l, t, img, onPress }: { l: HomeListing; t: Theme; img: strin
   return (
     <Pressable onPress={onPress} style={{ width: 250 }}>
       <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 20, overflow: 'hidden' }}>
-        <View style={{ height: 150, backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ height: 150, backgroundColor: img ? '#ffffff' : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
           {img
             ? <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
             : <Ionicons name="camera-outline" size={44} color={t.colors.textMuted} />}
@@ -248,7 +248,7 @@ function SoldCard({ s, t, img }: { s: HomeSale; t: Theme; img: string | null }) 
   return (
     <View style={{ width: 150, opacity: 0.94 }}>
       <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, overflow: 'hidden' }}>
-        <View style={{ height: 104, backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ height: 104, backgroundColor: img ? '#ffffff' : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
           {img
             ? <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
             : <Ionicons name="camera-outline" size={28} color={t.colors.textMuted} />}

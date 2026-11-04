@@ -6,7 +6,7 @@ import { api, dateOnly, money, useApi, type OrderSummary, type Theme } from '@tr
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Empty, ErrorNote, Loading, stateTone } from '../components/ui'
-import { API_ORIGIN } from '../config'
+import { sizedUri } from '../components/ModelImage'
 
 export function OrdersScreen({ navigation }: { navigation: any }) {
   const t = useTheme()
@@ -14,7 +14,7 @@ export function OrdersScreen({ navigation }: { navigation: any }) {
   const { data, error, loading, reload } = useApi(() => api.myOrders(), [])
   const images = useApi(() => api.modelImages(), [])
   const imageBySlug = useMemo(
-    () => new Map((images.data?.models ?? []).map((m) => [m.slug, API_ORIGIN + m.image.url])),
+    () => new Map((images.data?.models ?? []).map((m) => [m.slug, sizedUri(m.image, 200)])),
     [images.data],
   )
 
@@ -50,9 +50,9 @@ export function OrdersScreen({ navigation }: { navigation: any }) {
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3, marginTop: t.space.x3 }}>
-                  <View style={{ width: 46, height: 46, borderRadius: 12, backgroundColor: t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: 46, height: 46, borderRadius: 12, backgroundColor: img ? '#ffffff' : t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
                     {img
-                      ? <Image source={{ uri: img }} style={{ width: 46, height: 46 }} resizeMode="cover" />
+                      ? <Image source={{ uri: img }} style={{ width: 46, height: 46 }} resizeMode="contain" />
                       : <Ionicons name="camera-outline" size={22} color={t.colors.brand} />}
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>

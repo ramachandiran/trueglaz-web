@@ -10,6 +10,7 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
+import { ModelThumb, useModelImages } from '../components/ModelImage'
 import {
   isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
   enableE2ee, unlockVault, changePin, recoverVault, disableE2ee,
@@ -45,6 +46,7 @@ const WARRANTY_LABEL: Record<VaultItem['warrantyStatus'], string> = {
 
 export function VaultScreen() {
   const t = useTheme()
+  const pictures = useModelImages()
   const insets = useSafeAreaInsets()
   const { data, error, loading, reload } = useApi(() => api.vault(), [])
   const [adding, setAdding] = useState(false)
@@ -134,9 +136,7 @@ export function VaultScreen() {
             return (
               <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, padding: t.space.x4 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
-                  <View style={{ width: 52, height: 52, borderRadius: 13, backgroundColor: t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="camera-outline" size={24} color={t.colors.brand} />
-                  </View>
+                  <ModelThumb image={pictures.byId(item.productModelId)} size={52} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Txt numberOfLines={1} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: -0.2 }}>{item.modelLabel}</Txt>
                     {locked ? (

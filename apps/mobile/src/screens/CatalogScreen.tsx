@@ -11,7 +11,7 @@ import { Txt } from '../components/Txt'
 import { mobileFontFamily } from '../theme/fonts'
 import { useTheme } from '../theme/ThemeContext'
 import { Empty, ErrorNote, Loading } from '../components/ui'
-import { API_ORIGIN } from '../config'
+import { sizedUri } from '../components/ModelImage'
 
 /**
  * Catalogue — a buyer-forward, B2B-marketplace card layout (image left, spec
@@ -79,7 +79,7 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
   const brandName = useMemo(() => new Map((brands.data ?? []).map((b) => [b.id, b.name])), [brands.data])
   const categoryName = useMemo(() => new Map((categories.data ?? []).map((c) => [c.id, c.name])), [categories.data])
   const imageBySlug = useMemo(
-    () => new Map((images.data?.models ?? []).map((m) => [m.slug, API_ORIGIN + m.image.url])),
+    () => new Map((images.data?.models ?? []).map((m) => [m.slug, sizedUri(m.image, 400)])),
     [images.data],
   )
 
@@ -186,9 +186,9 @@ function ListingCard({
   return (
     <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, overflow: 'hidden' }}>
       <Pressable onPress={onOpen} style={{ flexDirection: 'row', gap: t.space.x3, padding: 13 }}>
-        <View style={{ width: 100, height: 100, borderRadius: 13, overflow: 'hidden', backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 100, height: 100, borderRadius: 13, overflow: 'hidden', backgroundColor: image ? '#ffffff' : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
           {image
-            ? <Image source={{ uri: image }} style={{ width: 100, height: 100 }} resizeMode="cover" />
+            ? <Image source={{ uri: image }} style={{ width: 100, height: 100 }} resizeMode="contain" />
             : <Ionicons name="camera-outline" size={34} color={t.colors.textMuted} />}
           <View style={{ position: 'absolute', top: 7, left: 7, backgroundColor: top ? t.colors.good : t.colors.accent, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 8 }}>
             <Txt style={{ color: '#fff', fontSize: 10.5, fontWeight: t.weight.bold as never }}>{listing.gradeCode}</Txt>

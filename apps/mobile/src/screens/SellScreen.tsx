@@ -7,6 +7,7 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button } from '../components/form'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
+import { ModelThumb, useModelImages } from '../components/ModelImage'
 import { StatusHero } from '../components/StatusViews'
 
 export function SellScreen({ navigation }: { navigation: any }) {
@@ -80,6 +81,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   const items = useApi(() => api.myItems(), [])
   const approvals = useApi(() => api.myApprovals(), [])
   const models = useApi(() => api.models(), [])
+  const pictures = useModelImages()
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -173,9 +175,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
           return (
             <Pressable key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}
               style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: action ? t.colors.warn : t.colors.border, borderRadius: 16, padding: 13 }}>
-              <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="camera-outline" size={22} color={t.colors.brand} />
-              </View>
+              <ModelThumb image={pictures.byId(i.productModelId)} size={48} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
                   <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.md, flexShrink: 1 }}>{nameOf(i)}</Txt>
