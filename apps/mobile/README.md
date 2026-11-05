@@ -19,26 +19,31 @@ journeys — **buying** and **selling**.
 
 ## Architecture
 
-- `src/core/` — the shared, platform-agnostic API client, types and hooks, vendored from
-  the web monorepo's `@trueglaz/core`, imported through the `@trueglaz/core` alias
-  (`babel.config.js` + `tsconfig.json`). The one platform seam is storage: `App.tsx`
-  installs an AsyncStorage adapter.
+- `@trueglaz/core` — the shared, platform-agnostic API client, types and hooks, from
+  `packages/core` in this monorepo (the same code the website uses). Two platform pieces
+  stay in the app: `App.tsx` installs an AsyncStorage adapter for core's storage port, and
+  `src/media/uploadPhoto.ts` turns a phone photo (often HEIC) into a JPEG before
+  `api.uploadMedia` sends it. `metro.config.js` makes Metro resolve core and keep a single
+  React (the app's 18.2, not the website's 18.3).
 - `src/screens/` — one file per screen; navigation is wired in `App.tsx` (bottom tabs:
   Home / Shop / Sell / Orders / Profile, plus a root stack for detail screens).
 - `src/components/`, `src/theme/` — the UI kit, form kit, Timeline, and theme context;
-  palette tokens live in `src/core/theme/tokens.ts` (shared with web).
+  palette tokens live in `packages/core/src/theme/tokens.ts` (shared with web).
 
 ## Running it
 
+From the repository root (one `npm install` for web, mobile and core):
+
 ```bash
 npm install
-npm start          # Expo dev server — scan the QR with Expo Go, or press i / a
+npm run mobile     # Expo dev server — scan the QR with Expo Go, or press i / a
+npm run typecheck  # core + web + mobile
 ```
 
 The API it points at is `expo.extra.apiOrigin` in `app.json` (the demo box). Override:
 
 ```bash
-EXPO_PUBLIC_API_ORIGIN="http://<api-host>" npm start
+EXPO_PUBLIC_API_ORIGIN="http://<api-host>" npm run mobile
 ```
 
 On a physical device the API must be reachable from the phone — a laptop-hosted API needs

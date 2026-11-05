@@ -1,3 +1,4 @@
+import { uploadPhoto } from '../media/uploadPhoto'
 import { useState } from 'react'
 import { Image, ScrollView, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
@@ -57,7 +58,7 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
     try {
       // Attach the selfie to the identity check before verifying — once it is
       // verified the record is locked and no longer accepts uploads.
-      if (session?.userId) await api.uploadPhotoRN(selfie, { ownerType: 'kyc', ownerId: session.userId, role: 'selfie' })
+      if (session?.userId) await uploadPhoto(selfie, { ownerType: 'kyc', ownerId: session.userId, role: 'selfie' })
       await api.verifyEkyc(otp.replace(/\D/g, '')); setJustVerified(true); kyc.reload()
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }

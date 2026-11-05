@@ -1,3 +1,4 @@
+import { uploadPhoto } from '../media/uploadPhoto'
 import { useMemo, useState } from 'react'
 import { Image, Pressable, ScrollView, View, Alert } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
@@ -149,7 +150,7 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
     try {
       // Attach the optional package photo to the item before marking shipped,
       // so a failed upload does not leave the parcel "shipped" without it.
-      if (photo) await api.uploadPhotoRN(photo, { ownerType: 'item', ownerId: itemId, role: 'seller_submission' })
+      if (photo) await uploadPhoto(photo, { ownerType: 'item', ownerId: itemId, role: 'seller_submission' })
       await api.shipSubmission(submissionId, {
         arrangedBy,
         courierName: arrangedBy === 'third_party' ? courierName.trim() : null,

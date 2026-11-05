@@ -1,3 +1,4 @@
+import { uploadPhoto } from '../media/uploadPhoto'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, Pressable, ScrollView, Switch, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
@@ -86,7 +87,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       // failed attempt stopped.
       for (let i = c.uploaded; i < photos.length; i++) {
         setProgress(`Uploading photo ${i + 1} of ${photos.length}…`)
-        await api.uploadPhotoRN(photos[i], { ownerType: 'item', ownerId: c.id, role: 'seller_submission' })
+        await uploadPhoto(photos[i], { ownerType: 'item', ownerId: c.id, role: 'seller_submission' })
         c.uploaded = i + 1
       }
       setProgress(null)

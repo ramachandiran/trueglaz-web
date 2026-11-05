@@ -1,5 +1,5 @@
 {
-  "name": "trueglaz-mobile",
+  "name": "@trueglaz/mobile",
   "private": true,
   "version": "0.1.0",
   "main": "index.js",
@@ -13,12 +13,11 @@
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
     "@expo/vector-icons": "^14.0.0",
-    "@noble/ciphers": "^1.2.1",
-    "@noble/hashes": "^1.7.1",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
+    "@trueglaz/core": "*",
     "expo": "~51.0.39",
     "expo-constants": "~16.0.2",
     "expo-font": "~12.0.10",
@@ -36,7 +35,6 @@
   },
   "devDependencies": {
     "@types/react": "~18.2.79",
-    "babel-plugin-module-resolver": "^5.0.2",
     "typescript": "~5.3.3"
   }
 }

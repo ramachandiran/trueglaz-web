@@ -4,12 +4,13 @@
     "strict": true,
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
-    "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@trueglaz/core": ["./src/core"]
-    }
+    "skipLibCheck": true
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
