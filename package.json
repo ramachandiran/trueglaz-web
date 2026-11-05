@@ -12,7 +12,7 @@
     "dev": "npm run dev -w @trueglaz/web -- --host 0.0.0.0",
     "build": "npm run tokens && npm run build -w @trueglaz/web",
     "mobile": "npm run start -w @trueglaz/mobile",
-    "typecheck": "npm run typecheck -w @trueglaz/web",
+    "typecheck": "npm run typecheck -w @trueglaz/web && npm run typecheck -w @trueglaz/mobile",
     "typecheck:mobile": "npm run typecheck -w @trueglaz/mobile"
   }
 }

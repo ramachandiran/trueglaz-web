@@ -2,7 +2,15 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 import { Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
 
-type Tone = 'neutral' | 'good' | 'warn' | 'bad' | 'accent'
+export type Tone = 'neutral' | 'good' | 'warn' | 'bad' | 'accent'
+
+/** The tone an item/order state reads as — shared by StateBadge and StatusHero. */
+export function stateTone(state: string): Tone {
+  const bad = ['REJECTED_PRE_INTAKE', 'INSPECTION_FAILED', 'QUARANTINED', 'SELLER_DECLINED', 'RETURNED', 'cancelled', 'returned']
+  const warn = ['RETURN_REQUESTED', 'RETURN_TO_SELLER', 'UNSOLD_REVIEW', 'AWAITING_SELLER_APPROVAL', 'return_requested']
+  const good = ['ACCEPTED', 'LISTED', 'DELIVERED', 'accepted', 'delivered']
+  return bad.includes(state) ? 'bad' : warn.includes(state) ? 'warn' : good.includes(state) ? 'good' : 'neutral'
+}
 
 export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
   const t = useTheme()
@@ -24,11 +32,7 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone 
 }
 
 export function StateBadge({ state }: { state: string }) {
-  const bad = ['REJECTED_PRE_INTAKE', 'INSPECTION_FAILED', 'QUARANTINED', 'SELLER_DECLINED', 'RETURNED']
-  const warn = ['RETURN_REQUESTED', 'RETURN_TO_SELLER', 'UNSOLD_REVIEW', 'AWAITING_SELLER_APPROVAL']
-  const good = ['ACCEPTED', 'LISTED', 'DELIVERED']
-  const tone: Tone = bad.includes(state) ? 'bad' : warn.includes(state) ? 'warn' : good.includes(state) ? 'good' : 'neutral'
-  return <Badge label={state.replace(/_/g, ' ')} tone={tone} />
+  return <Badge label={state.replace(/_/g, ' ')} tone={stateTone(state)} />
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: object }) {
@@ -67,9 +71,9 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function Muted({ children, size }: { children: React.ReactNode; size?: number }) {
+export function Muted({ children, size, style }: { children: React.ReactNode; size?: number; style?: object }) {
   const t = useTheme()
-  return <Txt style={{ color: t.colors.textMuted, fontSize: size ?? t.size.sm }}>{children}</Txt>
+  return <Txt style={{ color: t.colors.textMuted, fontSize: size ?? t.size.sm, ...style }}>{children}</Txt>
 }
 
 export function Loading() {

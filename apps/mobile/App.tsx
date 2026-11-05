@@ -1,186 +1,154 @@
-import { useEffect } from 'react'
-import { Platform, Pressable, View } from 'react-native'
+import 'react-native-get-random-values' // crypto.getRandomValues for the vault's client-side encryption; must load first
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native'
+import { View } from 'react-native'
+import { NavigationContainer, DefaultTheme, DarkTheme, useNavigation } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import Constants from 'expo-constants'
 import {
-  ActorProvider, api, setApiOrigin, setStorage, useActor, useApi, type Storage,
+  api, setApiOrigin, setStorage, SessionProvider, useApi, useSession, type Storage,
 } from '@trueglaz/core'
-import { Txt } from './src/components/Txt'
+import { API_ORIGIN } from './src/config'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import { useEffect, type ComponentProps } from 'react'
+import { Loading } from './src/components/ui'
 import { mobileFontAssets, mobileFontFamily } from './src/theme/fonts'
-import { ThemeProvider, useTheme, useThemeMode } from './src/theme/ThemeContext'
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext'
+import { SignInScreen } from './src/screens/SignInScreen'
+import { HomeScreen } from './src/screens/HomeScreen'
 import { CatalogScreen } from './src/screens/CatalogScreen'
 import { ListingDetailScreen } from './src/screens/ListingDetailScreen'
-import { ItemsScreen } from './src/screens/ItemsScreen'
-import { ItemDetailScreen } from './src/screens/ItemDetailScreen'
+import { CheckoutScreen } from './src/screens/CheckoutScreen'
+import { OrdersScreen } from './src/screens/OrdersScreen'
+import { OrderDetailScreen } from './src/screens/OrderDetailScreen'
+import { PayScreen } from './src/screens/PayScreen'
+import { SellScreen } from './src/screens/SellScreen'
+import { SellerItemScreen } from './src/screens/SellerItemScreen'
+import { NewItemScreen } from './src/screens/NewItemScreen'
+import { StartSellingScreen } from './src/screens/StartSellingScreen'
+import { ProfileScreen } from './src/screens/ProfileScreen'
+import { VaultScreen } from './src/screens/VaultScreen'
+import { VaultIntro } from './src/screens/VaultIntro'
+import { NotificationsScreen } from './src/screens/NotificationsScreen'
+import { AddressesScreen } from './src/screens/AddressesScreen'
+import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
 
-/** The React Native adapter for core's storage port. */
+/** The React Native adapter for core's storage port (web uses localStorage). */
 const nativeStorage: Storage = {
-  async get(key) {
-    try { return await AsyncStorage.getItem(key) } catch { return null }
-  },
-  async set(key, value) {
-    try { await AsyncStorage.setItem(key, value) } catch { /* ignore */ }
-  },
-  async remove(key) {
-    try { await AsyncStorage.removeItem(key) } catch { /* ignore */ }
-  },
+  async get(key) { try { return await AsyncStorage.getItem(key) } catch { return null } },
+  async set(key, value) { try { await AsyncStorage.setItem(key, value) } catch { /* ignore */ } },
+  async remove(key) { try { await AsyncStorage.removeItem(key) } catch { /* ignore */ } },
 }
 setStorage(nativeStorage)
+setApiOrigin(API_ORIGIN)
 
-// Native fetch has no same-origin policy and no dev proxy, so the API's absolute
-// origin has to be configured. A simulator cannot reach the host's "localhost";
-// set this to the machine's LAN address in app.json when running on a device.
-setApiOrigin(
-  process.env.EXPO_PUBLIC_API_ORIGIN ??
-    (Constants.expoConfig?.extra as { apiOrigin?: string } | undefined)?.apiOrigin ??
-    'http://localhost:5174',
-)
-
-const Stack = createNativeStackNavigator()
 const Tabs = createBottomTabNavigator()
+const Root = createNativeStackNavigator()
 
-function BrowseStack() {
+type IoniconName = ComponentProps<typeof Ionicons>['name']
+/** A tab icon that fills in when the tab is focused and outlines when it isn't. */
+function tabIcon(outline: IoniconName, filled: IoniconName) {
+  return ({ color, size, focused }: { color: string; size: number; focused: boolean }) =>
+    <Ionicons name={focused ? filled : outline} size={size ?? 24} color={color} />
+}
+
+function MainTabs() {
+  const t = useTheme()
+  const navigation = useNavigation()
+  // The unread badge on the Profile tab. Refetch whenever the tabs regain
+  // focus — i.e. coming back from the Notifications screen after reading
+  // something, or any other stacked screen — so the count never goes stale.
+  const notif = useApi(() => api.notifications(), [])
+  useEffect(() => navigation.addListener('focus', () => notif.reload()), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
+  const unread = notif.data?.unread || undefined
+  return (
+    <>
+    <Tabs.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: t.colors.accent,
+        tabBarInactiveTintColor: t.colors.textMuted,
+        tabBarLabelStyle: { fontFamily: mobileFontFamily.medium, fontSize: 11 },
+        tabBarStyle: { backgroundColor: t.colors.bgRaised, borderTopColor: t.colors.border },
+      }}
+    >
+      <Tabs.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: tabIcon('home-outline', 'home') }} />
+      <Tabs.Screen name="Shop" component={CatalogScreen} options={{ tabBarIcon: tabIcon('search-outline', 'search') }} />
+      <Tabs.Screen name="Sell" component={SellScreen} options={{ tabBarIcon: tabIcon('cube-outline', 'cube') }} />
+      <Tabs.Screen name="Vault" component={VaultScreen} options={{ tabBarIcon: tabIcon('shield-checkmark-outline', 'shield-checkmark') }} />
+      <Tabs.Screen name="Orders" component={OrdersScreen} options={{ tabBarIcon: tabIcon('receipt-outline', 'receipt') }} />
+      <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread }} />
+    </Tabs.Navigator>
+    <VaultIntro />
+    </>
+  )
+}
+
+function AppStack() {
   const t = useTheme()
   return (
-    <Stack.Navigator
+    <Root.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: t.colors.bgRaised },
         headerTintColor: t.colors.text,
         headerTitleStyle: { fontFamily: mobileFontFamily.bold },
-        headerBackTitleStyle: { fontFamily: mobileFontFamily.regular },
         contentStyle: { backgroundColor: t.colors.bg },
       }}
     >
-      <Stack.Screen name="Catalog" component={CatalogScreen} options={{ title: 'Browse' }} />
-      <Stack.Screen name="Listing" component={ListingDetailScreen} options={{ title: 'Listing' }} />
-      <Stack.Screen name="Item" component={ItemDetailScreen} options={{ title: 'Item' }} />
-    </Stack.Navigator>
+      <Root.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
+      <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false }} />
+      <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
+      <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
+      <Root.Screen name="Pay" component={PayScreen} options={{ title: 'Payment' }} />
+      <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
+      <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
+      <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />
+      <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
+      <Root.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Addresses' }} />
+      <Root.Screen name="PayoutAccount" component={PayoutAccountScreen} options={{ title: 'Payout account' }} />
+    </Root.Navigator>
   )
 }
 
-function TrackStack() {
-  const t = useTheme()
+function AuthStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: t.colors.bgRaised },
-        headerTintColor: t.colors.text,
-        headerTitleStyle: { fontFamily: mobileFontFamily.bold },
-        headerBackTitleStyle: { fontFamily: mobileFontFamily.regular },
-        contentStyle: { backgroundColor: t.colors.bg },
-      }}
-    >
-      <Stack.Screen name="Items" component={ItemsScreen} options={{ title: 'Track items' }} />
-      <Stack.Screen name="Item" component={ItemDetailScreen} options={{ title: 'Item' }} />
-      <Stack.Screen name="Listing" component={ListingDetailScreen} options={{ title: 'Listing' }} />
-    </Stack.Navigator>
+    <Root.Navigator screenOptions={{ headerShown: false }}>
+      <Root.Screen name="SignIn" component={SignInScreen} />
+    </Root.Navigator>
   )
 }
 
-/**
- * Stands in for signing in, exactly as on web: the API identifies callers by
- * header, so the app has to say who it is. Replaced wholesale when OTP lands.
- */
-function ActorBar() {
+function Routes() {
   const t = useTheme()
-  const { actor, setActor } = useActor()
-  const { mode, setMode } = useThemeMode()
-  const { data } = useApi((a) => api.actors(a), [])
-
-  // Without an actor most endpoints refuse, so default to the seeded seller.
-  useEffect(() => {
-    if (!actor && data?.length) {
-      const seller = data.find((h) => h.email?.startsWith('seller')) ?? data[0]
-      setActor({ userId: seller.userId, role: seller.suggestedRoleHeader, displayName: seller.displayName })
-    }
-  }, [actor, data, setActor])
-
-  const cycleActor = () => {
-    if (!data?.length) return
-    const i = data.findIndex((h) => h.userId === actor?.userId)
-    const next = data[(i + 1) % data.length]
-    setActor({ userId: next.userId, role: next.suggestedRoleHeader, displayName: next.displayName })
-  }
-
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: t.space.x4,
-        paddingVertical: t.space.x2,
-        backgroundColor: t.colors.bgSunken,
-      }}
-    >
-      <Pressable onPress={cycleActor}>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
-          Acting as {actor?.displayName ?? '…'}{actor ? ` · ${actor.role}` : ''} ⇄
-        </Txt>
-      </Pressable>
-      <Pressable onPress={() => setMode(mode === 'dark' ? 'light' : mode === 'light' ? 'midnight' : 'dark')}>
-        <Txt style={{ color: t.colors.accent, fontSize: t.size.xs }}>Theme: {mode}</Txt>
-      </Pressable>
-    </View>
-  )
-}
-
-function Shell() {
-  const t = useTheme()
+  const { session, ready } = useSession()
   const navTheme = {
     ...(t.name === 'dark' ? DarkTheme : DefaultTheme),
     colors: {
       ...(t.name === 'dark' ? DarkTheme : DefaultTheme).colors,
-      background: t.colors.bg,
-      card: t.colors.bgRaised,
-      text: t.colors.text,
-      border: t.colors.border,
-      primary: t.colors.accent,
+      background: t.colors.bg, card: t.colors.bgRaised, text: t.colors.text,
+      border: t.colors.border, primary: t.colors.accent,
     },
   }
-
+  if (!ready) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
   return (
     <NavigationContainer theme={navTheme}>
       <StatusBar style={t.name === 'dark' ? 'light' : 'dark'} />
-      <ActorBar />
-      <Tabs.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: t.colors.accent,
-          tabBarInactiveTintColor: t.colors.textMuted,
-          tabBarLabelStyle: { fontFamily: mobileFontFamily.medium },
-          tabBarStyle: {
-            backgroundColor: t.colors.bgRaised,
-            borderTopColor: t.colors.border,
-            // Web via react-native-web has no safe-area inset to pad for.
-            height: Platform.OS === 'web' ? 56 : undefined,
-          },
-        }}
-      >
-        <Tabs.Screen name="Browse" component={BrowseStack} />
-        <Tabs.Screen name="Track" component={TrackStack} />
-      </Tabs.Navigator>
+      {session ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   )
 }
 
 export default function App() {
   const [fontsLoaded] = useFonts(mobileFontAssets)
-
   if (!fontsLoaded) return null
-
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <ActorProvider>
-          <Shell />
-        </ActorProvider>
+        <SessionProvider>
+          <Routes />
+        </SessionProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   )

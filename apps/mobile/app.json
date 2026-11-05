@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "TrueGlaz",
-    "slug": "trueglaz",
+    "slug": "trueglaz-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,17 +21,25 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#233e50"
-      }
+      },
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiOrigin": "http://localhost:5174"
+      "apiOrigin": "https://demo.trueglaz.com"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TrueGlaz uses your photos so you can add pictures of the gear you are selling.",
+          "cameraPermission": "TrueGlaz uses the camera for your identity check and to photograph gear you are selling."
+        }
+      ]
     ]
   }
 }
