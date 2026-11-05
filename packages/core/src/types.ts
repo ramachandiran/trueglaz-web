@@ -323,7 +323,9 @@ export interface InboundShipment {
   state: string
   shippedAt: string | null
   deliveredAt: string | null
+  /** trueglaz | third_party — who the seller said arranged the courier. */
   arrangedBy: string | null
+  /** The courier's display name when shipped with a third party. */
   courierName: string | null
   packageWeightGrams: number | null
 }
@@ -442,6 +444,8 @@ export interface OrderDetail {
   lines: OrderLine[]
   /** Order line id to catalogue model id, for each line's model picture. */
   lineModels?: Record<string, string>
+  /** Order line id to what the item is called (the listing title). */
+  lineTitles?: Record<string, string>
   payments: Payment[]
 }
 
@@ -1139,6 +1143,8 @@ export interface HomeSale {
   soldAt: string | null
   categorySlug: string | null
   cover: MediaView | null
+  /** The catalogue model, for the model picture when the unit has no photograph. */
+  modelSlug?: string | null
 }
 
 /** Everything the shop front shows, in one answer. */
@@ -1809,6 +1815,8 @@ export interface SearchHit {
   modelSlug: string | null
   categoryId: string | null
   brandId: string | null
+  /** True when the signed-in viewer consigned this unit; they can manage it, not buy it. */
+  mine?: boolean
 }
 
 export interface ListingSearchResult {
