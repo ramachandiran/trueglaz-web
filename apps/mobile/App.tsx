@@ -1,3 +1,4 @@
+import 'react-native-get-random-values' // crypto.getRandomValues for the vault's client-side encryption; must load first
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import { View } from 'react-native'
@@ -22,11 +23,14 @@ import { ListingDetailScreen } from './src/screens/ListingDetailScreen'
 import { CheckoutScreen } from './src/screens/CheckoutScreen'
 import { OrdersScreen } from './src/screens/OrdersScreen'
 import { OrderDetailScreen } from './src/screens/OrderDetailScreen'
+import { PayScreen } from './src/screens/PayScreen'
 import { SellScreen } from './src/screens/SellScreen'
 import { SellerItemScreen } from './src/screens/SellerItemScreen'
 import { NewItemScreen } from './src/screens/NewItemScreen'
 import { StartSellingScreen } from './src/screens/StartSellingScreen'
 import { ProfileScreen } from './src/screens/ProfileScreen'
+import { VaultScreen } from './src/screens/VaultScreen'
+import { VaultIntro } from './src/screens/VaultIntro'
 import { NotificationsScreen } from './src/screens/NotificationsScreen'
 import { AddressesScreen } from './src/screens/AddressesScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
@@ -60,6 +64,7 @@ function MainTabs() {
   useEffect(() => navigation.addListener('focus', () => notif.reload()), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
   const unread = notif.data?.unread || undefined
   return (
+    <>
     <Tabs.Navigator
       screenOptions={{
         headerShown: false,
@@ -72,9 +77,12 @@ function MainTabs() {
       <Tabs.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: tabIcon('home-outline', 'home') }} />
       <Tabs.Screen name="Shop" component={CatalogScreen} options={{ tabBarIcon: tabIcon('search-outline', 'search') }} />
       <Tabs.Screen name="Sell" component={SellScreen} options={{ tabBarIcon: tabIcon('cube-outline', 'cube') }} />
+      <Tabs.Screen name="Vault" component={VaultScreen} options={{ tabBarIcon: tabIcon('shield-checkmark-outline', 'shield-checkmark') }} />
       <Tabs.Screen name="Orders" component={OrdersScreen} options={{ tabBarIcon: tabIcon('receipt-outline', 'receipt') }} />
       <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread }} />
     </Tabs.Navigator>
+    <VaultIntro />
+    </>
   )
 }
 
@@ -90,9 +98,10 @@ function AppStack() {
       }}
     >
       <Root.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
-      <Root.Screen name="Listing" component={ListingDetailScreen} options={{ title: 'Listing' }} />
+      <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false }} />
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
-      <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Order' }} />
+      <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
+      <Root.Screen name="Pay" component={PayScreen} options={{ title: 'Payment' }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
       <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />

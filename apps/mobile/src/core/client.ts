@@ -1,5 +1,6 @@
 import * as ImageManipulator from 'expo-image-manipulator'
 import { getStorage } from './storage'
+import { searchQuery, type Filters } from './filters'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
@@ -10,6 +11,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
+  VaultItem, AddGearInput, VaultPolicy, InsuranceRequest, ListingSearchResult, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -255,6 +257,9 @@ export const api = {
   logout: () => post<{ ok: boolean }>('/auth/logout'),
 
   // -- catalogue (public) --------------------------------------------------
+  /** The shop's search: results, total and the live filter options. */
+  searchListings: (f: Filters, page = 0, size = 24) =>
+    get<ListingSearchResult>(`/listings/search?${searchQuery(f, page, size)}`),
   listings(p: BrowseParams = {}) {
     const qs = new URLSearchParams()
     if (p.q) qs.set('q', p.q)
@@ -755,4 +760,27 @@ export const api = {
   itemShipments: (itemId: string) => get<ShipmentLeg[]>(`/items/${itemId}/shipments`),
   shipToSeller: (itemId: string, body: { courierCode: string; trackingNumber?: string | null; notes?: string | null }) =>
     post(`/items/${itemId}/ship-to-seller`, body),
+
+  // -- gear vault ----------------------------------------------------------
+  vault: () => get<VaultItem[]>('/vault'),
+  vaultItem: (id: string) => get<VaultItem>(`/vault/${id}`),
+  addGear: (body: AddGearInput) => post<VaultItem>('/vault', body),
+  updateGear: (id: string, body: AddGearInput) => put<VaultItem>(`/vault/${id}`, body),
+  removeGear: (id: string) => del<void>(`/vault/${id}`),
+  insuranceQuote: (id: string) => get<InsuranceQuote>(`/vault/${id}/insurance/quote`),
+  buyInsurance: (id: string, planCode: string, sumInsuredMinor?: number) =>
+    post<InsuranceRequest>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
+  /** Add a just-bought item to the vault, pre-filled from the order line. */
+  addGearFromOrderLine: (lineId: string) => post<VaultItem>(`/vault/from-order-line/${lineId}`),
+  /** The wrapped vault key for this user, or null if the vault isn't secured yet. */
+  vaultKey: async (): Promise<VaultKeyBlobsStored | null> => {
+    try { return await get<VaultKeyBlobsStored>('/vault/key') }
+    catch (e) { if (e instanceof ApiError && e.status === 404) return null; throw e }
+  },
+  setVaultKey: (blobs: VaultKeyBlobsStored) => put<void>('/vault/key', blobs),
+  /** Turn on the PIN: store the wrapped key and the re-encrypted existing items. */
+  activateVaultE2ee: (key: VaultKeyBlobsStored, items: MigratedItem[]) =>
+    post<void>('/vault/e2ee/activate', { key, items }),
+  /** Turn the PIN off (clears unreadable encrypted fields; used for a full reset). */
+  disableVaultE2ee: () => del<void>('/vault/e2ee'),
 }

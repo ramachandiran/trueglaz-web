@@ -5,6 +5,7 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Card, ErrorNote, Loading, Muted, SectionTitle } from '../components/ui'
+import { ModelThumb, useModelImages } from '../components/ModelImage'
 
 const PINCODE = /^[1-9][0-9]{5}$/
 
@@ -15,12 +16,17 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
   }
 
   const meta = useApi(() => api.meta(), [])
+  // Only for the model picture; the price and title travel in the route params.
+  const listing = useApi(() => api.listing(listingId), [listingId])
+  const pictures = useModelImages()
   const addresses = useApi(() => api.myAddresses(), [])
 
   const [reservation, setReservation] = useState<Reservation | null>(null)
   const [reserveError, setReserveError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  // No saved address: the form is the only way forward, so it starts open (TG-15).
+  useEffect(() => { if (addresses.data && addresses.data.length === 0) setAdding(true) }, [addresses.data])
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -84,7 +90,8 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
         await api.stubPay(order.id, 'approve')
         navigation.replace('OrderDetail', { id: order.id, justPaid: true })
       } else {
-        navigation.replace('OrderDetail', { id: order.id, awaitingPayment: true })
+        // A real gateway: open its checkout. The order is placed; paying is the next step.
+        navigation.replace('Pay', { orderId: order.id })
       }
     } catch (e) { setError((e as Error).message) } finally { setPlacing(false) }
   }
@@ -93,7 +100,9 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
     return (
       <View style={{ flex: 1, backgroundColor: t.colors.bg, padding: t.space.x4, gap: t.space.x3 }}>
         <ErrorNote error={new Error(reserveError)} />
-        <Muted>Someone may be buying this right now, or it has sold. Try another listing.</Muted>
+        {/checking this item out|already been sold/i.test(reserveError) && (
+          <Muted>Someone may be buying this right now, or it has sold. Try another listing.</Muted>
+        )}
         <Button label="Back to shop" variant="ghost" onPress={() => navigation.goBack()} />
       </View>
     )
@@ -107,7 +116,10 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
       <ScrollView contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
         <Card style={{ gap: t.space.x2 }}>
           <SectionTitle>Your item</SectionTitle>
-          <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>{title}</Txt>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+            <ModelThumb image={pictures.bySlug(listing.data?.modelSlug)} size={64} want={400} />
+            <Txt style={{ flex: 1, color: t.colors.text, fontWeight: t.weight.medium as never }}>{title}</Txt>
+          </View>
           <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{money(priceMinor, currency)}</Txt>
           {meta.data && meta.data.shippingMinor > 0 && <Muted size={t.size.xs}>+ {money(meta.data.shippingMinor)} delivery</Muted>}
           <Muted size={t.size.xs}>Held for you while you check out.</Muted>
@@ -116,9 +128,11 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
         <Card style={{ gap: t.space.x3 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <SectionTitle>Deliver to</SectionTitle>
-            <Pressable onPress={() => setAdding((v) => !v)}>
-              <Txt style={{ color: t.colors.accent }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
-            </Pressable>
+            {(addresses.data?.length ?? 0) > 0 && (
+              <Pressable onPress={() => setAdding((v) => !v)}>
+                <Txt style={{ color: t.colors.accent }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
+              </Pressable>
+            )}
           </View>
 
           {!adding && (addresses.data ?? []).map((a) => (

@@ -81,8 +81,11 @@ export function SignInScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: t.colors.brand }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: t.space.x5, gap: t.space.x5 }}>
-        <View style={{ alignItems: 'center', gap: t.space.x2 }}>
-          <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xxl, fontWeight: t.weight.bold as never }}>TrueGlaz</Txt>
+        <View style={{ alignItems: 'center', gap: t.space.x3 }}>
+          <View style={{ width: 60, height: 60, borderRadius: 16, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+            <Txt style={{ color: t.colors.onCta, fontSize: 30, fontWeight: t.weight.bold as never }}>T</Txt>
+          </View>
+          <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xxl, fontWeight: t.weight.bold as never, letterSpacing: -0.5 }}>TrueGlaz</Txt>
           <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.md }}>Buy and sell inspected used gear</Txt>
         </View>
 

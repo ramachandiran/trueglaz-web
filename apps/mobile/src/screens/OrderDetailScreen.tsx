@@ -1,12 +1,44 @@
 import { useState } from 'react'
 import { Modal, Pressable, ScrollView, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, dateTime, money, useApi, type OrderLine } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
-import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
+import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, stateTone } from '../components/ui'
+import { ModelThumb, useModelImages } from '../components/ModelImage'
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
+
+/** Once a buyer owns a unit, one tap files it in their Gear Vault, pre-filled. */
+const OWNED_STATES = ['delivered', 'accepted']
+function VaultAdd({ lineId, state }: { lineId: string; state: string }) {
+  const t = useTheme()
+  const [status, setStatus] = useState<'idle' | 'adding' | 'added' | 'error'>('idle')
+  if (!OWNED_STATES.includes(state)) return null
+  if (status === 'added') {
+    return (
+      <View style={{ marginTop: t.space.x2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: t.colors.goodSoft, borderRadius: 12, paddingVertical: 11 }}>
+        <Ionicons name="checkmark-circle" size={16} color={t.colors.good} />
+        <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>In your Gear Vault</Txt>
+      </View>
+    )
+  }
+  async function add() {
+    setStatus('adding')
+    try { await api.addGearFromOrderLine(lineId); setStatus('added') } catch { setStatus('error') }
+  }
+  return (
+    <Pressable onPress={add} disabled={status === 'adding'}
+      style={{ marginTop: t.space.x2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.colors.accent, borderRadius: 12, paddingVertical: 10, opacity: status === 'adding' ? 0.6 : 1 }}>
+      <Ionicons name={status === 'error' ? 'refresh' : 'shield-outline'} size={16} color={t.colors.accent} />
+      <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>
+        {status === 'adding' ? 'Adding…' : status === 'error' ? 'Try again' : 'Add to my Gear Vault'}
+      </Txt>
+    </Pressable>
+  )
+}
 
 /** A one-line summary of where a buyer's order line stands, for the status hero. */
 const ORDER_BLURB: Record<string, string> = {
@@ -19,6 +51,26 @@ const ORDER_BLURB: Record<string, string> = {
   return_requested: "We'll be in touch about your return.",
   returned: 'This item was returned to TrueGlaz.',
 }
+
+/** What a line's state means to the buyer, in words (never the raw code). */
+const LINE_STATUS: Record<string, string> = {
+  open: 'Preparing to ship',
+  packing: 'Preparing to ship',
+  dispatched: 'On the way',
+  delivered: 'Delivered',
+  accepted: 'Completed',
+  cancelled: 'Cancelled',
+  return_requested: 'Return requested',
+  returned: 'Returned',
+}
+
+/**
+ * How far along the six-step journey a line is: the index of the step that is
+ * in progress. Payment is confirmed before a line exists as `open`, so an open
+ * line is already preparing to ship, and an accepted one is past the end (every
+ * step done, none "in progress").
+ */
+const STAGE: Record<string, number> = { open: 2, packing: 2, dispatched: 3, delivered: 4, accepted: 6 }
 
 /** The buyer-facing order journey, derived from the line's fulfilment state. */
 function orderSteps(orderState: string, line: OrderLine | undefined): TrackStep[] {
@@ -38,14 +90,15 @@ function orderSteps(orderState: string, line: OrderLine | undefined): TrackStep[
         : { title: 'Return requested', desc: "We'll be in touch about your return.", state: 'current', tone: 'bad', meta: 'In progress' },
     ]
   }
-  const order = ['open', 'packing', 'dispatched', 'delivered', 'accepted']
-  const stage = Math.max(0, order.indexOf(s)) + 1 // +1 for the always-done "placed" step
+  // An order still waiting for its money is on the payment step.
+  const stage = orderState === 'pending_payment' ? 1 : STAGE[s] ?? 2
   const defs = [
     { title: 'Order placed', desc: undefined as string | undefined },
     { title: 'Payment confirmed', desc: undefined },
     { title: 'Preparing to ship', desc: undefined },
     { title: 'On the way', desc: undefined },
-    { title: 'Delivered', desc: line?.acceptanceWindowEndsAt ? `Accept by ${dateTime(line.acceptanceWindowEndsAt)}` : undefined },
+    // The accept-by date only matters while it is still the buyer's move.
+    { title: 'Delivered', desc: s === 'delivered' && line?.acceptanceWindowEndsAt ? `Accept by ${dateTime(line.acceptanceWindowEndsAt)}` : undefined },
     { title: 'Completed', desc: 'Sale finalised.' },
   ]
   return defs.map((d, i): TrackStep => {
@@ -54,13 +107,15 @@ function orderSteps(orderState: string, line: OrderLine | undefined): TrackStep[
   })
 }
 
-export function OrderDetailScreen({ route }: { route: any }) {
+export function OrderDetailScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
+  const insets = useSafeAreaInsets()
   const id: string = route.params.id
   const justPaid: boolean = !!route.params?.justPaid
   const awaitingPayment: boolean = !!route.params?.awaitingPayment
 
   const { data, error, loading, reload } = useApi(() => api.order(id), [id])
+  const pictures = useModelImages()
   const reasons = useApi(() => api.reasonCodes('return'), [])
 
   const [busyLine, setBusyLine] = useState<string | null>(null)
@@ -89,10 +144,18 @@ export function OrderDetailScreen({ route }: { route: any }) {
   if (!data) return null
 
   const { order, lines } = data
+  const unpaid = order.state === 'pending_payment'
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+      <View style={{ paddingTop: insets.top + t.space.x1, paddingHorizontal: t.space.x4, paddingBottom: t.space.x2, flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={8}
+          style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="chevron-back" size={21} color={t.colors.text} />
+        </Pressable>
+        <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Order</Txt>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x7 }}>
         <View style={{ gap: t.space.x2 }}>
           <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{order.orderNumber}</Txt>
           <Muted size={t.size.xs}>Placed {dateTime(order.createdAt)}</Muted>
@@ -100,12 +163,16 @@ export function OrderDetailScreen({ route }: { route: any }) {
 
         {justPaid ? (
           <StatusHero tone="good" badge="Paid" title="Payment confirmed 🎉" body="We'll prepare your item for dispatch." />
-        ) : awaitingPayment ? (
-          <StatusHero tone="warn" badge="Awaiting payment" title="This order is placed but not yet paid" />
+        ) : awaitingPayment || unpaid ? (
+          <View style={{ gap: t.space.x3 }}>
+            <StatusHero tone="warn" badge="Awaiting payment" title="This order is placed but not yet paid"
+              body="Pay to confirm it. If it stays unpaid, the order lapses and the item goes back on sale." />
+            {unpaid && <Button label={`Pay ${money(order.totalMinor)}`} variant="cta" onPress={() => navigation.navigate('Pay', { orderId: order.id })} />}
+          </View>
         ) : (
           <StatusHero
             tone={stateTone(lines[0]?.state ?? order.state)}
-            badge={(lines[0]?.state ?? order.state).replace(/_/g, ' ')}
+            badge={LINE_STATUS[lines[0]?.state ?? ''] ?? (lines[0]?.state ?? order.state).replace(/_/g, ' ')}
             title="Where your order is"
             body={ORDER_BLURB[lines[0]?.state ?? order.state]}
           />
@@ -115,13 +182,23 @@ export function OrderDetailScreen({ route }: { route: any }) {
 
         <Card style={{ gap: t.space.x3 }}>
           <SectionTitle>Items</SectionTitle>
-          {lines.map((l) => (
-            <View key={l.id} style={{ gap: t.space.x2, borderBottomWidth: 1, borderBottomColor: t.colors.border, paddingBottom: t.space.x3 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Badge label={l.gradeCodeAtSale} tone="accent" />
-                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{money(l.itemPriceMinor)}</Txt>
+          {lines.map((l, i) => (
+            <View key={l.id} style={{ gap: t.space.x2, marginTop: i === 0 ? 0 : t.space.x3, paddingTop: i === 0 ? 0 : t.space.x3, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: t.colors.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+                <ModelThumb image={pictures.byId(data.lineModels?.[l.id])} size={48} />
+                <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
+                  <Txt numberOfLines={2} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>
+                    {(data.lineTitles?.[l.id] ?? 'Your item').split('·')[0].trim()}
+                  </Txt>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
+                    <View style={{ backgroundColor: t.colors.goodSoft, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 8 }}>
+                      <Txt style={{ color: t.colors.good, fontSize: 10.5, fontWeight: t.weight.bold as never }}>Grade {l.gradeCodeAtSale}</Txt>
+                    </View>
+                    <Badge label={unpaid ? 'Awaiting payment' : LINE_STATUS[l.state] ?? l.state.replace(/_/g, ' ')} tone={stateTone(l.state)} />
+                  </View>
+                </View>
+                <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{money(l.itemPriceMinor)}</Txt>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}><StateBadge state={l.state} /></View>
               {l.acceptanceWindowEndsAt && l.state === 'delivered' && (
                 <Muted size={t.size.xs}>Accept by {dateTime(l.acceptanceWindowEndsAt)}, or it accepts automatically.</Muted>
               )}
@@ -133,6 +210,7 @@ export function OrderDetailScreen({ route }: { route: any }) {
               )}
               {l.state === 'return_requested' && <Muted size={t.size.xs}>Return requested — we'll be in touch.</Muted>}
               {l.acceptedAt && <Muted size={t.size.xs}>Accepted {dateTime(l.acceptedAt)}</Muted>}
+              <VaultAdd lineId={l.id} state={l.state} />
             </View>
           ))}
         </Card>

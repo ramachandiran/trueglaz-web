@@ -12,13 +12,34 @@
       "resizeMode": "contain",
       "backgroundColor": "#233e50"
     },
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.trueglaz.app" },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.trueglaz.app"
+    },
     "android": {
       "package": "com.trueglaz.app",
-      "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#233e50" }
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#233e50"
+      },
+      "versionCode": 1
     },
-    "web": { "bundler": "metro", "favicon": "./assets/favicon.png" },
-    "extra": { "apiOrigin": "http://3.104.55.164" },
-    "plugins": ["expo-font"]
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiOrigin": "https://demo.trueglaz.com"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TrueGlaz uses your photos so you can add pictures of the gear you are selling.",
+          "cameraPermission": "TrueGlaz uses the camera for your identity check and to photograph gear you are selling."
+        }
+      ]
+    ]
   }
 }

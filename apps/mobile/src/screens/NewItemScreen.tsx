@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, Pressable, ScrollView, Switch, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { api, useApi, type ProductModel } from '@trueglaz/core'
@@ -9,7 +9,11 @@ import { Card, Loading, Muted, SectionTitle } from '../components/ui'
 
 export function NewItemScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
-  const submissionId: string = route.params.submissionId
+  // Created on the first save rather than on opening the form (TG-9).
+  const submissionId = useRef<string | null>(route.params?.submissionId ?? null)
+  // Once the item exists, a retry must not create it again: it only finishes
+  // the photo uploads that failed (TG-14).
+  const created = useRef<{ id: string; uploaded: number } | null>(null)
 
   const categories = useApi(() => api.categories(), [])
   const brands = useApi(() => api.brands(), [])
@@ -65,23 +69,35 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
 
     setError(null); setBusy(true)
     try {
-      const created = await api.addItem(submissionId, {
+      if (!created.current) {
+        if (!submissionId.current) submissionId.current = (await api.createSubmission('guided')).id
+        const item = await api.addItem(submissionId.current, {
         productModelId, modelFreeText: modelFreeText.trim(), categoryId, brandId,
         description: description.trim(), reasonToSell: reasonToSell.trim(),
         underWarranty, hasBill, hasBox, hasAccessories,
         serialNumber: serialNumber.trim(), declaredGradeCode,
         askingAmountMinor: askingMinor, floorAmountMinor: floorMinor,
-      })
+        })
+        created.current = { id: item.id, uploaded: 0 }
+      }
+      const c = created.current
       // Upload any photos onto the new item before leaving, so it never reaches
-      // the queue without the pictures the seller meant to send.
-      for (let i = 0; i < photos.length; i++) {
+      // the queue without the pictures the seller meant to send. Resumes where a
+      // failed attempt stopped.
+      for (let i = c.uploaded; i < photos.length; i++) {
         setProgress(`Uploading photo ${i + 1} of ${photos.length}…`)
-        await api.uploadPhotoRN(photos[i], { ownerType: 'item', ownerId: created.id, role: 'seller_submission' })
+        await api.uploadPhotoRN(photos[i], { ownerType: 'item', ownerId: c.id, role: 'seller_submission' })
+        c.uploaded = i + 1
       }
       setProgress(null)
       // 1:1 flow: land straight on the item (now a draft) to review and submit.
-      navigation.replace('SellerItem', { id: created.id })
-    } catch (e) { setError((e as Error).message) } finally { setBusy(false); setProgress(null) }
+      navigation.replace('SellerItem', { id: c.id })
+    } catch (e) {
+      const msg = (e as Error).message
+      setError(created.current
+        ? `Your item is saved, but a photo didn't upload (${msg}). Tap the button again to finish uploading.`
+        : msg)
+    } finally { setBusy(false); setProgress(null) }
   }
 
   if (categories.loading || brands.loading || grades.loading) {
@@ -161,7 +177,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
       {progress && <Muted size={t.size.xs}>{progress}</Muted>}
-      <Button label="Add item" loading={busy} onPress={save} />
+      <Button label={created.current ? 'Finish uploading photos' : 'Add item'} loading={busy} onPress={save} />
     </ScrollView>
   )
 }

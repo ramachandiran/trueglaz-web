@@ -53,6 +53,10 @@ export interface ListingDetail {
   priceHistory: ListingPriceChange[]
   /** For the stock-image fallback. Null when the unit matched no model. */
   modelSlug: string | null
+  /** True when the signed-in viewer is this unit's seller (they cannot buy it). */
+  mine?: boolean
+  /** The seller's own item record — only given to the seller. */
+  myItemId?: string | null
 }
 
 export interface ConsignmentItem {
@@ -427,6 +431,10 @@ export interface Payment {
 export interface OrderDetail {
   order: Order
   lines: OrderLine[]
+  /** Order line id to catalogue model id, for each line's model picture. */
+  lineModels?: Record<string, string>
+  /** Order line id to what the item is called (the listing title). */
+  lineTitles?: Record<string, string>
   payments: Payment[]
 }
 
@@ -1112,6 +1120,8 @@ export interface HomeSale {
   soldAt: string | null
   categorySlug: string | null
   cover: MediaView | null
+  /** The catalogue model, for the model picture when the unit has no photograph. */
+  modelSlug?: string | null
 }
 
 /** Everything the shop front shows, in one answer. */
@@ -1631,4 +1641,165 @@ export interface CompanyProfileView {
   source: 'settings' | 'server'
   updatedAt: string | null
   updatedBy: string | null
+}
+
+// -- Gear Vault --------------------------------------------------------------
+
+export interface VaultValuation {
+  lowMinor: number
+  midMinor: number
+  highMinor: number
+  sampleCount: number
+  /** sold | asking | msrp */
+  basis: string
+}
+
+export interface VaultPolicy {
+  id: string
+  policyNo: string
+  planCode: string
+  insurerName: string | null
+  sumInsuredMinor: number
+  totalMinor: number
+  status: 'active' | 'lapsed' | 'cancelled'
+  startsOn: string
+  expiresOn: string
+  /** false while a stub stands in for a real insurer. */
+  live: boolean
+}
+
+/**
+ * A cover request. Issued at once when the insurer is instant; otherwise
+ * `authorized` (or `submitted`, with the insurer) until staff issue it, and the
+ * premium is only charged on issue.
+ */
+export interface InsuranceRequest {
+  id: string
+  itemId: string
+  status: 'authorized' | 'submitted' | 'issued' | 'declined' | 'cancelled' | 'expired'
+  planCode: string
+  sumInsuredMinor: number
+  premiumMinor: number
+  taxMinor: number
+  totalMinor: number
+  /** When manual issuance is expected by. */
+  expectedBy: string | null
+  declineReason: string | null
+  policy: VaultPolicy | null
+}
+
+export interface VaultItem {
+  id: string
+  modelLabel: string
+  productModelId: string | null
+  /** false = server-managed encryption (default); true = PIN/E2EE. */
+  e2ee: boolean
+  /** Default mode: decrypted for the owner. E2EE mode: these are null. */
+  serial: string | null
+  costMinor: number | null
+  notes: string | null
+  /** E2EE mode: opaque blobs the client decrypts. Default mode: null. */
+  serialCipher: string | null
+  costCipher: string | null
+  notesCipher: string | null
+  purchaseDate: string | null
+  warrantyExpiry: string | null
+  warrantySource: 'derived' | 'manual' | 'none'
+  warrantyStatus: 'unknown' | 'active' | 'expiring' | 'expired'
+  valuation: VaultValuation | null
+  policy: VaultPolicy | null
+  /** An open request being issued by hand, if any. */
+  insuranceRequest?: InsuranceRequest | null
+}
+
+export interface AddGearInput {
+  productModelId?: string | null
+  modelFreeText?: string | null
+  /** Default mode: plaintext, sealed server-side. */
+  serial?: string | null
+  costMinor?: number | null
+  notes?: string | null
+  /** E2EE mode: already-encrypted blobs. */
+  serialCipher?: string | null
+  costCipher?: string | null
+  notesCipher?: string | null
+  purchaseDate?: string | null
+  warrantyExpiry?: string | null
+}
+
+/** One item's re-encrypted fields, sent when turning on the PIN. */
+export interface MigratedItem {
+  id: string
+  serialCipher?: string | null
+  costCipher?: string | null
+  notesCipher?: string | null
+}
+
+/** The user's wrapped vault key, as stored by the server (all opaque to it). */
+export interface VaultKeyBlobsStored {
+  kdf: string
+  salt: string
+  wrappedDekPin: string
+  wrappedDekRecovery: string
+}
+
+export interface InsurancePlan {
+  code: string
+  title: string
+  blurb: string
+  premiumMinor: number
+  taxMinor: number
+  totalMinor: number
+  covers: string[]
+}
+
+export interface InsuranceQuote {
+  itemId: string
+  modelLabel: string
+  sumInsuredMinor: number
+  providerLive: boolean
+  plans: InsurancePlan[]
+}
+
+/** One choice in a filter group: the value to send back, its label, and how many it would show. */
+export interface FacetOption {
+  value: string
+  label: string
+  count: number
+}
+
+/**
+ * The filter groups the shop offers right now. Each is counted against the
+ * other selections, and only holds options with stock (plus any already picked),
+ * so an empty group is one to hide.
+ */
+export interface SearchFacets {
+  category: FacetOption[]
+  brand: FacetOption[]
+  mount: FacetOption[]
+  lensType: FacetOption[]
+  lensRange: FacetOption[]
+  sensorFormat: FacetOption[]
+  grade: FacetOption[]
+}
+
+/** A listing in search results, with the model facts its card needs. */
+export interface SearchHit {
+  listing: Listing
+  productModelId: string | null
+  modelSlug: string | null
+  categoryId: string | null
+  brandId: string | null
+  /** True when the signed-in viewer consigned this unit; they can manage it, not buy it. */
+  mine?: boolean
+}
+
+export interface ListingSearchResult {
+  hits: SearchHit[]
+  total: number
+  page: number
+  size: number
+  facets: SearchFacets
+  /** The price span of what the other filters leave; null when nothing does. */
+  price: { minMinor: number; maxMinor: number } | null
 }
