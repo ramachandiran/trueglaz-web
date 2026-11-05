@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "trueglaz": {
+      "source": { "source": "github", "repo": "ramachandiran/trueglaz-claude-skills" }
+    }
+  },
+  "enabledPlugins": {
+    "trueglaz-team@trueglaz": true
+  }
+}
