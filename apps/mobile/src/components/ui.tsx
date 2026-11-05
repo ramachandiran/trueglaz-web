@@ -1,0 +1,128 @@
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { Txt } from './Txt'
+import { useTheme } from '../theme/ThemeContext'
+
+export type Tone = 'neutral' | 'good' | 'warn' | 'bad' | 'accent'
+
+/** The tone an item/order state reads as — shared by StateBadge and StatusHero. */
+export function stateTone(state: string): Tone {
+  const bad = ['REJECTED_PRE_INTAKE', 'INSPECTION_FAILED', 'QUARANTINED', 'SELLER_DECLINED', 'RETURNED', 'cancelled', 'returned']
+  const warn = ['RETURN_REQUESTED', 'RETURN_TO_SELLER', 'UNSOLD_REVIEW', 'AWAITING_SELLER_APPROVAL', 'return_requested']
+  const good = ['ACCEPTED', 'LISTED', 'DELIVERED', 'accepted', 'delivered']
+  return bad.includes(state) ? 'bad' : warn.includes(state) ? 'warn' : good.includes(state) ? 'good' : 'neutral'
+}
+
+export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
+  const t = useTheme()
+  const map: Record<Tone, { bg: string; fg: string }> = {
+    neutral: { bg: t.colors.bgSunken, fg: t.colors.textMuted },
+    good: { bg: t.colors.goodSoft, fg: t.colors.good },
+    warn: { bg: t.colors.warnSoft, fg: t.colors.warn },
+    bad: { bg: t.colors.badSoft, fg: t.colors.bad },
+    accent: { bg: t.colors.accentSoft, fg: t.colors.accent },
+  }
+  const c = map[tone]
+  return (
+    <View style={[styles.badge, { backgroundColor: c.bg, borderRadius: t.radius.pill }]}>
+      <Txt style={{ color: c.fg, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>
+        {label}
+      </Txt>
+    </View>
+  )
+}
+
+export function StateBadge({ state }: { state: string }) {
+  return <Badge label={state.replace(/_/g, ' ')} tone={stateTone(state)} />
+}
+
+export function Card({ children, style }: { children: React.ReactNode; style?: object }) {
+  const t = useTheme()
+  return (
+    <View
+      style={[
+        {
+          backgroundColor: t.colors.bgRaised,
+          borderColor: t.colors.border,
+          borderWidth: 1,
+          borderRadius: t.radius.lg,
+          padding: t.space.x4,
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  )
+}
+
+export function SectionTitle({ children }: { children: React.ReactNode }) {
+  const t = useTheme()
+  return (
+    <Txt
+      style={{
+        color: t.colors.text,
+        fontSize: t.size.lg,
+        fontWeight: t.weight.bold as never,
+        marginBottom: t.space.x2,
+      }}
+    >
+      {children}
+    </Txt>
+  )
+}
+
+export function Muted({ children, size, style }: { children: React.ReactNode; size?: number; style?: object }) {
+  const t = useTheme()
+  return <Txt style={{ color: t.colors.textMuted, fontSize: size ?? t.size.sm, ...style }}>{children}</Txt>
+}
+
+export function Loading() {
+  const t = useTheme()
+  return (
+    <View style={styles.centre}>
+      <ActivityIndicator color={t.colors.accent} />
+    </View>
+  )
+}
+
+export function ErrorNote({ error, onRetry }: { error: Error; onRetry?: () => void }) {
+  const t = useTheme()
+  return (
+    <Card style={{ borderColor: t.colors.bad, gap: t.space.x2 }}>
+      <Txt style={{ color: t.colors.bad, fontWeight: t.weight.bold as never }}>
+        Something went wrong
+      </Txt>
+      <Muted>{error.message}</Muted>
+      {onRetry && (
+        <Pressable
+          onPress={onRetry}
+          style={{
+            alignSelf: 'flex-start',
+            paddingVertical: t.space.x2,
+            paddingHorizontal: t.space.x3,
+            borderWidth: 1,
+            borderColor: t.colors.border,
+            borderRadius: t.radius.md,
+          }}
+        >
+          <Txt style={{ color: t.colors.text }}>Try again</Txt>
+        </Pressable>
+      )}
+    </Card>
+  )
+}
+
+export function Empty({ title, hint }: { title: string; hint?: string }) {
+  const t = useTheme()
+  return (
+    <Card style={{ alignItems: 'center', paddingVertical: t.space.x6 }}>
+      <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{title}</Txt>
+      {hint && <View style={{ marginTop: t.space.x2 }}><Muted>{hint}</Muted></View>}
+    </Card>
+  )
+}
+
+const styles = StyleSheet.create({
+  badge: { paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' },
+  centre: { paddingVertical: 32, alignItems: 'center' },
+})

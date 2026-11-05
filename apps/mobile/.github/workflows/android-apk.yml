@@ -1,0 +1,57 @@
+# Builds an installable Android APK that talks to the staging API.
+#
+# Runs on GitHub's Ubuntu runners, which ship the Android SDK, so nothing is
+# installed by hand and every build is reproducible from the commit. The APK is
+# signed with the standard debug key: fine for testers installing it directly,
+# NOT accepted by the Play Store (that needs an upload key kept in a secret).
+name: Android APK (staging)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, claude/friendly-cray-ilaq8o]
+    paths: ['src/**', 'App.tsx', 'app.json', 'package.json', 'package-lock.json', 'assets/**', '.github/workflows/android-apk.yml']
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Baked into the bundle at build time; the app has no other way to find the API.
+      EXPO_PUBLIC_API_ORIGIN: https://demo.trueglaz.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+      # Generates the native android/ project from app.json (not committed).
+      - run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Build the release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: Name it after the commit
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk "out/trueglaz-staging-${GITHUB_SHA::7}.apk"
+          ls -lh out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trueglaz-staging-apk
+          path: out/*.apk
+          retention-days: 30
