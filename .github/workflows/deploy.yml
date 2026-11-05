@@ -5,8 +5,12 @@ name: Deploy web to AWS
 on:
   push:
     branches: [main]
+    # The phone app has its own workflow (android-apk.yml); a change to it alone
+    # does not need a website deploy. A change to packages/core runs both.
     paths-ignore:
       - '**/*.md'
+      - 'apps/mobile/**'
+      - '.github/workflows/android-apk.yml'
   workflow_dispatch:
 
 concurrency:
