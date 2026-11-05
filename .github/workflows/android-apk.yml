@@ -1,16 +1,28 @@
-# Builds an installable Android APK that talks to the staging API.
+# Builds an installable Android APK of the phone app (apps/mobile) that talks to
+# the staging API.
 #
 # Runs on GitHub's Ubuntu runners, which ship the Android SDK, so nothing is
 # installed by hand and every build is reproducible from the commit. The APK is
 # signed with the standard debug key: fine for testers installing it directly,
 # NOT accepted by the Play Store (that needs an upload key kept in a secret).
+#
+# It runs only when something the app is built from changes: the app itself,
+# the shared client (packages/core) or the workspace's dependencies. A
+# website-only change does not build an APK (and an app-only change does not
+# redeploy the website: see paths-ignore in deploy.yml).
 name: Android APK (staging)
 
 on:
   workflow_dispatch:
   push:
     branches: [main, claude/friendly-cray-ilaq8o]
-    paths: ['src/**', 'App.tsx', 'app.json', 'package.json', 'package-lock.json', 'assets/**', '.github/workflows/android-apk.yml']
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/core/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android-apk.yml'
+      - '!**/*.md'
 
 concurrency:
   group: android-apk-${{ github.ref }}
@@ -24,8 +36,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      # Baked into the bundle at build time; the app has no other way to find the API.
+      # Baked into the bundle at build time; the app has no other way to find
+      # the API. Kept here, in review, rather than in a repository variable.
       EXPO_PUBLIC_API_ORIGIN: https://demo.trueglaz.com
+    defaults:
+      run:
+        working-directory: apps/mobile
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,14 +50,25 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
 
+      # An app built without an API address installs fine and then cannot do
+      # anything. Refuse to build one.
+      - name: Check the API address
+        run: |
+          case "$EXPO_PUBLIC_API_ORIGIN" in
+            https://?*) echo "API: $EXPO_PUBLIC_API_ORIGIN" ;;
+            *) echo "::error::EXPO_PUBLIC_API_ORIGIN must be an https:// address (got '$EXPO_PUBLIC_API_ORIGIN'). Set it in .github/workflows/android-apk.yml."; exit 1 ;;
+          esac
+
+      # One install for the whole workspace: the app, packages/core and the website.
       - run: npm ci
+        working-directory: .
       - run: npx tsc --noEmit
 
       # Generates the native android/ project from app.json (not committed).
       - run: npx expo prebuild --platform android --no-install --clean
 
       - name: Build the release APK
-        working-directory: android
+        working-directory: apps/mobile/android
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
 
       - name: Name it after the commit
@@ -53,5 +80,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: trueglaz-staging-apk
-          path: out/*.apk
+          path: apps/mobile/out/*.apk
           retention-days: 30
