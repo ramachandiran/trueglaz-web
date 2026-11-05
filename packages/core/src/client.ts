@@ -20,6 +20,9 @@ import type {
  * enforced server-side against `user_role`, because a browser cannot be trusted
  * to police itself — hiding a button is a courtesy, not a control.
  */
+/** Where an uploaded photo belongs. */
+export type UploadTarget = { ownerType: 'item' | 'order' | 'kyc' | 'model'; ownerId: string; role: string; defectId?: string }
+
 const SESSION_KEY = 'trueglaz.session'
 
 let session: Session | null = null
@@ -304,23 +307,24 @@ export const api = {
    * Authorization header and no JSON, and in production it is not even our
    * origin. The upload target is signed; that is what authorises it.
    */
-  uploadPhoto: async (
-    file: File,
-    target: { ownerType: 'item' | 'order' | 'kyc' | 'model'; ownerId: string; role: string; defectId?: string },
-  ): Promise<MediaView> => {
-    const intent = await post<UploadIntent>('/media/intent', {
-      ...target,
-      contentType: file.type || (/\.png$/i.test(file.name) ? 'image/png' : /\.webp$/i.test(file.name) ? 'image/webp' : 'image/jpeg'),
-      bytes: file.size,
-    })
+  uploadPhoto: (file: File, target: UploadTarget): Promise<MediaView> =>
+    api.uploadMedia(
+      file,
+      file.type || (/\.png$/i.test(file.name) ? 'image/png' : /\.webp$/i.test(file.name) ? 'image/webp' : 'image/jpeg'),
+      target,
+    ),
 
-    const put = await fetch(intent.url, {
-      method: intent.method,
-      headers: intent.headers,
-      body: file,
-    })
+  /**
+   * The same three steps for any platform. The caller prepares the bytes: the
+   * browser passes the picked `File`; the phone app first turns whatever the
+   * camera produced (often a large HEIC, which the server cannot read) into a
+   * reasonably sized JPEG. That preparation stays in each app, so this package
+   * needs nothing platform-specific.
+   */
+  uploadMedia: async (body: Blob, contentType: string, target: UploadTarget): Promise<MediaView> => {
+    const intent = await post<UploadIntent>('/media/intent', { ...target, contentType, bytes: body.size })
+    const put = await fetch(intent.url, { method: intent.method, headers: intent.headers, body })
     if (!put.ok) throw new ApiError(put.status, 'The upload did not go through — please try again')
-
     return post<MediaView>('/media/seal', { ticket: intent.ticket })
   },
   recentlySold: (limit = 6) => get<SoldListing[]>(`/listings/recently-sold?limit=${limit}`),
