@@ -18,7 +18,8 @@ const SEEN_KEY = 'trueglaz.vault.introSeen'
  * asks for one field, and shows an instant estimate — never a gate: "Not now"
  * dismisses it and the Vault stays a tab away.
  */
-export function VaultIntro() {
+/** `onClosed` lets the Vault screen reload, so gear added here shows at once. */
+export function VaultIntro({ onClosed }: { onClosed?: () => void } = {}) {
   const t = useTheme()
   const { session } = useSession()
   const navigation = useNavigation<any>()
@@ -44,6 +45,7 @@ export function VaultIntro() {
   async function dismiss() {
     setEligible(false)
     try { await getStorage().set(SEEN_KEY, '1') } catch { /* fine */ }
+    onClosed?.()
   }
 
   if (!eligible) return null

@@ -4,8 +4,12 @@ import { api, getStorage, isOps, money, useSession, type ProductModel, type Vaul
 import '../pages/VaultPage.css'
 
 const SEEN_KEY = 'trueglaz.vault.introSeen'
-/** Only offered where the person is just landing, never mid-task (checkout, etc.). */
-const HOME_PATHS = ['/', '/catalog', '/sell']
+/**
+ * Only offered on the Vault itself. It used to open over the home page and the
+ * shop too, where it interrupted the task the buyer came for (UI/UX audit
+ * round 1, UX-02): an invitation belongs where its subject is.
+ */
+const HOME_PATHS = ['/vault']
 
 /**
  * A one-time, value-led invitation to start a Gear Vault.
