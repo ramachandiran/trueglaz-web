@@ -125,7 +125,7 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--tg-accent);
+  background: var(--tg-brand-accent);
   /* Ringed in the header's own background so it reads as a pip on the avatar
      rather than a smudge in it. */
   box-shadow: 0 0 0 2px var(--tg-bg-raised);

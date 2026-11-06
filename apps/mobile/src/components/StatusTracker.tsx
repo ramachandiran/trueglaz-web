@@ -37,7 +37,7 @@ function Row({ index, step, last }: { index: number; step: TrackStep; last: bool
   const node = done
     ? { bg: t.colors.good, border: t.colors.good, fg: '#ffffff' }
     : current
-      ? { bg: t.colors.accent, border: t.colors.accent, fg: '#ffffff' }
+      ? { bg: t.colors.accent, border: t.colors.accent, fg: t.colors.onAccent }
       : cancelled
         ? { bg: t.colors.bad, border: t.colors.bad, fg: '#ffffff' }
         : { bg: t.colors.bgRaised, border: t.colors.border, fg: t.colors.textMuted }
