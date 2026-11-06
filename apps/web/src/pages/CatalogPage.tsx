@@ -6,7 +6,7 @@ import { FilterSidebar } from '../components/FilterSidebar'
 import { photoKindFor } from '../components/GearPhoto'
 import { GradeBadge, Empty, ErrorNote, Loading } from '../components/ui'
 import {
-  EMPTY_FILTERS, singularCategory, type Filters, type SearchHit, type Sort,
+  activeFilterCount, EMPTY_FILTERS, singularCategory, type Filters, type SearchHit, type Sort,
 } from '@trueglaz/core'
 
 /** The sorts the results header offers, and so the only ones a link may ask for. */
@@ -31,6 +31,9 @@ export function CatalogPage() {
   // belong to, so a page that lands after the filters changed is dropped.
   const [more, setMore] = useState<{ key: string; hits: SearchHit[]; next: number }>({ key: '', hits: [], next: 1 })
   const [loadingMore, setLoadingMore] = useState(false)
+  // On a phone the filters fold away behind one button so the first screen is
+  // results, not ~1,350 px of checkboxes. On a wide screen they are always shown.
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const latestKey = useRef(key)
   latestKey.current = key
   const extra = more.key === key ? more : { key, hits: [], next: 1 }
@@ -106,16 +109,18 @@ export function CatalogPage() {
 
   return (
     <div className="catalog">
-      <FilterSidebar
-        filters={filters}
-        onChange={setFilters}
-        facets={search.data?.facets ?? null}
-        price={search.data?.price ?? null}
-      />
+      <div id="catalog-filters" className="catalog__filters" data-open={filtersOpen || undefined}>
+        <FilterSidebar
+          filters={filters}
+          onChange={setFilters}
+          facets={search.data?.facets ?? null}
+          price={search.data?.price ?? null}
+        />
+      </div>
 
-      <section className="catalog__results" aria-label="Listings">
+      <section id="results" tabIndex={-1} className="catalog__results" aria-label="Listings">
         <div className="results__bar">
-          <p className="results__count">
+          <h1 className="results__count">
             {total === 0 ? 'No results' : (
               <>
                 <strong>{total}</strong>
@@ -123,7 +128,17 @@ export function CatalogPage() {
               </>
             )}
             {' for '}<span className="results__term">{heading}</span>
-          </p>
+          </h1>
+          <button
+            type="button"
+            className="tg-button results__filters"
+            aria-expanded={filtersOpen}
+            aria-controls="catalog-filters"
+            onClick={() => setFiltersOpen((o) => !o)}
+          >
+            {filtersOpen ? 'Hide filters' : 'Filters'}
+            {activeFilterCount(filters) > 0 && ` (${activeFilterCount(filters)})`}
+          </button>
           <label className="results__sort">
             <span className="tg-muted">Sort by</span>
             <select

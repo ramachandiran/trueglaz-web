@@ -16,7 +16,11 @@
   margin-bottom: var(--tg-space-3);
   border-bottom: 1px solid var(--tg-border);
 }
-.results__count { margin: 0; font-size: var(--tg-text-sm); }
+.results__count { margin: 0; font-size: var(--tg-text-sm); font-weight: var(--tg-weight-normal); }
+.results__bar .results__filters { display: none; }
+/* A wrapper only so the phone layout can fold the filters away; on a wide
+   screen it steps aside so the sidebar stays sticky against the page. */
+.catalog__filters { display: contents; }
 .results__term { color: var(--tg-text); font-weight: var(--tg-weight-bold); }
 .results__sort {
   display: inline-flex;
@@ -110,6 +114,9 @@
 @media (max-width: 900px) {
   .catalog { grid-template-columns: 1fr; }
   .fs { position: static; max-height: none; }
+  /* Results first: the filters open from the button in the results bar. */
+  .catalog__filters:not([data-open]) { display: none; }
+  .results__bar .results__filters { display: inline-flex; min-height: 44px; }
 }
 
 @media (max-width: 720px) {
@@ -122,3 +129,5 @@
 
 /* More results, appended under the ones already on screen. */
 .results__more { display: flex; justify-content: center; margin-top: var(--tg-space-4); }
+
+.catalog__results:focus { outline: none; }
