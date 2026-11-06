@@ -78,6 +78,7 @@ export function StaffShell() {
 
   return (
     <div className="staff-shell">
+      <a className="skip-link" href="#main">Skip to content</a>
       <aside className="staff-side">
         <NavLink to="/admin" className="staff-side__brand">
           <LogoMark className="staff-side__mark" />
@@ -123,7 +124,7 @@ export function StaffShell() {
           </div>
         </header>
         <DemoNotice />
-        <main className="staff-content">
+        <main id="main" tabIndex={-1} className="staff-content">
           <Outlet />
         </main>
       </div>

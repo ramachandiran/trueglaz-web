@@ -179,6 +179,24 @@ select {
   50% { opacity: 0.55; }
 }
 
+/* Skip link: first thing a keyboard user meets, invisible until focused. */
+.skip-link {
+  position: absolute;
+  left: var(--tg-space-3);
+  top: var(--tg-space-3);
+  z-index: 1000;
+  padding: var(--tg-space-2) var(--tg-space-4);
+  background: var(--tg-bg-raised);
+  color: var(--tg-text);
+  border: 2px solid var(--tg-accent);
+  border-radius: var(--tg-radius-md);
+  font-weight: var(--tg-weight-bold);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+main:focus { outline: none; }
+
 .tg-visually-hidden {
   position: absolute;
   width: 1px; height: 1px;

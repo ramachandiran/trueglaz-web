@@ -34,6 +34,7 @@ export function ItemsPage() {
 
   return (
     <div className="items">
+      <h1 className="tg-visually-hidden">Items by stage</h1>
       <aside className="items__rail tg-card" aria-label="Filter by stage">
         <h2 className="items__rail-title">Stage</h2>
         <button

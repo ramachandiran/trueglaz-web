@@ -10,6 +10,7 @@ import { buildTimeline, type RenderedReport } from '@trueglaz/core'
 import { dateOnly, dateTime, money } from '@trueglaz/core'
 import './DetailPage.css'
 import { Gallery } from '../components/Gallery'
+import { usePageTitle } from '../state/usePageTitle'
 
 export function ListingDetailPage() {
   const { id = '' } = useParams()
@@ -41,6 +42,9 @@ export function ListingDetailPage() {
   // Opened from the buyer's orders ("View your item"): this is theirs, and the
   // buy box says so instead of "this one has been sold".
   const fromOrder = (location.state as { fromOrder?: { orderNumber: string; placedAt: string | null; lineState: string } } | null)?.fromOrder
+
+  // The tab says which unit this is once it has loaded (TG-48).
+  usePageTitle(listing.data ? `${listing.data.listing.title.split('·')[0].trim()} (used, graded)` : null)
 
   if (listing.loading) return <Loading label="Loading listing" />
   if (listing.error) return <ErrorNote error={listing.error} onRetry={listing.reload} />

@@ -12,9 +12,10 @@ import './AppShell.css'
 export function AppShell() {
   return (
     <div className="shell">
+      <a className="skip-link" href="#main">Skip to content</a>
       <DemoNotice />
       <Header />
-      <main className="shell__main">
+      <main id="main" tabIndex={-1} className="shell__main">
         <Outlet />
       </main>
       <VaultIntro />
