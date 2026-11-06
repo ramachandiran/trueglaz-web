@@ -530,6 +530,17 @@ export interface Payout {
 }
 
 /**
+ * A payout as the staff queue returns it: the payout, plus whose money it is
+ * and what sold. Released money is checked against these, not against an id.
+ */
+export interface PayoutQueueRow extends Payout {
+  sellerName: string | null
+  orderNumber: string | null
+  itemSku: string | null
+  itemTitle: string | null
+}
+
+/**
  * Where a seller's money goes.
  *
  * Only the last four digits of an account number are ever sent — the API does

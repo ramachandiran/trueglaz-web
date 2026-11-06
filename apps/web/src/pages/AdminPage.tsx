@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
-import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, type PayoutDestination } from '@trueglaz/core'
+import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, type PayoutDestination, type PayoutQueueRow } from '@trueglaz/core'
 import { InventoryTable } from '../components/InventoryTable'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { KycDocuments } from '../components/KycDocuments'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import './OpsPage.css'
 import '../components/dashboard.css'
 
@@ -37,6 +38,9 @@ export function AdminPage() {
 
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Releasing money always goes through a confirmation that names the seller,
+  // the item and the amount: the row alone is one click from paying anyone.
+  const [confirming, setConfirming] = useState<{ payout: PayoutQueueRow; held: boolean } | null>(null)
 
   async function act(id: string, fn: () => Promise<unknown>) {
     setBusy(id); setError(null)
@@ -103,7 +107,7 @@ export function AdminPage() {
         state={onHold}
         busy={busy}
         render={(p) => (
-          <button className="tg-button" disabled={busy === p.id} onClick={() => act(p.id, () => api.approvePayout(p.id))}>
+          <button className="tg-button" disabled={busy === p.id} onClick={() => setConfirming({ payout: p, held: true })}>
             Approve anyway
           </button>
         )}
@@ -115,7 +119,7 @@ export function AdminPage() {
         state={pending}
         busy={busy}
         render={(p) => (
-          <button className="tg-button tg-button--primary" disabled={busy === p.id} onClick={() => act(p.id, () => api.approvePayout(p.id))}>
+          <button className="tg-button tg-button--primary" disabled={busy === p.id} onClick={() => setConfirming({ payout: p, held: false })}>
             Approve
           </button>
         )}
@@ -128,6 +132,34 @@ export function AdminPage() {
         busy={busy}
         render={(p) => <TransferRow payout={p} busy={busy === p.id} onPay={(ref) => act(p.id, () => api.payPayout(p.id, ref))} />}
       />
+
+      <ConfirmDialog
+        open={confirming !== null}
+        title={confirming ? `Release ${money(confirming.payout.netMinor)} to ${confirming.payout.sellerName ?? 'this seller'}?` : ''}
+        confirmLabel="Approve payout"
+        busy={confirming !== null && busy === confirming.payout.id}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => {
+          if (!confirming) return
+          const id = confirming.payout.id
+          act(id, () => api.approvePayout(id)).finally(() => setConfirming(null))
+        }}
+      >
+        {confirming && (
+          <>
+            <p><strong>{payoutLabel(confirming.payout)}</strong></p>
+            <p className="tg-muted">
+              Gross {money(confirming.payout.grossMinor)}, net {money(confirming.payout.netMinor)} after fees.
+              Approving moves it to "ready to transfer"; the bank transfer itself is recorded separately.
+            </p>
+            {confirming.held && (
+              <p className="tg-badge tg-badge--warn">
+                On hold: {(confirming.payout.holdReasonCode ?? 'reason not given').replace(/_/g, ' ')}
+              </p>
+            )}
+          </>
+        )}
+      </ConfirmDialog>
 
       <RefundsDue onChanged={() => { recon.reload(); accounts.reload() }} />
 
@@ -222,13 +254,19 @@ function Widget({ label, value, note, tone, lead }: {
   )
 }
 
+/** What a payout is for, in the words an admin checks it against. */
+function payoutLabel(p: PayoutQueueRow): string {
+  const parts = [p.itemTitle, p.itemSku, p.orderNumber && `order ${p.orderNumber}`].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : `payout ${p.id.slice(0, 8)}`
+}
+
 function PayoutSection({
   title, blurb, state, busy, render,
 }: {
   title: string; blurb: string
-  state: ReturnType<typeof useApi<any>>
+  state: ReturnType<typeof useApi<PayoutQueueRow[]>>
   busy: string | null
-  render: (p: any) => React.ReactNode
+  render: (p: PayoutQueueRow) => React.ReactNode
 }) {
   if (state.loading) return null
   const rows = state.data ?? []
@@ -237,11 +275,13 @@ function PayoutSection({
     <section className="tg-card ops__card">
       <h2 className="ops__subtitle">{title} ({rows.length})</h2>
       <p className="tg-muted ops__fineprint">{blurb}</p>
-      {rows.map((p: any) => (
+      {rows.map((p) => (
         <div key={p.id} className="ops__inbound">
           <div>
-            <span className="tg-mono">{p.id.slice(0, 8)}</span>
-            <span className="tg-muted"> gross {money(p.grossMinor)} · </span>
+            <strong>{p.sellerName ?? 'Unknown seller'}</strong>
+            <span className="tg-muted"> · {payoutLabel(p)}</span>
+            <br />
+            <span className="tg-muted">gross {money(p.grossMinor)} · </span>
             <strong>net {money(p.netMinor)}</strong>
             {p.holdReasonCode && <span className="tg-badge tg-badge--warn">{p.holdReasonCode.replace(/_/g, ' ')}</span>}
           </div>
