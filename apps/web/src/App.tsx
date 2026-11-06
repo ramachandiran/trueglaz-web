@@ -38,6 +38,7 @@ import { SellerHomePage } from './pages/SellerHomePage'
 import { VaultPage } from './pages/VaultPage'
 import { WantedPage } from './pages/WantedPage'
 import { SignInPage } from './pages/SignInPage'
+import { RouteTitle } from './state/usePageTitle'
 
 /**
  * Smart home page that redirects based on user role.
@@ -68,6 +69,7 @@ function SmartHome() {
 export function App() {
   return (
     <BrowserRouter>
+      <RouteTitle />
       <Routes>
         <Route element={<AppShell />}>
           {/* Smart home: redirects ops/staff to inventory dashboard */}

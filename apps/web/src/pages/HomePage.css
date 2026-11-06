@@ -75,7 +75,7 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: var(--tg-weight-bold);
-  color: var(--tg-accent);
+  color: var(--tg-brand-accent);
 }
 
 .hero__headline {

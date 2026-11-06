@@ -43,7 +43,7 @@ export function AdminModelsPage() {
     <div className="am">
       <header className="am__head">
         <div>
-          <h1 className="am__title">Model photos</h1>
+          <h2 className="am__title">Model photos</h2>
           <p className="am__lede">
             One picture per model, shown wherever that model appears — the shop, orders, the Wanted board and the
             consignment form. Use your own photographs: the whole model, on a plain light background.

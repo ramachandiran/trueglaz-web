@@ -41,6 +41,14 @@ export interface ColorTokens {
   onBrandMuted: string
   /** The second header band, under the main bar. */
   brandAlt: string
+  /**
+   * The brand orange as TEXT or a mark on the brand surfaces (header, hero,
+   * footer). Kept apart from `accent` because the orange that is legible on
+   * the cream page (deep #B4400F) is illegible on navy, and the bright brand
+   * orange (#FF6B35) is illegible on cream. Each is checked against its own
+   * background: 4.5:1 or better for text.
+   */
+  brandAccent: string
 
   /**
    * The one warm colour: buy buttons, and nothing else.
@@ -116,8 +124,11 @@ export const light: Theme = {
     border: '#e2ddc4',
     borderStrong: '#c7c2a9',
 
-    accent: '#FF6B35',
-    accentHover: '#e65d2b',
+    // Action orange. #FF6B35 on this cream is 2.8:1, so text, links, focus
+    // rings and buttons use the deeper #B4400F: 5.6:1 on bg, 4.9:1 on
+    // bgSunken, 4.6:1 on accentSoft, and cream on it is 5.6:1 (TG-44).
+    accent: '#B4400F',
+    accentHover: '#9A3412',
     accentSoft: '#ffe1d4',
     onAccent: '#fffef3',
 
@@ -125,9 +136,10 @@ export const light: Theme = {
     onBrand: '#fffef3',
     onBrandMuted: '#a9bdcb',
     brandAlt: '#2e5168',
+    brandAccent: '#ff8a5c',
 
-    cta: '#FF6B35',
-    ctaHover: '#e65d2b',
+    cta: '#B4400F',
+    ctaHover: '#9A3412',
     onCta: '#fffef3',
 
     good: '#2e7d53',
@@ -165,19 +177,22 @@ export const dark: Theme = {
     border: '#2b4252',
     borderStrong: '#547082',
 
+    // The bright orange reads well on the dark page (6.1:1); it is the text
+    // ON an orange fill that has to be dark, not cream (cream is 2.8:1).
     accent: '#FF6B35',
-    accentHover: '#e65d2b',
+    accentHover: '#ff8a5c',
     accentSoft: '#40251a',
-    onAccent: '#fffef3',
+    onAccent: '#101c24',
 
     brand: '#1b3243',
     onBrand: '#f3f1e4',
     onBrandMuted: '#93a8b8',
     brandAlt: '#233c4f',
+    brandAccent: '#ff8a5c',
 
     cta: '#FF6B35',
-    ctaHover: '#e65d2b',
-    onCta: '#fffef3',
+    ctaHover: '#ff8a5c',
+    onCta: '#101c24',
 
     good: '#52b583',
     goodSoft: '#123528',
@@ -216,8 +231,11 @@ export const midnight: Theme = {
     border: '#ddd6c1',
     borderStrong: '#bfb599',
 
-    accent: '#FF6B35',
-    accentHover: '#e65d2b',
+    // Action orange. #FF6B35 on this cream is 2.8:1, so text, links, focus
+    // rings and buttons use the deeper #B4400F: 5.6:1 on bg, 4.9:1 on
+    // bgSunken, 4.6:1 on accentSoft, and cream on it is 5.6:1 (TG-44).
+    accent: '#B4400F',
+    accentHover: '#9A3412',
     accentSoft: '#ffe1d4',
     onAccent: '#fffef3',
 
@@ -225,9 +243,10 @@ export const midnight: Theme = {
     onBrand: '#fffef3',
     onBrandMuted: '#a9bdcb',
     brandAlt: '#2e5168',
+    brandAccent: '#ff8a5c',
 
-    cta: '#FF6B35',
-    ctaHover: '#e65d2b',
+    cta: '#B4400F',
+    ctaHover: '#9A3412',
     onCta: '#fffef3',
 
     good: '#2b7449',

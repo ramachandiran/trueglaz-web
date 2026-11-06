@@ -5,18 +5,20 @@ import './FilterSidebar.css'
 type ListKey = 'categoryIds' | 'brandIds' | 'mountIds' | 'lensTypes' | 'lensRanges' | 'sensorFormats' | 'grades'
 
 /**
- * The groups, in the order a shopper narrows: what it is, who made it, will it
- * fit, then the lens-only questions, then condition. The options themselves
- * come from the API.
+ * The groups, in the order a shopper narrows. Budget and condition come first
+ * (Price is drawn above this list): they are what buyers of used gear decide
+ * on, and they used to sit below the sidebar's own fold, 33 Tab presses down.
+ * Then what it is, who made it, will it fit, and the lens-only questions. The
+ * options themselves come from the API.
  */
 const GROUPS: { key: ListKey; facet: keyof SearchFacets; title: string }[] = [
+  { key: 'grades', facet: 'grade', title: 'Condition' },
   { key: 'categoryIds', facet: 'category', title: 'Type' },
   { key: 'brandIds', facet: 'brand', title: 'Brand' },
   { key: 'mountIds', facet: 'mount', title: 'Mount' },
   { key: 'lensTypes', facet: 'lensType', title: 'Lens type' },
   { key: 'lensRanges', facet: 'lensRange', title: 'Focal range' },
   { key: 'sensorFormats', facet: 'sensorFormat', title: 'Sensor' },
-  { key: 'grades', facet: 'grade', title: 'Condition' },
 ]
 
 interface Props {
@@ -50,6 +52,7 @@ export function FilterSidebar({ filters, onChange, facets, price }: Props) {
 
   return (
     <aside className="fs" aria-label="Filters">
+      <a className="skip-link" href="#results">Skip to results</a>
       <div className="fs__head">
         <h2 className="fs__title">Filters</h2>
         {active > 0 && (
@@ -65,24 +68,6 @@ export function FilterSidebar({ filters, onChange, facets, price }: Props) {
 
       {/* Search lives in the header and sort above the results; repeating them
           here would be two controls for one thing, and two places to look. */}
-
-      {facets && GROUPS.map(({ key, facet, title }) => {
-        const options: FacetOption[] = facets[facet]
-        if (options.length === 0) return null
-        return (
-          <Section key={key} title={title}>
-            {options.map((o) => (
-              <Check
-                key={o.value}
-                label={o.label}
-                count={o.count}
-                checked={filters[key].includes(o.value)}
-                onChange={() => toggle(key, o.value)}
-              />
-            ))}
-          </Section>
-        )
-      })}
 
       <Section title="Price">
         <div className="fs__price">
@@ -128,6 +113,25 @@ export function FilterSidebar({ filters, onChange, facets, price }: Props) {
           </p>
         )}
       </Section>
+
+      {facets && GROUPS.map(({ key, facet, title }) => {
+        const options: FacetOption[] = facets[facet]
+        if (options.length === 0) return null
+        return (
+          <Section key={key} title={title}>
+            {options.map((o) => (
+              <Check
+                key={o.value}
+                label={o.label}
+                count={o.count}
+                checked={filters[key].includes(o.value)}
+                onChange={() => toggle(key, o.value)}
+              />
+            ))}
+          </Section>
+        )
+      })}
+
     </aside>
   )
 }

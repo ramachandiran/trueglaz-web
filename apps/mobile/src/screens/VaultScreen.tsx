@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { VaultIntro } from './VaultIntro'
 import { Alert, FlatList, Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -202,6 +203,8 @@ export function VaultScreen() {
       )}
       {insuring && <InsureModal item={insuring} onClose={() => setInsuring(null)} onBought={() => { setInsuring(null); reload() }} />}
       {privacy && <PrivacySheet mode={privacy} items={items} onDone={afterPrivacy} onClose={() => setPrivacy(null)} />}
+      {/* The Vault's own invitation lives here, not over Home or Shop (UX-02). */}
+      <VaultIntro onClosed={reload} />
     </View>
   )
 }

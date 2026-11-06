@@ -4,7 +4,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail, ManagedListing, NewModel,
-  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
+  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutQueueRow, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, InboundClock, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -707,7 +707,7 @@ export const api = {
 
   // -- admin ---------------------------------------------------------------
   payoutQueue: (state?: string) =>
-    get<Payout[]>(`/payouts${state ? `?state=${encodeURIComponent(state)}` : ''}`),
+    get<PayoutQueueRow[]>(`/payouts${state ? `?state=${encodeURIComponent(state)}` : ''}`),
   approvePayout: (id: string) => post<Payout>(`/payouts/${id}/approve`),
   payPayout: (id: string, transferRef: string) => post<Payout>(`/payouts/${id}/pay`, { transferRef }),
   ledgerAccounts: () => get<LedgerAccountBalance[]>('/ledger/accounts'),

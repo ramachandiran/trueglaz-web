@@ -56,7 +56,7 @@
   color: var(--tg-on-brand); text-decoration: none; font-size: 13.5px; font-weight: var(--tg-weight-medium);
 }
 .staff-side__link:hover { background: #ffffff14; }
-.staff-side__link--on { background: #ffffff1f; box-shadow: inset 2px 0 0 var(--tg-accent); }
+.staff-side__link--on { background: #ffffff1f; box-shadow: inset 2px 0 0 var(--tg-brand-accent); }
 .staff-side__ic { width: 18px; height: 18px; flex: none; opacity: 0.82; }
 .staff-side__ic svg { width: 18px; height: 18px; display: block; }
 .staff-side__link--on .staff-side__ic { opacity: 1; }
