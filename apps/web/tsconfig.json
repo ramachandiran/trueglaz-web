@@ -22,7 +22,6 @@
     "types": [
       "vite/client"
     ],
-    "baseUrl": ".",
     "paths": {
       "react": [
         "./node_modules/@types/react"
