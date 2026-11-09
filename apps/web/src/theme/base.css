@@ -140,12 +140,15 @@ select {
   transition: background var(--tg-transition), border-color var(--tg-transition);
 }
 .tg-button:hover { background: var(--tg-bg-hover); }
+/* Every primary button is the bright brand orange with dark navy on it, the
+   same as the header search button (cta, 6.1:1). Text and links stay on the
+   deeper accent, which is the one that reads on cream. */
 .tg-button--primary {
-  background: var(--tg-accent);
-  border-color: var(--tg-accent);
-  color: var(--tg-on-accent);
+  background: var(--tg-cta);
+  border-color: var(--tg-cta);
+  color: var(--tg-on-cta);
 }
-.tg-button--primary:hover { background: var(--tg-accent-hover); }
+.tg-button--primary:hover { background: var(--tg-cta-hover); border-color: var(--tg-cta-hover); color: var(--tg-on-cta); }
 .tg-button--subtle { border-color: transparent; background: transparent; }
 .tg-button--subtle:hover { background: var(--tg-bg-hover); }
 /* Nothing said a disabled button was disabled: it kept its fill, its pointer
@@ -154,7 +157,7 @@ select {
    be answered one by one, since they are no less specific than this. */
 .tg-button:disabled { opacity: 0.45; cursor: not-allowed; }
 .tg-button:disabled:hover { background: var(--tg-bg-raised); }
-.tg-button--primary:disabled:hover { background: var(--tg-accent); }
+.tg-button--primary:disabled:hover { background: var(--tg-cta); }
 .tg-button--subtle:disabled:hover { background: transparent; }
 
 .tg-input,
