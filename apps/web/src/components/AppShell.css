@@ -217,19 +217,19 @@
   place-items: center;
   width: 46px;
   border: none;
-  background: var(--tg-cta);
-  color: var(--tg-on-cta);
+  background: var(--tg-brand-cta);
+  color: var(--tg-on-brand-cta);
   cursor: pointer;
   transition: background var(--tg-transition);
 }
-.search__go:hover { background: var(--tg-cta-hover); }
+.search__go:hover { background: var(--tg-brand-cta-hover); }
 
 .shell__sell-button {
   padding: var(--tg-space-2) var(--tg-space-3);
   border: 1px solid transparent;
   border-radius: var(--tg-radius-md);
-  background: var(--tg-cta);
-  color: var(--tg-on-cta);
+  background: var(--tg-brand-cta);
+  color: var(--tg-on-brand-cta);
   text-decoration: none;
   font-size: var(--tg-text-sm);
   font-weight: var(--tg-weight-bold);
@@ -238,7 +238,8 @@
   white-space: nowrap;
 }
 .shell__sell-button:hover {
-  background: var(--tg-cta-hover);
+  background: var(--tg-brand-cta-hover);
+  color: var(--tg-on-brand-cta);
   text-decoration: none;
 }
 

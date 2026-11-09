@@ -49,6 +49,15 @@ export interface ColorTokens {
    * background: 4.5:1 or better for text.
    */
   brandAccent: string
+  /**
+   * An action button sitting ON the brand bar: the header search button and
+   * "Sell your gear". The deep cream-page orange (#B4400F) turns muddy on the
+   * navy and only just separates from it, so the bar keeps the bright brand
+   * orange with dark navy on it (6.1:1) rather than cream (2.8:1).
+   */
+  brandCta: string
+  brandCtaHover: string
+  onBrandCta: string
 
   /**
    * The one warm colour: buy buttons, and nothing else.
@@ -137,6 +146,9 @@ export const light: Theme = {
     onBrandMuted: '#a9bdcb',
     brandAlt: '#2e5168',
     brandAccent: '#ff8a5c',
+    brandCta: '#FF6B35',
+    brandCtaHover: '#ff8a5c',
+    onBrandCta: '#101c24',
 
     cta: '#B4400F',
     ctaHover: '#9A3412',
@@ -189,6 +201,9 @@ export const dark: Theme = {
     onBrandMuted: '#93a8b8',
     brandAlt: '#233c4f',
     brandAccent: '#ff8a5c',
+    brandCta: '#FF6B35',
+    brandCtaHover: '#ff8a5c',
+    onBrandCta: '#101c24',
 
     cta: '#FF6B35',
     ctaHover: '#ff8a5c',
@@ -244,6 +259,9 @@ export const midnight: Theme = {
     onBrandMuted: '#a9bdcb',
     brandAlt: '#2e5168',
     brandAccent: '#ff8a5c',
+    brandCta: '#FF6B35',
+    brandCtaHover: '#ff8a5c',
+    onBrandCta: '#101c24',
 
     cta: '#B4400F',
     ctaHover: '#9A3412',

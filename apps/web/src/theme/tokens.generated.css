@@ -22,6 +22,9 @@
   --tg-on-brand-muted: #a9bdcb;
   --tg-brand-alt: #2e5168;
   --tg-brand-accent: #ff8a5c;
+  --tg-brand-cta: #FF6B35;
+  --tg-brand-cta-hover: #ff8a5c;
+  --tg-on-brand-cta: #101c24;
   --tg-cta: #B4400F;
   --tg-cta-hover: #9A3412;
   --tg-on-cta: #fffef3;
@@ -85,6 +88,9 @@
     --tg-on-brand-muted: #93a8b8;
     --tg-brand-alt: #233c4f;
     --tg-brand-accent: #ff8a5c;
+    --tg-brand-cta: #FF6B35;
+    --tg-brand-cta-hover: #ff8a5c;
+    --tg-on-brand-cta: #101c24;
     --tg-cta: #FF6B35;
     --tg-cta-hover: #ff8a5c;
     --tg-on-cta: #101c24;
@@ -123,6 +129,9 @@
   --tg-on-brand-muted: #93a8b8;
   --tg-brand-alt: #233c4f;
   --tg-brand-accent: #ff8a5c;
+  --tg-brand-cta: #FF6B35;
+  --tg-brand-cta-hover: #ff8a5c;
+  --tg-on-brand-cta: #101c24;
   --tg-cta: #FF6B35;
   --tg-cta-hover: #ff8a5c;
   --tg-on-cta: #101c24;
@@ -161,6 +170,9 @@
   --tg-on-brand-muted: #a9bdcb;
   --tg-brand-alt: #2e5168;
   --tg-brand-accent: #ff8a5c;
+  --tg-brand-cta: #FF6B35;
+  --tg-brand-cta-hover: #ff8a5c;
+  --tg-on-brand-cta: #101c24;
   --tg-cta: #B4400F;
   --tg-cta-hover: #9A3412;
   --tg-on-cta: #fffef3;
