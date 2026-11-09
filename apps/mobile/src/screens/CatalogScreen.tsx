@@ -159,7 +159,7 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
           keyExtractor={(r) => r.listing.id}
           onEndReached={loadMore}
           onEndReachedThreshold={0.6}
-          ListFooterComponent={loadingMore ? <Loading /> : null}
+          ListFooterComponent={loadingMore ? <Loading /> : undefined}
           contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x1, gap: t.space.x3 }}
           ListEmptyComponent={<Empty title="Nothing matches those filters" hint="Try clearing one or widening the search." />}
           renderItem={({ item: { listing, modelSlug, brandId, categoryId, mine } }) => (
