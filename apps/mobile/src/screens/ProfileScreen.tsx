@@ -70,7 +70,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
 
       <Panel t={t} title="Appearance">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
-          {(['system', 'light', 'dark', 'midnight'] as ThemeMode[]).map((m) => {
+          {(['dark', 'light', 'system', 'midnight'] as ThemeMode[]).map((m) => {
             const on = mode === m
             return (
               <Pressable key={m} onPress={() => setMode(m)}

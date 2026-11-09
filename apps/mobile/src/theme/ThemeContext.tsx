@@ -11,7 +11,10 @@ interface Ctx {
   setMode: (m: ThemeMode) => void
 }
 
-const ThemeCtx = createContext<Ctx>({ theme: themes.light, mode: 'system', setMode: () => {} })
+/** The app opens dark; Profile → Appearance still lets someone choose another. */
+const DEFAULT_MODE: ThemeMode = 'dark'
+
+const ThemeCtx = createContext<Ctx>({ theme: themes.dark, mode: DEFAULT_MODE, setMode: () => {} })
 
 const KEY = 'trueglaz.theme'
 
@@ -24,7 +27,7 @@ const KEY = 'trueglaz.theme'
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme()
-  const [mode, setModeState] = useState<ThemeMode>('system')
+  const [mode, setModeState] = useState<ThemeMode>(DEFAULT_MODE)
 
   useEffect(() => {
     AsyncStorage.getItem(KEY)
@@ -35,7 +38,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(() => {
     const resolved = mode === 'system' ? (system === 'dark' ? 'dark' : 'light') : mode
     return {
-      theme: themes[resolved] ?? themes.light,
+      theme: themes[resolved] ?? themes.dark,
       mode,
       setMode: (m) => {
         setModeState(m)

@@ -85,23 +85,11 @@
 
 /* Sitting on the brand bar, the picker borrows its colours rather than the
    page's — a white control here would read as a hole punched in the header. */
-.shell__actor .tg-select,
-.shell__theme {
+.shell__actor .tg-select {
   width: auto;
   font-size: var(--tg-text-sm);
   padding: var(--tg-space-1) var(--tg-space-2);
 }
-
-/* Doubled up on purpose: `.tg-select` sets its own background, and a single
-   class here would lose to it and leave cream text on a white control. */
-.tg-select.shell__theme {
-  color: var(--tg-on-brand);
-  background: rgb(255 255 255 / 0.10);
-  border-color: rgb(255 255 255 / 0.22);
-}
-.tg-select.shell__theme:hover { background: rgb(255 255 255 / 0.16); }
-/* The dropdown itself is drawn by the OS on the page, not on the bar. */
-.tg-select.shell__theme option { color: var(--tg-text); background: var(--tg-bg-raised); }
 
 .shell__actor-skeleton { width: 160px; height: 32px; }
 

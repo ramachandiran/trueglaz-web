@@ -1,6 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { isAdmin, isStaff, useSession } from '@trueglaz/core'
-import { useTheme, type ThemeMode } from '../state/useTheme'
 import { AccountMenu } from './AccountMenu'
 import { DemoNotice } from './DemoNotice'
 import { HeaderSearch } from './HeaderSearch'
@@ -70,7 +69,6 @@ function titleFor(pathname: string): string {
 }
 
 export function StaffShell() {
-  const { mode, setMode } = useTheme()
   const { session } = useSession()
   const { pathname } = useLocation()
   const staff = isStaff(session)
@@ -114,12 +112,6 @@ export function StaffShell() {
           <div className="staff-top__crumb">Console <span>/</span> <b>{titleFor(pathname)}</b></div>
           <div className="staff-top__tools">
             <HeaderSearch />
-            <select className="tg-select staff-top__theme" value={mode} onChange={(e) => setMode(e.target.value as ThemeMode)} aria-label="Colour theme">
-              <option value="system">Auto</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="midnight">Midnight</option>
-            </select>
             <AccountMenu />
           </div>
         </header>
