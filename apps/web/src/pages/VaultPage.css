@@ -40,7 +40,7 @@
 
 /* small / ghost button variants, local to the vault */
 .tg-button--small { padding: 6px 12px; font-size: var(--tg-text-sm); }
-.tg-button--ghost { background: transparent; border: 1px solid var(--tg-border); color: var(--tg-text-muted); }
+.tg-button--ghost { background: transparent; border: 1.5px solid var(--tg-cta); color: var(--tg-text); }
 
 /* modal */
 .vault__overlay { position: fixed; inset: 0; background: rgba(20, 30, 40, 0.45); display: flex; align-items: center; justify-content: center; padding: var(--tg-space-4); z-index: 50; }

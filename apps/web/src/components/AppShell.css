@@ -167,7 +167,7 @@
   white-space: nowrap;
   background: var(--tg-on-brand);
   color: var(--tg-brand);
-  border-color: var(--tg-on-brand);
+  border-color: var(--tg-brand-cta);
 }
 .shell__signin:hover {
   text-decoration: none;
