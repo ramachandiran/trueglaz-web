@@ -132,14 +132,17 @@ select {
   justify-content: center;
   gap: var(--tg-space-2);
   padding: var(--tg-space-2) var(--tg-space-3);
-  border: 1px solid var(--tg-border);
+  /* Secondary buttons keep the cream fill and navy text, with the brand orange
+     as their outline, so they belong with the orange primary button without
+     competing with it. Navy on cream stays 13:1. */
+  border: 1.5px solid var(--tg-cta);
   border-radius: var(--tg-radius-md);
   background: var(--tg-bg-raised);
   color: var(--tg-text);
   cursor: pointer;
   transition: background var(--tg-transition), border-color var(--tg-transition);
 }
-.tg-button:hover { background: var(--tg-bg-hover); }
+.tg-button:hover { background: var(--tg-accent-soft); border-color: var(--tg-cta-hover); }
 /* Every primary button is the bright brand orange with dark navy on it, the
    same as the header search button (cta, 6.1:1). Text and links stay on the
    deeper accent, which is the one that reads on cream. */
@@ -150,7 +153,7 @@ select {
 }
 .tg-button--primary:hover { background: var(--tg-cta-hover); border-color: var(--tg-cta-hover); color: var(--tg-on-cta); }
 .tg-button--subtle { border-color: transparent; background: transparent; }
-.tg-button--subtle:hover { background: var(--tg-bg-hover); }
+.tg-button--subtle:hover { background: var(--tg-bg-hover); border-color: transparent; }
 /* Nothing said a disabled button was disabled: it kept its fill, its pointer
    and its hover, so "Previous" on page one and a Confirm waiting on a required
    field both read as live and did nothing when pressed. The hover rules have to
