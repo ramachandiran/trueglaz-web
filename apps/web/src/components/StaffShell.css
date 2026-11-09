@@ -80,7 +80,6 @@
 .staff-top__crumb span { opacity: 0.5; margin: 0 2px; }
 .staff-top__crumb b { color: var(--tg-text); font-weight: var(--tg-weight-bold); }
 .staff-top__tools { margin-left: auto; display: flex; align-items: center; gap: var(--tg-space-3); }
-.staff-top__theme { max-width: 120px; }
 .staff-content { padding: var(--tg-space-5); min-width: 0; }
 
 @media (max-width: 900px) {
@@ -108,5 +107,4 @@
   .staff-top__tools { margin-left: 0; width: 100%; min-width: 0; }
   .staff-top__tools .search { flex: 1 1 auto; min-width: 0; }
   .staff-top__tools .search__input { min-width: 0; width: 100%; }
-  .staff-top__theme { max-width: 96px; }
 }

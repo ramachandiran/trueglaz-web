@@ -1,7 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { isAdmin, isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { useMarketView, type MarketView } from '../state/useMarketView'
-import { useTheme, type ThemeMode } from '../state/useTheme'
 import { AccountMenu } from './AccountMenu'
 import { DemoNotice } from './DemoNotice'
 import { HeaderSearch } from './HeaderSearch'
@@ -33,7 +32,6 @@ export function AppShell() {
  * but a menu full of links that 403 is its own kind of broken.
  */
 function Header() {
-  const { mode, setMode } = useTheme()
   const { session, ready } = useSession()
   const { view, setView } = useMarketView()
   const nav = useNavigate()
@@ -122,17 +120,6 @@ function Header() {
               Sign in
             </NavLink>
           ))}
-          <select
-            className="tg-select shell__theme"
-            value={mode}
-            onChange={(e) => setMode(e.target.value as ThemeMode)}
-            aria-label="Colour theme"
-          >
-            <option value="system">Auto</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-            <option value="midnight">Midnight</option>
-          </select>
         </div>
       </div>
     </header>
