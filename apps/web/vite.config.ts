@@ -9,6 +9,12 @@ const API = process.env.VITE_API_ORIGIN ?? 'http://localhost:5174'
 // the API.
 export default defineConfig({
   plugins: [react()],
+  // The phone app (apps/mobile) needs React 19, so npm hoists that copy to the
+  // workspace root, where packages/core and react-router would find it. The
+  // website is on React 18: always resolve React from this app, or the bundle
+  // would hold two Reacts and every hook would throw. tsconfig.json "paths"
+  // does the same for the type check.
+  resolve: { dedupe: ['react', 'react-dom'] },
   server: {
     port: 5173,
 

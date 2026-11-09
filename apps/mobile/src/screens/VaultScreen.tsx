@@ -126,7 +126,7 @@ export function VaultScreen() {
                 {items.length} item{items.length === 1 ? '' : 's'} · {insured} insured · indicative, final price set at a free inspection
               </Txt>
             </View>
-          ) : null}
+          ) : undefined}
           ListEmptyComponent={<Empty title="Your vault is empty" hint="Add gear you own to track its value, warranty and insurance." />}
           renderItem={({ item }) => {
             const cost = shownCost(item)
