@@ -197,7 +197,7 @@
   color: var(--tg-text);
   background: var(--tg-bg-raised);
 }
-.search__input:focus { outline: 2px solid var(--tg-cta); outline-offset: -2px; }
+.search__input:focus { outline: 2px solid var(--tg-accent); outline-offset: -2px; }
 .search__input::-webkit-search-cancel-button { cursor: pointer; }
 
 .search__go {
@@ -268,8 +268,8 @@
 
 .switch__tab--on,
 .switch__tab--on:hover {
-  background: var(--tg-accent);
-  color: var(--tg-on-accent);
+  background: var(--tg-brand-cta);
+  color: var(--tg-on-brand-cta);
 }
 
 .switch__tab:focus-visible {

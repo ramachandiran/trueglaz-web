@@ -134,8 +134,10 @@ export const light: Theme = {
     borderStrong: '#c7c2a9',
 
     // Action orange. #FF6B35 on this cream is 2.8:1, so text, links, focus
-    // rings and buttons use the deeper #B4400F: 5.6:1 on bg, 4.9:1 on
+    // rings and small marks use the deeper #B4400F: 5.6:1 on bg, 4.9:1 on
     // bgSunken, 4.6:1 on accentSoft, and cream on it is 5.6:1 (TG-44).
+    // Buttons are the exception (cta, below): the bright brand orange as a
+    // fill, with dark navy on it (6.1:1), the same as the header buttons.
     accent: '#B4400F',
     accentHover: '#9A3412',
     accentSoft: '#ffe1d4',
@@ -150,9 +152,9 @@ export const light: Theme = {
     brandCtaHover: '#ff8a5c',
     onBrandCta: '#101c24',
 
-    cta: '#B4400F',
-    ctaHover: '#9A3412',
-    onCta: '#fffef3',
+    cta: '#FF6B35',
+    ctaHover: '#ff8a5c',
+    onCta: '#101c24',
 
     good: '#2e7d53',
     goodSoft: '#ddefe3',
@@ -247,8 +249,10 @@ export const midnight: Theme = {
     borderStrong: '#bfb599',
 
     // Action orange. #FF6B35 on this cream is 2.8:1, so text, links, focus
-    // rings and buttons use the deeper #B4400F: 5.6:1 on bg, 4.9:1 on
+    // rings and small marks use the deeper #B4400F: 5.6:1 on bg, 4.9:1 on
     // bgSunken, 4.6:1 on accentSoft, and cream on it is 5.6:1 (TG-44).
+    // Buttons are the exception (cta, below): the bright brand orange as a
+    // fill, with dark navy on it (6.1:1), the same as the header buttons.
     accent: '#B4400F',
     accentHover: '#9A3412',
     accentSoft: '#ffe1d4',
@@ -263,9 +267,9 @@ export const midnight: Theme = {
     brandCtaHover: '#ff8a5c',
     onBrandCta: '#101c24',
 
-    cta: '#B4400F',
-    ctaHover: '#9A3412',
-    onCta: '#fffef3',
+    cta: '#FF6B35',
+    ctaHover: '#ff8a5c',
+    onCta: '#101c24',
 
     good: '#2b7449',
     goodSoft: '#dff2e5',
