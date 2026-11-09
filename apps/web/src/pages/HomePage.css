@@ -1,13 +1,13 @@
 /* ---------------------------------------------------------------------------
-   The shop front.
+   The shop front (TG-80).
 
-   Hero, promises, the signed-in buyer's own corner, then rails of gear. Rails
-   scroll sideways when they do not fit — a wrapping row reads as a grid that
-   has gone wrong, and a grid is what the catalogue is for.
+   Two doors first, Buy wider than Sell; the signed-in buyer's corner; the Gear
+   Vault invite; two short shelves of four; the promises last. Colours come
+   from the theme tokens only, so dark mode and the midnight theme follow.
    --------------------------------------------------------------------------- */
 .home {
   display: grid;
-  gap: var(--tg-space-7);
+  gap: var(--tg-space-6);
   padding: var(--tg-space-5) var(--tg-space-4) var(--tg-space-7);
   max-width: 1180px;
   margin: 0 auto;
@@ -19,28 +19,39 @@
   min-width: 0;
 }
 
-/* The link sits on the heading's baseline at the far end, so the eye finds the
-   way out of a row in the same place every time. */
+/* The way out of a shelf sits at the far end of its heading, in the same place
+   every time. */
 .home__head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--tg-space-2) var(--tg-space-3);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--tg-space-2) var(--tg-space-5);
 }
 
+.home__heading { display: grid; gap: var(--tg-space-1); min-width: 0; }
+
 .home__title {
-  font-size: var(--tg-text-lg);
+  font-size: var(--tg-text-xl);
+  letter-spacing: -0.015em;
   margin: 0;
 }
 
 .home__blurb {
   margin: 0;
   font-size: var(--tg-text-sm);
-  flex: 1 1 24ch;
+}
+
+.home__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--tg-space-2) var(--tg-space-4);
+  font-size: var(--tg-text-sm);
 }
 
 .home__all {
-  font-size: var(--tg-text-sm);
+  font-weight: var(--tg-weight-bold);
   white-space: nowrap;
 }
 
@@ -53,229 +64,260 @@
   font-weight: var(--tg-weight-bold);
 }
 
-/* --- hero ----------------------------------------------------------------- */
+/* --- two doors: buy (wider) and sell -------------------------------------- */
 
-.hero {
+.doors {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.9fr);
-  gap: var(--tg-space-6);
-  align-items: center;
-  padding: var(--tg-space-7) var(--tg-space-6);
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   border-radius: calc(var(--tg-radius-lg) * 1.5);
+  overflow: hidden;
+}
+
+.door {
+  display: flex;
+  flex-direction: column;
+  padding: var(--tg-space-6);
+  min-width: 0;
+}
+
+.door--buy {
   background:
     radial-gradient(120% 140% at 100% 0%, var(--tg-brand-alt) 0%, transparent 55%),
     var(--tg-brand);
   color: var(--tg-on-brand);
-  overflow: hidden;
 }
 
-.hero__eyebrow {
+.door--sell {
+  background: var(--tg-accent-soft);
+  color: var(--tg-text);
+}
+
+.door__kicker {
   margin: 0 0 var(--tg-space-3);
   font-size: var(--tg-text-xs);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   font-weight: var(--tg-weight-bold);
-  color: var(--tg-brand-accent);
+  color: var(--tg-accent);
 }
+.door--buy .door__kicker { color: var(--tg-brand-accent); }
 
-.hero__headline {
+.door__title {
   margin: 0 0 var(--tg-space-3);
-  font-size: clamp(2.1rem, 4.6vw, 3.3rem);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  color: var(--tg-on-brand);
+  font-size: clamp(2rem, 3.8vw, 3.2rem);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
 }
+.door--buy .door__title { color: var(--tg-on-brand); }
+.door--sell .door__title { font-size: clamp(1.6rem, 2.6vw, 2.3rem); color: var(--tg-text); }
 
-.hero__sub {
+.door__lede {
   margin: 0 0 var(--tg-space-5);
   max-width: 52ch;
   line-height: 1.55;
-  color: var(--tg-on-brand-muted);
 }
+.door--buy .door__lede { color: var(--tg-on-brand-muted); }
+.door--sell .door__lede { color: var(--tg-text-muted); }
 
-.hero__ctas {
+.door__ctas {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--tg-space-3) var(--tg-space-5);
 }
 
-.hero .hero__cta {
+.door .door__cta {
   padding: 13px 24px;
   font-weight: var(--tg-weight-bold);
   background: var(--tg-cta);
   border-color: var(--tg-cta);
-  color: var(--tg-on-cta, #fff);
+  color: var(--tg-on-cta);
   text-decoration: none;
 }
-
-.hero .hero__cta:hover {
+.door .door__cta:hover {
   background: var(--tg-cta-hover);
   border-color: var(--tg-cta-hover);
-  color: var(--tg-on-cta, #fff);
+  color: var(--tg-on-cta);
   text-decoration: none;
 }
 
-.hero__ghost {
+.door__ghost {
   color: var(--tg-on-brand);
   font-weight: var(--tg-weight-medium);
   text-decoration: underline;
   text-underline-offset: 4px;
   text-decoration-color: color-mix(in srgb, var(--tg-on-brand) 40%, transparent);
 }
+.door__ghost:hover { color: var(--tg-on-brand); text-decoration-color: var(--tg-on-brand); }
 
-.hero__ghost:hover {
-  color: var(--tg-on-brand);
-  text-decoration-color: var(--tg-on-brand);
-}
-
-.hero__cats {
-  list-style: none;
-  margin: var(--tg-space-5) 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--tg-space-2);
-}
-
-.hero__cat {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  border-radius: var(--tg-radius-pill);
-  border: 1px solid color-mix(in srgb, var(--tg-on-brand) 25%, transparent);
-  color: var(--tg-on-brand);
-  font-size: var(--tg-text-sm);
-  text-decoration: none;
-  transition: background var(--tg-transition), border-color var(--tg-transition);
-}
-
-.hero__cat span {
-  color: var(--tg-on-brand-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.hero__cat:hover {
-  background: color-mix(in srgb, var(--tg-on-brand) 10%, transparent);
-  border-color: var(--tg-on-brand);
-  color: var(--tg-on-brand);
-  text-decoration: none;
-}
-
-/* One real unit, on a card that lifts off the band. */
-.hero__feature {
-  display: grid;
-  background: var(--tg-bg-raised);
-  color: var(--tg-text);
-  border-radius: var(--tg-radius-lg);
-  overflow: hidden;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-  text-decoration: none;
-  transform: rotate(1.2deg);
-  transition: transform var(--tg-transition);
-}
-
-.hero__feature:hover {
-  color: var(--tg-text);
-  transform: rotate(0deg) translateY(-2px);
-  text-decoration: none;
-}
-
-.hero__feature .card__photo {
-  border: 0;
-  border-radius: 0;
-}
-
-.hero__feature-body {
-  display: grid;
-  gap: 4px;
-  padding: var(--tg-space-3) var(--tg-space-4) var(--tg-space-4);
-}
-
-.hero__feature-tag {
-  font-size: var(--tg-text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--tg-accent);
-  font-weight: var(--tg-weight-bold);
-}
-
-.hero__feature-name {
-  font-weight: var(--tg-weight-bold);
-  font-size: var(--tg-text-md);
-}
-
-.hero__feature-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--tg-space-2);
-  font-size: var(--tg-text-xs);
-  color: var(--tg-text-muted);
-}
-
-.hero__feature-price {
-  display: flex;
-  align-items: baseline;
-  gap: var(--tg-space-2);
-  margin-top: 2px;
-}
-
-.hero__feature-price strong {
-  font-size: var(--tg-text-lg);
-  font-variant-numeric: tabular-nums;
-}
-
-.hero__feature-was {
+.door__note {
+  margin: var(--tg-space-3) 0 0;
   font-size: var(--tg-text-sm);
   color: var(--tg-text-muted);
 }
 
-/* --- promises ------------------------------------------------------------- */
+/* Buy: real units at the foot of the door. */
+.door__shelf { margin-top: auto; padding-top: var(--tg-space-6); }
+.door__shelf-head { display: none; }
 
-/* Pulled up under the hero so the four read as its footing, not a new section. */
-.promises {
+.door__picks {
   list-style: none;
-  margin: calc(var(--tg-space-7) * -0.55) 0 0;
+  margin: 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--tg-space-3);
 }
+.door__picks > li { display: grid; }
+.door__picks > li:nth-child(n + 5) { display: none; }
+
+.pick {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: var(--tg-space-2);
+  border-radius: var(--tg-radius-md);
+  background: color-mix(in srgb, var(--tg-on-brand) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tg-on-brand) 14%, transparent);
+  color: var(--tg-on-brand);
+  text-decoration: none;
+}
+.pick:hover { background: color-mix(in srgb, var(--tg-on-brand) 12%, transparent); color: var(--tg-on-brand); text-decoration: none; }
+.pick .card__photo { margin-bottom: var(--tg-space-1); }
+.pick__name { font-size: var(--tg-text-sm); font-weight: var(--tg-weight-bold); line-height: 1.3; }
+.pick__meta { font-size: var(--tg-text-xs); color: var(--tg-on-brand-muted); font-variant-numeric: tabular-nums; }
+
+/* Sell: what happens after "Start selling", in three steps. */
+.door__steps {
+  list-style: none;
+  counter-reset: step;
+  margin: auto 0 0;
+  padding: var(--tg-space-6) 0 0;
+  display: grid;
+  gap: var(--tg-space-2);
+}
+.door__steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.2em minmax(0, 1fr);
+  padding: var(--tg-space-3) var(--tg-space-4);
+  border-radius: var(--tg-radius-md);
+  background: var(--tg-bg-raised);
+}
+.door__steps li::before {
+  content: counter(step, decimal-leading-zero);
+  grid-row: span 2;
+  font-family: var(--tg-font-mono);
+  font-size: var(--tg-text-xs);
+  color: var(--tg-accent);
+  padding-top: 3px;
+}
+.door__steps strong { font-size: var(--tg-text-md); }
+.door__steps span { font-size: var(--tg-text-sm); color: var(--tg-text-muted); }
+
+/* --- gear vault invite ---------------------------------------------------- */
+
+.vault-invite {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: var(--tg-space-7);
+  align-items: center;
+  padding: var(--tg-space-6) var(--tg-space-7);
+  border-radius: calc(var(--tg-radius-lg) * 1.5);
+  background: var(--tg-bg-sunken);
+}
+
+.vault-invite__title {
+  margin: var(--tg-space-2) 0 var(--tg-space-3);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.vault-invite__lede { margin: 0 0 var(--tg-space-4); line-height: 1.55; color: var(--tg-text-muted); max-width: 48ch; }
+
+.vault-invite__list {
+  list-style: none;
+  margin: 0 0 var(--tg-space-5);
+  padding: 0;
+  display: grid;
+  gap: var(--tg-space-2);
+}
+.vault-invite__list li { display: flex; gap: var(--tg-space-2); }
+.vault-invite__list li::before { content: "✓"; color: var(--tg-good); font-weight: var(--tg-weight-bold); }
+
+.vault-invite .vault-invite__cta { padding: 12px 22px; font-weight: var(--tg-weight-bold); text-decoration: none; }
+
+.vault-card {
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+  box-shadow: var(--tg-shadow-md);
+  overflow: hidden;
+}
+
+.vault-card__top {
+  display: grid;
+  gap: 2px;
+  padding: var(--tg-space-4) var(--tg-space-5);
+  background: var(--tg-brand);
+  color: var(--tg-on-brand);
+}
+.vault-card__label {
+  font-size: var(--tg-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--tg-on-brand-muted);
+}
+.vault-card__total { font-size: var(--tg-text-xxl); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.vault-card__sub { font-size: var(--tg-text-sm); color: var(--tg-on-brand-muted); }
+
+.vault-card__rows { list-style: none; margin: 0; padding: 0; }
+.vault-card__row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: var(--tg-space-3);
+  align-items: center;
+  padding: var(--tg-space-2) var(--tg-space-5);
+  border-top: 1px solid var(--tg-border);
+}
+.vault-card__row .card__photo { aspect-ratio: 1 / 1; }
+.vault-card__name { display: grid; gap: 2px; min-width: 0; }
+.vault-card__name span { font-size: var(--tg-text-xs); }
+.vault-card__value { font-variant-numeric: tabular-nums; }
+
+.vault-card__foot {
+  margin: 0;
+  padding: var(--tg-space-3) var(--tg-space-5);
+  background: var(--tg-bg-sunken);
+  font-size: var(--tg-text-xs);
+  color: var(--tg-text-muted);
+}
+
+/* --- promises (where "How it works" lands) --------------------------------- */
+
+.promises { scroll-margin-top: var(--tg-space-5); }
+.promises__title { margin-bottom: var(--tg-space-3); }
+
+.promises__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--tg-border);
+  border-bottom: 1px solid var(--tg-border);
+}
 
 .promise {
-  display: flex;
-  gap: var(--tg-space-3);
-  align-items: flex-start;
-  padding: var(--tg-space-4);
-  background: var(--tg-bg-raised);
-  border: 1px solid var(--tg-border);
-  border-radius: var(--tg-radius-lg);
-  font-size: var(--tg-text-sm);
-}
-
-.promise__icon {
-  flex: none;
   display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--tg-accent-soft);
-  color: var(--tg-accent);
+  align-content: start;
+  gap: var(--tg-space-1);
+  padding: var(--tg-space-5) var(--tg-space-5) var(--tg-space-5) 0;
 }
-
-.promise__title {
-  display: block;
-  margin-bottom: 2px;
-}
-
-.promise__body {
-  display: block;
-  color: var(--tg-text-muted);
-  font-size: var(--tg-text-xs);
-  line-height: 1.45;
-}
+.promise + .promise { padding-left: var(--tg-space-5); border-left: 1px solid var(--tg-border); }
+.promise__n { font-family: var(--tg-font-mono); font-size: var(--tg-text-xs); color: var(--tg-accent); margin-bottom: var(--tg-space-1); }
+.promise__title { font-size: var(--tg-text-md); }
+.promise__body { font-size: var(--tg-text-sm); color: var(--tg-text-muted); line-height: 1.5; }
 
 /* --- your corner ---------------------------------------------------------- */
 
@@ -568,7 +610,9 @@
 
 .myask__hit {
   margin: var(--tg-space-2) 0 var(--tg-space-1);
-  color: var(--tg-good);
+  /* Green on the green tint is 4.19:1, under AA for text this small; the tint
+     and the star already say "good news". */
+  color: var(--tg-text);
   font-weight: var(--tg-weight-bold);
   font-size: var(--tg-text-xs);
 }
@@ -602,64 +646,15 @@
   white-space: nowrap;
 }
 
-/* --- how it works --------------------------------------------------------- */
+/* --- shelves -------------------------------------------------------------- */
 
-.how__steps {
+.shelf {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--tg-space-4);
-}
-
-.how__steps li {
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  font-size: var(--tg-text-sm);
-}
-
-.how__steps li span:last-child {
-  color: var(--tg-text-muted);
-  font-size: var(--tg-text-xs);
-  line-height: 1.45;
-}
-
-.how__n {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--tg-brand);
-  color: var(--tg-on-brand);
-  font-weight: var(--tg-weight-bold);
-  margin-bottom: 4px;
-}
-
-/* --- rails ---------------------------------------------------------------- */
-
-.home-rail {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 var(--tg-space-2);
-  display: grid;
-  grid-auto-flow: column;
-  /* Keep a consistent tile width across rails, even when a row has only one item.
-     A `1fr` column lets a lone card stretch to the full width of the section,
-     which is why the "Just in" image can look disproportionately large. */
-  grid-auto-columns: minmax(180px, 220px);
-  gap: var(--tg-space-4);
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  /* Room for the card's focus ring, which a clipped overflow would cut off. */
-  padding-inline: 2px;
-  margin-inline: -2px;
-}
-
-.home-rail > * {
-  scroll-snap-align: start;
+  gap: var(--tg-space-5) var(--tg-space-4);
 }
 
 .card {
@@ -776,198 +771,18 @@
   opacity: 0.55;
 }
 
-/* --- shop by -------------------------------------------------------------- */
-
-.home__shopby {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--tg-space-5);
-  padding: var(--tg-space-5);
-  border: 1px solid var(--tg-border);
-  border-radius: var(--tg-radius-lg);
-  background: var(--tg-bg-raised);
-}
-
-.shopby {
-  display: grid;
-  gap: var(--tg-space-3);
-  align-content: start;
-}
-
-.shopby__note {
-  margin: -6px 0 0;
-  font-size: var(--tg-text-xs);
-}
-
-.home-chips {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--tg-space-2);
-}
-
-.home-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  border: 1px solid var(--tg-border);
-  border-radius: var(--tg-radius-pill);
-  background: var(--tg-bg);
-  color: var(--tg-text);
-  font-size: var(--tg-text-sm);
-  font-weight: var(--tg-weight-medium);
-  text-decoration: none;
-  transition: border-color var(--tg-transition), background var(--tg-transition);
-}
-
-.home-chip:hover {
-  border-color: var(--tg-accent);
-  background: var(--tg-accent-soft);
-  color: var(--tg-text);
-  text-decoration: none;
-}
-
-.home-chip__n {
-  font-size: var(--tg-text-xs);
-  color: var(--tg-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- demand by model + the ask -------------------------------------------- */
-
-.home__pair {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
-  gap: var(--tg-space-5);
-  align-items: start;
-}
-
-.home__models {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 1px;
-  background: var(--tg-border);
-  border: 1px solid var(--tg-border);
-  border-radius: var(--tg-radius-lg);
-  overflow: hidden;
-}
-
-.model {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--tg-space-2) var(--tg-space-4);
-  padding: var(--tg-space-3) var(--tg-space-4);
-  background: var(--tg-bg-raised);
-  font-size: var(--tg-text-sm);
-}
-
-.model__rank {
-  min-width: 2ch;
-  font-weight: var(--tg-weight-bold);
-  color: var(--tg-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.model__name {
-  flex: 1 1 22ch;
-}
-
-.model__stat {
-  font-variant-numeric: tabular-nums;
-  font-size: var(--tg-text-xs);
-}
-
-.model__cta,
-.model__gone {
-  white-space: nowrap;
-  font-size: var(--tg-text-sm);
-}
-
-.askpanel {
-  display: grid;
-  gap: var(--tg-space-3);
-  padding: var(--tg-space-5);
-  border-radius: var(--tg-radius-lg);
-  background: linear-gradient(160deg, var(--tg-accent-soft), var(--tg-bg-raised) 70%);
-  border: 1px solid var(--tg-border);
-}
-
-.askpanel__title {
-  margin: 0;
-  font-size: var(--tg-text-xl);
-  letter-spacing: -0.01em;
-}
-
-.askpanel__lede {
-  margin: 0;
-  font-size: var(--tg-text-sm);
-  color: var(--tg-text-muted);
-  line-height: 1.5;
-}
-
-.askpanel__cta {
-  justify-self: start;
-  text-decoration: none;
-}
-
-.askpanel__kicker {
-  margin-top: var(--tg-space-2);
-}
-
-.askpanel__foot {
-  margin: 0;
-  font-size: var(--tg-text-xs);
-  color: var(--tg-text-muted);
-}
-
-.home__asks {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.ask {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--tg-space-1) var(--tg-space-3);
-  font-size: var(--tg-text-sm);
-  padding-bottom: 6px;
-  border-bottom: 1px dashed var(--tg-border);
-}
-
-.ask:last-child { border-bottom: 0; padding-bottom: 0; }
-
-.ask__what {
-  font-weight: var(--tg-weight-medium);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--tg-space-2);
-}
-
 .myask__what { display: inline-flex; align-items: center; gap: var(--tg-space-2); }
-.model { align-items: center; }
-
-.ask__terms {
-  font-size: var(--tg-text-xs);
-}
 
 /* --- narrower screens ----------------------------------------------------- */
 
 @media (max-width: 960px) {
-  .hero { grid-template-columns: 1fr; padding: var(--tg-space-6) var(--tg-space-5); }
-  .hero__feature { max-width: 420px; transform: none; }
-  .promises { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }
-  .how__steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .corner__cols, .home__pair { grid-template-columns: 1fr; }
+  .doors { grid-template-columns: 1fr; }
+  .vault-invite { grid-template-columns: 1fr; gap: var(--tg-space-6); }
+  .promises__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .promise:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .promise:nth-child(even) { padding-left: var(--tg-space-4); border-left: 1px solid var(--tg-border); }
+  .promise:nth-child(n + 3) { border-top: 1px solid var(--tg-border); }
+  .corner__cols { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
@@ -976,29 +791,53 @@
     padding: var(--tg-space-3) var(--tg-space-3) var(--tg-space-7);
   }
 
-  .hero {
-    padding: var(--tg-space-5) var(--tg-space-4);
-    gap: var(--tg-space-5);
+  .doors { border-radius: var(--tg-radius-lg); }
+  .door { padding: var(--tg-space-5) var(--tg-space-4); }
+  .door .door__cta { flex: 1; justify-content: center; text-align: center; }
+
+  /* Buy first, with every pick as a rail that peeks past the edge, so more
+     gear shows before the Sell card. */
+  .door__shelf { padding-top: var(--tg-space-5); }
+  .door__shelf-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--tg-space-2);
+    font-size: var(--tg-text-sm);
+    font-weight: var(--tg-weight-bold);
   }
-
-  /* On a phone the feature card is a strip, not a tower: photo beside text. */
-  .hero__feature {
-    grid-template-columns: 120px minmax(0, 1fr);
-    max-width: none;
+  .door__shelf-head a { color: var(--tg-brand-accent); font-weight: var(--tg-weight-medium); }
+  .door__picks {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 42%;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    margin-right: calc(-1 * var(--tg-space-4));
+    padding-right: var(--tg-space-4);
+    scrollbar-width: none;
   }
+  .door__picks::-webkit-scrollbar { display: none; }
+  .door__picks > li { scroll-snap-align: start; }
+  .door__picks > li:nth-child(n + 5) { display: grid; }
 
-  .hero__feature .card__photo { height: 100%; aspect-ratio: auto; }
+  /* Sell is a short card on a phone: the steps are on the selling page. */
+  .door__steps { display: none; }
+  .door--sell .door__lede { margin-bottom: var(--tg-space-4); }
 
-  .promises { grid-template-columns: 1fr; gap: var(--tg-space-2); }
-  .promise { padding: var(--tg-space-3); }
+  .vault-invite { padding: var(--tg-space-5) var(--tg-space-4); border-radius: var(--tg-radius-lg); }
+  .vault-card__row { grid-template-columns: 48px minmax(0, 1fr) auto; padding: var(--tg-space-3) var(--tg-space-4); }
+  .vault-card__top, .vault-card__foot { padding-inline: var(--tg-space-4); }
+
+  .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--tg-space-5) var(--tg-space-3); }
+  .shelf--compact > li:nth-child(n + 3) { display: none; }
+
+  .promise, .promise + .promise { padding: var(--tg-space-4) var(--tg-space-3) var(--tg-space-4) 0; }
+  .promise:nth-child(even) { padding-left: var(--tg-space-3); }
+
   .corner { padding: var(--tg-space-4); }
   .corner__stats { flex-basis: 100%; order: 3; gap: var(--tg-space-3); }
-  .how__steps { gap: var(--tg-space-3); }
   /* Four labels do not fit beside a thumbnail on a phone; the dots carry the
      progress and only the step it is at is named. */
   .home-steps__s:not(.home-steps__s--now) { color: transparent; }
-
-  /* Narrower cards, so a second one peeks in at the edge and the row reads as
-     something you can push sideways. */
-  .home-rail { grid-auto-columns: minmax(150px, 70%); }
 }

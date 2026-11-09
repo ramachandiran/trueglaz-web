@@ -8,18 +8,18 @@ import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './HomePage.css'
 
 /**
- * The shop front.
+ * The shop front (TG-80).
  *
- * Built in the order a used-gear buyer's doubts arrive. First: is this place
- * worth my time — a hero that says what it is, with one real deal in it and the
- * ways in (department, search, ask). Second: can I trust second-hand gear from
- * strangers — four promises, the return window read from the platform setting
- * rather than typed into the copy. Third, for someone signed in: where are my
- * things — their parcels, the clock on anything they can still send back, and
- * whether what they asked for has turned up. Only then the shelves.
+ * TrueGlaz has two kinds of visitor, so the first screen has two doors: Buy,
+ * the wider one because most visitors come to buy, and Sell, which starts at
+ * sign-in and the one-time ID check. A signed-in buyer's own corner comes next,
+ * then the Gear Vault invite, then two short shelves — what sold and for how
+ * much (the thing a seller and a buyer both want to know), and what just came
+ * in — and the four promises last, where "How it works" in the hero points.
  *
- * Every rail is a different slice of stock. A row that repeated the one above
- * would make a shop of thirty items look like a shop of six.
+ * Shorter on purpose: the brand and mount chips, the top models and the ask
+ * board live in Shop and Wanted, one click away, rather than as nine equal
+ * sections nobody reads to the end.
  */
 export function HomePage() {
   const { session } = useSession()
@@ -33,12 +33,11 @@ export function HomePage() {
   const d = home.data
   const inStock = d.brands.reduce((n, b) => n + b.liveCount, 0)
   const first = (session?.displayName ?? '').split(' ')[0]
-  const hasHistory = (mine.data?.orders.length ?? 0) > 0
+  const signedIn = !!session
 
   return (
     <div className="home">
-      <Hero d={d} inStock={inStock} signedIn={!!session} />
-      <Promises hours={d.returnWindowHours} />
+      <Doors d={d} inStock={inStock} />
 
       {session && (
         mine.error ? <ErrorNote error={mine.error} onRetry={mine.reload} />
@@ -46,197 +45,192 @@ export function HomePage() {
             : null
       )}
 
-      {d.justIn.length > 0 && (
-        <Row title="Just in" blurb="The most recent arrivals, freshly graded." to="/catalog?sort=newest">
-          {d.justIn.map((l) => <GearCard key={l.id} listing={l} />)}
-        </Row>
-      )}
-
-      {/* Someone who has bought here already knows how it works. */}
-      {!hasHistory && <HowItWorks hours={d.returnWindowHours} />}
-
-      {d.bestSavings.length > 0 && (
-        <Row
-          title="Biggest savings"
-          blurb="What these cost new, against what they cost here."
-          to="/catalog?sort=price-asc"
-        >
-          {d.bestSavings.map((l) => <GearCard key={l.id} listing={l} showSaving />)}
-        </Row>
-      )}
-
-      {(d.brands.length > 0 || d.mounts.length > 0) && (
-        <section className="home__section home__shopby" aria-label="Shop by">
-          {d.brands.length > 0 && (
-            <div className="shopby">
-              <h2 className="home__kicker">Shop by brand</h2>
-              <ul className="home-chips">
-                {d.brands.map((b) => (
-                  <li key={b.name}>
-                    <Link className="home-chip" to={`/catalog?brand=${encodeURIComponent(b.name)}`}>
-                      {b.name} <span className="home-chip__n">{b.liveCount}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {d.mounts.length > 0 && (
-            <div className="shopby">
-              <h2 className="home__kicker">Shop by mount</h2>
-              <p className="shopby__note tg-muted">The first question a lens buyer asks: will it fit my body?</p>
-              <ul className="home-chips">
-                {d.mounts.map((m) => (
-                  <li key={m.name}>
-                    <Link className="home-chip" to={`/catalog?mount=${encodeURIComponent(m.name)}`}>
-                      {m.name} <span className="home-chip__n">{m.liveCount}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-      )}
+      <VaultInvite sales={d.recentlySold} />
 
       {d.recentlySold.length > 0 && (
-        <Row
-          title="Recently sold"
-          blurb="What gear actually goes for here — the one thing a listing page cannot tell you."
+        <Shelf
+          compact
+          kicker="Recently sold"
+          title="What gear actually sells for here"
+          blurb="Thinking of selling? This is what buyers paid."
         >
-          {d.recentlySold.map((s) => <SoldCard key={s.id} sale={s} />)}
-        </Row>
+          {d.recentlySold.slice(0, 4).map((s) => <SoldCard key={s.id} sale={s} />)}
+        </Shelf>
       )}
 
-      <div className="home__pair">
-        {d.topModels.length > 0 && (
-          <section className="home__section">
-            <div className="home__head">
-              <h2 className="home__title">What people buy here</h2>
-              <p className="home__blurb tg-muted">Every unit is one of one, so this counts models, not items.</p>
-            </div>
-            <ol className="home__models">
-              {d.topModels.map((m, i) => (
-                <li key={`${m.brandName}-${m.modelName}`} className="model">
-                  <span className="model__rank">{i + 1}</span>
-                  <ModelPhoto slug={m.modelSlug} kind="gear" size="mini" alt="" badge={false} />
-                  <div className="model__name">
-                    <span className="tg-muted">{m.brandName}</span> {m.modelName}
-                    <span className="model__stat tg-muted"> · {m.soldCount} sold</span>
-                  </div>
-                  {m.liveCount > 0 ? (
-                    <Link className="model__cta" to={`/catalog?q=${encodeURIComponent(m.modelName)}`}>
-                      {m.liveCount} from {m.fromPriceMinor != null ? money(m.fromPriceMinor) : '—'} →
-                    </Link>
-                  ) : (
-                    <span className="model__gone tg-muted">None in stock</span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </section>
-        )}
-        <AskPanel d={d} signedIn={!!session} />
-      </div>
+      {d.justIn.length > 0 && (
+        <Shelf
+          kicker="Just in"
+          title="Fresh off the inspection bench"
+          to="/catalog?sort=newest"
+          linkText={`See all ${inStock} →`}
+          aside={
+            <Link to={signedIn ? '/wanted?ask=1' : '/wanted'} className="home__ask">
+              Can't find it? Ask for it →
+            </Link>
+          }
+        >
+          {d.justIn.slice(0, 4).map((l) => <GearCard key={l.id} listing={l} />)}
+        </Shelf>
+      )}
+
+      <Promises hours={d.returnWindowHours} />
     </div>
   )
 }
 
-// -------------------------------------------------------------------- hero --
+// ------------------------------------------------------------------ doors --
 
-function Hero({ d, inStock, signedIn }: { d: HomeView; inStock: number; signedIn: boolean }) {
-  // One real unit, so the first screen shows the thing rather than describing it:
-  // the biggest saving if anything has one, else whatever came in last.
-  const pick = d.bestSavings[0] ?? d.justIn[0]
+function Doors({ d, inStock }: { d: HomeView; inStock: number }) {
+  // Real units, so the first screen shows the thing rather than describing it:
+  // the biggest saving first, then what came in last. Four show on a wide
+  // screen; a phone gets all six as a rail it can push sideways.
+  const seen = new Set<string>()
+  const picks = [...d.bestSavings.slice(0, 1), ...d.justIn, ...d.bestSavings]
+    .filter((l) => (seen.has(l.id) ? false : (seen.add(l.id), true)))
+    .slice(0, 6)
+
   return (
-    <section className="hero">
-      <div className="hero__copy">
-        <p className="hero__eyebrow">Pre-owned camera gear · inspected in our workshop</p>
-        <h1 className="hero__headline">Used gear,<br />graded honestly.</h1>
-        <p className="hero__sub">
-          Every unit is inspected, graded and photographed by us, and every defect we found is
-          written down before you buy. One of each — when it is gone, it is gone.
+    <div className="doors">
+      <section className="door door--buy" aria-labelledby="door-buy">
+        <p className="door__kicker">Buy</p>
+        <h1 id="door-buy" className="door__title">Certified used gear. No guesswork.</h1>
+        <p className="door__lede">
+          Inspected and graded in our workshop, every defect photographed. {windowText(d.returnWindowHours)} to
+          return it, and the seller is paid only after you keep it.
         </p>
-        <div className="hero__ctas">
-          <Link to="/catalog" className="tg-button hero__cta">Browse all {inStock} pieces</Link>
-          <Link to={signedIn ? '/wanted?ask=1' : '/wanted'} className="hero__ghost">
-            Looking for something specific?
-          </Link>
+        <div className="door__ctas">
+          <Link to="/catalog" className="tg-button door__cta">Shop all {inStock} pieces</Link>
+          <a href="#how" className="door__ghost">How it works</a>
         </div>
-        {d.categories.length > 0 && (
-          <ul className="hero__cats" aria-label="Departments">
-            {d.categories.map((c) => (
-              <li key={c.name}>
-                <Link to={`/catalog?cat=${encodeURIComponent(c.slug ?? '')}`} className="hero__cat">
-                  {c.name} <span>{c.liveCount}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+        {picks.length > 0 && (
+          <div className="door__shelf">
+            <div className="door__shelf-head">
+              <span>Just in</span>
+              <Link to="/catalog?sort=newest">See all {inStock} →</Link>
+            </div>
+            <ul className="door__picks">
+              {picks.map((l) => <Pick key={l.id} l={l} />)}
+            </ul>
+          </div>
         )}
+      </section>
+
+      <section className="door door--sell" aria-labelledby="door-sell">
+        <p className="door__kicker">Sell</p>
+        <h2 id="door-sell" className="door__title">Selling gear? Skip the haggling.</h2>
+        <p className="door__lede">We inspect it, price it and sell it. No meet-ups, no time-wasters.</p>
+        <div className="door__ctas">
+          {/* /sell is signed-in only: a visitor goes through sign-in and comes
+              straight back, and selling asks for the one-time ID check before
+              the first listing. */}
+          <Link to="/sell" className="tg-button door__cta">Start selling</Link>
+        </div>
+        <p className="door__note">One sign-in and ID check, then list freely.</p>
+        <ol className="door__steps">
+          <li><strong>Sign in and verify</strong><span>A one-time ID check, required to sell.</span></li>
+          <li><strong>Send it in</strong><span>We inspect, grade and price it from real sales.</span></li>
+          <li><strong>Get paid</strong><span>To your bank once the buyer keeps it.</span></li>
+        </ol>
+      </section>
+    </div>
+  )
+}
+
+function Pick({ l }: { l: HomeListing }) {
+  const name = l.title.split('·')[0].trim()
+  return (
+    <li>
+      <Link to={`/listings/${l.id}`} className="pick">
+        <Cover cover={l.cover} categorySlug={l.categorySlug} alt={name} modelSlug={l.modelSlug} />
+        <span className="pick__name">{name}</span>
+        <span className="pick__meta">{l.gradeCode} · {money(l.priceMinor)}</span>
+      </Link>
+    </li>
+  )
+}
+
+// ------------------------------------------------------------ gear vault --
+
+/**
+ * The Vault invite. The card is an example, and says so: three things that
+ * really sold here, at the price they sold for. Until the pricing platform
+ * (TG-56) lands, our own sales are the only values we stand behind.
+ */
+function VaultInvite({ sales }: { sales: HomeSale[] }) {
+  const rows = sales.slice(0, 3)
+  const total = rows.reduce((n, s) => n + s.priceMinor, 0)
+  return (
+    <section className="vault-invite" aria-labelledby="vault-invite">
+      <div className="vault-invite__copy">
+        <p className="home__kicker">Gear Vault · free</p>
+        <h2 id="vault-invite" className="vault-invite__title">What is your kit worth today?</h2>
+        <p className="vault-invite__lede">
+          Add the gear you own. We keep an estimate of its value from real sales, so you know what you could sell it
+          for, or insure it for.
+        </p>
+        <ul className="vault-invite__list">
+          <li>A value for every item and your whole kit</li>
+          <li>Insure any item from the Vault</li>
+          <li>See when it's a good time to sell</li>
+        </ul>
+        <Link to="/vault" className="tg-button tg-button--primary vault-invite__cta">Start your Gear Vault</Link>
       </div>
-      {pick && (
-        <Link to={`/listings/${pick.id}`} className="hero__feature">
-          <Cover cover={pick.cover} categorySlug={pick.categorySlug} alt={pick.title} modelSlug={pick.modelSlug} />
-          <span className="hero__feature-body">
-            <span className="hero__feature-tag">{pick.savedMinor ? 'Biggest saving today' : 'Just in'}</span>
-            <span className="hero__feature-name">{pick.title.split('·')[0].trim()}</span>
-            <span className="hero__feature-meta">
-              <GradeBadge code={pick.gradeCode} />
-              {pick.gradeLabel && <span>{pick.gradeLabel}</span>}
-            </span>
-            <span className="hero__feature-price">
-              <strong>{money(pick.priceMinor)}</strong>
-              {pick.savedMinor != null && pick.msrpMinor != null && (
-                <span className="hero__feature-was">
-                  <s>{money(pick.msrpMinor)}</s> new
-                </span>
-              )}
-            </span>
-          </span>
-        </Link>
+      {rows.length > 0 && (
+        <div className="vault-card" aria-label="Example vault">
+          <div className="vault-card__top">
+            <span className="vault-card__label">Example vault</span>
+            <strong className="vault-card__total">~{money(total)}</strong>
+            <span className="vault-card__sub">{rows.length} {rows.length === 1 ? 'item' : 'items'}</span>
+          </div>
+          <ul className="vault-card__rows">
+            {rows.map((s) => {
+              const name = s.title.split('·')[0].trim()
+              return (
+                <li key={s.id} className="vault-card__row">
+                  <Cover cover={s.cover} categorySlug={s.categorySlug} alt="" modelSlug={s.modelSlug} />
+                  <span className="vault-card__name">
+                    <strong>{name}</strong>
+                    <span className="tg-muted">{s.gradeCode}{s.soldAt ? ` · sold here ${relative(s.soldAt)}` : ''}</span>
+                  </span>
+                  <strong className="vault-card__value">~{money(s.priceMinor)}</strong>
+                </li>
+              )
+            })}
+          </ul>
+          <p className="vault-card__foot">Values from recent TrueGlaz sales · not an offer</p>
+        </div>
       )}
     </section>
   )
 }
 
+// --------------------------------------------------------------- promises --
+
 function Promises({ hours }: { hours: number }) {
-  const items: { icon: React.ReactNode; title: string; body: string }[] = [
-    { icon: <IconLens />, title: 'Inspected by us', body: 'Bench-tested and graded in our workshop, not by the seller.' },
-    { icon: <IconList />, title: 'Every defect written down', body: 'Marks, haze, worn grips — listed and photographed before you buy.' },
-    { icon: <IconClock />, title: `${windowText(hours)} to return`, body: 'After delivery. Not as described? Send it back for a full refund.' },
-    { icon: <IconShield />, title: 'Seller paid only after', body: 'Your money is held until the return window closes or you keep it.' },
+  const items: { title: string; body: string }[] = [
+    { title: 'Inspected by us', body: 'Bench-tested and graded in our workshop, not by the seller.' },
+    { title: 'Every defect written down', body: 'Marks, haze, worn grips: listed and photographed before you buy.' },
+    { title: `${windowText(hours)} to return`, body: 'After delivery. Not as described? Send it back for a full refund.' },
+    { title: 'Seller paid only after', body: 'Your money is held until the return window closes or you keep it.' },
   ]
   return (
-    <ul className="promises" aria-label="What every purchase comes with">
-      {items.map((p) => (
-        <li key={p.title} className="promise">
-          <span className="promise__icon" aria-hidden="true">{p.icon}</span>
-          <span>
+    <section id="how" className="promises" aria-labelledby="how-title">
+      <h2 id="how-title" className="home__kicker promises__title">How buying here works</h2>
+      <ol className="promises__list">
+        {items.map((p, i) => (
+          <li key={p.title} className="promise">
+            <span className="promise__n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
             <strong className="promise__title">{p.title}</strong>
             <span className="promise__body">{p.body}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-function HowItWorks({ hours }: { hours: number }) {
-  return (
-    <section className="home__section how" aria-label="How buying works">
-      <h2 className="home__kicker">How buying here works</h2>
-      <ol className="how__steps">
-        <li><span className="how__n">1</span><strong>Read the report</strong><span>Grade, photos of this exact unit, and every defect we found.</span></li>
-        <li><span className="how__n">2</span><strong>Pay securely</strong><span>We hold the money. The seller is not paid yet.</span></li>
-        <li><span className="how__n">3</span><strong>Try it at home</strong><span>You have {windowText(hours)} after delivery to return it.</span></li>
-        <li><span className="how__n">4</span><strong>Keep it</strong><span>Only then is the seller paid. Nothing to chase.</span></li>
+          </li>
+        ))}
       </ol>
     </section>
   )
 }
 
-// ------------------------------------------------------------ your corner --
+// -------------------------------------------------------------- your corner --
 
 /**
  * The signed-in buyer's own strip: what needs them, where their parcels are,
@@ -415,62 +409,36 @@ function MyAsk({ a }: { a: BuyerAsk }) {
   )
 }
 
-// --------------------------------------------------------------- the ask --
+// ---------------------------------------------------------------- shelves --
 
-function AskPanel({ d, signedIn }: { d: HomeView; signedIn: boolean }) {
-  return (
-    <section className="askpanel" aria-label="Ask for something">
-      <h2 className="askpanel__title">Can't find it?</h2>
-      <p className="askpanel__lede">
-        Tell us what you're after, at what grade and price. Sellers see the board, and you'll see it here the
-        moment one comes in.
-      </p>
-      <Link to={signedIn ? '/wanted?ask=1' : '/sign-in'} className="tg-button tg-button--primary askpanel__cta">
-        {signedIn ? "Tell us what you're looking for" : 'Sign in to ask for something'}
-      </Link>
-      {d.wanted.length > 0 && (
-        <>
-          <h3 className="home__kicker askpanel__kicker">Others are looking for</h3>
-          <ul className="home__asks">
-            {d.wanted.map((w) => (
-              <li key={w.id} className="ask">
-                <span className="ask__what"><ModelPhoto slug={w.modelSlug} kind="gear" size="mini" alt="" badge={false} />{w.wanted}</span>
-                <span className="ask__terms tg-muted">
-                  {[w.minGradeCode && `${w.minGradeCode}+`, w.maxPriceMinor != null && `≤ ${money(w.maxPriceMinor)}`].filter(Boolean).join(' · ')}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="askpanel__foot">
-            <Link to="/wanted">See the whole board</Link> · Have one of these? <Link to="/sell">Sell it here</Link>
-          </p>
-        </>
-      )}
-    </section>
-  )
-}
-
-// ------------------------------------------------------------------ rails --
-
-/** A titled row, with a way through to the filtered catalogue behind it. */
-function Row({
-  title, blurb, to, children,
+/** A short titled shelf of four, with a way through to the rest. */
+function Shelf({
+  kicker, title, blurb, to, linkText, aside, compact, children,
 }: {
+  /** Two on a phone rather than four: context, not the main shelf. */
+  compact?: boolean
+  kicker: string
   title: string
-  blurb: string
+  blurb?: string
   to?: string
+  linkText?: string
+  aside?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section className="home__section">
       <div className="home__head">
-        <h2 className="home__title">{title}</h2>
-        <p className="home__blurb tg-muted">{blurb}</p>
-        {to && <Link to={to} className="home__all">See all →</Link>}
+        <div className="home__heading">
+          <p className="home__kicker">{kicker}</p>
+          <h2 className="home__title">{title}</h2>
+          {blurb && <p className="home__blurb tg-muted">{blurb}</p>}
+        </div>
+        <div className="home__links">
+          {aside}
+          {to && <Link to={to} className="home__all">{linkText ?? 'See all →'}</Link>}
+        </div>
       </div>
-      {/* Scrolls sideways when it does not fit, rather than wrapping into a
-          second ragged line that reads as a grid pretending to be a row. */}
-      <ol className="home-rail">{children}</ol>
+      <ol className={`shelf${compact ? ' shelf--compact' : ''}`}>{children}</ol>
     </section>
   )
 }
@@ -504,7 +472,7 @@ function SoldCard({ sale }: { sale: HomeSale }) {
   return (
     <li className="card card--sold">
       <Link to={`/listings/${sale.id}`} className="card__link">
-        <Cover cover={sale.cover} categorySlug={sale.categorySlug} alt={name} />
+        <Cover cover={sale.cover} categorySlug={sale.categorySlug} alt={name} modelSlug={sale.modelSlug} />
         <span className="card__flag card__flag--sold">Sold</span>
         <span className="card__name">{name}</span>
       </Link>
@@ -571,9 +539,3 @@ function timeLeft(iso: string | null): string | null {
   const m = mins % 60
   return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`
 }
-
-const svg = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-function IconLens() { return <svg {...svg}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><path d="M12 3v5M21 12h-5M12 21v-5M3 12h5" /></svg> }
-function IconList() { return <svg {...svg}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></svg> }
-function IconClock() { return <svg {...svg}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg> }
-function IconShield() { return <svg {...svg}><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z" /><path d="M9 12l2 2 4-4" /></svg> }
