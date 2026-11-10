@@ -6,6 +6,7 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { ErrorNote, Loading, Muted } from '../components/ui'
 import { sizedUri } from '../components/ModelImage'
+import { Chip, Pill, RoundIcon, lift } from '../components/kit'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 type Fact = { icon: IconName; big: string; small: string }
@@ -34,60 +35,49 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-        {/* image hero */}
-        <View style={{ paddingHorizontal: t.space.x4, paddingTop: insets.top + t.space.x2 }}>
-          <View style={{ height: 250, borderRadius: 22, backgroundColor: heroUrl ? '#ffffff' : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {heroUrl
-              ? <Image source={{ uri: heroUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-              : <Ionicons name="camera-outline" size={66} color={t.colors.textMuted} />}
-            <Pressable onPress={() => navigation.goBack()} hitSlop={6}
-              style={{ position: 'absolute', top: 14, left: 14, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,254,243,0.92)', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="chevron-back" size={22} color={t.colors.text} />
-            </Pressable>
-            {heroUrl && (
-              <View style={{ position: 'absolute', left: 14, bottom: 14, backgroundColor: 'rgba(26,46,59,0.74)', borderRadius: 9, paddingVertical: 5, paddingHorizontal: 11 }}>
-                <Txt style={{ color: '#fff', fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Model photo · not this unit</Txt>
-              </View>
-            )}
+        {/* image hero: full bleed, round actions floating on it */}
+        <View style={{ height: 360 + insets.top, backgroundColor: heroUrl ? '#ffffff' : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', paddingTop: insets.top }}>
+          {heroUrl
+            ? <Image source={{ uri: heroUrl }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+            : <Ionicons name={/\d+mm\b|f\/\d/i.test(d.listing.title) ? 'aperture-outline' : 'camera-outline'} size={120} color={t.colors.textMuted} />}
+          <View style={{ position: 'absolute', top: insets.top + 8, left: 16 }}>
+            <RoundIcon icon="chevron-back" label="Back" onPress={() => navigation.goBack()} />
           </View>
-        </View>
-
-        <View style={{ paddingHorizontal: t.space.x4, paddingTop: t.space.x4, gap: 0 }}>
-          <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{d.internalSku}</Txt>
-          <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never, letterSpacing: -0.5, marginTop: 4 }}>
-            {d.listing.title.split('·')[0].trim()}
-          </Txt>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 9, flexWrap: 'wrap' }}>
-            <Txt style={{ color: t.colors.text, fontSize: 26, fontWeight: t.weight.bold as never, letterSpacing: -0.8 }}>
-              {money(d.listing.priceMinor, d.listing.currency)}
-            </Txt>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: t.colors.goodSoft, borderRadius: t.radius.pill, paddingVertical: 5, paddingHorizontal: 11 }}>
-              <Ionicons name="checkmark-circle" size={13} color={t.colors.good} />
-              <Txt style={{ color: t.colors.good, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>
-                Grade {d.listing.gradeCode}{d.gradePosition ? ` · ${d.gradePosition}` : ''}
-              </Txt>
-            </View>
-            {!buyable && (
-              <View style={{ backgroundColor: t.colors.warnSoft, borderRadius: t.radius.pill, paddingVertical: 5, paddingHorizontal: 11 }}>
-                <Txt style={{ color: t.colors.warn, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Not available</Txt>
-              </View>
-            )}
-          </View>
-          {drop && (
-            <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 9, backgroundColor: t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 5, paddingHorizontal: 11 }}>
-              <Ionicons name="arrow-down" size={13} color={t.colors.accentHover} />
-              <Txt style={{ color: t.colors.accentHover, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>
-                Price dropped {money(drop.amountMinor, d.listing.currency)} · {relative(drop.when)}
-              </Txt>
+          {heroUrl && (
+            <View style={{ position: 'absolute', left: 16, bottom: 16, backgroundColor: 'rgba(26,46,59,0.78)', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14 }}>
+              <Txt style={{ color: '#fff', fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Model photo · not this unit</Txt>
             </View>
           )}
+        </View>
+
+        <View style={{ paddingHorizontal: t.space.x4, paddingTop: t.space.x4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
+            <Chip label={`${d.listing.gradeCode}${d.gradePosition ? ` · ${d.gradePosition}` : ''}`} on />
+            {!buyable && <Chip label="Not available" />}
+            {drop && <Chip icon="arrow-down" label={`${money(drop.amountMinor, d.listing.currency)} off · ${relative(drop.when)}`} />}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: t.space.x3, marginTop: t.space.x4 }}>
+            <View style={{ flex: 1 }}>
+              <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: 26, fontWeight: t.weight.bold as never, letterSpacing: -0.6 }}>
+                {d.listing.title.split('·')[0].trim()}
+              </Txt>
+              <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs, marginTop: 4 }}>{d.internalSku}</Txt>
+            </View>
+            <Txt style={{ color: t.colors.text, fontSize: 24, fontWeight: t.weight.bold as never, letterSpacing: -0.6 }}>
+              {money(d.listing.priceMinor, d.listing.currency)}
+            </Txt>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: t.space.x3 }}>
+            <Ionicons name="shield-checkmark" size={15} color={t.colors.good} />
+            <Txt style={{ color: t.colors.good, fontSize: t.size.sm }}>Inspected in our workshop · every defect written down</Txt>
+          </View>
         </View>
 
         {/* key facts — real per-unit numbers */}
         {tiles.length > 0 && (
           <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: t.space.x4, marginTop: t.space.x4 }}>
             {tiles.map((f, i) => (
-              <View key={i} style={{ flex: 1, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 15, paddingVertical: 13, paddingHorizontal: 6, alignItems: 'center', gap: 2 }}>
+              <View key={i} style={{ flex: 1, backgroundColor: t.colors.bgRaised, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 6, alignItems: 'center', gap: 2, ...lift(t) }}>
                 <Ionicons name={f.icon} size={19} color={t.colors.accent} style={{ marginBottom: 3 }} />
                 <Txt style={{ fontSize: t.size.lg, fontWeight: t.weight.bold as never, letterSpacing: -0.3 }}>{f.big}</Txt>
                 <Txt style={{ fontSize: 10.5, color: t.colors.textMuted, fontWeight: t.weight.medium as never, textAlign: 'center' }}>{f.small}</Txt>
@@ -151,27 +141,17 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
       </ScrollView>
 
       {buyable && (
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: t.space.x4, paddingTop: t.space.x3, paddingBottom: insets.bottom + t.space.x3, borderTopWidth: 1, borderTopColor: t.colors.border, backgroundColor: t.colors.bgRaised, flexDirection: 'row', alignItems: 'center', gap: t.space.x4 }}>
-          <View>
-            <Muted size={t.size.xs}>Price</Muted>
-            <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{money(d.listing.priceMinor, d.listing.currency)}</Txt>
-          </View>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: t.space.x4, paddingTop: t.space.x3, paddingBottom: insets.bottom + t.space.x4, backgroundColor: t.colors.bg }}>
           {d.mine ? (
             // A seller cannot buy their own unit; the reservation refuses it.
-            <Pressable
-              onPress={() => d.myItemId ? navigation.navigate('SellerItem', { id: d.myItemId }) : navigation.navigate('Tabs', { screen: 'Sell' })}
-              style={{ flex: 1, borderWidth: 1.5, borderColor: t.colors.accent, borderRadius: 14, paddingVertical: 13, alignItems: 'center' }}>
-              <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never, fontSize: t.size.md }}>Your listing · Manage it</Txt>
-            </Pressable>
+            <Pill block variant="ghost" label="Your listing · Manage it"
+              onPress={() => d.myItemId ? navigation.navigate('SellerItem', { id: d.myItemId }) : navigation.navigate('Tabs', { screen: 'Sell' })} />
           ) : (
-          <Pressable
-            onPress={() => navigation.navigate('Checkout', {
-              listingId: d.listing.id, title: d.listing.title.split('·')[0].trim(),
-              priceMinor: d.listing.priceMinor, currency: d.listing.currency,
-            })}
-            style={{ flex: 1, backgroundColor: t.colors.cta, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}>
-            <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never, fontSize: t.size.md }}>Buy now</Txt>
-          </Pressable>
+            <Pill block label={`Buy this one · ${money(d.listing.priceMinor, d.listing.currency)}`}
+              onPress={() => navigation.navigate('Checkout', {
+                listingId: d.listing.id, title: d.listing.title.split('·')[0].trim(),
+                priceMinor: d.listing.priceMinor, currency: d.listing.currency,
+              })} />
           )}
         </View>
       )}
@@ -181,7 +161,7 @@ export function ListingDetailScreen({ route, navigation }: { route: any; navigat
 
 function Panel({ t, title, children }: { t: any; title: string; children: React.ReactNode }) {
   return (
-    <View style={{ marginHorizontal: t.space.x4, marginTop: t.space.x4, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, padding: t.space.x4 }}>
+    <View style={{ marginHorizontal: t.space.x4, marginTop: t.space.x4, backgroundColor: t.colors.bgRaised, borderRadius: 14, padding: t.space.x4, ...lift(t) }}>
       <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, marginBottom: 10 }}>{title}</Txt>
       {children}
     </View>
