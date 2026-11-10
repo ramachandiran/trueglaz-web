@@ -37,7 +37,9 @@ export function HomePage() {
 
   return (
     <div className="home">
-      <Doors d={d} inStock={inStock} />
+      {/* The Buy / Sell doors are the pitch to a visitor. Someone signed in has
+          already chosen; their own orders and requests lead the page instead. */}
+      {!signedIn && <Doors d={d} inStock={inStock} />}
 
       {session && (
         mine.error ? <ErrorNote error={mine.error} onRetry={mine.reload} />
@@ -244,7 +246,8 @@ function Corner({ b, name }: { b: BuyerHome; name: string }) {
   return (
     <section className="corner" aria-label="Your orders and requests">
       <div className="corner__head">
-        <h2 className="corner__title">{name ? `Welcome back, ${name}` : 'Welcome back'}</h2>
+        {/* The page heading for a signed-in visitor: the doors and their h1 are not shown. */}
+        <h1 className="corner__title">{name ? `Welcome back, ${name}` : 'Welcome back'}</h1>
         <ul className="corner__stats">
           <li><strong>{b.stats.inProgress}</strong> on the way to you</li>
           <li><strong>{b.stats.bought}</strong> bought</li>
