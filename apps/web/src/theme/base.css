@@ -33,6 +33,26 @@
   font-display: swap;
 }
 
+/* Inter: the text face (body, buttons, forms, prices). Variable, so every
+   weight from 400 to 700 is one file per script; Latin first, Latin Extended
+   only downloads when a page needs it. Self-hosted, no third-party request. */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-latin-ext.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 *,
 *::before,
 *::after {
@@ -59,6 +79,21 @@ h1, h2, h3, h4 {
   margin: 0;
   line-height: 1.25;
   font-weight: var(--tg-weight-bold);
+}
+
+/* Space Grotesk carries the brand in page and section titles and the big
+   vault totals; everything people read, compare and type stays in Inter. */
+h1, h2,
+.vault__hero-val, .vault-intro__amt, .vault-card__total {
+  font-family: var(--tg-font-heading);
+}
+
+/* Equal-width digits on amounts, so prices in a list line up. Only on
+   elements that hold nothing but an amount: in Inter the setting also widens
+   the hyphen, which would turn "TG-10" into "TG - 10" anywhere it inherits. */
+.card__price, .result__price, .buybox__price, .sold__price, .line__price,
+.inv__price, .parcel__price, .vault__plan-price, .gear__val, .vault__hero-val {
+  font-variant-numeric: tabular-nums;
 }
 
 /*
@@ -144,6 +179,8 @@ input[type='checkbox'] { accent-color: var(--tg-cta); }
   background: var(--tg-bg-raised);
   color: var(--tg-text);
   cursor: pointer;
+  /* A link styled as a button reads as a button: no prose underline. */
+  text-decoration: none;
   transition: background var(--tg-transition), border-color var(--tg-transition);
 }
 .tg-button:hover { background: var(--tg-accent-soft); border-color: var(--tg-cta-hover); }

@@ -87,7 +87,8 @@ export interface ColorTokens {
 export interface Theme {
   name: string
   colors: ColorTokens
-  font: { body: string; mono: string }
+  /** body: everything people read and type. heading: big titles and big numbers, the brand face. */
+  font: { body: string; heading: string; mono: string }
   /** Numbers, not strings: React Native needs them unitless. */
   size: { xs: number; sm: number; md: number; lg: number; xl: number; xxl: number }
   weight: { normal: string; medium: string; bold: string }
@@ -97,7 +98,8 @@ export interface Theme {
 
 const shared = {
   font: {
-    body: '"Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    body: '"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    heading: '"Space Grotesk", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
     mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
   },
   size: { xs: 12, sm: 13, md: 15, lg: 18, xl: 24, xxl: 32 },
@@ -231,6 +233,7 @@ export const midnight: Theme = {
   ...shared,
   font: {
     body: '"Iowan Old Style", Georgia, ui-serif, serif',
+    heading: '"Iowan Old Style", Georgia, ui-serif, serif',
     mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
   },
   radius: { sm: 2, md: 4, lg: 6, pill: 999 },

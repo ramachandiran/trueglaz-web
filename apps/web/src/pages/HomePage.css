@@ -176,7 +176,7 @@
 .pick:hover { background: color-mix(in srgb, var(--tg-on-brand) 12%, transparent); color: var(--tg-on-brand); text-decoration: none; }
 .pick .card__photo { margin-bottom: var(--tg-space-1); }
 .pick__name { font-size: var(--tg-text-sm); font-weight: var(--tg-weight-bold); line-height: 1.3; }
-.pick__meta { font-size: var(--tg-text-xs); color: var(--tg-on-brand-muted); font-variant-numeric: tabular-nums; }
+.pick__meta { font-size: var(--tg-text-xs); color: var(--tg-on-brand-muted); }
 
 /* Sell: what happens after "Start selling", in three steps. */
 .door__steps {

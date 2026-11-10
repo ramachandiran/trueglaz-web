@@ -1,6 +1,6 @@
 import { StyleSheet, Text, type TextProps } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
-import { resolveMobileBodyFont } from '../theme/fonts'
+import { resolveMobileBodyFont, resolveMobileFont } from '../theme/fonts'
 
 /**
  * Text that honours the theme's font.
@@ -9,12 +9,15 @@ import { resolveMobileBodyFont } from '../theme/fonts'
  * Native has no cascade from View to Text, so without this the font token in
  * tokens.ts would silently do nothing on mobile — colours would retheme and
  * type would not. Callers still override freely; their style wins.
+ *
+ * Display sizes (titles, the big vault total) get the heading face, the way
+ * h1/h2 do on the website; everything else is the body face.
  */
 export function Txt({ style, ...rest }: TextProps) {
   const t = useTheme()
   const flat = StyleSheet.flatten(style)
   const usesThemeBodyFont = !flat?.fontFamily || flat.fontFamily === t.font.body
-  const resolvedFamily = usesThemeBodyFont ? resolveMobileBodyFont(flat?.fontWeight) : flat.fontFamily
+  const resolvedFamily = usesThemeBodyFont ? resolveMobileFont(flat?.fontWeight, flat?.fontSize) : flat.fontFamily
 
   return (
     <Text
