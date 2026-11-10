@@ -1,12 +1,66 @@
-/* Insurance desk: the issue and decline forms sit under the request, one line on a wide screen. */
-.desk__form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--tg-space-3); }
-.desk__field { display: flex; flex-direction: column; gap: 4px; width: 220px; font-size: var(--tg-text-xs); }
-.desk__field--wide { width: 360px; }
-.desk__field > span { font-weight: var(--tg-weight-medium); color: var(--tg-text-muted); }
-.desk__field em { font-style: normal; font-weight: var(--tg-weight-regular, 400); opacity: 0.8; }
-.desk__field em::before { content: '· '; }
-.desk__buttons { display: inline-flex; gap: var(--tg-space-2); }
+/* Insurance desk: status tabs, the queue on the left, one request open on the right. Desktop only. */
+.desk__tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: var(--tg-space-4) 0; }
+.desk__tab { height: 34px; padding: 0 14px; border-radius: var(--tg-radius-pill); border: 1px solid var(--tg-border); background: var(--tg-bg-raised); color: var(--tg-text); font: inherit; font-size: var(--tg-text-sm); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.desk__tab b { font-size: 11px; background: var(--tg-bg-sunken); border-radius: var(--tg-radius-pill); padding: 1px 7px; }
+.desk__tab.on { background: #233e50; border-color: #233e50; color: #fffef3; font-weight: var(--tg-weight-bold); }
+.desk__tab.on b { background: #ffffff2e; color: inherit; }
 
-@media (max-width: 720px) {
-  .desk__field, .desk__field--wide { width: 100%; }
+.desk__grid { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 20px; align-items: start; }
+.desk__table { width: 100%; border-collapse: collapse; background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); overflow: hidden; font-size: var(--tg-text-sm); }
+.desk__table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--tg-text-muted); background: var(--tg-bg-sunken); padding: 9px 12px; }
+.desk__table td { padding: 11px 12px; border-top: 1px solid var(--tg-border); vertical-align: top; }
+.desk__table td small { display: block; color: var(--tg-text-muted); font-size: var(--tg-text-xs); }
+.desk__table tbody tr { cursor: pointer; }
+.desk__table tbody tr:hover td { background: var(--tg-bg-sunken); }
+.desk__table tr.sel td { background: var(--tg-accent-soft, #fff5ec); }
+.desk__table tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--tg-cta); }
+.desk__doc { color: var(--tg-accent); font-weight: var(--tg-weight-bold); }
+.desk__late { color: var(--tg-bad); font-weight: var(--tg-weight-bold); }
+
+.desk__panel { background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); padding: 18px; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+.desk__head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.desk__head h2 { font-family: var(--tg-font-heading, inherit); font-size: 19px; margin: 0; }
+.desk__st { font-size: 11.5px; font-weight: var(--tg-weight-bold); border-radius: var(--tg-radius-pill); padding: 3px 10px; white-space: nowrap; background: var(--tg-bg-sunken); }
+.desk__st--requested { background: #e3ecf3; color: #233e50; }
+.desk__st--with_agent, .desk__st--quote_shared { background: var(--tg-warn-soft); color: var(--tg-warn); }
+.desk__st--policy_uploaded { background: var(--tg-accent-soft); color: var(--tg-text); }
+.desk__st--insured { background: var(--tg-good-soft); color: var(--tg-good); }
+.desk__st--closed { background: var(--tg-bad-soft); color: var(--tg-bad); }
+
+.desk__kv { display: grid; grid-template-columns: 100px 1fr; gap: 6px 10px; font-size: var(--tg-text-sm); margin: 12px 0 0; }
+.desk__kv dt { color: var(--tg-text-muted); }
+.desk__kv dd { margin: 0; overflow-wrap: anywhere; }
+.desk__kv a { color: inherit; }
+.desk__lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--tg-text-muted); font-weight: var(--tg-weight-bold); margin: 16px 0 8px; }
+.desk__link { background: none; border: 0; padding: 0 0 0 6px; color: var(--tg-accent); font: inherit; font-weight: var(--tg-weight-bold); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.desk__kv dd > .desk__link:first-child, .desk__acts .desk__link { padding-left: 0; }
+.desk__link:disabled { opacity: .5; }
+
+.desk__checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: var(--tg-text-sm); }
+.desk__checks li { display: flex; gap: 8px; }
+.desk__checks li > span:first-child { width: 16px; font-weight: var(--tg-weight-bold); flex: none; text-align: center; }
+.desk__checks .ok > span:first-child { color: var(--tg-good); }
+.desk__checks .bad > span:first-child { color: var(--tg-bad); }
+.desk__checks .look > span:first-child { color: var(--tg-warn); }
+.desk__tick { display: flex; gap: 8px; align-items: flex-start; font-size: var(--tg-text-sm); margin-top: 10px; font-weight: var(--tg-weight-medium); }
+
+.desk__acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--tg-border); }
+.desk__form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--tg-space-3); margin-top: 12px; }
+.desk__field { display: flex; flex-direction: column; gap: 4px; font-size: var(--tg-text-xs); flex: 1; min-width: 200px; }
+.desk__field > span { font-weight: var(--tg-weight-medium); color: var(--tg-text-muted); }
+
+.desk__note { display: grid; gap: 8px; }
+.desk__note textarea { resize: vertical; font: inherit; }
+.desk__note-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
+.desk__note-row label { display: flex; align-items: center; gap: 8px; }
+.desk__note-row input { width: auto; }
+
+.desk__log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 12.5px; }
+.desk__log li { display: grid; grid-template-columns: 120px 1fr; gap: 8px; }
+.desk__log time { color: var(--tg-text-muted); }
+.desk__log li.event span { color: var(--tg-text-muted); }
+
+@media (max-width: 1100px) {
+  .desk__grid { grid-template-columns: 1fr; }
+  .desk__panel { position: static; max-height: none; }
 }

@@ -180,7 +180,7 @@ function VaultInvite({ sales }: { sales: HomeSale[] }) {
         </p>
         <ul className="vault-invite__list">
           <li>A value for every item and your whole kit</li>
-          <li>Insure any item from the Vault</li>
+          <li>Get an insurance quote for any item</li>
           <li>See when it's a good time to sell</li>
         </ul>
         <Link to="/vault" className="tg-button tg-button--primary home-cta">Start your Gear Vault</Link>
@@ -311,7 +311,7 @@ function Me({ b, vault, name }: { b: BuyerHome | null; vault: VaultItem[] | null
           <div className="tile tile--cream">
             <p className="tile__k">Gear Vault · free</p>
             <h2 className="tile__t">What is your kit worth today?</h2>
-            <p className="tile__sub">Add what you own. We value it from real sales, and you can insure it.</p>
+            <p className="tile__sub">Add what you own. We value it from real sales, and you can get it insured.</p>
             <Link to="/vault" className="tg-button tile__cta">Add your gear</Link>
           </div>
         )}
