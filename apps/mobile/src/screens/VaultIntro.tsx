@@ -95,7 +95,7 @@ function Offer({ onAdded, onSkip }: { onAdded: (it: VaultItem) => void; onSkip: 
       <Txt style={{ color: t.colors.accent, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.7 }}>GEAR VAULT</Txt>
       <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>See what your gear is worth</Txt>
       <Muted size={t.size.sm}>
-        Add a camera or lens you own and we’ll value it from real TrueGlaz sales — then track its warranty and insure it. No selling required.
+        Add a camera or lens you own and we’ll value it from real TrueGlaz sales — then track its warranty and get an insurance quote. No selling required.
       </Muted>
       <Field label="Start with one item" placeholder="e.g. Sony A7 III" value={model ? model.name : q} onChangeText={search} autoFocus />
       {!model && results.length > 0 && (

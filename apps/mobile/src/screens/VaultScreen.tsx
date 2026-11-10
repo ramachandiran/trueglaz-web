@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { VaultIntro } from './VaultIntro'
-import { Alert, FlatList, Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native'
+import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
   api, money, dateOnly, useApi, ApiError,
-  type VaultItem, type InsuranceQuote, type InsuranceRequest, type InsurancePlan, type ProductModel,
+  type VaultItem, type ProductModel,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { PageTitle, Pill, RoundIcon, Surface } from '../components/kit'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
+import { ClaimSheet, CoverRow, PolicySheet, QuoteSheet, Sheet } from '../components/VaultCover'
 import { ModelThumb, useModelImages } from '../components/ModelImage'
 import {
   isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
@@ -52,7 +53,7 @@ export function VaultScreen() {
   const insets = useSafeAreaInsets()
   const { data, error, loading, reload } = useApi(() => api.vault(), [])
   const [adding, setAdding] = useState(false)
-  const [insuring, setInsuring] = useState<VaultItem | null>(null)
+  const [insuring, setInsuring] = useState<{ item: VaultItem; what: 'quote' | 'policy' | 'claim' } | null>(null)
   const [privacy, setPrivacy] = useState<PrivacyMode | null>(null)
   const [, setPTick] = useState(0)
   const rePrivacy = () => setPTick((n) => n + 1)
@@ -64,7 +65,7 @@ export function VaultScreen() {
   const items = data ?? []
   const total = useMemo(() => items.reduce((n, it) => n + estimate(it), 0), [items])
   const insured = items.filter((i) => i.policy).length
-  // Paid for and waiting on staff to issue: say so, not "0 insured".
+  // Asked for a quote or sent a policy: say so, not "0 insured".
   const issuing = items.filter((i) => !i.policy && i.insuranceRequest).length
 
   function afterPrivacy() { setPrivacy(null); rePrivacy(); reload() }
@@ -137,9 +138,9 @@ export function VaultScreen() {
                     <Txt numberOfLines={1} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: -0.2 }}>{item.modelLabel}</Txt>
                     {locked ? (
                       <Txt style={{ color: t.colors.warn, fontSize: t.size.xs, marginTop: 2 }}>🔒 Locked — unlock to see price &amp; serial</Txt>
-                    ) : cost != null ? (
+                    ) : cost != null || serial ? (
                       <Muted size={t.size.xs} style={{ marginTop: 2 }}>
-                        Bought {money(cost)}{item.purchaseDate ? ` · ${dateOnly(item.purchaseDate)}` : ''}{serial ? ` · ser ••${serial.slice(-4)}` : ''}
+                        {[cost != null ? `Bought ${money(cost)}` : null, item.purchaseDate ? dateOnly(item.purchaseDate) : null, serial ? `ser ••${serial.slice(-4)}` : null].filter(Boolean).join(' · ')}
                       </Muted>
                     ) : null}
                     <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7, backgroundColor: wt.bg, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
@@ -156,24 +157,12 @@ export function VaultScreen() {
                     <Muted size={t.size.xs}>est. value</Muted>
                   </View>
                 </View>
-                <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x4, alignItems: 'center' }}>
-                  {item.policy ? (
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: t.colors.goodSoft, borderRadius: t.radius.pill, height: 38 }}>
-                      <Ionicons name="checkmark-circle" size={16} color={t.colors.good} />
-                      <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Insured{!item.policy.live ? ' (demo)' : ''}</Txt>
-                    </View>
-                  ) : item.insuranceRequest ? (
-                    // Requested and authorised; staff are issuing it. No second request.
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: t.colors.warnSoft, borderRadius: t.radius.pill, height: 38 }}>
-                      <Ionicons name="time-outline" size={16} color={t.colors.warn} />
-                      <Txt style={{ color: t.colors.warn, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>
-                        Cover being issued{item.insuranceRequest.expectedBy ? ` · by ${dateOnly(item.insuranceRequest.expectedBy)}` : ''}
-                      </Txt>
-                    </View>
-                  ) : (
-                    <View style={{ flex: 1 }}><Pill label="Insure this gear" icon="shield-checkmark-outline" small block onPress={() => setInsuring(item)} /></View>
-                  )}
-                  <RoundIcon icon="trash-outline" label={`Remove ${item.modelLabel}`} onPress={() => remove(item)} size={38} />
+                <CoverRow item={item} onChanged={reload}
+                  onQuote={() => setInsuring({ item, what: 'quote' })}
+                  onAddPolicy={() => setInsuring({ item, what: 'policy' })}
+                  onClaimHelp={() => setInsuring({ item, what: 'claim' })} />
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: t.space.x3 }}>
+                  <RoundIcon icon="trash-outline" label={`Remove ${item.modelLabel}`} onPress={() => remove(item)} size={34} />
                 </View>
               </Surface>
             )
@@ -190,7 +179,9 @@ export function VaultScreen() {
           onAdded={() => { setAdding(false); reload() }}
         />
       )}
-      {insuring && <InsureModal item={insuring} onClose={() => setInsuring(null)} onBought={() => { setInsuring(null); reload() }} />}
+      {insuring?.what === 'quote' && <QuoteSheet item={insuring.item} onClose={() => setInsuring(null)} onDone={() => { setInsuring(null); reload() }} />}
+      {insuring?.what === 'policy' && <PolicySheet item={insuring.item} onClose={() => setInsuring(null)} onDone={() => { setInsuring(null); reload() }} />}
+      {insuring?.what === 'claim' && <ClaimSheet onClose={() => setInsuring(null)} />}
       {privacy && <PrivacySheet mode={privacy} items={items} onDone={afterPrivacy} onClose={() => setPrivacy(null)} />}
       {/* The Vault's own invitation lives here, not over Home or Shop (UX-02). */}
       <VaultIntro onClosed={reload} />
@@ -400,126 +391,11 @@ function AddModal({ e2ee, unlocked, onNeedUnlock, onClose, onAdded }: {
   )
 }
 
-// -- insure --------------------------------------------------------------------
-
-function InsureModal({ item, onClose, onBought }: { item: VaultItem; onClose: () => void; onBought: () => void }) {
-  const t = useTheme()
-  const { data: quote, error, loading } = useApi<InsuranceQuote>(() => api.insuranceQuote(item.id), [item.id])
-  const [plan, setPlan] = useState('plus')
-  const [agree, setAgree] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const [requested, setRequested] = useState<InsuranceRequest | null>(null)
-
-  async function buy() {
-    setBusy(true); setErr(null)
-    try {
-      const r = await api.buyInsurance(item.id, plan, quote?.sumInsuredMinor)
-      // Issued on the spot: done. Otherwise say what happens next before closing.
-      if (r.status === 'issued') onBought()
-      else setRequested(r)
-    }
-    catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not buy cover') } finally { setBusy(false) }
-  }
-
-  if (requested) {
-    return (
-      <Sheet title="Cover requested" onClose={onBought}>
-        <View style={{ flexDirection: 'row', gap: t.space.x2, alignItems: 'center' }}>
-          <Ionicons name="time-outline" size={22} color={t.colors.warn} />
-          <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never, flex: 1 }}>
-            We're issuing your policy{requested.expectedBy ? ` — usually by ${dateOnly(requested.expectedBy)}` : ''}.
-          </Txt>
-        </View>
-        <Muted size={t.size.sm}>
-          {money(requested.totalMinor)} is authorised, not charged. You pay only when the policy is issued, and nothing if we can't issue it. We'll notify you either way.
-        </Muted>
-        <Button label="Done" onPress={onBought} style={{ marginTop: t.space.x2 }} />
-      </Sheet>
-    )
-  }
-
-  return (
-    <Sheet title={`Insure ${item.modelLabel}`} onClose={onClose}>
-      {loading && <Loading />}
-      {error && <ErrorNote error={error} />}
-      {quote && (
-        <>
-          <Muted size={t.size.sm}>
-            Cover amount ~{money(quote.sumInsuredMinor)} — from your vault estimate.
-            {!quote.providerLive ? ' Demo cover: no real policy is issued.' : ''}
-          </Muted>
-          <View style={{ gap: t.space.x2 }}>
-            {quote.plans.map((p: InsurancePlan) => {
-              const sel = plan === p.code
-              return (
-                <Pressable key={p.code} onPress={() => setPlan(p.code)}
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', gap: t.space.x2,
-                    borderWidth: 1.5, borderColor: sel ? t.colors.accent : t.colors.border,
-                    backgroundColor: sel ? t.colors.accentSoft : 'transparent',
-                    borderRadius: t.radius.md, padding: t.space.x3,
-                  }}>
-                  <View style={{ flex: 1 }}>
-                    <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{p.title}</Txt>
-                    <Muted size={t.size.xs}>{p.blurb}</Muted>
-                  </View>
-                  <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{money(p.totalMinor)}/yr</Txt>
-                </Pressable>
-              )
-            })}
-          </View>
-          <Pressable onPress={() => setAgree(!agree)} style={{ flexDirection: 'row', gap: t.space.x2, alignItems: 'center' }}>
-            <View style={{
-              width: 22, height: 22, borderRadius: 6, borderWidth: 1.5,
-              borderColor: agree ? t.colors.brand : t.colors.border, backgroundColor: agree ? t.colors.brand : 'transparent',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              {agree && <Txt style={{ color: t.colors.onBrand, fontWeight: t.weight.bold as never }}>✓</Txt>}
-            </View>
-            <Txt style={{ color: t.colors.text, fontSize: t.size.sm, flex: 1 }}>
-              I’ve read the policy wording and am choosing this cover myself.
-            </Txt>
-          </Pressable>
-          <Muted size={t.size.xs}>Underwritten by an IRDAI-licensed insurer · TrueGlaz Protect. Proof of ownership is attached.</Muted>
-          {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
-          <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x2 }}>
-            <Button label="Cancel" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-            <Button label={busy ? 'Buying…' : 'Buy cover'} onPress={buy} disabled={!agree || busy} loading={busy} style={{ flex: 1 }} />
-          </View>
-        </>
-      )}
-    </Sheet>
-  )
-}
-
 // -- bits ----------------------------------------------------------------------
 
-function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  const t = useTheme()
-  return (
-    <Modal transparent animationType="slide" visible onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(20,30,40,0.45)', justifyContent: 'flex-end' }}>
-        <View style={{
-          backgroundColor: t.colors.bg, borderTopLeftRadius: t.radius.lg, borderTopRightRadius: t.radius.lg,
-          padding: t.space.x4, maxHeight: '90%',
-        }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: t.space.x3 }}>
-            <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{title}</Txt>
-            <Pressable onPress={onClose} hitSlop={10}><Txt style={{ color: t.colors.textMuted, fontSize: t.size.xl }}>×</Txt></Pressable>
-          </View>
-          <ScrollView contentContainerStyle={{ gap: t.space.x3 }} keyboardShouldPersistTaps="handled">
-            {children}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  )
-}
-
-/** "2 insured", "1 insured · 1 being issued", or "1 cover being issued". */
-function coverNote(insured: number, issuing: number): string {
-  if (issuing === 0) return `${insured} insured`
-  if (insured > 0) return `${insured} insured · ${issuing} being issued`
-  return `${issuing} ${issuing === 1 ? 'cover' : 'covers'} being issued`
+/** "2 insured", "1 insured · 1 in progress", or "1 insurance request in progress". */
+function coverNote(insured: number, open: number): string {
+  if (open === 0) return `${insured} insured`
+  if (insured > 0) return `${insured} insured · ${open} in progress`
+  return `${open} insurance ${open === 1 ? 'request' : 'requests'} in progress`
 }
