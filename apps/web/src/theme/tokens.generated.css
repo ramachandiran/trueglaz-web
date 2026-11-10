@@ -38,7 +38,8 @@
   --tg-step-current: #233e50;
   --tg-step-upcoming: #bfbba4;
   --tg-step-detour: #8a5a12;
-  --tg-font: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --tg-font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --tg-font-heading: "Space Grotesk", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --tg-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --tg-text-xs: 0.75rem;
   --tg-text-sm: 0.8125rem;
@@ -187,6 +188,7 @@
   --tg-step-upcoming: #bfb599;
   --tg-step-detour: #8a5a12;
   --tg-font: "Iowan Old Style", Georgia, ui-serif, serif;
+  --tg-font-heading: "Iowan Old Style", Georgia, ui-serif, serif;
   --tg-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --tg-text-xs: 0.75rem;
   --tg-text-sm: 0.8125rem;

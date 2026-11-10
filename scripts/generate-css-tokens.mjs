@@ -52,6 +52,7 @@ function colorVars(theme, indent = '  ') {
 function scaleVars(theme, indent = '  ') {
   const lines = []
   lines.push(`${indent}--tg-font: ${theme.font.body};`)
+  lines.push(`${indent}--tg-font-heading: ${theme.font.heading};`)
   lines.push(`${indent}--tg-font-mono: ${theme.font.mono};`)
   for (const [k, v] of Object.entries(theme.size)) {
     lines.push(`${indent}--tg-text-${k}: ${v / 16}rem;`)
