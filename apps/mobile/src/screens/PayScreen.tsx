@@ -34,7 +34,8 @@ export function PayScreen({ route, navigation }: { route: any; navigation: any }
   const finish = useCallback(() => {
     if (done.current) return
     done.current = true
-    navigation.replace('OrderDetail', { id: orderId, justPaid: true })
+    // A moment of "it worked" first; the order (and its invoice) is one tap from there.
+    navigation.replace('OrderPlaced', { orderId })
   }, [navigation, orderId])
 
   const open = useCallback(async () => {

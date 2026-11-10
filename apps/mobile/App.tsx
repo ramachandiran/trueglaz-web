@@ -20,6 +20,7 @@ import { SignInScreen } from './src/screens/SignInScreen'
 import { HomeScreen } from './src/screens/HomeScreen'
 import { CatalogScreen } from './src/screens/CatalogScreen'
 import { ListingDetailScreen } from './src/screens/ListingDetailScreen'
+import { OrderPlacedScreen } from './src/screens/OrderPlacedScreen'
 import { CheckoutScreen } from './src/screens/CheckoutScreen'
 import { OrdersScreen } from './src/screens/OrdersScreen'
 import { OrderDetailScreen } from './src/screens/OrderDetailScreen'
@@ -70,7 +71,12 @@ function MainTabs() {
         tabBarActiveTintColor: t.colors.accent,
         tabBarInactiveTintColor: t.colors.textMuted,
         tabBarLabelStyle: { fontFamily: mobileFontFamily.medium, fontSize: 11 },
-        tabBarStyle: { backgroundColor: t.colors.bgRaised, borderTopColor: t.colors.border },
+        // Rounded on top and lifted on a soft shadow instead of a hard top border.
+        tabBarStyle: {
+          backgroundColor: t.colors.bgRaised, borderTopWidth: 0,
+          borderTopLeftRadius: 16, borderTopRightRadius: 16,
+          shadowColor: '#000', shadowOpacity: t.name === 'dark' ? 0.4 : 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: -4 }, elevation: 12,
+        },
       }}
     >
       <Tabs.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: tabIcon('home-outline', 'home') }} />
@@ -100,6 +106,7 @@ function AppStack() {
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
       <Root.Screen name="Pay" component={PayScreen} options={{ title: 'Payment' }} />
+      <Root.Screen name="OrderPlaced" component={OrderPlacedScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
       <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
-  api, EMPTY_FILTERS, money, relative,
-  useApi, activeFilterCount, singularCategory, type FacetOption, type Filters, type Listing,
+  api, EMPTY_FILTERS, money,
+  useApi, activeFilterCount, type FacetOption, type Filters,
   type SearchFacets, type SearchHit, type Sort,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -12,6 +12,7 @@ import { mobileFontFamily } from '../theme/fonts'
 import { useTheme } from '../theme/ThemeContext'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { sizedUri } from '../components/ModelImage'
+import { Chip as KitChip, ChipRow, PageTitle, ProductCard, lift } from '../components/kit'
 
 /**
  * Catalogue — a buyer-forward, B2B-marketplace card layout (image left, spec
@@ -35,6 +36,7 @@ const GROUPS: { key: ListKey; facet: keyof SearchFacets; title: string }[] = [
 export function CatalogScreen({ navigation, route }: { navigation: any; route?: any }) {
   const t = useTheme()
   const insets = useSafeAreaInsets()
+  const { width } = useWindowDimensions()
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [sheetOpen, setSheetOpen] = useState(false)
 
@@ -47,7 +49,6 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
 
   const key = JSON.stringify(filters)
   const search = useApi(() => api.searchListings(filters, 0, PAGE), [key])
-  const grades = useApi(() => api.grades(), [])
   const brands = useApi(() => api.brands(), [])
   const categories = useApi(() => api.categories(), [])
   const images = useApi(() => api.modelImages(), [])
@@ -89,8 +90,6 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
     } catch { /* the next scroll tries again */ } finally { setLoadingMore(false) }
   }
 
-  const gradeRank = useMemo(() => new Map((grades.data ?? []).map((g) => [g.code, g.rank])), [grades.data])
-  const gradeLabel = useMemo(() => new Map((grades.data ?? []).map((g) => [g.code, g.label])), [grades.data])
   const brandName = useMemo(() => new Map((brands.data ?? []).map((b) => [b.id, b.name])), [brands.data])
   const categoryName = useMemo(() => new Map((categories.data ?? []).map((c) => [c.id, c.name])), [categories.data])
   const imageBySlug = useMemo(
@@ -107,47 +106,47 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
   const activeCatId = filters.categoryIds.length === 1 ? filters.categoryIds[0] : null
   const crumb = activeCatId ? categoryName.get(activeCatId) ?? 'Gear' : 'All gear'
 
+  const sortLabel: Record<Sort, string> = { newest: 'Newest first', 'price-asc': 'Price: low to high', 'price-desc': 'Price: high to low', 'grade-desc': 'Best condition' }
+  const cardW = Math.floor((width - 32 - 14) / 2)
+
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <View style={{ flexDirection: 'row', gap: t.space.x3, padding: t.space.x4, paddingBottom: t.space.x3 }}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.space.x2, backgroundColor: t.colors.bgSunken, borderRadius: 15, paddingHorizontal: t.space.x4, height: 52 }}>
-          <Ionicons name="search" size={18} color={t.colors.textMuted} />
-          <TextInput
-            value={typed}
-            onChangeText={setTyped}
-            placeholder="Search cameras, lenses…"
-            placeholderTextColor={t.colors.textMuted}
-            style={{ flex: 1, color: t.colors.text, fontFamily: mobileFontFamily.regular, fontSize: 14 }}
-          />
-        </View>
-        <Pressable onPress={() => setSheetOpen(true)}
-          style={{ width: 52, height: 52, borderRadius: 15, backgroundColor: t.colors.accent, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="options-outline" size={23} color={t.colors.onCta} />
-          {active > 0 && (
-            <View style={{ position: 'absolute', top: -5, right: -5, minWidth: 19, height: 19, borderRadius: 10, backgroundColor: t.colors.brand, borderWidth: 2, borderColor: t.colors.bg, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-              <Txt style={{ color: t.colors.onBrand, fontSize: 10, fontWeight: t.weight.bold as never }}>{active}</Txt>
-            </View>
-          )}
-        </Pressable>
+      <PageTitle title="Shop" />
+
+      {/* Search, as a pill on a shadow rather than a sunken box. */}
+      <View style={[{ marginHorizontal: t.space.x4, marginTop: t.space.x3, flexDirection: 'row', alignItems: 'center', gap: t.space.x2,
+        backgroundColor: t.colors.bgRaised, borderRadius: t.radius.pill, paddingHorizontal: t.space.x4, height: 48 }, lift(t)]}>
+        <Ionicons name="search" size={18} color={t.colors.textMuted} />
+        <TextInput
+          value={typed}
+          onChangeText={setTyped}
+          placeholder="Search cameras, lenses…"
+          placeholderTextColor={t.colors.textMuted}
+          accessibilityLabel="Search the shop"
+          style={{ flex: 1, color: t.colors.text, fontFamily: mobileFontFamily.regular, fontSize: 14 }}
+        />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: t.space.x4, gap: t.space.x2, alignItems: 'center' }}
-        style={{ flexGrow: 0, flexShrink: 0, height: 52, marginBottom: t.space.x2 }}
-      >
-        <QuickChip label="All" selected={!activeCatId} onPress={() => onlyCategory(null)} />
-        {(search.data?.facets.category ?? (categories.data ?? []).map((c) => ({ value: c.id, label: c.name, count: 0 }))).map((c) => (
-          <QuickChip key={c.value} label={c.label} selected={activeCatId === c.value} onPress={() => onlyCategory(activeCatId === c.value ? null : c.value)} />
-        ))}
-      </ScrollView>
+      <View style={{ marginTop: t.space.x3 }}>
+        <ChipRow>
+          <KitChip label="All" on={!activeCatId} onPress={() => onlyCategory(null)} />
+          {(search.data?.facets.category ?? (categories.data ?? []).map((c) => ({ value: c.id, label: c.name, count: 0 }))).map((c) => (
+            <KitChip key={c.value} label={c.label} on={activeCatId === c.value} onPress={() => onlyCategory(activeCatId === c.value ? null : c.value)} />
+          ))}
+        </ChipRow>
+      </View>
 
-      <View style={{ paddingHorizontal: t.space.x4, paddingBottom: t.space.x2 }}>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
-          Used gear  ›  <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>{crumb}</Txt>
-          {`   ·   ${total} ${total === 1 ? 'result' : 'results'}`}
-        </Txt>
+      {/* Filters · sort · how many, as one quiet row. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: t.space.x4, paddingVertical: t.space.x3 }}>
+        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="filter" size={18} color={t.colors.text} />
+          <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>Filters{active ? ` · ${active}` : ''}</Txt>
+        </Pressable>
+        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="swap-vertical" size={16} color={t.colors.text} />
+          <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>{sortLabel[filters.sort]}</Txt>
+        </Pressable>
+        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{total} {total === 1 ? 'piece' : 'pieces'}</Txt>
       </View>
 
       {search.loading && !search.data && <Loading />}
@@ -156,28 +155,32 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
       {search.data && !search.error && (
         <FlatList
           data={hits}
+          numColumns={2}
           keyExtractor={(r) => r.listing.id}
           onEndReached={loadMore}
           onEndReachedThreshold={0.6}
           ListFooterComponent={loadingMore ? <Loading /> : undefined}
-          contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x1, gap: t.space.x3 }}
+          columnWrapperStyle={{ gap: 14 }}
+          contentContainerStyle={{ paddingHorizontal: t.space.x4, paddingTop: t.space.x1, paddingBottom: t.space.x6, gap: 22 }}
           ListEmptyComponent={<Empty title="Nothing matches those filters" hint="Try clearing one or widening the search." />}
-          renderItem={({ item: { listing, modelSlug, brandId, categoryId, mine } }) => (
-            <ListingCard
-              listing={listing}
-              image={modelSlug ? imageBySlug.get(modelSlug) : undefined}
-              brand={brandId ? brandName.get(brandId) : undefined}
-              category={categoryId ? categoryName.get(categoryId) : undefined}
-              gradeText={gradeLabel.get(listing.gradeCode)}
-              top={(gradeRank.get(listing.gradeCode) ?? 0) >= 9}
-              mine={!!mine}
-              onOpen={() => navigation.navigate('Listing', { id: listing.id })}
-              onBuy={() => navigation.navigate('Checkout', {
-                listingId: listing.id, title: listing.title.split('·')[0].trim(),
-                priceMinor: listing.priceMinor, currency: listing.currency,
-              })}
-            />
-          )}
+          renderItem={({ item: { listing, modelSlug, brandId, categoryId, mine } }) => {
+            const title = listing.title.split('·')[0].trim()
+            const category = categoryId ? categoryName.get(categoryId) : undefined
+            return (
+              <ProductCard
+                width={cardW}
+                g={{ title: listing.title, gradeCode: listing.gradeCode, priceMinor: listing.priceMinor, brandName: brandId ? brandName.get(brandId) : null, categorySlug: category ?? null }}
+                img={modelSlug ? imageBySlug.get(modelSlug) : undefined}
+                onPress={() => navigation.navigate('Listing', { id: listing.id })}
+                // A seller's own unit: they manage it from the listing page; buying it is refused.
+                actionIcon={mine ? 'create-outline' : 'bag-handle-outline'}
+                actionLabel={mine ? `Manage your ${title}` : `Buy ${title}`}
+                onAction={mine
+                  ? () => navigation.navigate('Listing', { id: listing.id })
+                  : () => navigation.navigate('Checkout', { listingId: listing.id, title, priceMinor: listing.priceMinor, currency: listing.currency })}
+              />
+            )
+          }}
         />
       )}
 
@@ -189,76 +192,6 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
         facets={search.data?.facets ?? null} price={search.data?.price ?? null} total={total} toggle={toggle}
       />
     </View>
-  )
-}
-
-function ListingCard({
-  listing, image, brand, category, gradeText, top, mine, onOpen, onBuy,
-}: {
-  listing: Listing; image?: string
-  brand?: string; category?: string; gradeText?: string; top: boolean; mine: boolean
-  onOpen: () => void; onBuy: () => void
-}) {
-  const t = useTheme()
-  const title = listing.title.split('·')[0].trim()
-  return (
-    <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, overflow: 'hidden' }}>
-      <Pressable onPress={onOpen} style={{ flexDirection: 'row', gap: t.space.x3, padding: 13 }}>
-        <View style={{ width: 100, height: 100, borderRadius: 13, overflow: 'hidden', backgroundColor: image ? '#ffffff' : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
-          {image
-            ? <Image source={{ uri: image }} style={{ width: 100, height: 100 }} resizeMode="contain" />
-            : <Ionicons name="camera-outline" size={34} color={t.colors.textMuted} />}
-          <View style={{ position: 'absolute', top: 7, left: 7, backgroundColor: top ? t.colors.good : t.colors.accent, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 8 }}>
-            <Txt style={{ color: '#fff', fontSize: 10.5, fontWeight: t.weight.bold as never }}>{listing.gradeCode}</Txt>
-          </View>
-        </View>
-
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Txt numberOfLines={2} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: -0.2, lineHeight: 19 }}>{title}</Txt>
-          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, letterSpacing: -0.4, marginTop: 4 }}>{money(listing.priceMinor, listing.currency)}</Txt>
-          {(brand || category) && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 5 }}>
-              {brand && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>{brand}</Txt>}
-              {brand && category && <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: t.colors.textMuted }} />}
-              {category && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>{singularCategory(category)}</Txt>}
-            </View>
-          )}
-          <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, backgroundColor: t.colors.goodSoft, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
-            <Ionicons name="checkmark-circle" size={12} color={t.colors.good} />
-            <Txt style={{ color: t.colors.good, fontSize: 11, fontWeight: t.weight.bold as never }}>Grade {listing.gradeCode}{gradeText ? ` · ${gradeText}` : ''}</Txt>
-          </View>
-        </View>
-      </Pressable>
-
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 13, paddingVertical: 11, borderTopWidth: 1, borderTopColor: t.colors.border }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="time-outline" size={13} color={t.colors.textMuted} />
-          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>
-            {listing.publishedAt ? `Listed ${relative(listing.publishedAt)}` : 'Recently listed'}
-          </Txt>
-        </View>
-        {mine ? (
-          // A seller's own unit: they manage it from the listing page; buying it is refused.
-          <Pressable onPress={onOpen} style={{ borderWidth: 1.5, borderColor: t.colors.accent, borderRadius: 11, paddingVertical: 8, paddingHorizontal: 14 }}>
-            <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Your listing · Manage</Txt>
-          </Pressable>
-        ) : (
-          <Pressable onPress={onBuy} style={{ backgroundColor: t.colors.cta, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 18 }}>
-            <Txt style={{ color: t.colors.onCta, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Buy now</Txt>
-          </Pressable>
-        )}
-      </View>
-    </View>
-  )
-}
-
-function QuickChip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  const t = useTheme()
-  return (
-    <Pressable onPress={onPress}
-      style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: selected ? t.colors.accent : t.colors.bgRaised, borderColor: selected ? t.colors.accent : t.colors.border }}>
-      <Txt style={{ color: selected ? t.colors.onAccent : t.colors.text, fontSize: t.size.sm }}>{label}</Txt>
-    </Pressable>
   )
 }
 
