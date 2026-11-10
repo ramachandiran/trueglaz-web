@@ -258,6 +258,8 @@
   font-size: var(--tg-text-sm);
   line-height: 1.5;
 }
+/* A bought item's way back: a full-width secondary button under the note. */
+.buybox__mine .buybox__back { display: flex; width: 100%; margin-top: var(--tg-space-3); font-weight: var(--tg-weight-medium); }
 
 /* Doubled up: `.tg-button` sets its own background, and a single class here
    loses to it — which is how the one button on the page that must be
