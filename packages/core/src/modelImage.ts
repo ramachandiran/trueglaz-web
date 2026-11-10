@@ -14,4 +14,12 @@
  * manufacturer's photograph or the placeholder we ship until one arrives.
  */
 export const STOCK_IMAGE_BADGE = 'Not this unit'
+
+/**
+ * The studio background every model picture is made on, and the frame colour
+ * around it, so the padding of a picture that does not fill its box is
+ * invisible. A warm light grey: calm on the dark app, a card on the cream web.
+ * Keep it in step with the API's image pipeline and `--tg-photo-bg` on the web.
+ */
+export const PHOTO_BG = '#F3F1EA'
 export const STOCK_IMAGE_NOTE = 'A picture of this model, not of the item being sold'

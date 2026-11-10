@@ -7,7 +7,7 @@
  */
 import { Image, Pressable, ScrollView, View, type StyleProp, type ViewStyle } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { money, type Theme } from '@trueglaz/core'
+import { money, PHOTO_BG, type Theme } from '@trueglaz/core'
 import { Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
 
@@ -135,7 +135,7 @@ export function GearArt({ uri, lens, brand, width, height, radius = 12, icon }: 
 }) {
   const t = useTheme()
   return (
-    <View style={{ width, height, borderRadius: radius, overflow: 'hidden', backgroundColor: uri ? '#ffffff' : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width, height, borderRadius: radius, overflow: 'hidden', backgroundColor: uri ? PHOTO_BG : t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
       {uri
         ? <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
         : <Ionicons name={lens ? 'aperture-outline' : 'camera-outline'} size={icon ?? 48} color={t.colors.textMuted} />}

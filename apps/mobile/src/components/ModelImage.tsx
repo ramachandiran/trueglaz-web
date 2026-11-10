@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Image, View, type StyleProp, type ViewStyle } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, type MediaView, type ModelImageEntry } from '@trueglaz/core'
+import { api, PHOTO_BG, type MediaView, type ModelImageEntry } from '@trueglaz/core'
 import { API_ORIGIN } from '../config'
 import { useTheme } from '../theme/ThemeContext'
 
@@ -81,7 +81,7 @@ export function ModelThumb({ image, size, want = 200, style }: {
   return (
     <View style={[{
       width: size, height: size, borderRadius: Math.round(size / 4), overflow: 'hidden',
-      backgroundColor: show ? '#ffffff' : t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border,
+      backgroundColor: show ? PHOTO_BG : t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border,
       alignItems: 'center', justifyContent: 'center',
     }, style]}>
       {show

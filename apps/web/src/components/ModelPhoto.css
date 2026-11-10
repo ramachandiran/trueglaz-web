@@ -1,3 +1,7 @@
+/* The studio background model pictures are made on (keep in step with PHOTO_BG
+   in @trueglaz/core and the API's image pipeline). */
+:root { --tg-photo-bg: #f3f1ea; }
+
 /* A model's picture. The same boxes as .photo (GearPhoto) at every size, so a
    tile never changes shape when a picture arrives: a stock picture with no
    fixed size once stretched catalogue tiles to the full row width. */
@@ -8,8 +12,8 @@
   overflow: hidden;
   border-radius: var(--tg-radius-md);
   border: 1px solid var(--tg-border);
-  /* Pictures are made on white; the frame is white too so the padding is invisible. */
-  background: #fff;
+  /* Pictures are made on the studio grey; the frame matches so the padding is invisible. */
+  background: var(--tg-photo-bg, #f3f1ea);
 }
 
 .model-photo--thumb { width: 54px; height: 54px; border-radius: var(--tg-radius-sm); }

@@ -53,7 +53,7 @@
 .am__card--photo { border-color: color-mix(in srgb, var(--tg-good) 45%, var(--tg-border)); }
 
 /* 4:3 on white: the shop's own tile, so what you see here is what buyers see. */
-.am__frame { position: relative; aspect-ratio: 4 / 3; background: #fff; border-bottom: 1px solid var(--tg-border); }
+.am__frame { position: relative; aspect-ratio: 4 / 3; background: var(--tg-photo-bg, #f3f1ea); border-bottom: 1px solid var(--tg-border); }
 .am__frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .am__frame .photo { width: 100%; height: 100%; border: 0; border-radius: 0; }
 
@@ -82,14 +82,14 @@
 .am__preview { display: grid; gap: 6px; }
 .am__preview p { margin: 0; }
 .am__sizes { display: flex; gap: var(--tg-space-3); align-items: flex-end; }
-.am__tile, .am__thumb { display: block; background: #fff; border: 1px solid var(--tg-border); overflow: hidden; }
+.am__tile, .am__thumb { display: block; background: var(--tg-photo-bg, #f3f1ea); border: 1px solid var(--tg-border); overflow: hidden; }
 .am__tile { width: 120px; height: 120px; border-radius: var(--tg-radius-md); }
 .am__thumb { width: 54px; height: 54px; border-radius: var(--tg-radius-sm); }
 .am__tile img, .am__thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .am__history { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; font-size: var(--tg-text-sm); }
 .am__history li { display: flex; gap: 8px; align-items: center; }
-.am__history img { width: 44px; height: 44px; object-fit: contain; background: #fff; border: 1px solid var(--tg-border); border-radius: var(--tg-radius-sm); flex: none; }
+.am__history img { width: 44px; height: 44px; object-fit: contain; background: var(--tg-photo-bg, #f3f1ea); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-sm); flex: none; }
 
 /* --- bulk ------------------------------------------------------------------- */
 
