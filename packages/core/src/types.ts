@@ -1724,6 +1724,21 @@ export interface InsuranceRequest {
   policy: VaultPolicy | null
 }
 
+/** One row of the staff insurance desk: a cover request waiting to be issued by hand. */
+export interface InsuranceQueueRow {
+  id: string
+  userId: string
+  ownerName: string | null
+  modelLabel: string
+  planCode: string
+  sumInsuredMinor: number
+  totalMinor: number
+  status: 'authorized' | 'submitted'
+  requestedAt: string | null
+  slaDueAt: string | null
+  overdue: boolean
+}
+
 export interface VaultItem {
   id: string
   modelLabel: string

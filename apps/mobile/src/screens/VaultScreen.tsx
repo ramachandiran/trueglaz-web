@@ -63,6 +63,8 @@ export function VaultScreen() {
   const items = data ?? []
   const total = useMemo(() => items.reduce((n, it) => n + estimate(it), 0), [items])
   const insured = items.filter((i) => i.policy).length
+  // Paid for and waiting on staff to issue: say so, not "0 insured".
+  const issuing = items.filter((i) => !i.policy && i.insuranceRequest).length
 
   function afterPrivacy() { setPrivacy(null); rePrivacy(); reload() }
 
@@ -123,7 +125,7 @@ export function VaultScreen() {
               <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>Estimated market value</Txt>
               <Txt style={{ color: t.colors.onBrand, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -1, marginTop: 2 }}>~{money(total)}</Txt>
               <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs, marginTop: 7 }}>
-                {items.length} item{items.length === 1 ? '' : 's'} · {insured} insured · indicative, final price set at a free inspection
+                {items.length} item{items.length === 1 ? '' : 's'} · {coverNote(insured, issuing)} · indicative, final price set at a free inspection
               </Txt>
             </View>
           ) : undefined}
@@ -526,4 +528,11 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
       </View>
     </Modal>
   )
+}
+
+/** "2 insured", "1 insured · 1 being issued", or "1 cover being issued". */
+function coverNote(insured: number, issuing: number): string {
+  if (issuing === 0) return `${insured} insured`
+  if (insured > 0) return `${insured} insured · ${issuing} being issued`
+  return `${issuing} ${issuing === 1 ? 'cover' : 'covers'} being issued`
 }

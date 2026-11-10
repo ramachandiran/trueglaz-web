@@ -53,6 +53,8 @@ export function VaultPage() {
   const unlocked = isUnlocked()
   const total = useMemo(() => (data ?? []).reduce((n, it) => n + estimate(it), 0), [data])
   const insured = (data ?? []).filter((i) => i.policy).length
+  // Paid for and waiting on staff to issue: say so, not "0 insured".
+  const issuing = (data ?? []).filter((i) => !i.policy && i.insuranceRequest).length
 
   if (loading) return <Loading label="Opening your vault" />
   if (error) return <ErrorNote error={error} onRetry={reload} />
@@ -87,7 +89,7 @@ export function VaultPage() {
           <span className="vault__hero-lab">Estimated market value</span>
           <span className="vault__hero-val">~{money(total)}</span>
           <span className="vault__hero-note">
-            {items.length} item{items.length === 1 ? '' : 's'} · {insured} insured · indicative, final price is set at a free inspection
+            {items.length} item{items.length === 1 ? '' : 's'} · {coverNote(insured, issuing)} · indicative, final price is set at a free inspection
           </span>
         </section>
       )}
@@ -465,3 +467,10 @@ function LockIcon({ open = false }: { open?: boolean }) {
   )
 }
 
+
+/** "2 insured", "1 insured · 1 being issued", or "1 cover being issued". */
+function coverNote(insured: number, issuing: number): string {
+  if (issuing === 0) return `${insured} insured`
+  if (insured > 0) return `${insured} insured · ${issuing} being issued`
+  return `${issuing} ${issuing === 1 ? 'cover' : 'covers'} being issued`
+}

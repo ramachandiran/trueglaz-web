@@ -1,0 +1,12 @@
+/* Insurance desk: the issue and decline forms sit under the request, one line on a wide screen. */
+.desk__form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--tg-space-3); }
+.desk__field { display: flex; flex-direction: column; gap: 4px; width: 220px; font-size: var(--tg-text-xs); }
+.desk__field--wide { width: 360px; }
+.desk__field > span { font-weight: var(--tg-weight-medium); color: var(--tg-text-muted); }
+.desk__field em { font-style: normal; font-weight: var(--tg-weight-regular, 400); opacity: 0.8; }
+.desk__field em::before { content: '· '; }
+.desk__buttons { display: inline-flex; gap: var(--tg-space-2); }
+
+@media (max-width: 720px) {
+  .desk__field, .desk__field--wide { width: 100%; }
+}

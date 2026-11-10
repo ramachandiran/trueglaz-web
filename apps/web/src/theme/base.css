@@ -85,6 +85,10 @@ select {
   color: inherit;
 }
 
+/* Native ticks and dots in the brand orange, not the browser's blue. */
+input[type='radio'],
+input[type='checkbox'] { accent-color: var(--tg-cta); }
+
 :where(button, a, input, select, summary):focus-visible {
   outline: 2px solid var(--tg-accent);
   outline-offset: 2px;

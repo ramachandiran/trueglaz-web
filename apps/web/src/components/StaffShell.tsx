@@ -18,6 +18,7 @@ const ICONS = {
   operations: 'M14 7l3 3L7 20l-4 1 1-4L14 7zM14 7l3-3 4 4-3 3',
   returns: 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 5 5v1',
   fulfilment: 'M1 3h15v13H1zM16 8h4l3 3v5h-7M5.5 19a2 2 0 1 0 0 .01M18.5 19a2 2 0 1 0 0 .01',
+  insurance: 'M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3zM9 12l2 2 4-4',
   people: 'M9 11a3.2 3.2 0 1 0 0-6.4A3.2 3.2 0 0 0 9 11zM2 20a7 7 0 0 1 14 0M16 5.5a3 3 0 0 1 0 5M22 20a6 6 0 0 0-5-5.9',
   money: 'M2 5h20v14H2zM2 10h20M6 15h4',
   balance: 'M12 3v18M4 7h16M6 7l-3 6a3 3 0 0 0 6 0zM18 7l-3 6a3 3 0 0 0 6 0z',
@@ -36,6 +37,7 @@ function sections(staff: boolean, admin: boolean) {
         { to: '/admin/operations', label: 'Operations', icon: ICONS.operations },
         { to: '/admin/returns', label: 'Returns', icon: ICONS.returns },
         staff && { to: '/admin/fulfilment', label: 'Fulfilment', icon: ICONS.fulfilment },
+        staff && { to: '/admin/insurance', label: 'Insurance desk', icon: ICONS.insurance },
       ].filter(Boolean) as NavItem[],
     },
     {
@@ -61,7 +63,7 @@ type NavItem = { to: string; end?: boolean; label: string; icon: string }
 function titleFor(pathname: string): string {
   const map: [string, string][] = [
     ['/admin/inventory', 'Inventory'], ['/admin/operations', 'Operations'], ['/admin/returns', 'Returns'],
-    ['/admin/fulfilment', 'Fulfilment'], ['/admin/people', 'People'], ['/admin/money', 'Money'],
+    ['/admin/fulfilment', 'Fulfilment'], ['/admin/insurance', 'Insurance desk'], ['/admin/people', 'People'], ['/admin/money', 'Money'],
     ['/admin/balance-sheet', 'Balance sheet'], ['/admin/audit', 'Audit'], ['/admin/settings', 'Settings'],
   ]
   for (const [p, label] of map) if (pathname.startsWith(p)) return label
