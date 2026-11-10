@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { api, money, relative, useApi, useSession } from '@trueglaz/core'
-import type { BuyerAsk, BuyerHome, BuyerOrder, HomeListing, HomeSale, HomeView, MediaView } from '@trueglaz/core'
+import type { BuyerHome, HomeListing, HomeSale, HomeView, MediaView, VaultItem } from '@trueglaz/core'
 import { photoKindFor } from '../components/GearPhoto'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { srcSet } from '../components/Gallery'
@@ -12,10 +12,10 @@ import './HomePage.css'
  *
  * TrueGlaz has two kinds of visitor, so the first screen has two doors: Buy,
  * the wider one because most visitors come to buy, and Sell, which starts at
- * sign-in and the one-time ID check. A signed-in buyer's own corner comes next,
- * then the Gear Vault invite, then two short shelves — what sold and for how
+ * sign-in and the one-time ID check. Then the Gear Vault invite, then two short shelves — what sold and for how
  * much (the thing a seller and a buyer both want to know), and what just came
  * in — and the four promises last, where "How it works" in the hero points.
+ * A signed-in person gets their own page instead: see [Me].
  *
  * Shorter on purpose: the brand and mount chips, the top models and the ask
  * board live in Shop and Wanted, one click away, rather than as nine equal
@@ -25,6 +25,7 @@ export function HomePage() {
   const { session } = useSession()
   const home = useApi(() => api.home(), [])
   const mine = useApi(() => (session ? api.buyerHome() : Promise.resolve(null)), [session?.userId])
+  const vault = useApi(() => (session ? api.vault() : Promise.resolve(null)), [session?.userId])
 
   if (home.loading) return <Loading label="Loading" />
   if (home.error) return <ErrorNote error={home.error} onRetry={home.reload} />
@@ -35,47 +36,53 @@ export function HomePage() {
   const first = (session?.displayName ?? '').split(' ')[0]
   const signedIn = !!session
 
+  const sold = d.recentlySold.length > 0 && (
+    <Shelf
+      compact
+      kicker="Recently sold"
+      title="What gear actually sells for here"
+      blurb="Thinking of selling? This is what buyers paid."
+    >
+      {d.recentlySold.slice(0, 4).map((s) => <SoldCard key={s.id} sale={s} />)}
+    </Shelf>
+  )
+  const justIn = d.justIn.length > 0 && (
+    <Shelf
+      kicker="Just in"
+      title="Fresh off the inspection bench"
+      to="/catalog?sort=newest"
+      linkText={`See all ${inStock} →`}
+      aside={
+        <Link to={signedIn ? '/wanted?ask=1' : '/wanted'} className="home__ask">
+          Can't find it? Ask for it →
+        </Link>
+      }
+    >
+      {d.justIn.slice(0, 4).map((l) => <GearCard key={l.id} listing={l} />)}
+    </Shelf>
+  )
+
+  // Someone signed in has already chosen to be here: their own tiles lead, new
+  // arrivals come before sold prices, and the visitor's pitch (the Buy / Sell
+  // doors, the vault invite, how it works) is left out.
+  if (signedIn) {
+    return (
+      <div className="home">
+        {mine.error
+          ? <ErrorNote error={mine.error} onRetry={mine.reload} />
+          : <Me b={mine.data ?? null} vault={vault.data ?? null} name={first} />}
+        {justIn}
+        {sold}
+      </div>
+    )
+  }
+
   return (
     <div className="home">
-      {/* The Buy / Sell doors are the pitch to a visitor. Someone signed in has
-          already chosen; their own orders and requests lead the page instead. */}
-      {!signedIn && <Doors d={d} inStock={inStock} />}
-
-      {session && (
-        mine.error ? <ErrorNote error={mine.error} onRetry={mine.reload} />
-          : mine.data ? <Corner b={mine.data} name={first} />
-            : null
-      )}
-
+      <Doors d={d} inStock={inStock} />
       <VaultInvite sales={d.recentlySold} />
-
-      {d.recentlySold.length > 0 && (
-        <Shelf
-          compact
-          kicker="Recently sold"
-          title="What gear actually sells for here"
-          blurb="Thinking of selling? This is what buyers paid."
-        >
-          {d.recentlySold.slice(0, 4).map((s) => <SoldCard key={s.id} sale={s} />)}
-        </Shelf>
-      )}
-
-      {d.justIn.length > 0 && (
-        <Shelf
-          kicker="Just in"
-          title="Fresh off the inspection bench"
-          to="/catalog?sort=newest"
-          linkText={`See all ${inStock} →`}
-          aside={
-            <Link to={signedIn ? '/wanted?ask=1' : '/wanted'} className="home__ask">
-              Can't find it? Ask for it →
-            </Link>
-          }
-        >
-          {d.justIn.slice(0, 4).map((l) => <GearCard key={l.id} listing={l} />)}
-        </Shelf>
-      )}
-
+      {sold}
+      {justIn}
       <Promises hours={d.returnWindowHours} />
     </div>
   )
@@ -232,183 +239,93 @@ function Promises({ hours }: { hours: number }) {
   )
 }
 
-// -------------------------------------------------------------- your corner --
+// ------------------------------------------------------------- signed in --
+
+function greeting(): string {
+  const h = new Date().getHours()
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+}
 
 /**
- * The signed-in buyer's own strip: what needs them, where their parcels are,
- * and what they asked for. Empty parts are left out rather than shown as
- * empty boxes; a first-time buyer gets one line inviting them to ask.
+ * A signed-in person's top of the page. No order details: those live in
+ * Orders, and a count with a link is all the home page needs ("2 orders on
+ * the way", only when there are some). The rest is three tiles, each a reason
+ * to come back today, each with one button:
+ * - what they asked for is in stock (else: ask for it);
+ * - what their kit is worth (else: add it to the vault);
+ * - what their most valuable item could sell for (hidden if nothing valued).
+ * Empty data never shows an empty box: every tile has a fallback or is left out.
  */
-function Corner({ b, name }: { b: BuyerHome; name: string }) {
-  const live = b.orders.filter((o) => LIVE.has(o.stage))
-  const done = b.orders.filter((o) => !LIVE.has(o.stage))
-  const nothing = b.orders.length === 0 && b.asks.length === 0
+function Me({ b, vault, name }: { b: BuyerHome | null; vault: VaultItem[] | null; name: string }) {
+  const onTheWay = b?.stats.inProgress ?? 0
+  const ask = b?.asks.find((a) => (a.matchCount ?? 0) > 0) ?? null
+  const items = vault ?? []
+  const worth = items.reduce((n, i) => n + (i.valuation?.midMinor ?? i.costMinor ?? 0), 0)
+  const insured = items.filter((i) => i.policy).length
+  const best = [...items].filter((i) => i.valuation).sort((x, y) => y.valuation!.midMinor - x.valuation!.midMinor)[0] ?? null
+
   return (
-    <section className="corner" aria-label="Your orders and requests">
-      <div className="corner__head">
-        {/* The page heading for a signed-in visitor: the doors and their h1 are not shown. */}
-        <h1 className="corner__title">{name ? `Welcome back, ${name}` : 'Welcome back'}</h1>
-        <ul className="corner__stats">
-          <li><strong>{b.stats.inProgress}</strong> on the way to you</li>
-          <li><strong>{b.stats.bought}</strong> bought</li>
-          <li><strong>{b.stats.openAsks}</strong> {b.stats.openAsks === 1 ? 'request' : 'requests'} open</li>
-        </ul>
-        <Link to="/orders" className="corner__all">All orders →</Link>
-      </div>
-
-      {b.actions.length > 0 && (
-        <div className="corner__todo">
-          {b.actions.map((a) => {
-            const inner = (
-              <>
-                <span className="home-task__n">{a.count}</span>
-                <span className="home-task__body"><strong>{a.title}</strong><span>{a.hint}</span></span>
-                <span className="home-task__go" aria-hidden="true">→</span>
-              </>
-            )
-            // "#asks" points further down this page, so it is a plain anchor, not a route.
-            return a.href.startsWith('#')
-              ? <a key={a.key} href={a.href} className={`home-task home-task--${a.tone}`}>{inner}</a>
-              : <Link key={a.key} to={a.href} className={`home-task home-task--${a.tone}`}>{inner}</Link>
-          })}
-        </div>
-      )}
-
-      {nothing ? (
-        <p className="corner__empty">
-          Nothing on order yet. Can't see what you want below?{' '}
-          <Link to="/wanted?ask=1">Tell us what you're looking for</Link> and we'll show you here when one arrives.
-        </p>
-      ) : (
-        <div className="corner__cols">
-          <div className="corner__orders">
-            <h3 className="home__kicker">Your orders</h3>
-            {b.orders.length === 0 ? (
-              <p className="corner__muted">Nothing on order.</p>
-            ) : (
-              <ul className="parcels">
-                {[...live, ...done].map((o) => <Parcel key={o.lineId} o={o} />)}
-              </ul>
-            )}
-          </div>
-          <div className="corner__asks" id="asks">
-            <h3 className="home__kicker">You asked for</h3>
-            {b.asks.length === 0 ? (
-              <p className="corner__muted">
-                No open requests. <Link to="/wanted?ask=1">Ask for something</Link> — we'll match it against
-                everything that comes in.
-              </p>
-            ) : (
-              <ul className="myasks">{b.asks.map((a) => <MyAsk key={a.id} a={a} />)}</ul>
-            )}
-          </div>
-        </div>
-      )}
-    </section>
-  )
-}
-
-const LIVE = new Set(['paying', 'preparing', 'on_the_way', 'delivered', 'returning'])
-const STEPS = ['Paid', 'Shipped', 'Delivered', 'Yours']
-const STEP_OF: Record<string, number> = { paying: -1, preparing: 0, on_the_way: 1, delivered: 2, yours: 3, kept_after_return: 3 }
-
-function Parcel({ o }: { o: BuyerOrder }) {
-  const step = STEP_OF[o.stage]
-  const left = timeLeft(o.windowEndsAt)
-  return (
-    <li className={`parcel parcel--${o.stage}`}>
-      <Link to={`/listings/${o.listingId}`} className="parcel__thumb">
-        <Cover cover={o.cover} categorySlug={o.categorySlug} alt={o.title} modelSlug={o.modelSlug} />
-      </Link>
-      <div className="parcel__body">
-        <div className="parcel__top">
-          <Link to="/orders" className="parcel__name">{o.title}</Link>
-          <span className="parcel__price">{money(o.priceMinor)}</span>
-        </div>
-        <p className={`parcel__status parcel__status--${toneOf(o)}`}>{statusOf(o, left)}</p>
-        {step !== undefined && step >= 0 && (
-          <ol className="home-steps" aria-label="Progress">
-            {STEPS.map((s, i) => (
-              <li key={s} className={`home-steps__s${i <= step ? ' home-steps__s--done' : ''}${i === step ? ' home-steps__s--now' : ''}`}>{s}</li>
-            ))}
-          </ol>
+    <section className="me" aria-labelledby="me-title">
+      <div className="me__top">
+        <h1 id="me-title" className="me__hi">{greeting()}{name ? `, ${name}` : ''}</h1>
+        {onTheWay > 0 && (
+          <Link to="/orders" className="me__chip">
+            <span className="me__dot" aria-hidden="true" />
+            <b>{onTheWay}</b> {onTheWay === 1 ? 'order' : 'orders'} on the way · Track
+          </Link>
         )}
-        <p className="parcel__meta tg-muted">
-          {o.orderNumber}
-          {o.placedAt && ` · ordered ${relative(o.placedAt)}`}
-          {o.trackingNumber && o.stage === 'on_the_way' && ` · ${o.courierCode ?? 'courier'} ${o.trackingNumber}`}
-        </p>
       </div>
-    </li>
-  )
-}
 
-const RETURN_TEXT: Record<string, string> = {
-  requested: 'Return requested — we will reply shortly',
-  approved: 'Return approved — send it back with the label on your order',
-  declined: 'Return declined — see your order for why',
-  received: 'We have your return and are checking it',
-  inspected: 'Your return has been checked; decision coming',
-  escalated: 'Your return is with our team for a decision',
-  refunded: 'Returned and refunded',
-  sale_stands: 'The sale stands; the item is on its way back to you',
-}
-
-function statusOf(o: BuyerOrder, left: string | null): string {
-  switch (o.stage) {
-    case 'paying': return 'Waiting for your payment'
-    case 'preparing': return 'Paid — we are packing it'
-    case 'on_the_way': return 'On its way to you'
-    case 'delivered': return left ? `Delivered — ${left} left to return it` : 'Delivered — the return window has closed'
-    case 'returning': return RETURN_TEXT[o.returnState ?? 'requested'] ?? 'Return in progress'
-    case 'yours': return 'Yours — enjoy it'
-    case 'kept_after_return': return 'Yours — the return was not accepted'
-    case 'refunded': return 'Returned and refunded'
-    default: return 'Cancelled — your money is refunded'
-  }
-}
-
-function toneOf(o: BuyerOrder): string {
-  if (o.stage === 'delivered' || (o.stage === 'returning' && o.returnState === 'approved')) return 'urgent'
-  if (o.stage === 'yours') return 'good'
-  if (LIVE.has(o.stage)) return 'live'
-  return 'quiet'
-}
-
-function MyAsk({ a }: { a: BuyerAsk }) {
-  return (
-    <li className={`myask${a.matchCount > 0 ? ' myask--hit' : ''}`}>
-      <div className="myask__top">
-        <strong className="myask__what"><ModelPhoto slug={a.modelSlug} kind="gear" size="mini" alt="" badge={false} />{a.wanted}</strong>
-        {a.state === 'submitted' && <span className="myask__review">Being reviewed</span>}
-      </div>
-      <p className="myask__terms tg-muted">
-        {[a.minGradeCode && `${a.minGradeCode} or better`, a.maxPriceMinor != null && `up to ${money(a.maxPriceMinor)}`]
-          .filter(Boolean).join(' · ') || 'Any grade, any price'}
-      </p>
-      {a.matchCount > 0 ? (
-        <>
-          <p className="myask__hit">★ {a.matchCount} in stock {a.matchCount === 1 ? 'fits' : 'fit'} what you asked for</p>
-          <ul className="myask__matches">
-            {a.matches.map((m) => (
-              <li key={m.listingId}>
-                <Link to={`/listings/${m.listingId}`} className="myask__match">
-                  <GradeBadge code={m.gradeCode} />
-                  <span className="myask__match-name">{m.title}</span>
-                  <strong>{money(m.priceMinor)}</strong>
-                </Link>
-              </li>
+      <div className="me__tiles">
+        {ask ? (
+          <div className="tile tile--navy">
+            <p className="tile__k">Matches your request</p>
+            <h2 className="tile__t">
+              The {ask.matches[0]?.title ?? ask.wanted} you asked for: {ask.matchCount} in stock at your price
+            </h2>
+            {ask.matches.slice(0, 2).map((m) => (
+              <Link key={m.listingId} to={`/listings/${m.listingId}`} className="tile__match">
+                <span><i>{m.gradeCode}</i>{m.title}</span><b>{money(m.priceMinor)}</b>
+              </Link>
             ))}
-          </ul>
-        </>
-      ) : (
-        <p className="myask__none tg-muted">
-          {a.nearCount > 0
-            ? `${a.nearCount} of this model in stock, outside your grade or budget.`
-            : 'Nothing yet. We will match it against everything that comes in.'}
-        </p>
-      )}
-    </li>
+            <Link to="/wanted" className="tg-button tg-button--primary tile__cta">See matches</Link>
+          </div>
+        ) : (
+          <div className="tile tile--navy">
+            <p className="tile__k">Wanted</p>
+            <h2 className="tile__t">Can't find the gear you want? Tell us and we'll tell you when it's in.</h2>
+            <Link to="/wanted?ask=1" className="tg-button tg-button--primary tile__cta">Ask for it</Link>
+          </div>
+        )}
+
+        {items.length > 0 ? (
+          <div className="tile tile--cream">
+            <p className="tile__k">Your Gear Vault</p>
+            <div className="tile__big">~{money(worth)}</div>
+            <p className="tile__sub">
+              {items.length} {items.length === 1 ? 'item' : 'items'} · {insured ? `${insured} insured` : 'none insured yet'} · valued from real sales
+            </p>
+            <Link to="/vault" className="tg-button tile__cta">Open your vault</Link>
+          </div>
+        ) : (
+          <div className="tile tile--cream">
+            <p className="tile__k">Gear Vault · free</p>
+            <h2 className="tile__t">What is your kit worth today?</h2>
+            <p className="tile__sub">Add what you own. We value it from real sales, and you can insure it.</p>
+            <Link to="/vault" className="tg-button tile__cta">Add your gear</Link>
+          </div>
+        )}
+
+        {best && (
+          <div className="tile tile--cream">
+            <p className="tile__k">Upgrading?</p>
+            <h2 className="tile__t">Your {best.modelLabel} could fetch ~{money(best.valuation!.midMinor)}</h2>
+            <p className="tile__sub">We inspect it, price it and sell it. Paid to your bank once the buyer keeps it.</p>
+            <Link to="/sell" className="tg-button tile__cta">Sell it with us</Link>
+          </div>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -531,14 +448,4 @@ function Cover({ cover, categorySlug, alt, modelSlug }: {
 function windowText(hours: number): string {
   if (hours % 24 === 0 && hours >= 48) return `${hours / 24} days`
   return `${hours} hours`
-}
-
-function timeLeft(iso: string | null): string | null {
-  if (!iso) return null
-  const ms = new Date(iso).getTime() - Date.now()
-  if (Number.isNaN(ms) || ms <= 0) return null
-  const mins = Math.ceil(ms / 60_000)
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
-  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`
 }

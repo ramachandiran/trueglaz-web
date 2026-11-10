@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Image, Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, isSeller, money, useApi, useSession, type HomeListing, type HomeSale, type Theme } from '@trueglaz/core'
+import { api, isSeller, money, useApi, useSession, type BuyerHome, type HomeListing, type HomeSale, type Theme, type VaultItem } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Muted } from '../components/ui'
@@ -22,6 +22,9 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   const home = useApi(() => api.home(), [])
   const images = useApi(() => api.modelImages(), [])
   const notif = useApi(() => api.notifications(), [])
+  // Signed in: their own tiles replace the sell pitch and the Buy / Sell toggle.
+  const mine = useApi(() => (session ? api.buyerHome() : Promise.resolve(null)), [session?.userId])
+  const vault = useApi(() => (session ? api.vault() : Promise.resolve(null)), [session?.userId])
   const [tab, setTab] = useState<'buy' | 'sell'>('buy')
   const firstName = session?.displayName?.split(' ')[0] ?? null
   const unread = notif.data?.unread ?? 0
@@ -103,52 +106,11 @@ export function HomeScreen({ navigation }: { navigation: any }) {
         </ScrollView>
       )}
 
-      {/* sell hero */}
-      <View style={{ paddingHorizontal: t.space.x4 }}>
-        <View style={{ backgroundColor: t.colors.brand, borderRadius: 22, padding: t.space.x5, overflow: 'hidden' }}>
-          <View style={{ position: 'absolute', right: -40, top: -36, width: 180, height: 180, borderRadius: 90, backgroundColor: '#ffffff12' }} />
-          <View style={{ position: 'absolute', right: 20, bottom: 18, opacity: 0.9 }}>
-            <Ionicons name="camera" size={78} color={t.colors.brandAlt} />
-            <View style={{ position: 'absolute', top: 30, left: 27, width: 24, height: 24, borderRadius: 12, backgroundColor: t.colors.accent }} />
-          </View>
-          <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xl, fontWeight: t.weight.bold as never, letterSpacing: -0.4, maxWidth: 210 }}>
-            Sell your gear, get paid
-          </Txt>
-          <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm, marginTop: 7, maxWidth: 200 }}>
-            Free pickup, honest grading &amp; fast payout
-          </Txt>
-          <Pressable onPress={() => navigation.navigate('Sell')}
-            style={{ alignSelf: 'flex-start', marginTop: t.space.x4, backgroundColor: t.colors.cta, borderRadius: 14, paddingVertical: t.space.x3, paddingHorizontal: t.space.x5 }}>
-            <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>
-              {isSeller(session) ? 'Open my selling' : 'Start selling'}
-            </Txt>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* buy / sell toggle */}
-      <View style={{ paddingHorizontal: t.space.x4, flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
-        <View style={{ flexDirection: 'row', backgroundColor: t.colors.bgSunken, borderRadius: 14, padding: 4 }}>
-          {(['buy', 'sell'] as const).map((k) => (
-            <Pressable key={k} onPress={() => setTab(k)}
-              style={{ paddingVertical: 9, paddingHorizontal: 22, borderRadius: 11, backgroundColor: tab === k ? t.colors.accent : 'transparent' }}>
-              <Txt style={{ fontWeight: t.weight.bold as never, fontSize: t.size.sm, color: tab === k ? t.colors.onCta : t.colors.textMuted }}>
-                {k === 'buy' ? 'Buy' : 'Sell'}
-              </Txt>
-            </Pressable>
-          ))}
-        </View>
-        <Pressable onPress={() => navigation.navigate('Shop', { openFilters: true, at: Date.now() })} hitSlop={6}
-          style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 13, paddingVertical: 10, paddingHorizontal: 15 }}>
-          <Ionicons name="swap-vertical-outline" size={16} color={t.colors.text} />
-          <Txt style={{ fontWeight: t.weight.bold as never, fontSize: t.size.sm }}>Sort</Txt>
-        </Pressable>
-      </View>
-
-      {tab === 'buy' ? (
+      {session ? (
         <>
+          <Me t={t} b={mine.data ?? null} vault={vault.data ?? null} navigation={navigation} />
           {(d?.justIn ?? []).length > 0 && (
-            <Section title="Featured gear" t={t} onSeeAll={() => navigation.navigate('Shop')}>
+            <Section title="Just in" t={t} onSeeAll={() => navigation.navigate('Shop')}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: t.space.x4, gap: t.space.x3 }}>
                 {d!.justIn.map((l) => <GearCard key={l.id} l={l} t={t} img={pic(l.cover, l.modelSlug)} onPress={() => navigation.navigate('Listing', { id: l.id })} />)}
               </ScrollView>
@@ -170,27 +132,195 @@ export function HomeScreen({ navigation }: { navigation: any }) {
           )}
         </>
       ) : (
-        <View style={{ paddingHorizontal: t.space.x4 }}>
-          <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, padding: t.space.x5, gap: t.space.x3 }}>
-            <View style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: t.colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="cash-outline" size={23} color={t.colors.accent} />
+        <>
+          {/* sell hero */}
+          <View style={{ paddingHorizontal: t.space.x4 }}>
+            <View style={{ backgroundColor: t.colors.brand, borderRadius: 22, padding: t.space.x5, overflow: 'hidden' }}>
+              <View style={{ position: 'absolute', right: -40, top: -36, width: 180, height: 180, borderRadius: 90, backgroundColor: '#ffffff12' }} />
+              <View style={{ position: 'absolute', right: 20, bottom: 18, opacity: 0.9 }}>
+                <Ionicons name="camera" size={78} color={t.colors.brandAlt} />
+                <View style={{ position: 'absolute', top: 30, left: 27, width: 24, height: 24, borderRadius: 12, backgroundColor: t.colors.accent }} />
+              </View>
+              <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xl, fontWeight: t.weight.bold as never, letterSpacing: -0.4, maxWidth: 210 }}>
+                Sell your gear, get paid
+              </Txt>
+              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm, marginTop: 7, maxWidth: 200 }}>
+                Free pickup, honest grading &amp; fast payout
+              </Txt>
+              <Pressable onPress={() => navigation.navigate('Sell')}
+                style={{ alignSelf: 'flex-start', marginTop: t.space.x4, backgroundColor: t.colors.cta, borderRadius: 14, paddingVertical: t.space.x3, paddingHorizontal: t.space.x5 }}>
+                <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>
+                  {isSeller(session) ? 'Open my selling' : 'Start selling'}
+                </Txt>
+              </Pressable>
             </View>
-            <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
-              {isSeller(session) ? 'Selling with TrueGlaz' : 'Turn your gear into cash'}
-            </Txt>
-            <Muted size={t.size.sm}>
-              {isSeller(session)
-                ? 'Track your consignments, prices and payouts in one place.'
-                : 'Free pickup, we inspect & grade honestly, list it, and pay you when it sells.'}
-            </Muted>
-            <Pressable onPress={() => navigation.navigate('Sell')}
-              style={{ marginTop: t.space.x1, alignSelf: 'flex-start', backgroundColor: t.colors.cta, borderRadius: 13, paddingVertical: t.space.x3, paddingHorizontal: t.space.x5 }}>
-              <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>{isSeller(session) ? 'Open my selling' : 'Start selling'}</Txt>
+          </View>
+
+          {/* buy / sell toggle */}
+          <View style={{ paddingHorizontal: t.space.x4, flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+            <View style={{ flexDirection: 'row', backgroundColor: t.colors.bgSunken, borderRadius: 14, padding: 4 }}>
+              {(['buy', 'sell'] as const).map((k) => (
+                <Pressable key={k} onPress={() => setTab(k)}
+                  style={{ paddingVertical: 9, paddingHorizontal: 22, borderRadius: 11, backgroundColor: tab === k ? t.colors.accent : 'transparent' }}>
+                  <Txt style={{ fontWeight: t.weight.bold as never, fontSize: t.size.sm, color: tab === k ? t.colors.onCta : t.colors.textMuted }}>
+                    {k === 'buy' ? 'Buy' : 'Sell'}
+                  </Txt>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable onPress={() => navigation.navigate('Shop', { openFilters: true, at: Date.now() })} hitSlop={6}
+              style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 13, paddingVertical: 10, paddingHorizontal: 15 }}>
+              <Ionicons name="swap-vertical-outline" size={16} color={t.colors.text} />
+              <Txt style={{ fontWeight: t.weight.bold as never, fontSize: t.size.sm }}>Sort</Txt>
             </Pressable>
           </View>
-        </View>
+
+          {tab === 'buy' ? (
+            <>
+              {(d?.justIn ?? []).length > 0 && (
+                <Section title="Featured gear" t={t} onSeeAll={() => navigation.navigate('Shop')}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: t.space.x4, gap: t.space.x3 }}>
+                    {d!.justIn.map((l) => <GearCard key={l.id} l={l} t={t} img={pic(l.cover, l.modelSlug)} onPress={() => navigation.navigate('Listing', { id: l.id })} />)}
+                  </ScrollView>
+                </Section>
+              )}
+              {(d?.bestSavings ?? []).length > 0 && (
+                <Section title="Biggest savings" t={t} onSeeAll={() => navigation.navigate('Shop')}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: t.space.x4, gap: t.space.x3 }}>
+                    {d!.bestSavings.map((l) => <GearCard key={l.id} l={l} t={t} img={pic(l.cover, l.modelSlug)} onPress={() => navigation.navigate('Listing', { id: l.id })} />)}
+                  </ScrollView>
+                </Section>
+              )}
+              {(d?.recentlySold ?? []).length > 0 && (
+                <Section title="Recently sold" t={t}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: t.space.x4, gap: t.space.x3 }}>
+                    {d!.recentlySold.map((s) => <SoldCard key={s.id} s={s} t={t} img={pic(s.cover, s.modelSlug)} />)}
+                  </ScrollView>
+                </Section>
+              )}
+            </>
+          ) : (
+            <View style={{ paddingHorizontal: t.space.x4 }}>
+              <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 18, padding: t.space.x5, gap: t.space.x3 }}>
+                <View style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: t.colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="cash-outline" size={23} color={t.colors.accent} />
+                </View>
+                <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
+                  {isSeller(session) ? 'Selling with TrueGlaz' : 'Turn your gear into cash'}
+                </Txt>
+                <Muted size={t.size.sm}>
+                  {isSeller(session)
+                    ? 'Track your consignments, prices and payouts in one place.'
+                    : 'Free pickup, we inspect & grade honestly, list it, and pay you when it sells.'}
+                </Muted>
+                <Pressable onPress={() => navigation.navigate('Sell')}
+                  style={{ marginTop: t.space.x1, alignSelf: 'flex-start', backgroundColor: t.colors.cta, borderRadius: 13, paddingVertical: t.space.x3, paddingHorizontal: t.space.x5 }}>
+                  <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>{isSeller(session) ? 'Open my selling' : 'Start selling'}</Txt>
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </>
       )}
     </ScrollView>
+  )
+}
+
+/**
+ * A signed-in person's top of the screen, the same as the website: no order
+ * details (those are in Orders), a count only when something is on its way,
+ * and three tiles, each one reason to act today with one button:
+ * - what they asked for is in stock (else: search the shop);
+ * - what their kit is worth (else: add it to the vault);
+ * - what their most valuable item could sell for (left out if nothing is valued).
+ */
+function Me({ t, b, vault, navigation }: { t: Theme; b: BuyerHome | null; vault: VaultItem[] | null; navigation: any }) {
+  const onTheWay = b?.stats.inProgress ?? 0
+  const ask = b?.asks.find((a) => (a.matchCount ?? 0) > 0) ?? null
+  const items = vault ?? []
+  const worth = items.reduce((n, i) => n + (i.valuation?.midMinor ?? i.costMinor ?? 0), 0)
+  const insured = items.filter((i) => i.policy).length
+  const best = [...items].filter((i) => i.valuation).sort((x, y) => y.valuation!.midMinor - x.valuation!.midMinor)[0] ?? null
+
+  const tile = (navy: boolean) => ({
+    borderRadius: 22, padding: t.space.x5, gap: 10, overflow: 'hidden' as const,
+    backgroundColor: navy ? t.colors.brand : t.colors.bgRaised,
+    borderWidth: navy ? 0 : 1, borderColor: t.colors.border,
+  })
+  const kicker = (navy: boolean) => ({ fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' as const, color: navy ? t.colors.brandAccent : t.colors.accent })
+  const title = (navy: boolean) => ({ fontSize: t.size.xl, fontWeight: t.weight.bold as never, letterSpacing: -0.3, color: navy ? t.colors.onBrand : t.colors.text })
+  const primary = (label: string, onPress: () => void) => (
+    <Pressable onPress={onPress} style={{ alignSelf: 'flex-start', marginTop: 4, backgroundColor: t.colors.cta, borderRadius: 14, paddingVertical: t.space.x3, paddingHorizontal: t.space.x5 }}>
+      <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>{label}</Txt>
+    </Pressable>
+  )
+  const secondary = (label: string, onPress: () => void) => (
+    <Pressable onPress={onPress} style={{ alignSelf: 'flex-start', marginTop: 4, borderWidth: 1.5, borderColor: t.colors.cta, borderRadius: 14, paddingVertical: t.space.x3, paddingHorizontal: t.space.x5 }}>
+      <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{label}</Txt>
+    </Pressable>
+  )
+
+  return (
+    <View style={{ paddingHorizontal: t.space.x4, gap: t.space.x3 }}>
+      {onTheWay > 0 && (
+        <Pressable onPress={() => navigation.navigate('Orders')} accessibilityRole="link"
+          style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.pill, paddingVertical: 8, paddingHorizontal: 14 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.colors.good }} />
+          <Txt style={{ fontSize: t.size.sm, color: t.colors.text }}>
+            <Txt style={{ fontWeight: t.weight.bold as never }}>{onTheWay}</Txt> {onTheWay === 1 ? 'order' : 'orders'} on the way · Track
+          </Txt>
+        </Pressable>
+      )}
+
+      {ask ? (
+        <View style={tile(true)}>
+          <Txt style={kicker(true)}>Matches your request</Txt>
+          <Txt style={title(true)}>The {ask.matches[0]?.title ?? ask.wanted} you asked for: {ask.matchCount} in stock at your price</Txt>
+          {ask.matches.slice(0, 2).map((m) => (
+            <Pressable key={m.listingId} onPress={() => navigation.navigate('Listing', { id: m.listingId })}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#ffffff17', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12 }}>
+              <View style={{ backgroundColor: '#ffffff26', borderRadius: 6, paddingVertical: 2, paddingHorizontal: 7 }}>
+                <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xs }}>{m.gradeCode}</Txt>
+              </View>
+              <Txt numberOfLines={1} style={{ flex: 1, color: t.colors.onBrand, fontSize: t.size.sm }}>{m.title}</Txt>
+              <Txt style={{ color: t.colors.onBrand, fontWeight: t.weight.bold as never, fontSize: t.size.sm }}>{money(m.priceMinor)}</Txt>
+            </Pressable>
+          ))}
+          {primary('See matches', () => navigation.navigate('Shop', { q: ask.matches[0]?.title ?? ask.wanted, at: Date.now() }))}
+        </View>
+      ) : (
+        <View style={tile(true)}>
+          <Txt style={kicker(true)}>Just in</Txt>
+          <Txt style={title(true)}>Fresh off the inspection bench, graded and ready to ship</Txt>
+          {primary('Shop new arrivals', () => navigation.navigate('Shop'))}
+        </View>
+      )}
+
+      {items.length > 0 ? (
+        <View style={tile(false)}>
+          <Txt style={kicker(false)}>Your Gear Vault</Txt>
+          <Txt style={{ fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -1, color: t.colors.text }}>~{money(worth)}</Txt>
+          <Muted size={t.size.sm}>{items.length} {items.length === 1 ? 'item' : 'items'} · {insured ? `${insured} insured` : 'none insured yet'} · valued from real sales</Muted>
+          {secondary('Open your vault', () => navigation.navigate('Vault'))}
+        </View>
+      ) : (
+        <View style={tile(false)}>
+          <Txt style={kicker(false)}>Gear Vault · free</Txt>
+          <Txt style={title(false)}>What is your kit worth today?</Txt>
+          <Muted size={t.size.sm}>Add what you own. We value it from real sales, and you can insure it.</Muted>
+          {secondary('Add your gear', () => navigation.navigate('Vault'))}
+        </View>
+      )}
+
+      {best && (
+        <View style={tile(false)}>
+          <Txt style={kicker(false)}>Upgrading?</Txt>
+          <Txt style={title(false)}>Your {best.modelLabel} could fetch ~{money(best.valuation!.midMinor)}</Txt>
+          <Muted size={t.size.sm}>We inspect it, price it and sell it. Paid to your bank once the buyer keeps it.</Muted>
+          {secondary('Sell it with us', () => navigation.navigate('Sell'))}
+        </View>
+      )}
+    </View>
   )
 }
 
