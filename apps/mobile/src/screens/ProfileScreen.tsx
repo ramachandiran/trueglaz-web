@@ -7,6 +7,7 @@ import { Txt } from '../components/Txt'
 import { useTheme, useThemeMode, type ThemeMode } from '../theme/ThemeContext'
 import { Loading, Muted } from '../components/ui'
 import { API_ORIGIN } from '../config'
+import { disablePush } from '../push'
 import { Chip, ListRow, PageTitle, lift } from '../components/kit'
 
 
@@ -60,7 +61,9 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
               onPress={() => navigation.navigate('PayoutAccount')} />
           )}
           <ListRow title="Notifications" sub={unread > 0 ? `${unread} unread` : 'All caught up'}
-            onPress={() => navigation.navigate('Notifications')} last />
+            onPress={() => navigation.navigate('Notifications')} />
+          <ListRow title="Notification settings" sub="Push on this phone, and what you hear about"
+            onPress={() => navigation.navigate('NotificationSettings')} last />
         </View>
 
         {profile.loading && !profile.data && <Loading />}
@@ -82,7 +85,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
           </View>
         </Panel>
 
-        <Pressable onPress={signOut} accessibilityRole="button"
+        <Pressable onPress={async () => { await disablePush(); await signOut() }} accessibilityRole="button"
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: t.colors.bad, borderRadius: t.radius.pill, height: 48 }}>
           <Ionicons name="log-out-outline" size={18} color={t.colors.bad} />
           <Txt style={{ color: t.colors.bad, fontWeight: t.weight.bold as never }}>Sign out</Txt>

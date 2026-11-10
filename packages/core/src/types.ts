@@ -1964,3 +1964,12 @@ export interface ListingSearchResult {
   /** The price span of what the other filters leave; null when nothing does. */
   price: { minMinor: number; maxMinor: number } | null
 }
+
+/** A person's notification choices: which channels exist, and what they get on each. */
+export interface NotificationSettings {
+  /** Channels an admin has switched on, beyond in-app (always on). */
+  channels: { code: 'push' | 'email' | 'whatsapp'; label: string }[]
+  categories: { code: string; label: string; hint: string; locked: boolean }[]
+  /** category → channel → on */
+  enabled: Record<string, Record<string, boolean>>
+}

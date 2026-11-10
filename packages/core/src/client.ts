@@ -10,7 +10,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -722,6 +722,13 @@ export const api = {
 
   // -- invoices and shipments ----------------------------------------------
   /** Everything addressed to me: purchases, and commission if I sell. */
+  // Notification choices and push.
+  notificationSettings: () => get<NotificationSettings>('/profile/notification-settings'),
+  updateNotificationSettings: (changes: { category: string; channel: string; enabled: boolean }[]) =>
+    put<NotificationSettings>('/profile/notification-settings', changes),
+  registerPushDevice: (token: string, platform: 'android' | 'ios', appVersion?: string | null) =>
+    post<{ ok: boolean }>('/profile/push-devices', { token, platform, appVersion }),
+  removePushDevice: (token: string) => post<{ ok: boolean }>('/profile/push-devices/remove', { token }),
   myInvoices: () => get<Invoice[]>('/invoices'),
   invoice: (id: string) => get<InvoiceDetail>(`/invoices/${id}`),
   /**

@@ -34,6 +34,8 @@ import { VaultScreen } from './src/screens/VaultScreen'
 import { NotificationsScreen } from './src/screens/NotificationsScreen'
 import { AddressesScreen } from './src/screens/AddressesScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
+import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen'
+import { setBadge, usePushWhileSignedIn } from './src/push'
 
 /** The React Native adapter for core's storage port (web uses localStorage). */
 const nativeStorage: Storage = {
@@ -63,6 +65,9 @@ function MainTabs() {
   const notif = useApi(() => api.notifications(), [])
   useEffect(() => navigation.addListener('focus', () => notif.reload()), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
   const unread = notif.data?.unread || undefined
+  // Pushes: register this phone if already allowed, and open what a tapped one is about.
+  usePushWhileSignedIn(navigation)
+  useEffect(() => { if (notif.data) setBadge(notif.data.unread) }, [notif.data])
   return (
     <>
     <Tabs.Navigator
@@ -113,6 +118,7 @@ function AppStack() {
       <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
       <Root.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Addresses' }} />
       <Root.Screen name="PayoutAccount" component={PayoutAccountScreen} options={{ title: 'Payout account' }} />
+      <Root.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notification settings' }} />
     </Root.Navigator>
   )
 }

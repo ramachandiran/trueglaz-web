@@ -6,6 +6,7 @@ import {
 } from '@trueglaz/core'
 import { KycPanel } from '../components/KycPanel'
 import { NotificationsPanel } from '../components/NotificationsPanel'
+import { NotificationChoices } from '../components/NotificationChoices'
 import { ErrorNote, Loading } from '../components/ui'
 import './ProfilePage.css'
 
@@ -59,6 +60,7 @@ export function ProfilePage() {
           Notifications
           {me.unreadNotifications > 0 && ` (${me.unreadNotifications})`}
         </a>
+        <a href="#notification-choices">Notification settings</a>
         <a href="#details">Personal details</a>
         <a href="#addresses">Addresses</a>
         <a href="#bank">Bank details</a>
@@ -69,6 +71,7 @@ export function ProfilePage() {
       {/* First, above the details: it is the only section that can be waiting on
           them, and the one they came here to check. */}
       <NotificationsPanel onChanged={profile.reload} />
+      <NotificationChoices />
 
       <PersonalDetails me={me} onSaved={profile.reload} />
       <Addresses />
