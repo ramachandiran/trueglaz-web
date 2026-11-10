@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   api, money, dateOnly, useApi,
-  type VaultItem, type InsuranceRequest, type InsurancePlan, type InsuranceQuote, type ProductModel, ApiError,
+  type VaultItem, type ProductModel, ApiError,
 } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
+import { AddPolicyModal, ClaimHelpModal, CoverStrip, Modal, QuoteModal } from '../components/VaultInsurance'
 import { ModelPhoto } from '../components/ModelPhoto'
 import {
   isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
@@ -35,13 +36,14 @@ function hasLockedFields(it: VaultItem): boolean {
  *
  * Nothing here touches selling. The value is an estimate from TrueGlaz's own
  * market (never a grade — we never inspected it), the warranty is derived from
- * the purchase date, and each item can be insured through a partner.
+ * the purchase date, and each item can get an insurance quote from a licensed
+ * agent (TrueGlaz refers it; the policy is the owner's with the insurer).
  */
 export function VaultPage() {
   const { itemId } = useParams()
   const { data, error, loading, reload } = useApi(() => api.vault(), [])
   const [adding, setAdding] = useState(false)
-  const [insuring, setInsuring] = useState<VaultItem | null>(null)
+  const [insuring, setInsuring] = useState<{ item: VaultItem; what: 'quote' | 'policy' | 'claim' } | null>(null)
   const [privacy, setPrivacy] = useState<PrivacyMode | null>(null)
   // Privacy lives in a module (so it survives navigation); bump to re-read it.
   const [, setPTick] = useState(0)
@@ -53,7 +55,7 @@ export function VaultPage() {
   const unlocked = isUnlocked()
   const total = useMemo(() => (data ?? []).reduce((n, it) => n + estimate(it), 0), [data])
   const insured = (data ?? []).filter((i) => i.policy).length
-  // Paid for and waiting on staff to issue: say so, not "0 insured".
+  // Asked for a quote or sent a policy: say so, not "0 insured".
   const issuing = (data ?? []).filter((i) => !i.policy && i.insuranceRequest).length
 
   if (loading) return <Loading label="Opening your vault" />
@@ -103,7 +105,8 @@ export function VaultPage() {
       ) : (
         <ul className="vault__list">
           {items.map((it) => (
-            <GearCard key={it.id} item={it} focused={it.id === itemId} onInsure={() => setInsuring(it)} onChanged={reload} />
+            <GearCard key={it.id} item={it} focused={it.id === itemId} onChanged={reload}
+              onInsure={(what) => setInsuring({ item: it, what })} />
           ))}
         </ul>
       )}
@@ -117,13 +120,13 @@ export function VaultPage() {
           onAdded={() => { setAdding(false); reload() }}
         />
       )}
-      {insuring && (
-        <InsureModal
-          item={insuring}
-          onClose={() => setInsuring(null)}
-          onBought={() => { setInsuring(null); reload() }}
-        />
+      {insuring?.what === 'quote' && (
+        <QuoteModal item={insuring.item} onClose={() => setInsuring(null)} onDone={() => { setInsuring(null); reload() }} />
       )}
+      {insuring?.what === 'policy' && (
+        <AddPolicyModal item={insuring.item} onClose={() => setInsuring(null)} onDone={() => { setInsuring(null); reload() }} />
+      )}
+      {insuring?.what === 'claim' && <ClaimHelpModal onClose={() => setInsuring(null)} />}
       {privacy && (
         <VaultPrivacyModal mode={privacy} items={items} onDone={afterPrivacy} onClose={closePrivacy} />
       )}
@@ -183,7 +186,9 @@ const WARRANTY_LABEL: Record<VaultItem['warrantyStatus'], string> = {
   active: 'Under warranty', expiring: 'Warranty ending soon', expired: 'Warranty expired', unknown: 'Warranty unknown',
 }
 
-function GearCard({ item, focused, onInsure, onChanged }: { item: VaultItem; focused?: boolean; onInsure: () => void; onChanged: () => void }) {
+function GearCard({ item, focused, onInsure, onChanged }: {
+  item: VaultItem; focused?: boolean; onInsure: (what: 'quote' | 'policy' | 'claim') => void; onChanged: () => void
+}) {
   const [busy, setBusy] = useState(false)
   // Opened from a notification about this item: bring it into view.
   const ref = useFocusScroll(focused)
@@ -200,6 +205,7 @@ function GearCard({ item, focused, onInsure, onChanged }: { item: VaultItem; foc
 
   return (
     <li ref={ref} className={`gear${focused ? ' gear--focused' : ''}`}>
+      <div className="gear__row">
       {/* The admin-set model picture; the drawn placeholder for free-text gear. */}
       <span className="gear__thumb" aria-hidden="true">
         <ModelPhoto modelId={item.productModelId} kind="camera" size="thumb" alt="" badge={false} />
@@ -212,7 +218,7 @@ function GearCard({ item, focused, onInsure, onChanged }: { item: VaultItem; foc
           ) : (
             <>
               {cost != null && <>Bought {money(cost)}{item.purchaseDate ? ` · ${dateOnly(item.purchaseDate)}` : ''}</>}
-              {serial && <span className="gear__serial"> · ser ••{serial.slice(-4)}</span>}
+              {serial && <span className="gear__serial">{cost != null ? ' · ' : ''}ser ••{serial.slice(-4)}</span>}
             </>
           )}
         </div>
@@ -235,21 +241,12 @@ function GearCard({ item, focused, onInsure, onChanged }: { item: VaultItem; foc
           <div className="gear__range">Estimating…</div>
         )}
         <div className="gear__actions">
-          {item.policy ? (
-            <span className="gear__insured" title={`Policy ${item.policy.policyNo}`}>
-              ✓ Insured{!item.policy.live ? ' (demo)' : ''}
-            </span>
-          ) : item.insuranceRequest ? (
-            // Requested and authorised; staff are issuing it. No second request.
-            <span className="gear__pending" title="You are charged only when the policy is issued">
-              Cover being issued{item.insuranceRequest.expectedBy ? ` · by ${dateOnly(item.insuranceRequest.expectedBy)}` : ''}
-            </span>
-          ) : (
-            <button className="tg-button tg-button--small" onClick={onInsure}>Insure</button>
-          )}
           <button className="tg-button tg-button--small tg-button--ghost" disabled={busy} onClick={remove}>Remove</button>
         </div>
       </div>
+      </div>
+      <CoverStrip item={item} onChanged={onChanged}
+        onQuote={() => onInsure('quote')} onAddPolicy={() => onInsure('policy')} onClaimHelp={() => onInsure('claim')} />
     </li>
   )
 }
@@ -350,89 +347,6 @@ function AddGearModal({ e2ee, unlocked, onNeedUnlock, onClose, onAdded }: {
   )
 }
 
-// -- insure --------------------------------------------------------------------
-
-function InsureModal({ item, onClose, onBought }: { item: VaultItem; onClose: () => void; onBought: () => void }) {
-  const { data: quote, error, loading } = useApi<InsuranceQuote>(() => api.insuranceQuote(item.id), [item.id])
-  const [plan, setPlan] = useState<string>('plus')
-  const [agree, setAgree] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const [requested, setRequested] = useState<InsuranceRequest | null>(null)
-
-  async function buy() {
-    setBusy(true); setErr(null)
-    try {
-      const r = await api.buyInsurance(item.id, plan, quote?.sumInsuredMinor)
-      // Issued on the spot: done. Otherwise say what happens next before closing.
-      if (r.status === 'issued') onBought()
-      else setRequested(r)
-    }
-    catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not buy cover') }
-    finally { setBusy(false) }
-  }
-
-  if (requested) {
-    return (
-      <Modal title="Cover requested" onClose={onBought}>
-        <p className="vault__hint">
-          <strong>We're issuing your policy{requested.expectedBy ? ` — usually by ${dateOnly(requested.expectedBy)}` : ''}.</strong>
-        </p>
-        <p className="vault__hint">
-          {money(requested.totalMinor)} is authorised, not charged. You pay only when the policy is issued, and nothing
-          if we can't issue it. We'll notify you either way.
-        </p>
-        <div className="vault__modal-actions">
-          <button className="tg-button tg-button--primary" onClick={onBought}>Done</button>
-        </div>
-      </Modal>
-    )
-  }
-
-  return (
-    <Modal title={`Insure ${item.modelLabel}`} onClose={onClose}>
-      {loading && <Loading label="Getting a quote" />}
-      {error && <ErrorNote error={error} />}
-      {quote && (
-        <>
-          <p className="vault__hint">
-            Cover amount <strong>~{money(quote.sumInsuredMinor)}</strong> — from your vault estimate.
-            {!quote.providerLive && <span className="gear__indic"> Demo cover: no real policy is issued.</span>}
-          </p>
-          <ul className="vault__plans">
-            {quote.plans.map((p: InsurancePlan) => (
-              <li key={p.code}>
-                <label className={`vault__plan${plan === p.code ? ' vault__plan--sel' : ''}`}>
-                  <input type="radio" name="plan" checked={plan === p.code} onChange={() => setPlan(p.code)} />
-                  <span className="vault__plan-main">
-                    <strong>{p.title}</strong>
-                    <span className="vault__plan-blurb">{p.blurb}</span>
-                  </span>
-                  <span className="vault__plan-price">{money(p.totalMinor)}<small>/year</small></span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <label className="vault__consent">
-            <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-            I’ve read the policy wording and am choosing this cover myself.
-          </label>
-          <p className="vault__fineprint">
-            Underwritten by an IRDAI-licensed insurer · TrueGlaz Protect. Your proof of ownership is attached to the policy.
-          </p>
-          {err && <p className="ops__error" role="alert">{err}</p>}
-          <div className="vault__modal-actions">
-            <button className="tg-button" onClick={onClose}>Cancel</button>
-            <button className="tg-button tg-button--primary" disabled={!agree || busy} onClick={buy}>
-              {busy ? 'Buying…' : `Buy ${quote.plans.find((p) => p.code === plan)?.title ?? ''} cover`}
-            </button>
-          </div>
-        </>
-      )}
-    </Modal>
-  )
-}
-
 // -- bits ----------------------------------------------------------------------
 
 /** Scroll an element into view once, when it becomes the focused one. */
@@ -440,20 +354,6 @@ function useFocusScroll(focused?: boolean) {
   const [el, setEl] = useState<HTMLLIElement | null>(null)
   useEffect(() => { if (focused && el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [focused, el])
   return setEl
-}
-
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="vault__overlay" onClick={onClose}>
-      <div className="vault__modal" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
-        <div className="vault__modal-head">
-          <h2>{title}</h2>
-          <button className="vault__x" aria-label="Close" onClick={onClose}>×</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
 }
 
 function LockIcon({ open = false }: { open?: boolean }) {
@@ -468,9 +368,9 @@ function LockIcon({ open = false }: { open?: boolean }) {
 }
 
 
-/** "2 insured", "1 insured · 1 being issued", or "1 cover being issued". */
-function coverNote(insured: number, issuing: number): string {
-  if (issuing === 0) return `${insured} insured`
-  if (insured > 0) return `${insured} insured · ${issuing} being issued`
-  return `${issuing} ${issuing === 1 ? 'cover' : 'covers'} being issued`
+/** "2 insured", "1 insured · 1 in progress", or "1 insurance request in progress". */
+function coverNote(insured: number, open: number): string {
+  if (open === 0) return `${insured} insured`
+  if (insured > 0) return `${insured} insured · ${open} in progress`
+  return `${open} insurance ${open === 1 ? 'request' : 'requests'} in progress`
 }

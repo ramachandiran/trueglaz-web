@@ -96,7 +96,7 @@ function OfferStep({ onAdded, onSkip }: { onAdded: (it: VaultItem) => void; onSk
       <h2 className="vault-intro__title">See what your gear is worth</h2>
       <p className="vault-intro__lead">
         Add a camera or lens you own and we’ll value it from real TrueGlaz sales — then track its
-        warranty and insure it, all in one place. No selling required.
+        warranty and get an insurance quote, all in one place. No selling required.
       </p>
       <label className="vault__field">
         <span>Start with one item</span>

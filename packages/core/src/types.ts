@@ -1702,41 +1702,167 @@ export interface VaultPolicy {
   expiresOn: string
   /** false while a stub stands in for a real insurer. */
   live: boolean
+  /** The policy document the owner uploaded, if any. */
+  documentId?: string | null
+}
+
+export type InsuranceStatus = 'requested' | 'with_agent' | 'quote_shared' | 'policy_uploaded' | 'insured' | 'closed'
+export type CallTime = 'morning' | 'afternoon' | 'evening'
+
+/** The invoice sent with a quote request: the owner's upload, or our own tax invoice. */
+export interface AttachedInvoice {
+  kind: 'upload' | 'trueglaz'
+  documentId: string | null
+  invoiceId: string | null
+  label: string
+  contentType: string | null
+}
+
+/** The policy the owner typed in, waiting for staff to check it. */
+export interface SubmittedPolicy {
+  documentId: string | null
+  insurerName: string | null
+  policyNo: string | null
+  startsOn: string | null
+  endsOn: string | null
+  sumInsuredMinor: number | null
+  uploadedAt: string | null
 }
 
 /**
- * A cover request. Issued at once when the insurer is instant; otherwise
- * `authorized` (or `submitted`, with the insurer) until staff issue it, and the
- * premium is only charged on issue.
+ * An insurance request on one vault item. TrueGlaz refers it to a licensed
+ * agent; the owner buys from the agent and uploads the policy for us to check.
  */
 export interface InsuranceRequest {
   id: string
   itemId: string
-  status: 'authorized' | 'submitted' | 'issued' | 'declined' | 'cancelled' | 'expired'
-  planCode: string
-  sumInsuredMinor: number
-  premiumMinor: number
-  taxMinor: number
-  totalMinor: number
-  /** When manual issuance is expected by. */
-  expectedBy: string | null
-  declineReason: string | null
+  status: InsuranceStatus
+  /** quote = asked us for a quote; own = brought a policy bought elsewhere. */
+  source: 'quote' | 'own'
+  coverMinor: number
+  callTime: CallTime | null
+  /** When the agent's call is due: 3 working days from the request. */
+  replyBy: string | null
+  createdAt: string | null
+  agentSentAt: string | null
+  quoteSharedAt: string | null
+  reuploadReason: string | null
+  closedReason: string | null
+  invoice: AttachedInvoice | null
+  submittedPolicy: SubmittedPolicy | null
   policy: VaultPolicy | null
 }
 
-/** One row of the staff insurance desk: a cover request waiting to be issued by hand. */
+export interface InsuranceTermsPoint { kind: 'covered' | 'excluded' | 'rule'; text: string }
+
+/** The terms the owner reads before asking for a quote; the version is stored with the request. */
+export interface InsuranceTerms {
+  version: string
+  title: string
+  insurer: string
+  wordingUrl: string
+  howItWorks: string[]
+  points: InsuranceTermsPoint[]
+  acceptance: string
+  consent: string
+  claimSteps: string[]
+}
+
+/** Everything the quote form needs before the owner fills it in. */
+export interface InsuranceStart {
+  itemId: string
+  modelLabel: string
+  hasSerial: boolean
+  serialLast4: string | null
+  coverSuggestionMinor: number | null
+  coverBasis: 'new_price' | 'paid' | 'estimate' | 'none'
+  trueglazInvoice: { id: string; number: string } | null
+  phoneHint: string | null
+  replyBy: string
+  terms: InsuranceTerms
+  openRequest: InsuranceRequest | null
+  activePolicy: VaultPolicy | null
+}
+
+export interface InsuranceDocument {
+  id: string
+  kind: 'invoice' | 'policy'
+  fileName: string | null
+  contentType: string
+  bytes: number
+  createdAt: string | null
+}
+
+export interface QuoteRequestInput {
+  invoiceDocumentId?: string | null
+  coverMinor: number
+  callTime: CallTime
+  termsVersion: string
+  acceptedTerms: boolean
+  consentToShare: boolean
+}
+
+export interface AddPolicyInput {
+  policyDocumentId: string
+  insurerName: string
+  policyNo: string
+  startsOn: string
+  endsOn: string
+  sumInsuredMinor: number
+}
+
+/** One row of the staff insurance desk. */
 export interface InsuranceQueueRow {
   id: string
   userId: string
   ownerName: string | null
   modelLabel: string
-  planCode: string
-  sumInsuredMinor: number
-  totalMinor: number
-  status: 'authorized' | 'submitted'
+  coverMinor: number
+  status: InsuranceStatus
+  source: 'quote' | 'own'
+  callTime: CallTime | null
+  invoiceKind: 'pdf' | 'jpg' | 'png' | 'trueglaz' | null
+  agentName: string | null
   requestedAt: string | null
-  slaDueAt: string | null
+  replyBy: string | null
+  /** Waiting on us past the 3 working days. */
   overdue: boolean
+  nextFollowUpOn: string | null
+  followUpDue: boolean
+  updatedAt: string | null
+}
+
+export interface InsuranceNote {
+  id: string
+  kind: 'event' | 'note'
+  outcome: string | null
+  body: string
+  authorName: string | null
+  createdAt: string | null
+}
+
+/** A comparison before marking insured. ok = null means "look at the document". */
+export interface PolicyCheck { label: string; ok: boolean | null; detail: string }
+
+export interface InsuranceDeskDetail {
+  row: InsuranceQueueRow
+  phone: string | null
+  email: string | null
+  serialLast4: string | null
+  serialReadable: boolean
+  purchaseDate: string | null
+  paidMinor: number | null
+  newPriceMinor: number | null
+  termsVersion: string | null
+  termsAcceptedAt: string | null
+  consentAt: string | null
+  invoice: AttachedInvoice | null
+  submittedPolicy: SubmittedPolicy | null
+  reuploadReason: string | null
+  closedReason: string | null
+  policy: VaultPolicy | null
+  checks: PolicyCheck[]
+  notes: InsuranceNote[]
 }
 
 export interface VaultItem {
@@ -1759,8 +1885,10 @@ export interface VaultItem {
   warrantyStatus: 'unknown' | 'active' | 'expiring' | 'expired'
   valuation: VaultValuation | null
   policy: VaultPolicy | null
-  /** An open request being issued by hand, if any. */
+  /** An open insurance request (quote or policy being checked), if any. */
   insuranceRequest?: InsuranceRequest | null
+  /** Bought on TrueGlaz: our invoice is attached, no upload needed. */
+  fromTrueglaz?: boolean
 }
 
 export interface AddGearInput {
@@ -1792,24 +1920,6 @@ export interface VaultKeyBlobsStored {
   salt: string
   wrappedDekPin: string
   wrappedDekRecovery: string
-}
-
-export interface InsurancePlan {
-  code: string
-  title: string
-  blurb: string
-  premiumMinor: number
-  taxMinor: number
-  totalMinor: number
-  covers: string[]
-}
-
-export interface InsuranceQuote {
-  itemId: string
-  modelLabel: string
-  sumInsuredMinor: number
-  providerLive: boolean
-  plans: InsurancePlan[]
 }
 
 /** One choice in a filter group: the value to send back, its label, and how many it would show. */

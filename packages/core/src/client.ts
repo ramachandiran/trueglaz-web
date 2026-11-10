@@ -10,7 +10,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -84,6 +84,9 @@ export function setApiOrigin(value: string) {
   origin = value.replace(/\/$/, '')
 }
 const url = (p: string) => `${origin}/api/v1${p}`
+
+/** A URL the API handed back: absolute (a bucket) as is, relative (this API) against its origin. */
+export const apiAbsolute = (u: string) => (u.startsWith('/') ? `${origin}${u}` : u)
 
 /**
  * What to say when nothing answered.
@@ -746,16 +749,50 @@ export const api = {
   addGear: (body: AddGearInput) => post<VaultItem>('/vault', body),
   updateGear: (id: string, body: AddGearInput) => put<VaultItem>(`/vault/${id}`, body),
   removeGear: (id: string) => del<void>(`/vault/${id}`),
-  insuranceQuote: (id: string) => get<InsuranceQuote>(`/vault/${id}/insurance/quote`),
-  buyInsurance: (id: string, planCode: string, sumInsuredMinor?: number) =>
-    post<InsuranceRequest>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
-  /** Staff insurance desk: open cover requests, oldest first. */
-  insuranceQueue: () => get<InsuranceQueueRow[]>('/staff/insurance/requests'),
-  insuranceSubmit: (id: string) => post<InsuranceRequest>(`/staff/insurance/requests/${id}/submit`, {}),
-  insuranceIssue: (id: string, body: { insurerName: string; policyNo?: string | null; startsOn?: string | null; expiresOn?: string | null }) =>
-    post<InsuranceRequest>(`/staff/insurance/requests/${id}/issue`, body),
-  insuranceDecline: (id: string, reason: string) =>
-    post<InsuranceRequest>(`/staff/insurance/requests/${id}/decline`, { reason }),
+  // Insurance is a quote referral: we pass the request to a licensed agent.
+  insuranceTerms: () => get<InsuranceTerms>('/vault/insurance/terms'),
+  insuranceStart: (itemId: string) => get<InsuranceStart>(`/vault/${itemId}/insurance/start`),
+  requestInsuranceQuote: (itemId: string, body: QuoteRequestInput) =>
+    post<InsuranceRequest>(`/vault/${itemId}/insurance/quote-request`, body),
+  addInsurancePolicy: (itemId: string, body: AddPolicyInput) =>
+    post<InsuranceRequest>(`/vault/${itemId}/insurance/policy`, body),
+  withdrawInsurance: (itemId: string) => post<InsuranceRequest>(`/vault/${itemId}/insurance/withdraw`, {}),
+  /**
+   * Upload an invoice or policy (PDF, JPG or PNG, up to 10 MB): ask, PUT the
+   * bytes straight to the store, then have the API check what landed.
+   */
+  uploadInsuranceDocument: async (
+    itemId: string, kind: 'invoice' | 'policy', body: Blob, contentType: string, fileName?: string,
+  ): Promise<InsuranceDocument> => {
+    const intent = await post<UploadIntent>('/vault/insurance/documents/intent', { itemId, kind, contentType, bytes: body.size })
+    const put = await fetch(apiAbsolute(intent.url), { method: intent.method, headers: intent.headers, body })
+    if (!put.ok) throw new ApiError(put.status, 'The upload did not go through — please try again')
+    return post<InsuranceDocument>('/vault/insurance/documents/seal', { ticket: intent.ticket, fileName })
+  },
+  /** A short-lived link to an insurance document (the owner, or staff). */
+  insuranceDocumentLink: async (docId: string) => {
+    const l = await get<{ url: string; contentType: string; fileName: string | null }>(`/vault/insurance/documents/${docId}/link`)
+    return { ...l, url: apiAbsolute(l.url) }
+  },
+
+  /** Staff insurance desk. */
+  insuranceCounts: () => get<Record<string, number>>('/staff/insurance/counts'),
+  insuranceQueue: (status?: string) =>
+    get<InsuranceQueueRow[]>(`/staff/insurance/requests${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  insuranceDetail: (id: string) => get<InsuranceDeskDetail>(`/staff/insurance/requests/${id}`),
+  insuranceSerial: (id: string) => post<{ serial: string }>(`/staff/insurance/requests/${id}/serial`, {}),
+  insuranceNote: (id: string, body: { outcome?: string | null; body?: string | null; nextFollowUpOn?: string | null }) =>
+    post<InsuranceDeskDetail>(`/staff/insurance/requests/${id}/notes`, body),
+  insuranceAgent: (id: string, agentName: string, note?: string) =>
+    post<InsuranceDeskDetail>(`/staff/insurance/requests/${id}/agent`, { agentName, note }),
+  insuranceQuoteShared: (id: string, note?: string) =>
+    post<InsuranceDeskDetail>(`/staff/insurance/requests/${id}/quote-shared`, { note }),
+  insuranceVerify: (id: string, checkedNameAndSerial: boolean) =>
+    post<InsuranceDeskDetail>(`/staff/insurance/requests/${id}/verify`, { checkedNameAndSerial }),
+  insuranceReupload: (id: string, reason: string) =>
+    post<InsuranceDeskDetail>(`/staff/insurance/requests/${id}/reupload`, { reason }),
+  insuranceClose: (id: string, reason: string) =>
+    post<InsuranceDeskDetail>(`/staff/insurance/requests/${id}/close`, { reason }),
   /** Add a just-bought item to the vault, pre-filled from the order line. */
   addGearFromOrderLine: (lineId: string) => post<VaultItem>(`/vault/from-order-line/${lineId}`),
   /** The wrapped vault key for this user, or null if the vault isn't secured yet. */
