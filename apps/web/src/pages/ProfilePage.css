@@ -171,3 +171,7 @@
     gap: var(--tg-space-2);
   }
 }
+
+/* The add / edit address form: its own small title, and the default tick. */
+.profile__form-title { margin: 0 0 var(--tg-space-3); font-size: var(--tg-text-md); }
+.profile__check { display: flex; align-items: center; gap: var(--tg-space-2); margin-top: var(--tg-space-3); font-size: var(--tg-text-sm); }

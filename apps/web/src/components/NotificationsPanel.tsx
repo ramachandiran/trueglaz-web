@@ -158,7 +158,7 @@ export function NotificationsPanel({ onChanged }: { onChanged?: () => void }) {
         </h2>
         {unread > 0 && (
           <button
-            className="tg-button tg-button--subtle"
+            className="tg-button"
             disabled={busy}
             onClick={() => act(() => api.markAllNotificationsRead())}
           >

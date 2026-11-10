@@ -127,7 +127,7 @@ function PersonalDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) 
           <span className="profile__label">Email</span>
           <p className="profile__value">{me.email ?? <span className="tg-muted">Not set</span>}</p>
           <span className="tg-muted profile__hint">
-            This signs you in. <a href="#security">Change it below</a>.
+            This signs you in.
           </span>
         </div>
 
@@ -200,12 +200,28 @@ const INDIAN_STATES = [
   'Puducherry',
 ] as const
 
+/** Matches the API's cap (ProfileService.MAX_ADDRESSES). */
+const MAX_ADDRESSES = 10
+
+/**
+ * Saved delivery addresses: home, office, family. Checkout offers the default
+ * one first and lets the buyer pick any other; an order copies the address it
+ * was given, so editing or removing one here never rewrites an order.
+ */
 function Addresses() {
   const list = useApi(() => api.myAddresses(), [])
   const [form, setForm] = useState(EMPTY_ADDRESS)
+  const [makeDefault, setMakeDefault] = useState(false)
+  // null: no form open; 'new': adding one; otherwise the id being edited.
+  const [editing, setEditing] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
+
+  const rows = list.data ?? []
+  // The default first, then the rest in the order they were saved.
+  const sorted = [...rows].sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
+  const formOpen = editing !== null || (!list.loading && rows.length === 0)
+  const validationError = validateAddressForm(form)
 
   async function act(fn: () => Promise<Address[]>) {
     setBusy(true); setError(null)
@@ -217,92 +233,103 @@ function Addresses() {
     } finally { setBusy(false) }
   }
 
-  const rows = list.data ?? []
-  const current = rows.find((a) => a.isDefault) ?? rows[0] ?? null
-  const validationError = validateAddressForm(form)
+  function close() { setEditing(null); setForm(EMPTY_ADDRESS); setMakeDefault(false); setError(null) }
 
-  async function saveAddress() {
-    if (validationError) {
-      setError(validationError)
-      return
-    }
-
-    setBusy(true)
+  function startAdd() {
     setError(null)
+    setForm(EMPTY_ADDRESS)
+    setMakeDefault(false)
+    setEditing('new')
+  }
+
+  function startEdit(a: Address) {
+    setError(null)
+    setEditing(a.id)
+    setMakeDefault(a.isDefault)
+    setForm({
+      label: a.label ?? '',
+      recipientName: a.recipientName,
+      line1: a.line1,
+      line2: a.line2 ?? '',
+      city: a.city,
+      state: a.state ?? '',
+      pincode: a.pincode,
+      phone: a.phoneE164 ?? '',
+    })
+  }
+
+  async function save() {
+    if (validationError) { setError(validationError); return }
+    const body = {
+      ...form,
+      label: form.label.trim() || null,
+      line2: form.line2.trim() || null,
+      phone: form.phone.trim() || null,
+      // The first address is the default whatever is ticked; the API does the same.
+      isDefault: rows.length === 0 || makeDefault,
+    }
+    setBusy(true); setError(null)
     try {
-      if (current) {
-        await api.removeAddress(current.id)
-      }
-      await api.addAddress({
-        ...form,
-        label: form.label.trim() || null,
-        line2: form.line2.trim() || null,
-        phone: form.phone.trim() || null,
-        isDefault: true,
-      })
-      setForm(EMPTY_ADDRESS)
-      setEditing(false)
+      if (editing && editing !== 'new') await api.updateAddress(editing, body)
+      else await api.addAddress(body)
+      close()
       list.reload()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'That did not work')
-    } finally {
-      setBusy(false)
-    }
+    } finally { setBusy(false) }
   }
 
-  function startEdit() {
-    if (!current) return
-    setError(null)
-    setEditing(true)
-    setForm({
-      label: current.label ?? '',
-      recipientName: current.recipientName,
-      line1: current.line1,
-      line2: current.line2 ?? '',
-      city: current.city,
-      state: current.state ?? '',
-      pincode: current.pincode,
-      phone: current.phoneE164 ?? '',
-    })
+  function remove(a: Address) {
+    const name = a.label || a.recipientName
+    if (!window.confirm(`Remove "${name}" from your addresses? Orders already placed keep their address.`)) return
+    if (editing === a.id) close()
+    act(() => api.removeAddress(a.id))
   }
 
   return (
     <section className="tg-card profile__section" id="addresses">
-      <h2 className="profile__section-title">Delivery address</h2>
+      <h2 className="profile__section-title">Delivery addresses</h2>
       <p className="tg-muted profile__blurb">
-        Checkout uses the one address you keep here. An order copies it onto
-        itself, so changing this later never rewrites an order already placed.
+        Keep home, office or anywhere else you have gear sent. Checkout offers your
+        default first and lets you pick any other. An order keeps the address it was
+        sent to, so changing one here never rewrites an order already placed.
       </p>
 
       {list.loading && <Loading label="Loading addresses" />}
       {error && <p className="profile__error" role="alert">{error}</p>}
 
-      {current && (
+      {sorted.length > 0 && (
         <ul className="profile__addresses">
-          <li className="profile__address profile__address--default">
-            <div>
-              <strong>{current.label || current.recipientName}</strong>
-              <span className="tg-badge tg-badge--good profile__default">Saved address</span>
-              <p className="tg-muted profile__address-body">
-                {current.recipientName} · {current.line1}{current.line2 ? `, ${current.line2}` : ''}, {current.city}
-                {current.state ? `, ${current.state}` : ''} {current.pincode}
-                {current.phoneE164 ? ` · ${current.phoneE164}` : ''}
-              </p>
-            </div>
-            <div className="profile__address-actions">
-              <button className="tg-button" disabled={busy} onClick={startEdit}>
-                Edit
-              </button>
-              <button className="tg-button tg-button--subtle" disabled={busy} onClick={() => act(() => api.removeAddress(current.id))}>
-                Remove
-              </button>
-            </div>
-          </li>
+          {sorted.map((a) => (
+            <li key={a.id} className={`profile__address${a.isDefault ? ' profile__address--default' : ''}`}>
+              <div>
+                <strong>{a.label || a.recipientName}</strong>
+                {a.isDefault && <span className="tg-badge tg-badge--good profile__default">Default</span>}
+                <p className="tg-muted profile__address-body">
+                  {a.recipientName} · {a.line1}{a.line2 ? `, ${a.line2}` : ''}, {a.city}
+                  {a.state ? `, ${a.state}` : ''} {a.pincode}
+                  {a.phoneE164 ? ` · ${a.phoneE164}` : ''}
+                </p>
+              </div>
+              <div className="profile__address-actions">
+                {!a.isDefault && (
+                  <button className="tg-button" disabled={busy} onClick={() => act(() => api.makeDefaultAddress(a.id))}>
+                    Make default
+                  </button>
+                )}
+                <button className="tg-button" disabled={busy} onClick={() => startEdit(a)}>Edit</button>
+                <button className="tg-button tg-button--subtle" disabled={busy} onClick={() => remove(a)}>Remove</button>
+              </div>
+            </li>
+          ))}
         </ul>
       )}
 
-      {(!current || editing) && (
+      {formOpen ? (
         <div className="profile__address-form">
+          <h3 className="profile__form-title">
+            {editing && editing !== 'new' ? 'Edit address' : rows.length === 0 ? 'Add your delivery address' : 'Add another address'}
+          </h3>
           <div className="profile__grid">
             <Field label="Label" hint="Home, office — whatever you'll recognise" value={form.label} onChange={(v) => setForm({ ...form, label: v })} />
             <Field label="Recipient" value={form.recipientName} onChange={(v) => setForm({ ...form, recipientName: v })} />
@@ -318,20 +345,24 @@ function Addresses() {
             <Field label="PIN code" value={form.pincode} onChange={(v) => setForm({ ...form, pincode: v })} />
             <Field label="Phone" hint="For the courier" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
           </div>
+          {rows.length > 0 && !(editing && rows.find((r) => r.id === editing)?.isDefault) && (
+            <label className="profile__check">
+              <input type="checkbox" checked={makeDefault} onChange={(e) => setMakeDefault(e.target.checked)} />
+              Use this as my default address
+            </label>
+          )}
           <div className="profile__actions">
-            <button
-              className="tg-button tg-button--primary"
-              disabled={busy || !!validationError}
-              onClick={saveAddress}
-            >
-              {busy ? 'Saving…' : current ? 'Save changes' : 'Save address'}
+            <button className="tg-button tg-button--primary" disabled={busy || !!validationError} onClick={save}>
+              {busy ? 'Saving…' : editing && editing !== 'new' ? 'Save changes' : 'Save address'}
             </button>
-            {editing && (
-              <button className="tg-button" onClick={() => { setEditing(false); setForm(EMPTY_ADDRESS); setError(null) }}>
-                Cancel
-              </button>
-            )}
+            {rows.length > 0 && <button className="tg-button" onClick={close}>Cancel</button>}
           </div>
+        </div>
+      ) : rows.length >= MAX_ADDRESSES ? (
+        <p className="tg-muted profile__hint">You have {MAX_ADDRESSES} addresses, the most you can keep. Remove one to add another.</p>
+      ) : (
+        <div className="profile__actions">
+          <button className="tg-button" onClick={startAdd}>+ Add another address</button>
         </div>
       )}
     </section>

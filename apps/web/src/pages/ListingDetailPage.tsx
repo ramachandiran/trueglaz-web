@@ -128,8 +128,8 @@ export function ListingDetailPage() {
               ) : (
                 <><strong>You bought this one</strong>{fromOrder.placedAt ? ` on ${dateOnly(fromOrder.placedAt)}` : ''}.</>
               )}
-              <span className="tg-muted"> Order <span className="tg-mono">{fromOrder.orderNumber}</span> · </span>
-              <Link to="/orders">Back to your orders</Link>
+              <span className="tg-muted"> Order <span className="tg-mono">{fromOrder.orderNumber}</span>.</span>
+              <Link to="/orders" className="tg-button buybox__back">Back to your orders</Link>
             </div>
           )}
 
