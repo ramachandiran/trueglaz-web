@@ -22,6 +22,7 @@ import { HomePage } from './pages/HomePage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { FulfilmentPage } from './pages/FulfilmentPage'
 import { ReturnsPage } from './pages/ReturnsPage'
+import { InsuranceDeskPage } from './pages/InsuranceDeskPage'
 import { StaffHomePage } from './pages/StaffHomePage'
 import { InspectPage } from './pages/InspectPage'
 import { InventoryDashboard } from './pages/InventoryDashboard'
@@ -114,6 +115,7 @@ export function App() {
           {/* Ops, not staff: the bench check on a returned unit is a technician's. */}
           <Route path="/admin/returns" element={<Guard need="ops"><ReturnsPage /></Guard>} />
           <Route path="/admin/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
+          <Route path="/admin/insurance" element={<Guard need="staff"><InsuranceDeskPage /></Guard>} />
           <Route path="/admin/people" element={<Guard need="staff"><StaffUsersPage /></Guard>} />
           <Route path="/admin/people/:id" element={<Guard need="staff"><StaffUserDetailPage /></Guard>} />
 

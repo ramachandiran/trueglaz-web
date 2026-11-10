@@ -10,7 +10,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, InsuranceRequest, ListingSearchResult, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceQuote, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -749,6 +749,13 @@ export const api = {
   insuranceQuote: (id: string) => get<InsuranceQuote>(`/vault/${id}/insurance/quote`),
   buyInsurance: (id: string, planCode: string, sumInsuredMinor?: number) =>
     post<InsuranceRequest>(`/vault/${id}/insurance`, { planCode, sumInsuredMinor }),
+  /** Staff insurance desk: open cover requests, oldest first. */
+  insuranceQueue: () => get<InsuranceQueueRow[]>('/staff/insurance/requests'),
+  insuranceSubmit: (id: string) => post<InsuranceRequest>(`/staff/insurance/requests/${id}/submit`, {}),
+  insuranceIssue: (id: string, body: { insurerName: string; policyNo?: string | null; startsOn?: string | null; expiresOn?: string | null }) =>
+    post<InsuranceRequest>(`/staff/insurance/requests/${id}/issue`, body),
+  insuranceDecline: (id: string, reason: string) =>
+    post<InsuranceRequest>(`/staff/insurance/requests/${id}/decline`, { reason }),
   /** Add a just-bought item to the vault, pre-filled from the order line. */
   addGearFromOrderLine: (lineId: string) => post<VaultItem>(`/vault/from-order-line/${lineId}`),
   /** The wrapped vault key for this user, or null if the vault isn't secured yet. */

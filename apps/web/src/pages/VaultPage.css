@@ -19,7 +19,7 @@
 .vault__empty button { margin-top: 8px; }
 
 /* list */
-.vault__list { list-style: none; display: flex; flex-direction: column; gap: var(--tg-space-3); }
+.vault__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--tg-space-3); }
 .gear { display: flex; gap: var(--tg-space-3); align-items: center; background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-lg); padding: 14px 16px; }
 .gear__thumb { flex: none; display: flex; }
 .gear__main { flex: 1; min-width: 0; }
@@ -51,7 +51,7 @@
 .vault__field { display: flex; flex-direction: column; gap: 5px; font-size: var(--tg-text-sm); }
 .vault__field > span { font-weight: var(--tg-weight-medium); color: var(--tg-text-muted); }
 .vault__grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--tg-space-3); }
-.vault__results { list-style: none; border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); overflow: hidden; margin-top: -4px; }
+.vault__results { list-style: none; padding: 0; border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); overflow: hidden; margin-top: -4px; }
 .vault__results li + li { border-top: 1px solid var(--tg-border); }
 .vault__results button { width: 100%; text-align: left; background: none; border: none; padding: 9px 12px; font-size: var(--tg-text-sm); color: var(--tg-text); cursor: pointer; }
 .vault__results button:hover { background: var(--tg-bg-sunken); }
@@ -60,7 +60,7 @@
 .vault__modal-actions { display: flex; justify-content: flex-end; gap: var(--tg-space-2); margin-top: var(--tg-space-2); }
 
 /* plans */
-.vault__plans { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.vault__plans { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .vault__plan { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--tg-border); border-radius: var(--tg-radius-md); padding: 11px 13px; cursor: pointer; }
 .vault__plan--sel { border-color: var(--tg-accent); background: var(--tg-accent-soft); }
 .vault__plan-main { flex: 1; display: flex; flex-direction: column; }
