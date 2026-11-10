@@ -87,8 +87,10 @@
   color: var(--tg-on-brand);
 }
 
+/* Navy and cream only, as on the brand slides: the sell door uses the same
+   cream as the Gear Vault band, so the orange buttons read the same everywhere. */
 .door--sell {
-  background: var(--tg-accent-soft);
+  background: var(--tg-bg-sunken);
   color: var(--tg-text);
 }
 
@@ -126,20 +128,9 @@
   gap: var(--tg-space-3) var(--tg-space-5);
 }
 
-.door .door__cta {
-  padding: 13px 24px;
-  font-weight: var(--tg-weight-bold);
-  background: var(--tg-cta);
-  border-color: var(--tg-cta);
-  color: var(--tg-on-cta);
-  text-decoration: none;
-}
-.door .door__cta:hover {
-  background: var(--tg-cta-hover);
-  border-color: var(--tg-cta-hover);
-  color: var(--tg-on-cta);
-  text-decoration: none;
-}
+/* Every call to action on the home page is the one primary button, at one size. */
+.tg-button.home-cta { padding: 13px 24px; font-weight: var(--tg-weight-bold); text-decoration: none; }
+.tg-button.home-cta:hover { text-decoration: none; }
 
 .door__ghost {
   color: var(--tg-on-brand);
@@ -246,7 +237,6 @@
 .vault-invite__list li { display: flex; gap: var(--tg-space-2); }
 .vault-invite__list li::before { content: "✓"; color: var(--tg-good); font-weight: var(--tg-weight-bold); }
 
-.vault-invite .vault-invite__cta { padding: 12px 22px; font-weight: var(--tg-weight-bold); text-decoration: none; }
 
 .vault-card {
   border-radius: var(--tg-radius-lg);
@@ -793,7 +783,7 @@
 
   .doors { border-radius: var(--tg-radius-lg); }
   .door { padding: var(--tg-space-5) var(--tg-space-4); }
-  .door .door__cta { flex: 1; justify-content: center; text-align: center; }
+  .door .home-cta { flex: 1; justify-content: center; text-align: center; }
 
   /* Buy first, with every pick as a rail that peeks past the edge, so more
      gear shows before the Sell card. */

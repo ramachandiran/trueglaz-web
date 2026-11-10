@@ -100,7 +100,7 @@ function Doors({ d, inStock }: { d: HomeView; inStock: number }) {
           return it, and the seller is paid only after you keep it.
         </p>
         <div className="door__ctas">
-          <Link to="/catalog" className="tg-button door__cta">Shop all {inStock} pieces</Link>
+          <Link to="/catalog" className="tg-button tg-button--primary home-cta">Shop all {inStock} pieces</Link>
           <a href="#how" className="door__ghost">How it works</a>
         </div>
         {picks.length > 0 && (
@@ -124,7 +124,7 @@ function Doors({ d, inStock }: { d: HomeView; inStock: number }) {
           {/* /sell is signed-in only: a visitor goes through sign-in and comes
               straight back, and selling asks for the one-time ID check before
               the first listing. */}
-          <Link to="/sell" className="tg-button door__cta">Start selling</Link>
+          <Link to="/sell" className="tg-button tg-button--primary home-cta">Start selling</Link>
         </div>
         <p className="door__note">One sign-in and ID check, then list freely.</p>
         <ol className="door__steps">
@@ -174,7 +174,7 @@ function VaultInvite({ sales }: { sales: HomeSale[] }) {
           <li>Insure any item from the Vault</li>
           <li>See when it's a good time to sell</li>
         </ul>
-        <Link to="/vault" className="tg-button tg-button--primary vault-invite__cta">Start your Gear Vault</Link>
+        <Link to="/vault" className="tg-button tg-button--primary home-cta">Start your Gear Vault</Link>
       </div>
       {rows.length > 0 && (
         <div className="vault-card" aria-label="Example vault">
