@@ -329,7 +329,8 @@
 
 .corner__title {
   margin: 0;
-  font-size: var(--tg-text-lg);
+  font-size: var(--tg-text-xl);
+  letter-spacing: -0.01em;
 }
 
 .corner__stats {
