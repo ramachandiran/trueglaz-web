@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Modal, Pressable, ScrollView, View } from 'react-native'
+import { Pressable, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import {
   api, getStorage, isOps, money, useSession,
   type ProductModel, type VaultItem,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
+import { BottomSheet } from '../components/BottomSheet'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Muted } from '../components/ui'
@@ -51,21 +52,12 @@ export function VaultIntro({ onClosed }: { onClosed?: () => void } = {}) {
   if (!eligible) return null
 
   return (
-    <Modal transparent animationType="slide" visible onRequestClose={dismiss}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(20,30,40,0.45)', justifyContent: 'flex-end' }}>
-        <View style={{
-          backgroundColor: t.colors.bg, borderTopLeftRadius: t.radius.lg, borderTopRightRadius: t.radius.lg,
-          padding: t.space.x4, maxHeight: '90%',
-        }}>
-          <ScrollView contentContainerStyle={{ gap: t.space.x3 }} keyboardShouldPersistTaps="handled">
-            {step === 'offer'
-              ? <Offer onAdded={(it) => { setAdded(it); setStep('added') }} onSkip={dismiss} />
-              : <Added item={added!} onAddAnother={() => { setAdded(null); setStep('offer') }}
-                  onOpen={() => { dismiss(); navigation.navigate('Vault') }} onDone={dismiss} />}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    <BottomSheet onClose={dismiss} background={t.colors.bg} scroll>
+      {step === 'offer'
+        ? <Offer onAdded={(it) => { setAdded(it); setStep('added') }} onSkip={dismiss} />
+        : <Added item={added!} onAddAnother={() => { setAdded(null); setStep('offer') }}
+            onOpen={() => { dismiss(); navigation.navigate('Vault') }} onDone={dismiss} />}
+    </BottomSheet>
   )
 }
 

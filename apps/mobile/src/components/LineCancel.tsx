@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Modal, Pressable, View } from 'react-native'
+import { Pressable, View } from 'react-native'
+import { BottomSheet } from './BottomSheet'
 import { api, dateOnly, money, useApi } from '@trueglaz/core'
 import { Txt } from './Txt'
 import { Button, Field } from './form'
@@ -70,9 +71,8 @@ export function LineCancel({ lineId, state, totalMinor, onChanged }: { lineId: s
         </Txt>, true,
       )}
       <Button label={state === 'dispatched' ? 'Cancel — it’s on its way' : 'Cancel order'} variant="ghost" onPress={() => { setOpen(true); setError(null) }} />
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
-          <View style={{ backgroundColor: t.colors.bgRaised, borderTopLeftRadius: t.radius.lg, borderTopRightRadius: t.radius.lg, padding: t.space.x4, gap: t.space.x3 }}>
+      <BottomSheet visible={open} onClose={() => setOpen(false)}>
+          <View style={{ gap: t.space.x3 }}>
             <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Cancel this order?</Txt>
             <Muted size={t.size.xs}>
               {state === 'dispatched'
@@ -90,17 +90,17 @@ export function LineCancel({ lineId, state, totalMinor, onChanged }: { lineId: s
                 )
               })}
             </View>
-            <Field label={reason === 'other' ? 'Tell us briefly why' : 'Anything else? (optional)'} value={note} onChangeText={setNote} multiline />
+            <Field label={reason === 'other' ? 'Tell us briefly why' : 'Anything else? (optional)'} value={note} onChangeText={setNote}
+              multiline submitBehavior="blurAndSubmit" returnKeyType="done" maxLength={500} />
             {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
-            <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
-              <Button label="Keep the order" variant="ghost" onPress={() => setOpen(false)} style={{ flex: 1 }} />
-              <Button label="Request cancellation" variant="danger" loading={busy}
+            <View style={{ gap: t.space.x2 }}>
+              <Button label="Request cancellation" variant="cta" loading={busy}
                 disabled={!reason || (reason === 'other' && note.trim().length < 5)}
-                onPress={() => reason && run(() => api.requestCancel(lineId, reason, note))} style={{ flex: 1 }} />
+                onPress={() => reason && run(() => api.requestCancel(lineId, reason, note))} />
+              <Button label="Keep the order" variant="ghost" onPress={() => setOpen(false)} />
             </View>
           </View>
-        </View>
-      </Modal>
+      </BottomSheet>
     </View>
   )
 }

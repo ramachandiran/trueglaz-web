@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
+import { FlatList, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
@@ -8,6 +8,7 @@ import {
   type SearchFacets, type SearchHit, type Sort,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
+import { BottomSheet } from '../components/BottomSheet'
 import { mobileFontFamily } from '../theme/fonts'
 import { useTheme } from '../theme/ThemeContext'
 import { Empty, ErrorNote, Loading } from '../components/ui'
@@ -206,9 +207,7 @@ function FilterSheet({
   const rupees = (minor: number | null) => (minor === null ? '' : String(Math.round(minor / 100)))
   const fromRupees = (text: string) => (text.trim() === '' ? null : Math.max(0, Number(text.replace(/[^0-9]/g, '')) * 100))
   return (
-    <Modal visible={open} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.sheetBackdrop}>
-        <View style={{ backgroundColor: t.colors.bgRaised, borderTopLeftRadius: t.radius.lg, borderTopRightRadius: t.radius.lg, maxHeight: '85%', padding: t.space.x4 }}>
+    <BottomSheet visible={open} onClose={onClose} maxHeight="85%" scroll gap={t.space.x5} header={(
           <View style={styles.sheetHead}>
             <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Filters</Txt>
             <View style={{ flexDirection: 'row', gap: t.space.x3 }}>
@@ -220,7 +219,8 @@ function FilterSheet({
               <Pressable onPress={onClose}><Txt style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Show {total}</Txt></Pressable>
             </View>
           </View>
-          <ScrollView contentContainerStyle={{ gap: t.space.x5, paddingBottom: t.space.x6 }}>
+    )}>
+
             <Group title="Sort">
               <Wrap>
                 {([['newest', 'Newest'], ['price-asc', 'Price ↑'], ['price-desc', 'Price ↓'], ['grade-desc', 'Condition']] as [Sort, string][]).map(([value, label]) => (
@@ -252,10 +252,7 @@ function FilterSheet({
               </View>
               {price && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{money(price.minMinor)} – {money(price.maxMinor)} in stock</Txt>}
             </Group>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    </BottomSheet>
   )
 }
 
@@ -297,6 +294,5 @@ function Chip({ label, selected, disabled, onPress }: { label: string; selected:
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   sheetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
 })

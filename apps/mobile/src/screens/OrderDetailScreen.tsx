@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Modal, Pressable, ScrollView, View } from 'react-native'
+import { Pressable, ScrollView, View } from 'react-native'
+import { BottomSheet } from '../components/BottomSheet'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as ImagePicker from 'expo-image-picker'
@@ -256,9 +257,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
         {actionError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{actionError}</Txt>}
       </ScrollView>
 
-      <Modal visible={!!returnFor} transparent animationType="slide" onRequestClose={() => setReturnFor(null)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
-          <View style={{ backgroundColor: t.colors.bgRaised, borderTopLeftRadius: t.radius.lg, borderTopRightRadius: t.radius.lg, padding: t.space.x4, gap: t.space.x3 }}>
+      <BottomSheet visible={!!returnFor} onClose={() => setReturnFor(null)} scroll>
             <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Request a return</Txt>
             <Muted size={t.size.xs}>Within the acceptance window you can send it back. Tell us why.</Muted>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
@@ -272,7 +271,8 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
                 )
               })}
             </View>
-            <Field label="What is wrong?" value={note} onChangeText={setNote} multiline />
+            <Field label="What is wrong?" value={note} onChangeText={setNote} placeholder="A few words: what you found when you opened it"
+              multiline submitBehavior="blurAndSubmit" returnKeyType="done" maxLength={500} />
             <View style={{ gap: t.space.x2 }}>
               <Txt style={{ color: t.colors.text, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Unboxing video (required)</Txt>
               <Muted size={t.size.xs}>The video you took opening the parcel: the seal, the item and the problem. Up to 200 MB. Only you and our team can see it.</Muted>
@@ -295,13 +295,11 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
               )}
             </View>
             {actionError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{actionError}</Txt>}
-            <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
-              <Button label="Cancel" variant="ghost" onPress={() => setReturnFor(null)} style={{ flex: 1 }} />
-              <Button label="Request return" variant="danger" onPress={submitReturn} loading={busyLine === returnFor?.id} disabled={!video || progress !== null || !reasonCode} style={{ flex: 1 }} />
+            <View style={{ gap: t.space.x2 }}>
+              <Button label="Request return" variant="cta" onPress={submitReturn} loading={busyLine === returnFor?.id} disabled={!video || progress !== null || !reasonCode} />
+              <Button label="Cancel" variant="ghost" onPress={() => setReturnFor(null)} />
             </View>
-          </View>
-        </View>
-      </Modal>
+      </BottomSheet>
     </View>
   )
 }
