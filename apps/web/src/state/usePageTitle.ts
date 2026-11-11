@@ -41,6 +41,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/admin\/settings\/payouts/, 'Payouts · Settings'],
   [/^\/admin\/settings\/company/, 'Company & invoices · Settings'],
   [/^\/admin\/settings\/catalogue/, 'Catalogue · Settings'],
+  [/^\/admin\/settings\/team/, 'Team · Settings'],
   [/^\/admin\/settings\/security/, 'Sign-in & security · Settings'],
   [/^\/admin\/settings\/notifications/, 'Notifications · Settings'],
   [/^\/admin\/settings\/models/, 'Model photos · Settings'],

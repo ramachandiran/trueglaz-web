@@ -160,3 +160,20 @@
   .st__bands .st__input { width: 100px; }
   .st__bands .st__input--pct { width: 64px; }
 }
+
+/* Team (TG-85) */
+.team__add { margin-bottom: var(--tg-space-2); }
+.team__form { display: flex; gap: var(--tg-space-3); align-items: flex-end; flex-wrap: wrap; margin: var(--tg-space-3) 0 var(--tg-space-2); }
+.team__field { display: grid; gap: 4px; font-size: var(--tg-text-sm); color: var(--tg-text-muted); }
+.team__field--email { flex: 1 1 260px; }
+.team__ok { color: var(--tg-good); font-size: var(--tg-text-sm); margin: var(--tg-space-2) 0 0; }
+.team__list { padding: 0; overflow-x: auto; }
+.team__table { width: 100%; border-collapse: collapse; font-size: var(--tg-text-sm); }
+.team__table th { text-align: left; font-weight: 600; color: var(--tg-text-muted); font-size: var(--tg-text-xs); text-transform: uppercase; letter-spacing: .05em; }
+.team__table th, .team__table td { padding: var(--tg-space-3) var(--tg-space-4); border-bottom: 1px solid var(--tg-border); }
+.team__table tr:last-child td { border-bottom: 0; }
+.team__roles { display: flex; gap: 6px; flex-wrap: wrap; }
+.team__role { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: 999px; font-size: var(--tg-text-xs); font-weight: 600; background: var(--tg-bg-hover); }
+.team__role--admin { background: var(--tg-accent-soft); }
+.team__x { border: 0; background: none; cursor: pointer; color: var(--tg-text-muted); font-size: 15px; line-height: 1; padding: 0 6px; border-radius: 50%; }
+.team__x:hover { color: var(--tg-bad); background: var(--tg-bad-soft); }

@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell'
 import { StaffShell } from './components/StaffShell'
 import { storedMarketView } from './state/useMarketView'
 import { Guard } from './components/Guard'
+import { TeamSettingsPage } from './pages/settings/TeamSettingsPage'
 import { DigilockerReturnPage } from './pages/DigilockerReturnPage'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
 import { AuditPage } from './pages/AuditPage'
@@ -130,6 +131,7 @@ export function App() {
             <Route path="payouts" element={<SettingsGroupPage key="payouts" group="payouts" />} />
             <Route path="company" element={<CompanySettingsPage />} />
             <Route path="catalogue" element={<CatalogueSettingsPage />} />
+            <Route path="team" element={<TeamSettingsPage />} />
             <Route path="security" element={<SettingsGroupPage key="security" group="security" />} />
             <Route path="notifications" element={<SettingsGroupPage key="notifications" group="notifications" />} />
             <Route path="models" element={<AdminModelsPage />} />

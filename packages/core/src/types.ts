@@ -1516,6 +1516,11 @@ export interface ReturnCase {
   decisionNote: string | null
   inspection: { serialMatches: boolean; conditionOk: boolean; accessoriesOk: boolean; note: string | null } | null
   resolutionNote: string | null
+  decidedAt?: string | null
+  receivedAt?: string | null
+  inspectedAt?: string | null
+  resolvedAt?: string | null
+  unboxingVideoId?: string | null
 }
 
 /** A case as the buyer sees it: with where to send the parcel once it is approved. */
@@ -1523,7 +1528,64 @@ export interface ReturnForBuyer {
   case: ReturnCase
   courierCode: string | null
   trackingNumber: string | null
+  video?: ReturnEvidence | null
 }
+
+/** The buyer's unboxing video for a return. */
+export interface ReturnEvidence {
+  id: string
+  kind: string
+  fileName: string | null
+  contentType: string
+  bytes: number
+  createdAt: string | null
+}
+
+/**
+ * One step in an order line's life. Kinds: paid, dispatched, tracking_updated,
+ * delivered, return_requested, return_approved, return_declined, return_received,
+ * return_checked, return_refunded, return_escalated, return_sale_stands, closed.
+ */
+export interface OrderLineEvent {
+  kind: string
+  at: string
+  /** Staff only. */
+  actorName: string | null
+  actorRole: string | null
+  note: string | null
+  data: Record<string, unknown>
+}
+
+/** An order line as the fulfilment desk sees it. */
+export interface StaffOrderLine extends OrderLine {
+  internalSku: string | null
+  title: string | null
+  productModelId: string | null
+  orderNumber: string | null
+  buyerName: string | null
+  courierCode: string | null
+  trackingNumber: string | null
+  /** Paise. Staff only. */
+  courierCostMinor: number | null
+  dispatchedAt: string | null
+  deliveredAt: string | null
+  deliveryRemarks: string | null
+  dispatchNote: string | null
+}
+
+export interface DispatchInput {
+  courierCode: string
+  trackingNumber?: string | null
+  courierCostMinor: number
+  dispatchedOn?: string | null
+  notes?: string | null
+}
+
+export interface TeamRole { role: string; grantedAt: string | null; grantedByName: string | null }
+export interface TeamMember { userId: string; displayName: string; email: string | null; roles: TeamRole[]; lastSeenAt: string | null }
+export interface TeamInvite { id: string; email: string; role: string; invitedByName: string | null; createdAt: string | null }
+export interface TeamView { members: TeamMember[]; invites: TeamInvite[] }
+export interface TeamGrantResult { outcome: 'granted' | 'invited'; member: TeamMember | null; invite: TeamInvite | null }
 
 export interface ReturnCaseView {
   case: ReturnCase
@@ -1535,6 +1597,9 @@ export interface ReturnCaseView {
   buyerName: string | null
   /** For the model's picture. */
   productModelId?: string | null
+  /** The buyer's unboxing video; null on returns raised before it was required. */
+  video?: ReturnEvidence | null
+  buyerEmail?: string | null
 }
 
 /** What staff see first: stage sizes, what is waiting on them, and what just moved. */

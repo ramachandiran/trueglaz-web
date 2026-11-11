@@ -2,12 +2,14 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, dateTime, money, relative, useApi,
-  type OrderLineSummary, type OrderSummary, type ReturnForBuyer,
+  type OrderLineSummary, type OrderSummary, type ReturnForBuyer, type ReturnEvidence,
 } from '@trueglaz/core'
 import { photoKindFor } from '../components/GearPhoto'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import './OrdersPage.css'
 import { ModelPhoto } from '../components/ModelPhoto'
+import { LineHistory } from '../components/LineHistory'
+import { courierName } from '../components/couriers'
 
 /**
  * The buyer's orders.
@@ -230,15 +232,6 @@ function OrderCard({ order, onChanged }: { order: OrderSummary; onChanged: () =>
 }
 
 /** "bluedart" is a code; the buyer is told to hand a parcel to Blue Dart. */
-const COURIERS: Record<string, string> = {
-  bluedart: 'Blue Dart', delhivery: 'Delhivery', dtdc: 'DTDC', ecomexpress: 'Ecom Express', xpressbees: 'Xpressbees',
-  shadowfax: 'Shadowfax', indiapost: 'India Post', speedpost: 'Speed Post', ekart: 'Ekart', shiprocket: 'Shiprocket',
-}
-function courierName(code: string | null | undefined): string | null {
-  if (!code) return null
-  return COURIERS[code.toLowerCase().replace(/[^a-z]/g, '')] ?? code.charAt(0).toUpperCase() + code.slice(1)
-}
-
 /** What the buyer bought, without the grade code the listing title ends in: "EOS R5 · TG-9" -> "EOS R5". */
 function modelText(title: string): string {
   return title.split('·')[0].trim()
@@ -303,6 +296,7 @@ function LineRow({
         )}
 
         <ReturnPanel line={line} canRaise={waiting} onChanged={onChanged} />
+        <HistoryToggle lineId={line.id} state={line.state} />
       </div>
 
       <div className="line__actions">
@@ -401,13 +395,17 @@ function statusLine(line: OrderLineSummary): string {
     case 'accepted':
       return line.acceptedBy === 'window_expired'
         ? `Closed automatically on ${dateOnly(line.acceptedAt)} — the return window passed.`
-        : `Confirmed on ${dateOnly(line.acceptedAt)}. The seller has been paid.`
+        : line.acceptedBy === 'return_declined'
+          ? `Sale closed on ${dateOnly(line.acceptedAt)}, after your return was declined.`
+          : line.acceptedBy === 'return_refused'
+            ? `Sale closed on ${dateOnly(line.acceptedAt)}, after your return was reviewed.`
+            : `Confirmed on ${dateOnly(line.acceptedAt)}. The seller has been paid.`
     case 'dispatched':
       return line.dispatchedAt ? `On its way — sent ${relative(line.dispatchedAt)}.` : 'On its way to you.'
     case 'delivered':
       return 'Delivered. The return window has ended and the sale is closing.'
     case 'return_requested':
-      return 'Return in progress — the clock is stopped while we deal with it.'
+      return 'Return in progress — the clock is stopped while we deal with it. Your payment stays held.'
     case 'returned':
       return 'Returned. Your refund is on its way.'
     case 'cancelled':
@@ -464,12 +462,33 @@ function OrderInvoice({
   )
 }
 
+/** Where a return is, in the steps it actually has (TG-91). */
+const RETURN_STEPS = ['Requested', 'Approved', 'Received', 'Checked', 'Refunded']
+const RETURN_REACHED: Record<string, number> = { requested: 0, approved: 1, received: 2, inspected: 3, escalated: 3, refunded: 4 }
+
+function HistoryToggle({ lineId, state }: { lineId: string; state: string }) {
+  const [open, setOpen] = useState(false)
+  if (state === 'open' || state === 'cancelled') return null
+  return (
+    <div className="line__history">
+      <button type="button" className="order__link" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {open ? 'Hide history' : 'History'}
+      </button>
+      {open && <LineHistory lineId={lineId} refreshKey={state} />}
+    </div>
+  )
+}
+
+const MAX_VIDEO = 200 * 1024 * 1024
+const fileSize = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / (1024 * 1024)).toFixed(1)} MB`)
+
 /**
  * Returning an item: asking, and then following it.
  *
- * Asking is only on offer while the window is open. Once a return exists the
- * panel says where it stands in words, and, when it has been approved, where to
- * send the parcel.
+ * Asking is only on offer while the window is open, and needs the unboxing
+ * video (TG-90): the video is what our team judges the request on. Once a
+ * return exists the panel shows where it stands, as a rail and in words, and
+ * keeps showing it after the sale closes — including a decline and why (TG-92).
  */
 function ReturnPanel({
   line, canRaise, onChanged,
@@ -478,7 +497,8 @@ function ReturnPanel({
   canRaise: boolean
   onChanged: () => void
 }) {
-  const hasCase = ['return_requested', 'returned'].includes(line.state) || line.acceptedBy === 'return_refused'
+  const hasCase = ['return_requested', 'returned'].includes(line.state) ||
+    line.acceptedBy === 'return_refused' || line.acceptedBy === 'return_declined'
   const found = useApi<ReturnForBuyer | null | undefined>(
     () => (hasCase ? api.returnForLine(line.id) : Promise.resolve(null)),
     [line.id, line.state],
@@ -486,16 +506,33 @@ function ReturnPanel({
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('not_as_described')
   const [note, setNote] = useState('')
+  const [video, setVideo] = useState<ReturnEvidence | null>(null)
+  const [progress, setProgress] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const spec = RETURN_REASONS.find((r) => r.code === reason)!
 
+  async function pick(file: File | undefined) {
+    if (!file) return
+    setError(null); setVideo(null)
+    const type = file.type || (file.name.toLowerCase().endsWith('.mov') ? 'video/quicktime' : 'video/mp4')
+    if (!['video/mp4', 'video/quicktime', 'video/webm'].includes(type)) { setError('Choose an MP4, MOV or WebM video.'); return }
+    if (file.size > MAX_VIDEO) { setError('That video is over 200 MB. Record a shorter clip, or lower the camera resolution.'); return }
+    setProgress(0)
+    try {
+      setVideo(await api.uploadReturnVideo(line.id, file, type, file.name, setProgress))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'The video did not upload — please try again')
+    } finally { setProgress(null) }
+  }
+
   async function submit() {
+    if (!video) return
     setBusy(true); setError(null)
     try {
-      await api.returnRequest(line.id, reason, note)
-      setOpen(false); setNote('')
+      await api.returnRequest(line.id, reason, note, video.id)
+      setOpen(false); setNote(''); setVideo(null)
       onChanged(); found.reload()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'That did not go through')
@@ -506,19 +543,31 @@ function ReturnPanel({
   if (rc) {
     const c = rc.case
     const text: Record<string, string> = {
-      requested: 'We have your return request and will review it shortly.',
+      requested: 'Requested — we’re reviewing your unboxing video and will reply within a working day.',
       approved: `Approved. Send it back with ${courierName(rc.courierCode) ?? 'the courier'}${rc.trackingNumber ? `, tracking ${rc.trackingNumber}` : ''}. We refund you once it has arrived and been checked.`,
       received: 'We have your parcel and are checking it.',
       inspected: 'Checked. We are finishing up.',
       refunded: 'Return accepted. Your refund is being processed.',
-      escalated: 'The item did not pass our check on arrival. Our team will contact you.',
-      sale_stands: 'After review the sale stands; the item is being sent back to you.',
-      declined: `Not accepted. ${c.decisionNote ?? ''}`,
+      escalated: 'The item did not pass our check on arrival. A senior member of our team is reviewing it and will contact you.',
+      sale_stands: `After review the sale stands; the item is being sent back to you.${c.resolutionNote ? ` ${c.resolutionNote}` : ''}`,
+      declined: `Declined — ${(c.decisionNote ?? 'see the history for details').replace(/[.\s]+$/, '')}. The sale has closed as delivered.`,
     }
+    const reached = RETURN_REACHED[c.state]
+    const bad = c.state === 'declined' || c.state === 'sale_stands'
     return (
-      <p className="line__status" role="status">
-        <strong>Return:</strong> {text[c.state] ?? c.state}
-      </p>
+      <div className={`line__return${bad ? ' line__return--bad' : ''}`} role="status">
+        {reached !== undefined && (
+          <ol className="rail rail--return" aria-label="Return progress">
+            {RETURN_STEPS.map((step, i) => (
+              <li key={step} className={'rail__step' + (i <= reached ? ' rail__step--done' : '') + (i === reached && c.state !== 'refunded' ? ' rail__step--now' : '')}>
+                <span className="rail__dot" aria-hidden="true" />
+                <span className="rail__label">{step}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="line__status"><strong>Return:</strong> {text[c.state] ?? c.state}</p>
+      </div>
     )
   }
 
@@ -531,7 +580,7 @@ function ReturnPanel({
     )
   }
   return (
-    <div className="line__status">
+    <div className="line__status line__return-form">
       <label className="tg-label">
         Why are you returning it?
         <select className="tg-input" value={reason} onChange={(e) => setReason(e.target.value)}>
@@ -543,16 +592,35 @@ function ReturnPanel({
         {!spec.needsNote && <span className="tg-muted"> (optional)</span>}
         <textarea className="tg-input" rows={3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} />
       </label>
+      <div className="line__video">
+        <span className="tg-label">Unboxing video <span className="tg-muted">(required)</span></span>
+        <p className="tg-muted line__video-hint">
+          The video you took opening the parcel, showing the seal, the item and the problem. MP4, MOV or WebM, up to 200 MB.
+          Only you and our team can see it.
+        </p>
+        {video ? (
+          <p className="line__video-ok">✓ {video.fileName ?? 'Video'} uploaded ({fileSize(video.bytes)})
+            {' '}<button type="button" className="order__link" onClick={() => setVideo(null)}>Replace</button></p>
+        ) : progress !== null ? (
+          <div className="line__progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+            <span style={{ width: `${Math.round(progress * 100)}%` }} />
+            <em>Uploading… {Math.round(progress * 100)}%</em>
+          </div>
+        ) : (
+          <input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" onChange={(e) => pick(e.target.files?.[0])} aria-label="Unboxing video" />
+        )}
+      </div>
       {error && <p className="order__error" role="alert">{error}</p>}
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button
           type="button" className="tg-button tg-button--primary"
-          disabled={busy || (spec.needsNote && note.trim().length < 10)}
+          disabled={busy || !video || progress !== null || (spec.needsNote && note.trim().length < 10)}
           onClick={submit}
+          title={video ? undefined : 'Add your unboxing video first'}
         >
           {busy ? 'Sending…' : 'Request the return'}
         </button>
-        <button type="button" className="tg-button" disabled={busy} onClick={() => setOpen(false)}>Cancel</button>
+        <button type="button" className="tg-button" disabled={busy || progress !== null} onClick={() => setOpen(false)}>Cancel</button>
       </div>
     </div>
   )
