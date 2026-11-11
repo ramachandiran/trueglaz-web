@@ -30,6 +30,19 @@ function statusOf(t: Theme, state: string): [string, string] {
   }
 }
 
+function lineStatus(t: Theme, l: OrderSummary['lines'][number]): [string, string] {
+  if (l.cancelRequest?.state === 'requested') return ['Cancellation requested', t.colors.warn]
+  switch (l.state) {
+    case 'dispatched': return ['Shipped', t.colors.good]
+    case 'delivered': return ['Delivered · check it', t.colors.good]
+    case 'return_requested': return ['Return in progress', t.colors.warn]
+    case 'accepted': return ['Yours', t.colors.good]
+    case 'cancelled': return ['Cancelled', t.colors.bad]
+    case 'returned': return ['Refunded', t.colors.textMuted]
+    default: return ['Packing', t.colors.cta]
+  }
+}
+
 /** Orders, in the 2026 layout: a big title, status tabs, and one card per order. */
 export function OrdersScreen({ navigation }: { navigation: any }) {
   const t = useTheme()
@@ -84,7 +97,9 @@ export function OrdersScreen({ navigation }: { navigation: any }) {
 function OrderCard({ t, o, img, onOpen }: { t: Theme; o: OrderSummary; img?: string; onOpen: () => void }) {
   const first = o.lines[0]
   const extra = o.lines.length - 1
-  const [status, colour] = statusOf(t, o.state)
+  // A paid order's own state stays "paid" while its item travels, so the card
+  // reads the item: shipped, delivered, a return or a cancellation in progress.
+  const [status, colour] = o.state === 'paid' && first ? lineStatus(t, first) : statusOf(t, o.state)
   const name = first ? first.title.split('·')[0].trim() : 'Order'
   return (
     <Surface style={{ padding: t.space.x4 }}>

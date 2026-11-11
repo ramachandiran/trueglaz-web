@@ -20,6 +20,17 @@ const REASONS: Record<string, string> = {
   damaged_in_transit: 'damaged in transit',
   wrong_item: 'wrong item received',
   change_of_mind: 'changed their mind',
+  cancelled_in_transit: 'cancelled while in transit',
+}
+
+/** Why a buyer may cancel; the API's list, for labels in history and queues. */
+export const CANCEL_REASONS: Record<string, string> = {
+  ordered_by_mistake: 'ordered by mistake',
+  better_price: 'found a better price',
+  no_longer_needed: 'no longer needed',
+  delivery_too_slow: 'delivery is taking too long',
+  wrong_address: 'wrong delivery address',
+  other: 'other',
 }
 
 const CLOSED_BY: Record<string, string> = {
@@ -48,14 +59,21 @@ export function orderEventTitle(e: OrderLineEvent): string {
     case 'return_escalated': return 'Did not pass our check — passed to an admin'
     case 'return_sale_stands': return 'After review the sale stands — item sent back'
     case 'closed': return CLOSED_BY[String(d.closedBy)] ?? 'Sale complete'
+    case 'cancel_requested': return `Cancellation requested — ${CANCEL_REASONS[String(d.reason)] ?? String(d.reason ?? '')}`
+    case 'cancel_withdrawn': return 'Cancellation request withdrawn'
+    case 'cancel_approved': return d.outcome === 'recall'
+      ? 'Cancellation approved — the courier is bringing it back'
+      : 'Cancellation approved — order cancelled'
+    case 'cancel_declined': return 'Cancellation declined — the order carries on'
+    case 'refunded': return `Refunded${typeof d.amountMinor === 'number' ? ` ₹${(d.amountMinor / 100).toLocaleString('en-IN')}` : ''}${str(d.reference) ? ` · ref ${d.reference}` : ''}`
     default: return e.kind.replace(/_/g, ' ')
   }
 }
 
 /** good | bad | warn | plain, for the dot beside a step. */
 export function orderEventTone(kind: string): 'good' | 'bad' | 'warn' | 'plain' {
-  if (kind === 'return_declined' || kind === 'return_escalated') return 'bad'
-  if (kind === 'return_refunded' || kind === 'closed' || kind === 'delivered') return 'good'
-  if (kind === 'return_requested') return 'warn'
+  if (kind === 'return_declined' || kind === 'return_escalated' || kind === 'cancel_declined') return 'bad'
+  if (kind === 'return_refunded' || kind === 'closed' || kind === 'delivered' || kind === 'refunded' || kind === 'cancel_approved') return 'good'
+  if (kind === 'return_requested' || kind === 'cancel_requested') return 'warn'
   return 'plain'
 }

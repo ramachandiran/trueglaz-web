@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import * as ImagePicker from 'expo-image-picker'
 import { api, dateTime, money, useApi, type OrderLine, type ReturnEvidence } from '@trueglaz/core'
 import { LineReturnAndHistory } from '../components/LineHistoryList'
+import { LineCancel } from '../components/LineCancel'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
@@ -234,6 +235,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
                   <Button label="Return" variant="ghost" onPress={() => { setReturnFor(l); setVideo(null); setActionError(null) }} style={{ flex: 1 }} />
                 </View>
               )}
+              {!unpaid && <LineCancel lineId={l.id} state={l.state} totalMinor={order.totalMinor} onChanged={reload} />}
               <LineReturnAndHistory lineId={l.id} state={l.state} acceptedBy={l.acceptedBy} />
               {l.acceptedAt && <Muted size={t.size.xs}>Accepted {dateTime(l.acceptedAt)}</Muted>}
               <VaultAdd lineId={l.id} state={l.state} />

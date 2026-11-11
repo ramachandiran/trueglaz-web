@@ -295,6 +295,7 @@ function LineRow({
           <p className="line__status">{statusLine(line)}</p>
         )}
 
+        <CancelPanel line={line} order={order} onChanged={onChanged} />
         <ReturnPanel line={line} canRaise={waiting} onChanged={onChanged} />
         <HistoryToggle lineId={line.id} state={line.state} />
       </div>
@@ -468,7 +469,6 @@ const RETURN_REACHED: Record<string, number> = { requested: 0, approved: 1, rece
 
 function HistoryToggle({ lineId, state }: { lineId: string; state: string }) {
   const [open, setOpen] = useState(false)
-  if (state === 'open' || state === 'cancelled') return null
   return (
     <div className="line__history">
       <button type="button" className="order__link" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -544,7 +544,9 @@ function ReturnPanel({
     const c = rc.case
     const text: Record<string, string> = {
       requested: 'Requested — we’re reviewing your unboxing video and will reply within a working day.',
-      approved: `Approved. Send it back with ${courierName(rc.courierCode) ?? 'the courier'}${rc.trackingNumber ? `, tracking ${rc.trackingNumber}` : ''}. We refund you once it has arrived and been checked.`,
+      approved: c.reasonCode === 'cancelled_in_transit'
+        ? 'Cancellation approved — the courier is bringing it back to us. We refund you once it is back and checked.'
+        : `Approved. Send it back with ${courierName(rc.courierCode) ?? 'the courier'}${rc.trackingNumber ? `, tracking ${rc.trackingNumber}` : ''}. We refund you once it has arrived and been checked.`,
       received: 'We have your parcel and are checking it.',
       inspected: 'Checked. We are finishing up.',
       refunded: 'Return accepted. Your refund is being processed.',
@@ -622,6 +624,108 @@ function ReturnPanel({
         </button>
         <button type="button" className="tg-button" disabled={busy || progress !== null} onClick={() => setOpen(false)}>Cancel</button>
       </div>
+    </div>
+  )
+}
+
+const CANCELLABLE = ['open', 'packing', 'dispatched']
+
+/**
+ * Calling off a paid order before it arrives (TG-93).
+ *
+ * The buyer asks with a reason; our team decides, because the parcel may
+ * already be packed or with the courier. While the request waits, dispatch is
+ * held, so we never post something the buyer has asked us not to. The panel
+ * keeps saying what happened after the decision, with the refund reference.
+ */
+function CancelPanel({ line, order, onChanged }: { line: OrderLineSummary; order: OrderSummary; onChanged: () => void }) {
+  const reasons = useApi(() => api.cancelReasons(), [])
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const cr = line.cancelRequest
+
+  async function run(fn: () => Promise<unknown>) {
+    setBusy(true); setError(null)
+    try { await fn(); setOpen(false); setNote(''); setReason(''); onChanged() }
+    catch (e) { setError(e instanceof ApiError ? e.message : 'That did not go through') }
+    finally { setBusy(false) }
+  }
+
+  // After the decision: say what happened, and where the money is.
+  if (cr?.state === 'approved' && cr.outcome === 'pre_dispatch') {
+    return (
+      <div className="line__return" role="status">
+        <p className="line__status">
+          <strong>Cancelled at your request</strong> on {dateOnly(cr.decidedAt)}.{' '}
+          {cr.refundRef
+            ? <>Your refund of {money(order.totalMinor)} has been sent to how you paid (reference <span className="tg-mono">{cr.refundRef}</span>). It can take 5–7 working days to show.</>
+            : <>Your refund of {money(order.totalMinor)} is being processed to how you paid.</>}
+        </p>
+      </div>
+    )
+  }
+  if (!CANCELLABLE.includes(line.state)) return null
+
+  if (cr?.state === 'requested') {
+    return (
+      <div className="line__return" role="status">
+        <p className="line__status">
+          <strong>Cancellation requested</strong> on {dateOnly(cr.requestedAt)}. We’re reviewing it
+          {line.state === 'dispatched' ? ' — it is already with the courier, so if we approve, it comes back to us first.' : ' and holding dispatch until we do.'}
+        </p>
+        {error && <p className="order__error" role="alert">{error}</p>}
+        <button type="button" className="order__link" disabled={busy} onClick={() => run(() => api.withdrawCancel(line.id))}>
+          {busy ? 'Withdrawing…' : 'Withdraw the request'}
+        </button>
+      </div>
+    )
+  }
+
+  const declined = cr?.state === 'declined' ? cr : null
+  const needsNote = reason === 'other'
+  return (
+    <div className="line__cancel">
+      {declined && (
+        <p className="line__status line__status--bad">
+          <strong>We couldn’t cancel this:</strong> {declined.decisionNote}
+        </p>
+      )}
+      {!open ? (
+        <button type="button" className="order__link" onClick={() => setOpen(true)}>
+          {line.state === 'dispatched' ? 'Cancel — it’s on its way' : 'Cancel order'}
+        </button>
+      ) : (
+        <div className="line__return-form">
+          <p className="tg-muted line__video-hint">
+            {line.state === 'dispatched'
+              ? 'It is already with the courier. If we approve, the courier brings it back to us, and we refund you once it is back and checked.'
+              : 'We hold dispatch while we review it, usually within a working day. If we approve, you are refunded in full to how you paid.'}
+          </p>
+          <label className="tg-label">
+            Why are you cancelling?
+            <select className="tg-input" value={reason} onChange={(e) => setReason(e.target.value)}>
+              <option value="" disabled>Choose a reason</option>
+              {(reasons.data ?? []).map((r) => <option key={r.code} value={r.code}>{r.label}</option>)}
+            </select>
+          </label>
+          <label className="tg-label">
+            {needsNote ? 'Tell us briefly why' : 'Anything else?'} {!needsNote && <span className="tg-muted">(optional)</span>}
+            <textarea className="tg-input" rows={2} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} />
+          </label>
+          {error && <p className="order__error" role="alert">{error}</p>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="tg-button tg-button--primary"
+              disabled={busy || !reason || (needsNote && note.trim().length < 5)}
+              onClick={() => run(() => api.requestCancel(line.id, reason, note))}>
+              {busy ? 'Sending…' : 'Request cancellation'}
+            </button>
+            <button type="button" className="tg-button" disabled={busy} onClick={() => setOpen(false)}>Keep the order</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

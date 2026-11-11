@@ -11,7 +11,7 @@ import type {
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
   VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, DigilockerResult, StaffPayoutAccount, VaultKeyBlobsStored, MigratedItem,
-  OrderLineEvent, ReturnEvidence, StaffOrderLine, DispatchInput, TeamView, TeamGrantResult,
+  OrderLineEvent, ReturnEvidence, StaffOrderLine, DispatchInput, TeamView, TeamGrantResult, CancelRequest, StaffCancelRow, CancelDecision,
 } from './types'
 
 /**
@@ -444,6 +444,15 @@ export const api = {
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
   acceptLine: (lineId: string, byWindowExpiry = false, reason?: string) =>
     post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`, byWindowExpiry ? { reason: reason ?? '' } : undefined),
+  /** Cancelling a paid line before delivery (TG-93): the buyer asks, staff decide. */
+  cancelReasons: () => get<{ code: string; label: string }[]>('/cancellations/reasons'),
+  requestCancel: (lineId: string, reasonCode: string, note?: string) =>
+    post<CancelRequest>(`/order-lines/${lineId}/cancel-request`, { reasonCode, note: note?.trim() || null }),
+  withdrawCancel: (lineId: string) => post<CancelRequest>(`/order-lines/${lineId}/cancel-request/withdraw`, {}),
+  cancelRequestFor: (lineId: string) => get<CancelRequest | null>(`/order-lines/${lineId}/cancel-request`),
+  cancellations: (state?: string) => get<StaffCancelRow[]>(`/cancellations${state ? `?state=${state}` : ''}`),
+  approveCancel: (lineId: string, note?: string) => post<CancelDecision>(`/cancellations/${lineId}/approve`, { note: note?.trim() || null }),
+  declineCancel: (lineId: string, note: string) => post<CancelRequest>(`/cancellations/${lineId}/decline`, { note }),
   /** Everything that happened to a line: the buyer's part of it, or all of it for staff. */
   lineHistory: (lineId: string) => get<OrderLineEvent[]>(`/order-lines/${lineId}/history`),
   staffHome: () => get<StaffHome>('/staff/home'),

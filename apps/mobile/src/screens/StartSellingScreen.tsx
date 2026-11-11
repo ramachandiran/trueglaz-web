@@ -11,6 +11,7 @@ import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { demoAadhaar } from '../aadhaar'
 import { DigilockerCard } from '../components/DigilockerCard'
+import { OtpBoxes } from '../components/OtpBoxes'
 
 type Step = 'aadhaar' | 'otp'
 
@@ -148,7 +149,7 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
               <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo OTP: {devCode}</Txt>
             </View>
           )}
-          <Field label="OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" />
+          <OtpBoxes value={otp} onChange={setOtp} label="OTP" />
 
           <View style={{ gap: t.space.x2 }}>
             <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Verification selfie (required)</Txt>

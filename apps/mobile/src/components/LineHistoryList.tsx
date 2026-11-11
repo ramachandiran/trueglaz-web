@@ -9,7 +9,8 @@ const RETURN_TEXT = (r: ReturnForBuyer): string => {
   const c = r.case
   switch (c.state) {
     case 'requested': return 'Requested — we’re reviewing your unboxing video and will reply within a working day.'
-    case 'approved': return `Approved. Send it back with ${r.courierCode ?? 'the courier'}${r.trackingNumber ? `, tracking ${r.trackingNumber}` : ''}. We refund you once it has arrived and been checked.`
+    case 'approved': if (c.reasonCode === 'cancelled_in_transit') return 'Cancellation approved — the courier is bringing it back to us. We refund you once it is back and checked.'
+      return `Approved. Send it back with ${r.courierCode ?? 'the courier'}${r.trackingNumber ? `, tracking ${r.trackingNumber}` : ''}. We refund you once it has arrived and been checked.`
     case 'received': return 'We have your parcel and are checking it.'
     case 'inspected': return 'Checked. We are finishing up.'
     case 'refunded': return 'Return accepted. Your refund is being processed.'
@@ -44,7 +45,7 @@ export function LineReturnAndHistory({ lineId, state, acceptedBy }: { lineId: st
           </Txt>
         </View>
       )}
-      {state !== 'open' && state !== 'cancelled' && (
+      {(
         <Pressable onPress={() => setOpen(!open)} hitSlop={6}>
           <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{open ? 'Hide history' : 'History'}</Txt>
         </Pressable>

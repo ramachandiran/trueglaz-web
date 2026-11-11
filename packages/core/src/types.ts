@@ -512,6 +512,8 @@ export interface OrderLineSummary {
   trackingNumber: string | null
   dispatchedAt: string | null
   deliveredAt: string | null
+  /** The latest cancellation request on this line, if the buyer ever asked. */
+  cancelRequest?: CancelRequest | null
 }
 
 export interface Payout {
@@ -1556,6 +1558,43 @@ export interface OrderLineEvent {
   data: Record<string, unknown>
 }
 
+/** A buyer's request to cancel a paid line before delivery (TG-93). */
+export interface CancelRequest {
+  id: string
+  orderLineId: string
+  reasonCode: string
+  note: string | null
+  /** requested | approved | declined | withdrawn */
+  state: string
+  /** open | dispatched: where the line was when the buyer asked. */
+  lineStateAtRequest: string
+  requestedAt: string | null
+  decidedAt: string | null
+  decisionNote: string | null
+  /** pre_dispatch | recall, once approved. */
+  outcome: string | null
+  refundRef: string | null
+}
+
+export interface StaffCancelRow {
+  request: CancelRequest
+  orderNumber: string
+  buyerName: string | null
+  itemSku: string | null
+  itemLabel: string
+  amountMinor: number
+  lineState: string
+  productModelId: string | null
+}
+
+export interface CancelDecision {
+  request: CancelRequest
+  /** refunded | refund_due | recall | none */
+  refund: string
+  refundRef: string | null
+  refundNote: string | null
+}
+
 /** An order line as the fulfilment desk sees it. */
 export interface StaffOrderLine extends OrderLine {
   internalSku: string | null
@@ -1571,6 +1610,8 @@ export interface StaffOrderLine extends OrderLine {
   deliveredAt: string | null
   deliveryRemarks: string | null
   dispatchNote: string | null
+  /** The buyer has asked to cancel and nobody has decided yet: dispatch is held. */
+  cancelRequested?: boolean
 }
 
 export interface DispatchInput {
