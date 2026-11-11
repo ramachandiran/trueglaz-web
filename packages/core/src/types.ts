@@ -915,6 +915,10 @@ export interface CodeSent {
   contact: string
   expiresAt: string
   devCode: string | null
+  /** Seconds the code lasts, from now (server's count). Older APIs omit it. */
+  expiresInSeconds?: number
+  /** Seconds before another code may be asked for. */
+  resendInSeconds?: number
 }
 
 export interface SessionInfo {

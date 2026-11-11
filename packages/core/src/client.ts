@@ -253,7 +253,7 @@ export const api = {
 
   // -- auth ---------------------------------------------------------------
   requestCode: (contact: string) =>
-    post<{ sent: boolean; expiresAt: string; devCode: string | null }>('/auth/request-code', { contact }),
+    post<{ sent: boolean; expiresAt: string; devCode: string | null; expiresInSeconds?: number; resendInSeconds?: number }>('/auth/request-code', { contact }),
   /**
    * A correct code either signs you in or tells you there is no account yet.
    *

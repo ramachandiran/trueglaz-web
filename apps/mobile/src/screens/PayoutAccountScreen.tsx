@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native'
 import { api, dateOnly, useApi } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { OtpBoxes } from '../components/OtpBoxes'
+import { CodeTimer } from '../components/CodeTimer'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle } from '../components/ui'
@@ -86,6 +87,9 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
   const [devCode, setDevCode] = useState<string | null>(null)
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [code, setCode] = useState('')
+  const [deadline, setDeadline] = useState(0)
+  const [resendAt, setResendAt] = useState(0)
+  const [expired, setExpired] = useState(false)
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -103,7 +107,10 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
     try {
       const res = await api.requestPayoutCode()
       setDevCode(res.devCode); setSentTo(res.contact); setCodeSent(true)
-      if (res.devCode) setCode(res.devCode)
+      setCode(res.devCode ?? '')
+      setDeadline(Date.now() + (res.expiresInSeconds ?? Math.max(1, Math.round((Date.parse(res.expiresAt) - Date.now()) / 1000))) * 1000)
+      setResendAt(Date.now() + (res.resendInSeconds ?? 60) * 1000)
+      setExpired(false)
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
 
@@ -155,15 +162,17 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
               <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
             </View>
           )}
-          <OtpBoxes value={code} onChange={setCode} label="Verification code" />
+          <OtpBoxes value={code} onChange={setCode} label="Verification code" editable={!expired} />
+          <CodeTimer key={deadline} deadline={deadline} resendAt={resendAt} onResend={sendCode} resending={busy} align="flex-start"
+            onExpire={() => { setExpired(true); setCode('') }} />
         </View>
       )}
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
 
-      {codeSent
+      {codeSent && !expired
         ? <Button label="Save payout account" loading={busy} onPress={save} />
-        : <Button label="Send verification code" loading={busy} onPress={sendCode} />}
+        : !codeSent && <Button label="Send verification code" loading={busy} onPress={sendCode} />}
       <Button label="Cancel" variant="ghost" onPress={onCancel} />
     </Card>
   )
