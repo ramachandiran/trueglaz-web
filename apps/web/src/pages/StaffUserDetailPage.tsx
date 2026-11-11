@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiError, dateOnly, dateTime, money, useApi } from '@trueglaz/core'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
+import { PayoutCheckPanel } from '../components/PayoutCheckPanel'
 import { KycBadge, SellingBadge } from './StaffUsersPage'
 import './StaffUsersPage.css'
+import './StaffUserDetailPage.css'
 
 type Tab = 'selling' | 'buying'
 
@@ -67,15 +69,16 @@ export function StaffUserDetailPage() {
           <h2 className="person__panel-title">Identity check</h2>
           {d.kyc ? (
             <dl className="person__facts">
-              <Fact k="Status" v={d.kyc.status} />
+              <Fact k="Status" v={d.kyc.status.replace(/_/g, ' ')} />
               <Fact k="Name on the document" v={d.kyc.legalName ?? '—'} />
               <Fact
                 k="Where the name came from"
                 v={d.kyc.nameSource === 'uidai'
                   ? 'The issuer (UIDAI), not typed in'
+                  : d.kyc.nameSource === 'digilocker' ? "The seller's DigiLocker (UIDAI), not typed in"
                   : d.kyc.nameSource === 'self_declared' ? 'Typed in by the seller' : '—'}
               />
-              <Fact k="Document" v={d.kyc.idType ? `${d.kyc.idType} ending ${d.kyc.idLast4 ?? '????'}` : '—'} />
+              <Fact k="Document" v={d.kyc.idType ? `${d.kyc.idType === 'aadhaar' ? 'Aadhaar' : d.kyc.idType.toUpperCase()} ending ${d.kyc.idLast4 ?? '????'}` : '—'} />
               <Fact k="Checked by" v={d.kyc.provider ?? '—'} />
               <Fact k="Mobile on the document" v={d.kyc.mobileHint ?? '—'} />
               <Fact k="Verified" v={d.kyc.verifiedAt ? dateTime(d.kyc.verifiedAt) : '—'} />
@@ -145,6 +148,8 @@ export function StaffUserDetailPage() {
           )}
           {error && <p className="person__error" role="alert">{error}</p>}
         </section>
+
+        <PayoutCheckPanel userId={u.userId} />
       </div>
 
       <div className="person__tabs" role="tablist">

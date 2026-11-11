@@ -19,6 +19,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/profile/, 'Your account'],
   [/^\/wanted/, 'Wanted board'],
   [/^\/sign-in/, 'Sign in'],
+  [/^\/kyc\/digilocker/, 'Identity check'],
   [/^\/sell\/manage/, 'Your gear with us'],
   [/^\/sell\/new/, 'Consign an item'],
   [/^\/sell\/.+/, 'Your submission'],

@@ -10,7 +10,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, DigilockerResult, StaffPayoutAccount, VaultKeyBlobsStored, MigratedItem,
 } from './types'
 
 /**
@@ -285,6 +285,10 @@ export const api = {
 
   /** Exchange the code for the identity. Verifies on the spot — no queue. */
   verifyEkyc: (otp: string) => post<KycStatus>('/kyc/ekyc/verify', { otp }),
+  /** Aadhaar from DigiLocker: a consent link to open, then finish once the person is back. */
+  startDigilocker: (consent: boolean, fromApp = false) =>
+    post<{ url: string }>('/kyc/digilocker/start', { consent, fromApp }),
+  completeDigilocker: () => post<DigilockerResult>('/kyc/digilocker/complete', {}),
 
   /** Someone's identity documents. Theirs, or ops — nobody else. */
   kycDocuments: (userId: string) => get<KycDocumentView[]>(`/kyc/${userId}/documents`),
@@ -465,6 +469,13 @@ export const api = {
   staffUsers: (q = '', sellingState = '') =>
     get<StaffUserRow[]>(`/staff/users?q=${encodeURIComponent(q)}&sellingState=${encodeURIComponent(sellingState)}`),
   staffUser: (userId: string) => get<StaffUserDetail>(`/staff/users/${userId}`),
+  /** Payout accounts the bank check could not clear, and the decision on them. */
+  payoutReviews: () => get<StaffPayoutAccount[]>('/staff/users/payout-reviews'),
+  staffPayoutAccount: (userId: string) => get<StaffPayoutAccount | null>(`/staff/users/${userId}/payout-account`),
+  approvePayoutAccount: (userId: string, note?: string) =>
+    post<StaffPayoutAccount>(`/staff/users/${userId}/payout-account/approve`, { note: note ?? null }),
+  rejectPayoutAccount: (userId: string, reason: string) =>
+    post<StaffPayoutAccount>(`/staff/users/${userId}/payout-account/reject`, { reason }),
   staffUserSelling: (userId: string) => get<StaffSellingRow[]>(`/staff/users/${userId}/selling`),
   staffUserBuying: (userId: string) => get<StaffBuyingRow[]>(`/staff/users/${userId}/buying`),
   approveSelling: (userId: string, note?: string) =>

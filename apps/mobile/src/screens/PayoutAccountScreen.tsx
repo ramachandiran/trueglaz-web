@@ -23,8 +23,8 @@ export function PayoutAccountScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <SectionTitle>Current payout account</SectionTitle>
             <Badge
-              label={acct.data.verificationState === 'verified' ? 'Verified' : acct.data.verificationState}
-              tone={acct.data.verificationState === 'verified' ? 'good' : 'warn'}
+              label={({ verified: 'Verified', pending: 'Being checked', failed: 'Not accepted' } as Record<string, string>)[acct.data.verificationState] ?? acct.data.verificationState}
+              tone={acct.data.verificationState === 'verified' ? 'good' : acct.data.verificationState === 'failed' ? 'bad' : 'warn'}
             />
           </View>
           <Line label="Method" value={acct.data.method === 'upi' ? 'UPI' : 'Bank account'} />
@@ -36,6 +36,20 @@ export function PayoutAccountScreen() {
                 <Line label="IFSC" value={acct.data.ifsc ?? '—'} />
               </>}
           {acct.data.verifiedAt && <Line label="Since" value={dateOnly(acct.data.verifiedAt)} />}
+          {acct.data.nameAtBank && <Line label="Name at your bank" value={acct.data.nameAtBank} />}
+          {acct.data.verificationState === 'pending' && (
+            <Muted size={t.size.xs}>
+              {acct.data.nameAtBank
+                ? `Your bank's name for this account doesn't clearly match ${acct.data.checkedAgainstName ?? 'your verified name'}. `
+                : "We couldn't confirm the name with your bank just now. "}
+              Our team will check it within a working day; payouts wait until then.
+            </Muted>
+          )}
+          {acct.data.verificationState === 'failed' && (
+            <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>
+              {acct.data.reviewReason ?? 'Our team could not accept this account.'} Add an account in your own name.
+            </Txt>
+          )}
         </Card>
       )}
 

@@ -387,7 +387,7 @@ function Section({ title, required }: { title: string; required?: boolean }) {
   )
 }
 
-function Check({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
+export function Check({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
   const t = useTheme()
   return (
     <Pressable onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked: on }} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>

@@ -175,3 +175,7 @@
 /* The add / edit address form: its own small title, and the default tick. */
 .profile__form-title { margin: 0 0 var(--tg-space-3); font-size: var(--tg-text-md); }
 .profile__check { display: flex; align-items: center; gap: var(--tg-space-2); margin-top: var(--tg-space-3); font-size: var(--tg-text-sm); }
+
+/* What the bank said about the holder: a full-width line under the account row. */
+.profile__bank-note { flex-basis: 100%; margin: 0; font-size: var(--tg-text-sm); line-height: 1.5; }
+.profile__bank-note--bad { color: var(--tg-bad); }

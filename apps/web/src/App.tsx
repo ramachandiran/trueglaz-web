@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell'
 import { StaffShell } from './components/StaffShell'
 import { storedMarketView } from './state/useMarketView'
 import { Guard } from './components/Guard'
+import { DigilockerReturnPage } from './pages/DigilockerReturnPage'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
 import { AuditPage } from './pages/AuditPage'
 import { Loading } from './components/ui'
@@ -81,6 +82,8 @@ export function App() {
           <Route path="/listings/:id" element={<ListingDetailPage />} />
           <Route path="/wanted" element={<WantedPage />} />
           <Route path="/sign-in" element={<SignInPage />} />
+          {/* DigiLocker's return address; not guarded, see the page. */}
+          <Route path="/kyc/digilocker/return" element={<DigilockerReturnPage />} />
 
           {/* Buyer */}
           <Route path="/checkout/:listingId" element={<Guard need="signed-in"><CheckoutPage /></Guard>} />

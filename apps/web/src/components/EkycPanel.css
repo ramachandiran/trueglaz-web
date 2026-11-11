@@ -32,3 +32,19 @@
 
 .ekyc__actions { display: flex; flex-wrap: wrap; gap: var(--tg-space-2); }
 .ekyc__error { margin: 0; font-size: var(--tg-text-sm); color: var(--tg-bad); }
+
+/* DigiLocker: three short steps, then a consent the person actually reads. */
+.ekyc__steps {
+  margin: 0; padding-left: 1.25rem;
+  display: grid; gap: var(--tg-space-1);
+  font-size: var(--tg-text-sm);
+}
+.ekyc__consent {
+  display: flex; gap: var(--tg-space-2); align-items: flex-start;
+  font-size: var(--tg-text-sm); line-height: 1.5;
+  padding: var(--tg-space-3);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md, 8px);
+  cursor: pointer;
+}
+.ekyc__consent input { margin-top: 0.2rem; flex: none; accent-color: #FF6B35; }

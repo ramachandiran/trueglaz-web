@@ -85,3 +85,6 @@
   border-color: var(--tg-accent);
   box-shadow: inset 0 0 0 1px var(--tg-accent);
 }
+
+.kyc__otp-alt { margin-top: var(--tg-space-3); font-size: var(--tg-text-sm); }
+.kyc__otp-alt summary { cursor: pointer; color: var(--tg-text-muted); margin-bottom: var(--tg-space-3); }

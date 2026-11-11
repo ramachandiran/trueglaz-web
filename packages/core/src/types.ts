@@ -555,6 +555,32 @@ export interface PayoutAccountView {
   verificationState: string
   verifiedAt: string | null
   createdAt: string | null
+  /** The holder's name as the bank has it, when the bank was asked. */
+  nameAtBank?: string | null
+  /** DIRECT_MATCH … NO_MATCH, or UNCHECKED. */
+  nameMatch?: string | null
+  /** The name it was compared with (the verified Aadhaar name when there is one). */
+  checkedAgainstName?: string | null
+  /** Why it waits for a person, or why it was refused. */
+  reviewReason?: string | null
+}
+
+/** A payout account as staff see it, with what the bank said. */
+export interface StaffPayoutAccount {
+  id: string
+  userId: string
+  ownerName: string | null
+  method: string
+  destination: string
+  accountHolderName: string
+  nameAtBank: string | null
+  checkedAgainstName: string | null
+  nameMatch: string | null
+  score: number | null
+  checkProvider: string | null
+  state: string
+  reviewReason: string | null
+  createdAt: string | null
 }
 
 export interface PriceProposal {
@@ -739,6 +765,17 @@ export interface KycStatus {
   verifiedAt: string | null
   expiresAt: string | null
   rejectedReasonCode: string | null
+  /** The real-time routes this server offers: digilocker, aadhaar_otp, documents. */
+  methods?: string[]
+  /** The consent the person ticks before a real-time check. */
+  consentText?: string
+  /** True while a DigiLocker consent is open. */
+  digilockerPending?: boolean
+}
+
+export interface DigilockerResult {
+  state: 'pending' | 'verified'
+  kyc: KycStatus
 }
 
 export interface KycReview {

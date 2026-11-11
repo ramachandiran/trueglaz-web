@@ -10,6 +10,7 @@ import { Card, Muted, SectionTitle } from '../components/ui'
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { demoAadhaar } from '../aadhaar'
+import { DigilockerCard } from '../components/DigilockerCard'
 
 type Step = 'aadhaar' | 'otp'
 
@@ -30,6 +31,12 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
 
   const verified = justVerified || kyc.data?.status === 'verified'
   const canSell = kyc.data?.canSell ?? false
+  // An older API sends no list, and offered only the OTP route.
+  const methods = kyc.data?.methods ?? ['aadhaar_otp', 'documents']
+  const digilocker = methods.includes('digilocker')
+  const otpOffered = methods.includes('aadhaar_otp')
+  const [useOtp, setUseOtp] = useState(false)
+  const showOtp = !verified && otpOffered && (!digilocker || useOtp)
   const showForm = !verified
 
   const start = async () => {
@@ -68,7 +75,7 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
     { title: 'Account created', desc: 'Signed in with your email.', state: 'done', meta: 'Done', tone: 'ok' },
     {
       title: 'Identity verified',
-      desc: 'Aadhaar eKYC — we keep only the last four digits.',
+      desc: digilocker ? 'Aadhaar through DigiLocker — we keep only the last four digits.' : 'Aadhaar eKYC — we keep only the last four digits.',
       state: verified ? 'done' : 'current',
       meta: verified ? 'Verified' : 'In progress', tone: verified ? 'ok' : 'now',
     },
@@ -109,8 +116,19 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
       {/* the status tracker */}
       <ProgressSection steps={steps} />
 
-      {/* contextual action: the eKYC form only while unverified */}
-      {showForm && step === 'aadhaar' && (
+      {/* contextual action: DigiLocker first, the OTP route only where offered */}
+      {showForm && digilocker && !useOtp && kyc.data && (
+        <DigilockerCard kyc={kyc.data} onVerified={() => { setJustVerified(true); kyc.reload() }} />
+      )}
+      {showForm && digilocker && otpOffered && (
+        <Button
+          label={useOtp ? 'Use DigiLocker instead' : 'Use a one-time code on your Aadhaar instead'}
+          variant="ghost"
+          onPress={() => { setUseOtp(!useOtp); setError(null) }}
+        />
+      )}
+
+      {showOtp && step === 'aadhaar' && (
         <Card style={{ gap: t.space.x3 }}>
           <SectionTitle>Verify with Aadhaar eKYC</SectionTitle>
           <Muted size={t.size.xs}>We verify your identity over an OTP sent to your Aadhaar-linked mobile. We never store the number.</Muted>
@@ -121,7 +139,7 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
         </Card>
       )}
 
-      {showForm && step === 'otp' && (
+      {showOtp && step === 'otp' && (
         <Card style={{ gap: t.space.x3 }}>
           <SectionTitle>Enter the OTP</SectionTitle>
           {mobileHint && <Muted size={t.size.xs}>Sent to {mobileHint}.</Muted>}
