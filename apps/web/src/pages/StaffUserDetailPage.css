@@ -1,0 +1,50 @@
+/* ---------------------------------------------------------------------------
+   One person, as staff see them: identity, selling access and payout account
+   side by side, then what they have sold and bought.
+   --------------------------------------------------------------------------- */
+.person { display: grid; gap: var(--tg-space-4); }
+.person__crumbs a { font-size: var(--tg-text-sm); }
+
+.person .people__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--tg-space-4); }
+.person .people__title { margin: 0; }
+.person .people__sub { margin: var(--tg-space-1) 0 0; font-size: var(--tg-text-sm); }
+.person__badges { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; }
+
+.person__panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: var(--tg-space-4);
+  align-items: start;
+}
+.person__panel { padding: var(--tg-space-5); display: grid; gap: var(--tg-space-3); }
+.person__panel-title { margin: 0; font-size: var(--tg-text-lg); }
+.person__panel p { margin: 0; }
+
+/* Label above value, two to a row: a scan, not a read. */
+.person__facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(130px, auto) 1fr;
+  gap: var(--tg-space-2) var(--tg-space-4);
+  font-size: var(--tg-text-sm);
+}
+.person__facts dt { color: var(--tg-text-muted); }
+.person__facts dd { margin: 0; overflow-wrap: anywhere; }
+
+.person__blurb, .person__fineprint, .person__blocked { font-size: var(--tg-text-sm); line-height: 1.5; }
+.person__fineprint { font-size: var(--tg-text-xs); }
+.person__field { display: grid; gap: var(--tg-space-1); font-size: var(--tg-text-sm); }
+.person__actions { display: flex; flex-wrap: wrap; gap: var(--tg-space-2); }
+.person__decision { font-size: var(--tg-text-sm); }
+.person__error { color: var(--tg-bad); font-size: var(--tg-text-sm); }
+
+.person__tabs { display: flex; gap: var(--tg-space-1); border-bottom: 1px solid var(--tg-border); }
+.person__tab {
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: var(--tg-space-2) var(--tg-space-3);
+  font: inherit; color: var(--tg-text-muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.person__tab--on { color: var(--tg-text); border-bottom-color: #FF6B35; font-weight: 600; }
+.person__empty { margin: 0; }
+.person__fact { display: contents; }

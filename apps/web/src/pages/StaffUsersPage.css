@@ -114,3 +114,15 @@
 .people__name { font-weight: var(--tg-weight-medium); text-decoration: none; color: var(--tg-text); }
 
 .people__name:hover { color: var(--tg-accent); text-decoration: underline; }
+
+/* Payout accounts waiting on a person: above the queue, one line each. */
+.people__payouts {
+  margin-bottom: var(--tg-space-4);
+  padding: var(--tg-space-3) var(--tg-space-4);
+  border: 1px solid var(--tg-warn, #b7791f);
+  border-left-width: 4px;
+  border-radius: var(--tg-radius-md, 8px);
+  background: var(--tg-warn-soft, transparent);
+  font-size: var(--tg-text-sm);
+}
+.people__payouts ul { margin: var(--tg-space-2) 0 0; padding-left: 1.1rem; display: grid; gap: var(--tg-space-1); }

@@ -14,6 +14,7 @@ import { Chip, Pill } from './kit'
 import { Button, Field } from './form'
 import { ErrorNote, Loading, Muted } from './ui'
 import { useTheme } from '../theme/ThemeContext'
+import { PushPrompt } from './PushPrompt'
 
 /**
  * Insurance on a vault card, as a quote referral: TrueGlaz is not the insurer
@@ -200,6 +201,7 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
           </Txt>
           <Muted size={t.size.sm} style={{ textAlign: 'center' }}>You pay them directly — TrueGlaz takes no payment. Once you buy, add the policy here.</Muted>
         </View>
+        <PushPrompt reason="We'll tell you when the agent has your quote." />
         <Pill label="Done" block onPress={onDone} />
       </Sheet>
     )
@@ -385,7 +387,7 @@ function Section({ title, required }: { title: string; required?: boolean }) {
   )
 }
 
-function Check({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
+export function Check({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
   const t = useTheme()
   return (
     <Pressable onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked: on }} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>

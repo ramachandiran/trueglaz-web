@@ -425,3 +425,18 @@
 
   .rail { max-width: 180px; }
 }
+
+/* A return in progress: its own rail under the order's, and a warmer tone. */
+.line__return { margin-top: var(--tg-space-2); padding: var(--tg-space-3); border-radius: var(--tg-radius-md, 8px); background: var(--tg-accent-soft, rgb(255 107 53 / 0.08)); }
+.line__return--bad { background: var(--tg-bad-soft); }
+.line__return .line__status { margin: var(--tg-space-2) 0 0; }
+.rail--return { margin: 0; }
+.line__history { margin-top: var(--tg-space-2); }
+.line__history .lh { margin-top: var(--tg-space-3); }
+.line__return-form { display: grid; gap: var(--tg-space-3); }
+.line__video { display: grid; gap: var(--tg-space-1); }
+.line__video-hint { margin: 0; font-size: var(--tg-text-xs); }
+.line__video-ok { margin: 0; color: var(--tg-good); font-weight: 600; font-size: var(--tg-text-sm); }
+.line__progress { position: relative; height: 26px; border-radius: 13px; background: var(--tg-border); overflow: hidden; max-width: 360px; }
+.line__progress span { position: absolute; inset: 0 auto 0 0; background: #FF6B35; transition: width .2s; }
+.line__progress em { position: relative; display: block; text-align: center; font-style: normal; font-size: var(--tg-text-xs); line-height: 26px; color: var(--tg-text); }

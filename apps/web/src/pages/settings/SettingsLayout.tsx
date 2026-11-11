@@ -9,6 +9,7 @@ export const SETTINGS_PAGES = [
   { to: 'payouts', label: 'Payouts', end: false, blurb: 'What staff may send without an admin' },
   { to: 'company', label: 'Company & invoices', end: false, blurb: 'Legal name, GSTIN, address on invoices' },
   { to: 'catalogue', label: 'Catalogue', end: false, blurb: 'Add brands and models to the gear list' },
+  { to: 'team', label: 'Team', end: false, blurb: 'Add staff, technicians and admins' },
   { to: 'security', label: 'Sign-in & security', end: false, blurb: 'Sign-in codes and sessions' },
   { to: 'notifications', label: 'Notifications', end: false, blurb: 'Email and WhatsApp updates, and their sender' },
   { to: 'models', label: 'Model photos', end: false, blurb: 'The picture of each catalogue model' },

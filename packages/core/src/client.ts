@@ -10,7 +10,8 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, DigilockerResult, StaffPayoutAccount, VaultKeyBlobsStored, MigratedItem,
+  OrderLineEvent, ReturnEvidence, StaffOrderLine, DispatchInput, TeamView, TeamGrantResult,
 } from './types'
 
 /**
@@ -166,6 +167,29 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
 }
 
 const get = <T,>(p: string) => request<T>(p)
+
+/**
+ * A direct upload with progress where the platform reports it (XMLHttpRequest,
+ * in browsers and React Native), falling back to fetch. Used for the unboxing
+ * video, where a 100 MB upload without a progress bar reads as a hung screen.
+ */
+function putWithProgress(
+  url: string, method: string, headers: Record<string, string>, body: Blob, onProgress?: (f: number) => void,
+): Promise<void> {
+  const fail = (status: number) => new ApiError(status, 'The upload did not go through — please check your connection and try again')
+  if (typeof XMLHttpRequest === 'undefined' || !onProgress) {
+    return fetch(url, { method, headers, body }).then((r) => { if (!r.ok) throw fail(r.status) })
+  }
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open(method, url)
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v))
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total) }
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? (onProgress(1), resolve()) : reject(fail(xhr.status)))
+    xhr.onerror = () => reject(fail(0))
+    xhr.send(body)
+  })
+}
 const post = <T,>(p: string, body?: unknown) =>
   request<T>(p, { method: 'POST', body: JSON.stringify(body ?? {}) })
 const patch = <T,>(p: string, body?: unknown) =>
@@ -285,6 +309,10 @@ export const api = {
 
   /** Exchange the code for the identity. Verifies on the spot — no queue. */
   verifyEkyc: (otp: string) => post<KycStatus>('/kyc/ekyc/verify', { otp }),
+  /** Aadhaar from DigiLocker: a consent link to open, then finish once the person is back. */
+  startDigilocker: (consent: boolean, fromApp = false) =>
+    post<{ url: string }>('/kyc/digilocker/start', { consent, fromApp }),
+  completeDigilocker: () => post<DigilockerResult>('/kyc/digilocker/complete', {}),
 
   /** Someone's identity documents. Theirs, or ops — nobody else. */
   kycDocuments: (userId: string) => get<KycDocumentView[]>(`/kyc/${userId}/documents`),
@@ -414,15 +442,34 @@ export const api = {
   /** Everything the orders list draws, in one call. */
   myOrders: () => get<OrderSummary[]>('/orders'),
   order: (id: string) => get<OrderDetail>(`/orders/${id}`),
-  acceptLine: (lineId: string, byWindowExpiry = false) =>
-    post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`),
+  acceptLine: (lineId: string, byWindowExpiry = false, reason?: string) =>
+    post<OrderLine>(`/order-lines/${lineId}/accept?byWindowExpiry=${byWindowExpiry}`, byWindowExpiry ? { reason: reason ?? '' } : undefined),
+  /** Everything that happened to a line: the buyer's part of it, or all of it for staff. */
+  lineHistory: (lineId: string) => get<OrderLineEvent[]>(`/order-lines/${lineId}/history`),
   staffHome: () => get<StaffHome>('/staff/home'),
   sellerHome: () => get<SellerHome>('/seller/home'),
   buyerHome: () => get<BuyerHome>('/buyer/home'),
 
   // -- returns -------------------------------------------------------------
-  returnRequest: (lineId: string, reasonCode: string, note?: string) =>
-    post<ReturnCase>(`/order-lines/${lineId}/return-request`, { reasonCode, note: note?.trim() || null }),
+  returnRequest: (lineId: string, reasonCode: string, note: string | undefined, unboxingVideoId: string) =>
+    post<ReturnCase>(`/order-lines/${lineId}/return-request`, { reasonCode, note: note?.trim() || null, unboxingVideoId }),
+  /**
+   * The unboxing video for a return (MP4, MOV or WebM, up to 200 MB): ask, PUT
+   * straight to the store, then have the API check what landed. [onProgress]
+   * gets 0..1 where the platform can report it.
+   */
+  uploadReturnVideo: async (
+    lineId: string, body: Blob, contentType: string, fileName?: string, onProgress?: (f: number) => void,
+  ): Promise<ReturnEvidence> => {
+    const intent = await post<UploadIntent>(`/order-lines/${lineId}/return-video/intent`, { contentType, bytes: body.size })
+    await putWithProgress(apiAbsolute(intent.url), intent.method, intent.headers, body, onProgress)
+    return post<ReturnEvidence>('/return-videos/seal', { ticket: intent.ticket, fileName })
+  },
+  /** A short-lived link to an unboxing video (the buyer who sent it, or staff). */
+  returnVideoLink: async (videoId: string) => {
+    const l = await get<{ url: string; contentType: string; fileName: string | null }>(`/return-videos/${videoId}/link`)
+    return { ...l, url: apiAbsolute(l.url) }
+  },
   returnForLine: (lineId: string) => get<ReturnForBuyer | null>(`/order-lines/${lineId}/return`),
   returns: (state?: string) => get<ReturnCaseView[]>(`/returns${state ? `?state=${state}` : ''}`),
   returnApprove: (lineId: string, courierCode?: string, trackingNumber?: string) =>
@@ -465,6 +512,13 @@ export const api = {
   staffUsers: (q = '', sellingState = '') =>
     get<StaffUserRow[]>(`/staff/users?q=${encodeURIComponent(q)}&sellingState=${encodeURIComponent(sellingState)}`),
   staffUser: (userId: string) => get<StaffUserDetail>(`/staff/users/${userId}`),
+  /** Payout accounts the bank check could not clear, and the decision on them. */
+  payoutReviews: () => get<StaffPayoutAccount[]>('/staff/users/payout-reviews'),
+  staffPayoutAccount: (userId: string) => get<StaffPayoutAccount | null>(`/staff/users/${userId}/payout-account`),
+  approvePayoutAccount: (userId: string, note?: string) =>
+    post<StaffPayoutAccount>(`/staff/users/${userId}/payout-account/approve`, { note: note ?? null }),
+  rejectPayoutAccount: (userId: string, reason: string) =>
+    post<StaffPayoutAccount>(`/staff/users/${userId}/payout-account/reject`, { reason }),
   staffUserSelling: (userId: string) => get<StaffSellingRow[]>(`/staff/users/${userId}/selling`),
   staffUserBuying: (userId: string) => get<StaffBuyingRow[]>(`/staff/users/${userId}/buying`),
   approveSelling: (userId: string, note?: string) =>
@@ -682,9 +736,17 @@ export const api = {
   createModel: (body: NewModel) => post<ProductModel>('/admin/models', body),
 
   orderLines: (state?: string) =>
-    get<OrderLine[]>(`/order-lines${state ? `?state=${encodeURIComponent(state)}` : ''}`),
-  dispatchLine: (id: string) => post<OrderLine>(`/order-lines/${id}/dispatch`),
-  deliverLine: (id: string) => post<OrderLine>(`/order-lines/${id}/deliver`),
+    get<StaffOrderLine[]>(`/order-lines${state ? `?state=${encodeURIComponent(state)}` : ''}`),
+  dispatchLine: (id: string, body: DispatchInput) => post<OrderLine>(`/order-lines/${id}/dispatch`, body),
+  updateTracking: (id: string, trackingNumber: string) => post<OrderLine>(`/order-lines/${id}/tracking`, { trackingNumber }),
+  deliverLine: (id: string, body: { deliveredOn?: string | null; remarks?: string | null } = {}) =>
+    post<OrderLine>(`/order-lines/${id}/deliver`, body),
+
+  /** Admin: who holds a role, and open invites. */
+  team: () => get<TeamView>('/admin/team'),
+  grantRole: (email: string, role: string) => post<TeamGrantResult>('/admin/team/grant', { email, role }),
+  revokeRole: (userId: string, role: string) => post<void>('/admin/team/revoke', { userId, role }),
+  cancelInvite: (id: string) => post<void>(`/admin/team/invites/${id}/cancel`, {}),
   transitionItem: (id: string, toState: string, reasonCode?: string | null, note?: string | null) =>
     post<ConsignmentItem>(`/items/${id}/transition`, {
       toState,
@@ -722,6 +784,13 @@ export const api = {
 
   // -- invoices and shipments ----------------------------------------------
   /** Everything addressed to me: purchases, and commission if I sell. */
+  // Notification choices and push.
+  notificationSettings: () => get<NotificationSettings>('/profile/notification-settings'),
+  updateNotificationSettings: (changes: { category: string; channel: string; enabled: boolean }[]) =>
+    put<NotificationSettings>('/profile/notification-settings', changes),
+  registerPushDevice: (token: string, platform: 'android' | 'ios', appVersion?: string | null) =>
+    post<{ ok: boolean }>('/profile/push-devices', { token, platform, appVersion }),
+  removePushDevice: (token: string) => post<{ ok: boolean }>('/profile/push-devices/remove', { token }),
   myInvoices: () => get<Invoice[]>('/invoices'),
   invoice: (id: string) => get<InvoiceDetail>(`/invoices/${id}`),
   /**

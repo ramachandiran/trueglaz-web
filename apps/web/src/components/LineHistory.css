@@ -1,0 +1,17 @@
+/* An order line's history: a vertical rail of dated steps. */
+.lh { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--tg-space-3); }
+.lh__empty { margin: 0; font-size: var(--tg-text-sm); }
+.lh__step { position: relative; display: grid; grid-template-columns: 14px 1fr; gap: var(--tg-space-3); }
+.lh__step:not(:last-child)::before {
+  content: ''; position: absolute; left: 6px; top: 16px; bottom: calc(-1 * var(--tg-space-3));
+  width: 2px; background: var(--tg-border);
+}
+.lh__dot { width: 14px; height: 14px; border-radius: 50%; margin-top: 3px; background: var(--tg-text-muted); box-shadow: 0 0 0 3px var(--tg-bg-raised); }
+.lh__step--good .lh__dot { background: var(--tg-good); }
+.lh__step--bad .lh__dot { background: var(--tg-bad); }
+.lh__step--warn .lh__dot { background: #FF6B35; }
+.lh__body p { margin: 0; }
+.lh__title { font-size: var(--tg-text-sm); font-weight: 600; }
+.lh__meta { font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
+.lh__note { font-size: var(--tg-text-sm); margin-top: 2px !important; }
+.lh__staff { font-size: var(--tg-text-xs); color: var(--tg-text-muted); }

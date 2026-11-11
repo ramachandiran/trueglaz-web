@@ -64,6 +64,20 @@ jobs:
         working-directory: .
       - run: npx tsc --noEmit
 
+      # Firebase config for push notifications, from a repository secret. Without
+      # it the APK still builds; it just cannot receive pushes.
+      - name: Firebase config (push)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+            node -e "const j=require('./google-services.json'); if(!j.project_info||!j.client) throw new Error('GOOGLE_SERVICES_JSON is not a google-services.json')"
+            echo "Push: Firebase config added"
+          else
+            echo "::warning::No GOOGLE_SERVICES_JSON secret: this APK cannot receive push notifications."
+          fi
+
       # Generates the native android/ project from app.json (not committed).
       - run: npx expo prebuild --platform android --no-install --clean
 

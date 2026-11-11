@@ -1,0 +1,7 @@
+/* Notification settings: kinds of message down the side, channels across the top. */
+.nchoice { width: 100%; border-collapse: collapse; font-size: var(--tg-text-sm); margin-top: var(--tg-space-3); }
+.nchoice th, .nchoice td { padding: 10px 8px; border-top: 1px solid var(--tg-border); text-align: center; }
+.nchoice thead th { border-top: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--tg-text-muted); }
+.nchoice th[scope="row"], .nchoice thead th:first-child { text-align: left; }
+.nchoice th[scope="row"] small { display: block; font-weight: 400; color: var(--tg-text-muted); font-size: var(--tg-text-xs); }
+.nchoice__box { width: 18px; height: 18px; accent-color: var(--tg-cta); }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, ApiError, dateOnly, useApi, useSession, type KycStatus } from '@trueglaz/core'
+import { DigilockerPanel } from './DigilockerPanel'
 import { EkycPanel } from './EkycPanel'
 import { PhotoUpload } from './PhotoUpload'
 import { Loading } from './ui'
@@ -102,6 +103,9 @@ export function KycPanel({ kyc, onChanged }: {
 
   const rejected = status === 'rejected'
   const expired = status === 'expired'
+  // An older API sends no list and still offers only the OTP route.
+  const methods = kyc.data?.methods ?? ['aadhaar_otp', 'documents']
+  const digilocker = methods.includes('digilocker')
 
   return (
     <section className="tg-card kyc">
@@ -122,7 +126,7 @@ export function KycPanel({ kyc, onChanged }: {
           onClick={() => setRoute('aadhaar')}
         >
           <strong>Aadhaar</strong>
-          <span className="tg-muted">One-time code. Verified in a minute.</span>
+          <span className="tg-muted">{digilocker ? 'Through DigiLocker. Verified in a minute.' : 'One-time code. Verified in a minute.'}</span>
         </button>
         <button
           type="button" role="tab" aria-selected={route === 'document'}
@@ -135,7 +139,17 @@ export function KycPanel({ kyc, onChanged }: {
       </div>
 
       {route === 'aadhaar' ? (
-        <EkycPanel kyc={kyc} onVerified={onChanged} />
+        digilocker ? (
+          <>
+            <DigilockerPanel kyc={kyc} onVerified={onChanged} />
+            {methods.includes('aadhaar_otp') && (
+              <details className="kyc__otp-alt">
+                <summary>Use a one-time code on your Aadhaar number instead</summary>
+                <EkycPanel kyc={kyc} onVerified={onChanged} />
+              </details>
+            )}
+          </>
+        ) : <EkycPanel kyc={kyc} onVerified={onChanged} />
       ) : (
       <>
       <p className="tg-muted kyc__why">

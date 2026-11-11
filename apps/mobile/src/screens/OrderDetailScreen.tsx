@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Modal, Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, dateTime, money, useApi, type OrderLine } from '@trueglaz/core'
+import * as ImagePicker from 'expo-image-picker'
+import { api, dateTime, money, useApi, type OrderLine, type ReturnEvidence } from '@trueglaz/core'
+import { LineReturnAndHistory } from '../components/LineHistoryList'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
@@ -123,6 +125,29 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   const [reasonCode, setReasonCode] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
+  const [video, setVideo] = useState<ReturnEvidence | null>(null)
+  const [progress, setProgress] = useState<number | null>(null)
+
+  // TG-90: the unboxing video is what the return is judged on. Recorded now
+  // or picked from the gallery; uploaded straight to storage with progress.
+  const pickVideo = async (source: 'camera' | 'library') => {
+    if (!returnFor) return
+    setActionError(null)
+    const perm = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!perm.granted) { setActionError(source === 'camera' ? 'Allow camera access to record the video.' : 'Allow access to your videos to choose one.'); return }
+    const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ['videos'], videoMaxDuration: 300, quality: 1 }
+    const res = source === 'camera' ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts)
+    if (res.canceled) return
+    const a = res.assets[0]
+    if (a.fileSize && a.fileSize > 200 * 1024 * 1024) { setActionError('That video is over 200 MB. Record a shorter clip.'); return }
+    const type = a.mimeType && ['video/mp4', 'video/quicktime', 'video/webm'].includes(a.mimeType) ? a.mimeType
+      : (a.fileName ?? a.uri).toLowerCase().endsWith('.mov') ? 'video/quicktime' : 'video/mp4'
+    setProgress(0)
+    try {
+      const blob = await (await fetch(a.uri)).blob()
+      setVideo(await api.uploadReturnVideo(returnFor.id, blob, type, a.fileName ?? 'unboxing.mp4', setProgress))
+    } catch (e) { setActionError((e as Error).message) } finally { setProgress(null) }
+  }
 
   const accept = async (line: OrderLine) => {
     setActionError(null); setBusyLine(line.id)
@@ -132,10 +157,11 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
 
   const submitReturn = async () => {
     if (!returnFor || !reasonCode) { setActionError('Pick a reason.'); return }
+    if (!video) { setActionError('Add your unboxing video.'); return }
     setActionError(null); setBusyLine(returnFor.id)
     try {
-      await api.returnRequest(returnFor.id, reasonCode, note.trim() || undefined)
-      setReturnFor(null); setReasonCode(null); setNote(''); reload()
+      await api.returnRequest(returnFor.id, reasonCode, note.trim() || undefined, video.id)
+      setReturnFor(null); setReasonCode(null); setNote(''); setVideo(null); reload()
     } catch (e) { setActionError((e as Error).message) } finally { setBusyLine(null) }
   }
 
@@ -205,10 +231,10 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
               {l.state === 'delivered' && (
                 <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
                   <Button label="Accept delivery" onPress={() => accept(l)} loading={busyLine === l.id} style={{ flex: 1 }} />
-                  <Button label="Return" variant="ghost" onPress={() => { setReturnFor(l); setActionError(null) }} style={{ flex: 1 }} />
+                  <Button label="Return" variant="ghost" onPress={() => { setReturnFor(l); setVideo(null); setActionError(null) }} style={{ flex: 1 }} />
                 </View>
               )}
-              {l.state === 'return_requested' && <Muted size={t.size.xs}>Return requested — we'll be in touch.</Muted>}
+              <LineReturnAndHistory lineId={l.id} state={l.state} acceptedBy={l.acceptedBy} />
               {l.acceptedAt && <Muted size={t.size.xs}>Accepted {dateTime(l.acceptedAt)}</Muted>}
               <VaultAdd lineId={l.id} state={l.state} />
             </View>
@@ -244,10 +270,32 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
                 )
               })}
             </View>
-            <Field label="Note (optional)" value={note} onChangeText={setNote} multiline />
+            <Field label="What is wrong?" value={note} onChangeText={setNote} multiline />
+            <View style={{ gap: t.space.x2 }}>
+              <Txt style={{ color: t.colors.text, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Unboxing video (required)</Txt>
+              <Muted size={t.size.xs}>The video you took opening the parcel: the seal, the item and the problem. Up to 200 MB. Only you and our team can see it.</Muted>
+              {video ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={18} color={t.colors.good} />
+                  <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never, flex: 1 }}>Video uploaded</Txt>
+                  <Pressable onPress={() => setVideo(null)}><Txt style={{ color: t.colors.accent, fontSize: t.size.sm }}>Replace</Txt></Pressable>
+                </View>
+              ) : progress !== null ? (
+                <View style={{ height: 24, borderRadius: 12, backgroundColor: t.colors.border, overflow: 'hidden', justifyContent: 'center' }}>
+                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.round(progress * 100)}%`, backgroundColor: t.colors.cta }} />
+                  <Txt style={{ textAlign: 'center', fontSize: t.size.xs, color: t.colors.text }}>Uploading… {Math.round(progress * 100)}%</Txt>
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
+                  <Button label="Record video" variant="ghost" onPress={() => pickVideo('camera')} style={{ flex: 1 }} />
+                  <Button label="Choose video" variant="ghost" onPress={() => pickVideo('library')} style={{ flex: 1 }} />
+                </View>
+              )}
+            </View>
+            {actionError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{actionError}</Txt>}
             <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
               <Button label="Cancel" variant="ghost" onPress={() => setReturnFor(null)} style={{ flex: 1 }} />
-              <Button label="Request return" variant="danger" onPress={submitReturn} loading={busyLine === returnFor?.id} style={{ flex: 1 }} />
+              <Button label="Request return" variant="danger" onPress={submitReturn} loading={busyLine === returnFor?.id} disabled={!video || progress !== null || !reasonCode} style={{ flex: 1 }} />
             </View>
           </View>
         </View>

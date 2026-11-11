@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api, ApiError, dateTime, isAdmin, isStaff, isTechnician, money, useApi, useSession,
   type ReturnCaseView,
 } from '@trueglaz/core'
-import { Empty, ErrorNote, Loading } from '../components/ui'
 import { ModelPhoto } from '../components/ModelPhoto'
+import { QueueScreen } from '../components/QueueScreen'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { LineHistory } from '../components/LineHistory'
+import { COURIER_CHOICES, courierName } from '../components/couriers'
 import './OpsPage.css'
+import './FulfilmentPage.css'
 
 const REASON_LABELS: Record<string, string> = {
   not_as_described: 'Not as described',
@@ -15,13 +19,18 @@ const REASON_LABELS: Record<string, string> = {
   change_of_mind: 'Changed their mind',
 }
 
+type Tab = 'requested' | 'approved' | 'received' | 'inspected' | 'escalated' | 'settled'
+
+const SETTLED = ['refunded', 'declined', 'sale_stands']
+
 /**
- * Returns, in the order a return moves.
+ * Returns, in the order a return moves, in the same frame as Operations (TG-86).
  *
  * A return is a person with a parcel and money attached, so each stage shows
  * only the one decision that belongs to it and only to the role that makes it:
- * staff approve or decline and receive and decide the refund, a technician does
- * the bench check, and what staff refused lands with an admin.
+ * staff watch the buyer's unboxing video and approve or decline (TG-90), receive
+ * the parcel and decide the refund; a technician does the bench check; what
+ * staff refused lands with an admin. Every row opens its full history (TG-91).
  */
 export function ReturnsPage() {
   const { session } = useSession()
@@ -31,112 +40,177 @@ export function ReturnsPage() {
   const all = useApi(() => api.returns(), [])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>('requested')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [open, setOpen] = useState<string | null>(null)
+  const [video, setVideo] = useState<ReturnCaseView | null>(null)
+  const [done, setDone] = useState(0)
+  const perPage = 10
 
   async function act(id: string, fn: () => Promise<unknown>) {
     setBusy(id); setError(null)
-    try { await fn(); all.reload() }
+    try { await fn(); all.reload(); setDone((n) => n + 1) }
     catch (e) { setError(e instanceof ApiError ? e.message : 'That did not work') }
     finally { setBusy(null) }
   }
 
-  if (all.loading) return <Loading label="Loading returns" />
-  if (all.error) return <ErrorNote error={all.error} onRetry={all.reload} />
-
   const rows = all.data ?? []
-  const by = (s: string) => rows.filter((r) => r.case.state === s)
-  const open = ['requested', 'approved', 'received', 'inspected', 'escalated']
-  const closed = rows.filter((r) => !open.includes(r.case.state))
+  const inState = (t: Tab) => rows.filter((r) => (t === 'settled' ? SETTLED.includes(r.case.state) : r.case.state === t))
+  const stages: { key: Tab; label: string; show: boolean; blurb: string }[] = [
+    { key: 'requested', label: 'To review', show: staff, blurb: 'Watch the unboxing video. Approving sends the buyer a pickup; declining closes the sale like any delivered one — give a reason, the buyer reads it.' },
+    { key: 'approved', label: 'On its way back', show: staff, blurb: 'Mark it received when the parcel arrives.' },
+    { key: 'received', label: 'To check', show: tech, blurb: 'Is it the same unit, in the condition it left in, with what it left with?' },
+    { key: 'inspected', label: 'To decide', show: staff, blurb: 'Refund relists the unit and cancels the sale; the buyer’s money shows under Refunds due. Refusing sends it to an admin.' },
+    { key: 'escalated', label: 'Admin', show: admin, blurb: 'Refund anyway sends the unit home to the seller. Sale stands sends it back to the buyer and pays the seller.' },
+    { key: 'settled', label: 'Settled', show: true, blurb: '' },
+  ]
+  const stage = stages.find((s) => s.key === tab)!
+  const inTab = inState(tab)
+  const filtered = inTab.filter((r) => {
+    const t = search.trim().toLowerCase()
+    if (!t) return true
+    return [r.orderNumber, r.itemSku, r.itemLabel, r.buyerName, r.case.buyerNote].some((v) => v?.toLowerCase().includes(t))
+  })
+  const pages = Math.ceil(filtered.length / perPage)
+  const p = Math.min(Math.max(1, page), pages || 1)
+  const shown = filtered.slice((p - 1) * perPage, p * perPage)
+
+  const render = (r: ReturnCaseView) => {
+    const b = busy === r.orderLineId
+    switch (r.case.state) {
+      case 'requested': return <RequestActions row={r} busy={b} act={act} />
+      case 'approved': return (
+        <button className="tg-button tg-button--primary" disabled={b} onClick={() => act(r.orderLineId, () => api.returnReceive(r.orderLineId))}>
+          Mark received
+        </button>
+      )
+      case 'received': return <BenchCheck row={r} busy={b} act={act} />
+      case 'inspected': return <Decide row={r} busy={b} act={act} />
+      case 'escalated': return <AdminClose row={r} busy={b} act={act} />
+      default: return <span className="tg-badge">{r.case.state.replace('_', ' ')}</span>
+    }
+  }
 
   return (
-    <div className="ops">
-      <h1 className="ops__title">Returns</h1>
-      {error && <p className="ops__error" role="alert">{error}</p>}
-      {rows.length === 0 && <Empty title="No returns" hint="A buyer's request appears here for review." />}
-
-      <Stage
-        title="Asked for — approve or decline" rows={by('requested')} show={staff}
-        blurb="Approving sends the buyer a return label. Declining closes the sale; give a reason, the buyer reads it."
-        render={(r) => <RequestActions row={r} busy={busy === r.orderLineId} act={act} />}
-      />
-      <Stage
-        title="On its way back" rows={by('approved')} show={staff}
-        blurb="Mark it received when the parcel arrives."
-        render={(r) => (
-          <button className="tg-button tg-button--primary" disabled={busy === r.orderLineId} onClick={() => act(r.orderLineId, () => api.returnReceive(r.orderLineId))}>
-            Mark received
-          </button>
+    <>
+      <QueueScreen
+        title="Returns"
+        subtitle="Every return from the buyer’s request to the refund, with the unboxing video and a full history."
+        tabs={stages.map((s) => ({ key: s.key, label: s.label, count: inState(s.key).length }))}
+        active={tab}
+        onTab={(k) => { setTab(k as Tab); setPage(1); setOpen(null); setError(null) }}
+        search={search}
+        onSearch={(v) => { setSearch(v); setPage(1) }}
+        searchPlaceholder="Search by order, SKU, item, buyer or note…"
+        shown={filtered.length}
+        total={inTab.length}
+        unit="returns"
+        loading={all.loading && !all.data}
+        error={all.error}
+        onRetry={all.reload}
+        emptyTitle={tab === 'settled' ? 'No settled returns yet' : 'Nothing at this stage'}
+        emptyHint="That is the queue being empty, not the page being broken."
+        page={p}
+        pages={pages}
+        onPage={setPage}
+        summary={(
+          <>
+            {stage.blurb && <p className="tg-muted ops__fineprint ret__blurb">{stage.blurb}</p>}
+            {error && <p className="ops__error" role="alert">{error}</p>}
+          </>
         )}
-      />
-      <Stage
-        title="Received — check it" rows={by('received')} show={tech}
-        blurb="Is it the same unit, in the condition it left in, with what it left with?"
-        render={(r) => <BenchCheck row={r} busy={busy === r.orderLineId} act={act} />}
-      />
-      <Stage
-        title="Checked — decide" rows={by('inspected')} show={staff}
-        blurb="Refund relists the unit and cancels the sale; the buyer's money shows under Refunds due. Refusing sends it to an admin."
-        render={(r) => <Decide row={r} busy={busy === r.orderLineId} act={act} />}
-      />
-      <Stage
-        title="Refused — an admin decides" rows={by('escalated')} show={admin}
-        blurb="Refund anyway sends the unit home to the seller. Let the sale stand sends it back to the buyer and pays the seller."
-        render={(r) => <AdminClose row={r} busy={busy === r.orderLineId} act={act} />}
-      />
-
-      {closed.length > 0 && (
-        <section className="tg-card ops__card">
-          <h2 className="ops__subtitle">Settled ({closed.length})</h2>
-          {closed.map((r) => (
-            <div key={r.orderLineId} className="ops__inbound">
-              <Summary row={r} />
-              <span className="tg-badge">{r.case.state.replace('_', ' ')}</span>
-            </div>
-          ))}
-        </section>
-      )}
-    </div>
+      >
+        <table className="q__table ful">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Order</th>
+              <th>Reason</th>
+              <th>Asked</th>
+              <th className="ful__act">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((r) => (
+              <Fragment key={r.orderLineId}>
+                <tr>
+                  <td><Summary row={r} /></td>
+                  <td>
+                    <div className="tg-mono">{r.orderNumber}</div>
+                    <div className="tg-muted ful__small">{r.buyerName ?? 'Buyer'} · {money(r.amountMinor)}</div>
+                  </td>
+                  <td className="ful__small ret__reason">
+                    <strong>{REASON_LABELS[r.case.reasonCode] ?? r.case.reasonCode}</strong>
+                    {r.case.buyerNote && <div>“{r.case.buyerNote}”</div>}
+                    {r.video
+                      ? <button type="button" className="tg-button ret__video-btn" onClick={() => setVideo(r)}>▶ Unboxing video</button>
+                      : <div className="tg-muted">No video (raised before it was required)</div>}
+                    {r.case.decisionNote && <div className="tg-muted">Declined: {r.case.decisionNote}</div>}
+                    {r.case.resolutionNote && <div className="tg-muted">Staff: {r.case.resolutionNote}</div>}
+                  </td>
+                  <td className="ful__small tg-muted">{dateTime(r.case.requestedAt)}</td>
+                  <td className="ful__act">
+                    <div className="ful__buttons ret__actions">
+                      {stage.show || tab === 'settled' ? render(r) : <span className="tg-muted ful__small">Waiting on someone else</span>}
+                      <button type="button" className="tg-button tg-button--subtle" aria-expanded={open === r.orderLineId}
+                        onClick={() => setOpen(open === r.orderLineId ? null : r.orderLineId)}>
+                        {open === r.orderLineId ? 'Hide history' : 'History'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {open === r.orderLineId && (
+                  <tr className="ful__history"><td colSpan={5}><LineHistory lineId={r.orderLineId} staff refreshKey={done} /></td></tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </QueueScreen>
+      {video && <VideoDialog row={video} onClose={() => setVideo(null)} />}
+    </>
   )
 }
 
-function Stage({ title, blurb, rows, show, render }: {
-  title: string; blurb: string; rows: ReturnCaseView[]; show: boolean
-  render: (r: ReturnCaseView) => React.ReactNode
-}) {
-  // Someone who cannot act on a stage still sees it exists, but not as a to-do.
-  if (rows.length === 0) return null
+/** The buyer's unboxing video, played in the console. Opening it is audited by the API. */
+function VideoDialog({ row, onClose }: { row: ReturnCaseView; onClose: () => void }) {
+  const link = useApi(() => api.returnVideoLink(row.video!.id), [row.video!.id])
   return (
-    <section className="tg-card ops__card">
-      <h2 className="ops__subtitle">{title} ({rows.length})</h2>
-      <p className="tg-muted ops__fineprint">{blurb}</p>
-      {rows.map((r) => (
-        <div key={r.orderLineId} className="ops__inbound">
-          <Summary row={r} />
-          <span>{show ? render(r) : <span className="tg-muted">Waiting on someone else</span>}</span>
-        </div>
-      ))}
-    </section>
+    <ConfirmDialog open title={`Unboxing video · ${row.orderNumber}`} confirmLabel="Done" onConfirm={onClose} onCancel={onClose}>
+      <div className="ret__review">
+        {link.loading && <p className="tg-muted">Loading the video…</p>}
+        {link.error && <p className="ops__error">Could not load the video.</p>}
+        {link.data && (
+          <>
+            <video className="ret__player" src={link.data.url} controls playsInline preload="metadata" />
+            <p className="tg-muted ful__small">
+              {row.video!.fileName ?? 'video'} · {row.video!.bytes < 1048576 ? `${Math.max(1, Math.round(row.video!.bytes / 1024))} KB` : `${(row.video!.bytes / 1048576).toFixed(1)} MB`} · sent {dateTime(row.video!.createdAt)}.{' '}
+              <a href={link.data.url} target="_blank" rel="noopener noreferrer">Open in a new tab</a>
+            </p>
+          </>
+        )}
+        <p className="ful__small"><strong>{REASON_LABELS[row.case.reasonCode] ?? row.case.reasonCode}</strong>{row.case.buyerNote ? ` — “${row.case.buyerNote}”` : ''}</p>
+      </div>
+    </ConfirmDialog>
   )
 }
 
 function Summary({ row }: { row: ReturnCaseView }) {
-  const c = row.case
-  const f = c.inspection
+  const f = row.case.inspection
   return (
-    <div>
+    <div className="ful__item">
       <span className="ops__pic"><ModelPhoto modelId={row.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
-      <span className="tg-mono">{row.orderNumber}</span>{' '}
-      <Link to={`/items/${c.consignmentItemId}`} className="tg-mono">{row.itemSku}</Link>
-      <span className="tg-muted"> {row.itemLabel} · {money(row.amountMinor)} · {row.buyerName ?? 'buyer'} · asked {dateTime(c.requestedAt)}</span>
-      <br />
-      <strong>{REASON_LABELS[c.reasonCode] ?? c.reasonCode}</strong>
-      {c.buyerNote && <span> — “{c.buyerNote}”</span>}
-      {f && (
-        <div className="tg-muted">
-          Bench: serial {f.serialMatches ? 'matches' : 'DOES NOT match'} · condition {f.conditionOk ? 'ok' : 'WORSE'} ·
-          accessories {f.accessoriesOk ? 'complete' : 'MISSING'}{f.note ? ` — ${f.note}` : ''}
-        </div>
-      )}
-      {c.resolutionNote && <div className="tg-muted">Staff: {c.resolutionNote}</div>}
+      <div>
+        <div className="ful__title">{row.itemLabel}</div>
+        <Link to={`/items/${row.case.consignmentItemId}`} className="tg-mono ful__sku">{row.itemSku}</Link>
+        {f && (
+          <div className="tg-muted ful__small">
+            Bench: serial {f.serialMatches ? 'matches' : 'DOES NOT match'} · condition {f.conditionOk ? 'ok' : 'WORSE'} ·
+            accessories {f.accessoriesOk ? 'complete' : 'MISSING'}{f.note ? ` — ${f.note}` : ''}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -160,14 +234,16 @@ function RequestActions({ row, busy, act }: { row: ReturnCaseView; busy: boolean
     <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       {mode === 'approve' ? (
         <>
-          <input className="tg-input" value={courier} onChange={(e) => setCourier(e.target.value)} placeholder="Courier" style={{ width: 110 }} />
+          <select className="tg-select" value={courier} onChange={(e) => setCourier(e.target.value)} aria-label="Pickup courier">
+            {COURIER_CHOICES.map((c) => <option key={c} value={c}>{courierName(c)}</option>)}
+          </select>
           <input className="tg-input" value={tracking} onChange={(e) => setTracking(e.target.value)} placeholder="Tracking (if known)" />
-          <button className="tg-button tg-button--primary" disabled={busy} onClick={() => act(row.orderLineId, () => api.returnApprove(row.orderLineId, courier, tracking))}>Send label</button>
+          <button className="tg-button tg-button--primary" disabled={busy} onClick={() => act(row.orderLineId, () => api.returnApprove(row.orderLineId, courier, tracking))}>Approve and book pickup</button>
         </>
       ) : (
         <>
           <input className="tg-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason the buyer will read" style={{ minWidth: 260 }} />
-          <button className="tg-button tg-button--primary" disabled={busy || note.trim().length < 10} onClick={() => act(row.orderLineId, () => api.returnDecline(row.orderLineId, note))}>Decline</button>
+          <button className="tg-button tg-button--primary" disabled={busy || note.trim().length < 10} onClick={() => act(row.orderLineId, () => api.returnDecline(row.orderLineId, note))}>Decline return</button>
         </>
       )}
       <button className="tg-button" onClick={() => setMode(null)}>Back</button>

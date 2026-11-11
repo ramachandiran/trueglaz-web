@@ -4,6 +4,8 @@ import { AppShell } from './components/AppShell'
 import { StaffShell } from './components/StaffShell'
 import { storedMarketView } from './state/useMarketView'
 import { Guard } from './components/Guard'
+import { TeamSettingsPage } from './pages/settings/TeamSettingsPage'
+import { DigilockerReturnPage } from './pages/DigilockerReturnPage'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
 import { AuditPage } from './pages/AuditPage'
 import { Loading } from './components/ui'
@@ -81,6 +83,8 @@ export function App() {
           <Route path="/listings/:id" element={<ListingDetailPage />} />
           <Route path="/wanted" element={<WantedPage />} />
           <Route path="/sign-in" element={<SignInPage />} />
+          {/* DigiLocker's return address; not guarded, see the page. */}
+          <Route path="/kyc/digilocker/return" element={<DigilockerReturnPage />} />
 
           {/* Buyer */}
           <Route path="/checkout/:listingId" element={<Guard need="signed-in"><CheckoutPage /></Guard>} />
@@ -127,6 +131,7 @@ export function App() {
             <Route path="payouts" element={<SettingsGroupPage key="payouts" group="payouts" />} />
             <Route path="company" element={<CompanySettingsPage />} />
             <Route path="catalogue" element={<CatalogueSettingsPage />} />
+            <Route path="team" element={<TeamSettingsPage />} />
             <Route path="security" element={<SettingsGroupPage key="security" group="security" />} />
             <Route path="notifications" element={<SettingsGroupPage key="notifications" group="notifications" />} />
             <Route path="models" element={<AdminModelsPage />} />

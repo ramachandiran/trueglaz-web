@@ -12,3 +12,7 @@ yarn-error.*
 .env.local
 /ios
 /android
+
+# Firebase config for push; written by CI from a secret
+google-services.json
+GoogleService-Info.plist

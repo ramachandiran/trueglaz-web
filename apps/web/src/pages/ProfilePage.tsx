@@ -6,6 +6,7 @@ import {
 } from '@trueglaz/core'
 import { KycPanel } from '../components/KycPanel'
 import { NotificationsPanel } from '../components/NotificationsPanel'
+import { NotificationChoices } from '../components/NotificationChoices'
 import { ErrorNote, Loading } from '../components/ui'
 import './ProfilePage.css'
 
@@ -59,6 +60,7 @@ export function ProfilePage() {
           Notifications
           {me.unreadNotifications > 0 && ` (${me.unreadNotifications})`}
         </a>
+        <a href="#notification-choices">Notification settings</a>
         <a href="#details">Personal details</a>
         <a href="#addresses">Addresses</a>
         <a href="#bank">Bank details</a>
@@ -69,6 +71,7 @@ export function ProfilePage() {
       {/* First, above the details: it is the only section that can be waiting on
           them, and the one they came here to check. */}
       <NotificationsPanel onChanged={profile.reload} />
+      <NotificationChoices />
 
       <PersonalDetails me={me} onSaved={profile.reload} />
       <Addresses />
@@ -371,6 +374,33 @@ function Addresses() {
 
 /* -- bank details ---------------------------------------------------------- */
 
+const STATE_LABEL: Record<string, string> = { verified: 'Verified', pending: 'Being checked', failed: 'Not accepted' }
+const STATE_BADGE: Record<string, string> = { verified: 'tg-badge--good', pending: 'tg-badge--warn', failed: 'tg-badge--bad' }
+
+/**
+ * What the bank told us when we asked who holds the account. Shown plainly so a
+ * seller who typed a family member's account understands why payouts wait.
+ */
+function BankSays({ account }: { account: NonNullable<Profile['payoutAccount']> }) {
+  if (account.verificationState === 'failed') {
+    return <p className="profile__bank-note profile__bank-note--bad">{account.reviewReason ?? 'Our team could not accept this account.'} Add an account in your own name.</p>
+  }
+  if (account.verificationState === 'pending') {
+    return (
+      <p className="profile__bank-note">
+        {account.nameAtBank
+          ? <>Your bank has this account as <strong>{account.nameAtBank}</strong>, which doesn't clearly match {account.checkedAgainstName ? <strong>{account.checkedAgainstName}</strong> : 'your verified name'}. </>
+          : <>We couldn't confirm the name with your bank just now. </>}
+        Our team will check it within a working day; payouts wait until then.
+      </p>
+    )
+  }
+  if (account.nameAtBank) {
+    return <p className="profile__bank-note tg-muted">Your bank confirmed the holder: {account.nameAtBank}</p>
+  }
+  return null
+}
+
 function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
   // Prefilled from what is already on file: a change is usually one field, and
   // retyping your own name to correct an IFSC is busywork. The account number
@@ -440,9 +470,10 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
             {account.ifsc && ` · ${account.ifsc}`}
             {account.createdAt && ` · added ${dateOnly(account.createdAt)}`}
           </span>
-          <span className={`tg-badge ${account.verificationState === 'verified' ? 'tg-badge--good' : 'tg-badge--warn'}`}>
-            {account.verificationState}
+          <span className={`tg-badge ${STATE_BADGE[account.verificationState] ?? 'tg-badge--warn'}`}>
+            {STATE_LABEL[account.verificationState] ?? account.verificationState}
           </span>
+          <BankSays account={account} />
         </div>
       ) : (
         <p className="tg-muted">
@@ -450,7 +481,9 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
         </p>
       )}
 
-      {done && <p className="profile__ok">Saved. Payouts from now on go to the new account.</p>}
+      {done && account?.verificationState === 'verified' && (
+        <p className="profile__ok">Saved and checked with your bank. Payouts from now on go to this account.</p>
+      )}
 
       <h3 className="profile__subheading">{account ? 'Change where it goes' : 'Add an account'}</h3>
 
@@ -465,7 +498,7 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
 
         <Field
           label="Account holder's name"
-          hint="Must match the name on the account"
+          hint="Your own name, as your bank has it. We check it with the bank."
           value={form.accountHolderName}
           onChange={(v) => setForm({ ...form, accountHolderName: v })}
         />

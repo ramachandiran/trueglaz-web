@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError, dateOnly, useApi, type StaffUserRow } from '@trueglaz/core'
+import { PayoutReviewStrip } from '../components/PayoutCheckPanel'
 import { QueueScreen } from '../components/QueueScreen'
 import './StaffUsersPage.css'
 
@@ -95,6 +96,7 @@ export function StaffUsersPage() {
       page={validPage}
       pages={pages}
       onPage={setPage}
+      summary={<PayoutReviewStrip />}
     >
       <table className="q__table">
         <thead>

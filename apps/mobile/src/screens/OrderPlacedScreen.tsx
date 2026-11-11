@@ -5,6 +5,7 @@ import { api, useApi } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Pill } from '../components/kit'
+import { PushPrompt } from '../components/PushPrompt'
 
 /**
  * The moment after paying: one clear "it worked", what happens next, and the
@@ -46,6 +47,7 @@ export function OrderPlacedScreen({ route, navigation }: { route: any; navigatio
         </Txt>
       </View>
       <View style={{ gap: t.space.x3 }}>
+        <PushPrompt reason="We'll tell you when it's packed, shipped and delivered." />
         <Pill block label="Track this order" onPress={() => navigation.replace('OrderDetail', { id: orderId, justPaid: true })} />
         <Pill block variant="ghost" label="Continue shopping" onPress={() => navigation.navigate('Tabs', { screen: 'Shop' })} />
       </View>

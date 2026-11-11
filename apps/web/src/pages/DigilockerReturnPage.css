@@ -1,0 +1,13 @@
+/* The page DigiLocker sends people back to: one card, centred, nothing else to do. */
+.dlr { display: grid; place-items: start center; padding: var(--tg-space-6) var(--tg-space-4); }
+.dlr__card {
+  width: 100%; max-width: 520px;
+  display: grid; gap: var(--tg-space-3);
+  padding: var(--tg-space-6);
+}
+.dlr__card--ok { box-shadow: inset 0 4px 0 var(--tg-good), var(--tg-shadow-sm); }
+.dlr__card--bad { box-shadow: inset 0 4px 0 var(--tg-bad), var(--tg-shadow-sm); }
+.dlr__card p { margin: 0; }
+.dlr__eyebrow { font-size: var(--tg-text-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--tg-text-muted); }
+.dlr__title { margin: 0; font-size: var(--tg-text-xl); }
+.dlr__actions { display: flex; flex-wrap: wrap; gap: var(--tg-space-2); margin-top: var(--tg-space-2); }
