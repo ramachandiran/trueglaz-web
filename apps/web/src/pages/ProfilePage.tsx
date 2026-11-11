@@ -540,6 +540,7 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
             <button className="tg-button tg-button--primary" disabled={busy || code.trim().length < 4} onClick={save}>
               {busy ? 'Saving…' : 'Confirm and save'}
             </button>
+            <button className="tg-button tg-button--subtle" disabled={busy} onClick={requestCode}>Send a new code</button>
             <button className="tg-button" onClick={() => { setSent(null); setCode('') }}>Cancel</button>
           </div>
         </div>
@@ -636,8 +637,8 @@ function Security({ me, onChanged }: { me: Profile; onChanged: () => void }) {
       ) : (
         <div className="profile__confirm">
           <p className="tg-muted">
-            We sent a code to <strong>{sent.contact}</strong> — entering it proves you can
-            read mail there, which is the whole point of changing it.
+            We sent a code to <strong>{sent.contact}</strong>. It expires at {dateTime(sent.expiresAt)}. Entering it
+            proves you can read mail there, which is the whole point of changing it.
           </p>
           <div className="profile__actions">
             <input
@@ -651,6 +652,7 @@ function Security({ me, onChanged }: { me: Profile; onChanged: () => void }) {
             <button className="tg-button tg-button--primary" disabled={busy || code.trim().length < 4} onClick={confirm}>
               {busy ? 'Confirming…' : 'Confirm'}
             </button>
+            <button className="tg-button tg-button--subtle" disabled={busy} onClick={requestCode}>Send a new code</button>
             <button className="tg-button" onClick={() => { setSent(null); setCode('') }}>Cancel</button>
           </div>
         </div>

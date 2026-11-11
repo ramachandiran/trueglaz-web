@@ -30,6 +30,16 @@ export function SignInPage() {
   const [devCode, setDevCode] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // When the code stops working, as this browser's Date.now() (TG-97).
+  const [deadline, setDeadline] = useState(0)
+  const [now, setNow] = useState(() => Date.now())
+  const left = Math.max(0, Math.ceil((deadline - now) / 1000))
+  const expired = step === 'code' && deadline > 0 && left === 0
+  useEffect(() => {
+    if (step !== 'code') return
+    const id = setInterval(() => setNow(Date.now()), 500)
+    return () => clearInterval(id)
+  }, [step])
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -82,8 +92,28 @@ export function SignInPage() {
     setError(null)
     try {
       const res = await api.requestCode(entered)
-      setDevCode(res.devCode)
+      startCode(res)
       setStep('code')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not send a code')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function startCode(res: { devCode: string | null; expiresAt: string; expiresInSeconds?: number }) {
+    const secs = res.expiresInSeconds ?? Math.max(1, Math.round((Date.parse(res.expiresAt) - Date.now()) / 1000))
+    setDevCode(res.devCode)
+    setDeadline(Date.now() + secs * 1000)
+    setNow(Date.now())
+    setCode('')
+  }
+
+  async function resend() {
+    setBusy(true)
+    setError(null)
+    try {
+      startCode(await api.requestCode(contact.trim()))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not send a code')
     } finally {
@@ -235,8 +265,8 @@ export function SignInPage() {
           ) : step === 'code' ? (
             <form onSubmit={verify} className="signin__form">
               <p className="tg-muted signin__blurb">
-                A code is on its way to <strong>{contact}</strong>. It expires in a few
-                minutes. New here? The same code signs you up.
+                A code is on its way to <strong>{contact}</strong>. New here? The same
+                code signs you up.
               </p>
               <label className="signin__label" htmlFor="code">Code</label>
               <input
@@ -247,6 +277,7 @@ export function SignInPage() {
                 autoComplete="one-time-code"
                 autoFocus
                 required
+                disabled={expired}
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="123456"
@@ -259,9 +290,17 @@ export function SignInPage() {
                 </p>
               )}
 
-              <button className="tg-button tg-button--primary signin__submit" disabled={busy || code.length < 4}>
-                {busy ? 'Checking…' : 'Continue'}
-              </button>
+              <p className={`signin__timer${expired ? ' signin__timer--out' : ''}`} aria-live={expired || left <= 10 ? 'polite' : 'off'}>
+                {expired
+                  ? <>Code expired. <button type="button" className="signin__resend" onClick={resend} disabled={busy}>{busy ? 'Sending…' : 'Resend code'}</button></>
+                  : <>Code expires in <strong>{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</strong></>}
+              </p>
+
+              {!expired && (
+                <button className="tg-button tg-button--primary signin__submit" disabled={busy || code.length < 4}>
+                  {busy ? 'Checking…' : 'Continue'}
+                </button>
+              )}
               <button
                 type="button"
                 className="tg-button tg-button--subtle"
