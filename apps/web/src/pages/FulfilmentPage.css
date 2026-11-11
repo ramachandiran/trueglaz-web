@@ -27,3 +27,4 @@ dialog.confirm:has(.ful__form), dialog.confirm:has(.ret__review) { width: min(60
 .ret__player { width: 100%; max-height: 60vh; background: #000; border-radius: var(--tg-radius-md, 8px); }
 .ful__history td, .ful__history td * { text-align: left !important; }
 .ful__field textarea, .line__return-form textarea { font: inherit; }
+.ful__notice { margin: 0 0 var(--tg-space-3); padding: var(--tg-space-3) var(--tg-space-4); border-radius: var(--tg-radius-md, 8px); background: var(--tg-good-soft, rgb(46 125 83 / .1)); color: var(--tg-text); font-size: var(--tg-text-sm); }

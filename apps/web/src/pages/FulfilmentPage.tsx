@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiError, dateOnly, dateTime, isAdmin, money, useApi, useSession, type StaffOrderLine } from '@trueglaz/core'
+import { api, ApiError, CANCEL_REASONS, dateOnly, dateTime, isAdmin, money, useApi, useSession, type StaffCancelRow, type StaffOrderLine } from '@trueglaz/core'
 import { QueueScreen } from '../components/QueueScreen'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -9,9 +9,10 @@ import { COURIER_CHOICES, courierName } from '../components/couriers'
 import './OpsPage.css'
 import './FulfilmentPage.css'
 
-type Tab = 'open' | 'dispatched' | 'delivered' | 'closed'
+type Tab = 'cancel' | 'open' | 'dispatched' | 'delivered' | 'closed'
 
 const TABS: { key: Tab; label: string; states: string[] }[] = [
+  { key: 'cancel', label: 'Cancellations', states: [] },
   { key: 'open', label: 'To dispatch', states: ['open', 'packing'] },
   { key: 'dispatched', label: 'In transit', states: ['dispatched'] },
   { key: 'delivered', label: 'Delivered', states: ['delivered'] },
@@ -26,6 +27,8 @@ type Dialog =
   | { kind: 'deliver'; line: StaffOrderLine }
   | { kind: 'tracking'; line: StaffOrderLine }
   | { kind: 'close'; line: StaffOrderLine }
+  | { kind: 'cancel-approve'; row: StaffCancelRow }
+  | { kind: 'cancel-decline'; row: StaffCancelRow }
 
 /**
  * Getting sold items to buyers, in the same frame as Operations (TG-86).
@@ -40,7 +43,9 @@ export function FulfilmentPage() {
   const { session } = useSession()
   const admin = isAdmin(session)
   const all = useApi(() => api.orderLines(), [])
+  const cancels = useApi(() => api.cancellations('requested'), [])
   const [tab, setTab] = useState<Tab>('open')
+  const [notice, setNotice] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState<string | null>(null)
@@ -49,7 +54,12 @@ export function FulfilmentPage() {
   const perPage = 10
 
   const rows = all.data ?? []
-  const count = (t: Tab) => rows.filter((l) => TABS.find((x) => x.key === t)!.states.includes(l.state)).length
+  const count = (t: Tab) => t === 'cancel' ? (cancels.data?.length ?? 0)
+    : rows.filter((l) => TABS.find((x) => x.key === t)!.states.includes(l.state)).length
+  const cancelRows = (cancels.data ?? []).filter((r) => {
+    const t = search.trim().toLowerCase()
+    return !t || [r.orderNumber, r.itemSku, r.itemLabel, r.buyerName, r.request.note].some((v) => v?.toLowerCase().includes(t))
+  })
   const inTab = useMemo(() => {
     const states = TABS.find((x) => x.key === tab)!.states
     return rows.filter((l) => states.includes(l.state)).sort((a, b) => stamp(b) - stamp(a))
@@ -60,11 +70,16 @@ export function FulfilmentPage() {
     return [l.orderNumber, l.internalSku, l.title, l.buyerName, l.trackingNumber, courierName(l.courierCode)]
       .some((v) => v?.toLowerCase().includes(t))
   })
-  const pages = Math.ceil(filtered.length / perPage)
+  const isCancel = tab === 'cancel'
+  const listLen = isCancel ? cancelRows.length : filtered.length
+  const pages = Math.ceil(listLen / perPage)
   const p = Math.min(Math.max(1, page), pages || 1)
   const shown = filtered.slice((p - 1) * perPage, p * perPage)
+  const shownCancels = cancelRows.slice((p - 1) * perPage, p * perPage)
 
-  const finished = () => { setDialog(null); setDone((n) => n + 1); all.reload() }
+  const finished = (message?: string) => {
+    setDialog(null); setDone((n) => n + 1); all.reload(); cancels.reload(); setNotice(message ?? null)
+  }
 
   return (
     <>
@@ -73,22 +88,74 @@ export function FulfilmentPage() {
         subtitle="Sold items on their way to buyers. Each step is recorded: who, when, which courier and what it cost."
         tabs={TABS.map((t) => ({ key: t.key, label: t.label, count: count(t.key) }))}
         active={tab}
-        onTab={(k) => { setTab(k as Tab); setPage(1); setOpen(null) }}
+        onTab={(k) => { setTab(k as Tab); setPage(1); setOpen(null); setNotice(null) }}
         search={search}
         onSearch={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Search by order, SKU, item, buyer or tracking…"
-        shown={filtered.length}
-        total={inTab.length}
-        unit="items"
-        loading={all.loading && !all.data}
-        error={all.error}
-        onRetry={all.reload}
-        emptyTitle={tab === 'open' ? 'Nothing waiting to be dispatched' : tab === 'dispatched' ? 'Nothing in transit' : tab === 'delivered' ? 'Nothing waiting on a buyer' : 'No closed sales yet'}
+        shown={listLen}
+        total={isCancel ? (cancels.data?.length ?? 0) : inTab.length}
+        unit={isCancel ? 'requests' : 'items'}
+        loading={isCancel ? cancels.loading && !cancels.data : all.loading && !all.data}
+        error={isCancel ? cancels.error : all.error}
+        onRetry={isCancel ? cancels.reload : all.reload}
+        summary={notice ? <p className="ful__notice" role="status">{notice}</p> : undefined}
+        emptyTitle={isCancel ? 'No cancellations waiting' : tab === 'open' ? 'Nothing waiting to be dispatched' : tab === 'dispatched' ? 'Nothing in transit' : tab === 'delivered' ? 'Nothing waiting on a buyer' : 'No closed sales yet'}
         emptyHint="That is the queue being empty, not the page being broken."
         page={p}
         pages={pages}
         onPage={setPage}
       >
+        {isCancel ? (
+          <table className="q__table ful">
+            <thead>
+              <tr><th>Item</th><th>Order</th><th>Why</th><th>Where it is</th><th className="ful__act">Decision</th></tr>
+            </thead>
+            <tbody>
+              {shownCancels.map((r) => (
+                <Fragment key={r.request.id}>
+                  <tr>
+                    <td>
+                      <div className="ful__item">
+                        <span className="ops__pic"><ModelPhoto modelId={r.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
+                        <div>
+                          <div className="ful__title">{r.itemLabel}</div>
+                          <span className="tg-mono ful__sku">{r.itemSku}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="tg-mono">{r.orderNumber}</div>
+                      <div className="tg-muted ful__small">{r.buyerName ?? 'Buyer'} · {money(r.amountMinor)}</div>
+                    </td>
+                    <td className="ful__small ret__reason">
+                      <strong>{cap(CANCEL_REASONS[r.request.reasonCode] ?? r.request.reasonCode)}</strong>
+                      {r.request.note && <div>“{r.request.note}”</div>}
+                      <div className="tg-muted">Asked {dateTime(r.request.requestedAt)}</div>
+                    </td>
+                    <td className="ful__small">
+                      {r.lineState === 'dispatched'
+                        ? <><span className="tg-badge tg-badge--warn">With the courier</span><div className="tg-muted">Approving recalls it through Returns</div></>
+                        : <><span className="tg-badge">Not dispatched</span><div className="tg-muted">Dispatch is on hold</div></>}
+                    </td>
+                    <td className="ful__act">
+                      <div className="ful__buttons">
+                        <button type="button" className="tg-button tg-button--primary" onClick={() => setDialog({ kind: 'cancel-approve', row: r })}>Approve</button>
+                        <button type="button" className="tg-button" onClick={() => setDialog({ kind: 'cancel-decline', row: r })}>Decline</button>
+                        <button type="button" className="tg-button tg-button--subtle" aria-expanded={open === r.request.orderLineId}
+                          onClick={() => setOpen(open === r.request.orderLineId ? null : r.request.orderLineId)}>
+                          {open === r.request.orderLineId ? 'Hide history' : 'History'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {open === r.request.orderLineId && (
+                    <tr className="ful__history"><td colSpan={5}><LineHistory lineId={r.request.orderLineId} staff refreshKey={done} /></td></tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        ) : (
         <table className="q__table ful">
           <thead>
             <tr>
@@ -148,12 +215,15 @@ export function FulfilmentPage() {
             ))}
           </tbody>
         </table>
+        )}
       </QueueScreen>
 
       {dialog?.kind === 'dispatch' && <DispatchDialog line={dialog.line} onClose={() => setDialog(null)} onDone={finished} />}
       {dialog?.kind === 'deliver' && <DeliverDialog line={dialog.line} onClose={() => setDialog(null)} onDone={finished} />}
       {dialog?.kind === 'tracking' && <TrackingDialog line={dialog.line} onClose={() => setDialog(null)} onDone={finished} />}
       {dialog?.kind === 'close' && <CloseDialog line={dialog.line} onClose={() => setDialog(null)} onDone={finished} />}
+      {dialog?.kind === 'cancel-approve' && <ApproveCancelDialog row={dialog.row} onClose={() => setDialog(null)} onDone={finished} />}
+      {dialog?.kind === 'cancel-decline' && <DeclineCancelDialog row={dialog.row} onClose={() => setDialog(null)} onDone={finished} />}
     </>
   )
 }
@@ -163,6 +233,10 @@ const stamp = (l: StaffOrderLine) => { const w = when(l); return w ? new Date(w)
 
 function RowAction({ line: l, admin, onOpen }: { line: StaffOrderLine; admin: boolean; onOpen: (d: Dialog) => void }) {
   if (l.state === 'open' || l.state === 'packing') {
+    if (l.cancelRequested) {
+      // TG-93: never post something the buyer has asked us not to.
+      return <span className="tg-badge tg-badge--warn" title="Decide the cancellation first, on the Cancellations tab">Buyer asked to cancel — on hold</span>
+    }
     return <button type="button" className="tg-button tg-button--primary" onClick={() => onOpen({ kind: 'dispatch', line: l })}>Dispatch</button>
   }
   if (l.state === 'dispatched') {
@@ -191,6 +265,53 @@ function RowAction({ line: l, admin, onOpen }: { line: StaffOrderLine; admin: bo
     )
   }
   return <span className="tg-badge tg-badge--good">{l.acceptedBy === 'return_declined' ? 'Closed · return declined' : 'Closed'}</span>
+}
+
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+
+function ApproveCancelDialog({ row, onClose, onDone }: { row: StaffCancelRow; onClose: () => void; onDone: (m?: string) => void }) {
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const recall = row.lineState === 'dispatched'
+  async function go() {
+    setBusy(true); setError(null)
+    try {
+      const d = await api.approveCancel(row.request.orderLineId, note)
+      onDone(d.refund === 'refunded' ? `Cancelled. ${money(row.amountMinor)} refunded to the buyer (ref ${d.refundRef}); the item is back on sale.`
+        : d.refund === 'refund_due' ? `Cancelled and the item is back on sale. The refund could not go out automatically (${d.refundNote}) — it is waiting under Money → Refunds due.`
+          : d.refund === 'recall' ? 'Approved. The parcel is recalled and now waits under Returns → On its way back; the buyer is refunded once it is back and checked.'
+            : 'Cancelled.')
+    } catch (e) { setError(e instanceof ApiError ? e.message : 'That did not work') } finally { setBusy(false) }
+  }
+  return (
+    <ConfirmDialog open title={`Approve cancelling ${row.orderNumber}?`} confirmLabel={recall ? 'Approve and recall' : 'Approve and refund'} busy={busy} onCancel={onClose} onConfirm={go}>
+      {recall ? (
+        <p>It is already with the courier. Approving recalls it: it shows under Returns as on its way back, and the buyer is refunded once it is back and checked.</p>
+      ) : (
+        <p>The item goes back on sale, the order and its invoice are cancelled, and {money(row.amountMinor)} is refunded to how the buyer paid.</p>
+      )}
+      <label className="ful__field"><span>Internal note <em className="tg-muted">(optional)</em></span>
+        <input className="tg-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Not yet packed" />
+      </label>
+      {error && <p className="ops__error" role="alert">{error}</p>}
+    </ConfirmDialog>
+  )
+}
+
+function DeclineCancelDialog({ row, onClose, onDone }: { row: StaffCancelRow; onClose: () => void; onDone: (m?: string) => void }) {
+  const [note, setNote] = useState('')
+  const s = useSubmit(() => onDone('Declined. The order carries on and the buyer has been told why.'))
+  return (
+    <ConfirmDialog open title={`Decline cancelling ${row.orderNumber}?`} confirmLabel="Decline" busy={s.busy} onCancel={onClose}
+      onConfirm={() => s.run(() => api.declineCancel(row.request.orderLineId, note))}>
+      <p>The order carries on as normal and dispatch is released.</p>
+      <label className="ful__field"><span>Reason (the buyer reads this)</span>
+        <input className="tg-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. It was handed to the courier this morning" />
+      </label>
+      {s.error && <p className="ops__error" role="alert">{s.error}</p>}
+    </ConfirmDialog>
+  )
 }
 
 function useSubmit(onDone: () => void) {

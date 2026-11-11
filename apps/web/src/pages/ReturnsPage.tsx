@@ -17,6 +17,7 @@ const REASON_LABELS: Record<string, string> = {
   damaged_in_transit: 'Damaged in transit',
   wrong_item: 'Wrong item received',
   change_of_mind: 'Changed their mind',
+  cancelled_in_transit: 'Cancelled while in transit',
 }
 
 type Tab = 'requested' | 'approved' | 'received' | 'inspected' | 'escalated' | 'settled'
@@ -145,7 +146,7 @@ export function ReturnsPage() {
                     {r.case.buyerNote && <div>“{r.case.buyerNote}”</div>}
                     {r.video
                       ? <button type="button" className="tg-button ret__video-btn" onClick={() => setVideo(r)}>▶ Unboxing video</button>
-                      : <div className="tg-muted">No video (raised before it was required)</div>}
+                      : <div className="tg-muted">{r.case.reasonCode === 'cancelled_in_transit' ? 'Recalled from the courier — no video' : 'No video (raised before it was required)'}</div>}
                     {r.case.decisionNote && <div className="tg-muted">Declined: {r.case.decisionNote}</div>}
                     {r.case.resolutionNote && <div className="tg-muted">Staff: {r.case.resolutionNote}</div>}
                   </td>

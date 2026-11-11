@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 import { api, dateOnly, useApi } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
+import { OtpBoxes } from '../components/OtpBoxes'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle } from '../components/ui'
@@ -154,7 +155,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
               <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
             </View>
           )}
-          <Field label="Verification code" value={code} onChangeText={setCode} keyboardType="number-pad" />
+          <OtpBoxes value={code} onChange={setCode} label="Verification code" />
         </View>
       )}
 

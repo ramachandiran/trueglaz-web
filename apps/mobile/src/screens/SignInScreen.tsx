@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { api, useSession, type AuthResult, type Session } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { Button, Field } from '../components/form'
+import { OtpBoxes } from '../components/OtpBoxes'
 import { Card, Muted } from '../components/ui'
 import { useTheme } from '../theme/ThemeContext'
 
@@ -52,11 +53,12 @@ export function SignInScreen() {
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
 
-  const verify = async () => {
-    if (code.trim().length < 4) { setError('Enter the code from your email.'); return }
+  const verify = async (typed?: string) => {
+    const c = (typed ?? code).trim()
+    if (c.length < 4) { setError('Enter the code from your email.'); return }
     setError(null); setBusy(true)
     try {
-      const res = await api.verifyCode(contact.trim(), code.trim())
+      const res = await api.verifyCode(contact.trim(), c)
       if (res.newUser) { setStep('signup'); return }
       await signIn(toSession(res))
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
@@ -112,8 +114,8 @@ export function SignInScreen() {
                   <Muted size={t.size.xs}>Shown because this is a demo server with no email provider.</Muted>
                 </View>
               )}
-              <Field label="Code" value={code} onChangeText={setCode} keyboardType="number-pad" placeholder="______" onSubmitEditing={verify} />
-              <Button label="Verify & continue" onPress={verify} loading={busy} />
+              <OtpBoxes value={code} onChange={(v) => { setCode(v); setError(null) }} onComplete={(v) => { if (!busy) verify(v) }} label="Code" error={!!error} />
+              <Button label="Verify & continue" onPress={() => verify()} loading={busy} />
               <Pressable onPress={() => { setStep('contact'); setCode(''); setDevCode(null) }}>
                 <Txt style={{ color: t.colors.accent }}>Use a different email</Txt>
               </Pressable>
