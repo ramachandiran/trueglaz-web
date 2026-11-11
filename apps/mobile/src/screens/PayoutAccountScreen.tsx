@@ -88,6 +88,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [code, setCode] = useState('')
   const [deadline, setDeadline] = useState(0)
+  const [resendAt, setResendAt] = useState(0)
   const [expired, setExpired] = useState(false)
 
   const [busy, setBusy] = useState(false)
@@ -108,6 +109,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
       setDevCode(res.devCode); setSentTo(res.contact); setCodeSent(true)
       setCode(res.devCode ?? '')
       setDeadline(Date.now() + (res.expiresInSeconds ?? Math.max(1, Math.round((Date.parse(res.expiresAt) - Date.now()) / 1000))) * 1000)
+      setResendAt(Date.now() + (res.resendInSeconds ?? 60) * 1000)
       setExpired(false)
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
@@ -161,7 +163,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
             </View>
           )}
           <OtpBoxes value={code} onChange={setCode} label="Verification code" editable={!expired} />
-          <CodeTimer key={deadline} deadline={deadline} onResend={sendCode} resending={busy} align="flex-start"
+          <CodeTimer key={deadline} deadline={deadline} resendAt={resendAt} onResend={sendCode} resending={busy} align="flex-start"
             onExpire={() => { setExpired(true); setCode('') }} />
         </View>
       )}

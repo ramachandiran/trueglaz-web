@@ -16,7 +16,8 @@ const looksLikePhone = (s: string) => /^[+()\d][\d\s()+-]{6,}$/.test(s.trim())
 type Step = 'contact' | 'code' | 'signup'
 
 /** Used only when an older API does not say how long its code lasts. */
-const FALLBACK_CODE_SECONDS = 60
+const FALLBACK_CODE_SECONDS = 300
+const FALLBACK_RESEND_SECONDS = 60
 const native = Platform.OS !== 'web'
 
 function toSession(r: AuthResult): Session {
@@ -39,6 +40,7 @@ export function SignInScreen() {
   const [error, setError] = useState<string | null>(null)
   // The code's deadline, its result colour, and a counter that re-runs the shake.
   const [deadline, setDeadline] = useState(0)
+  const [resendAt, setResendAt] = useState(0)
   const [expired, setExpired] = useState(false)
   const [resending, setResending] = useState(false)
   const [status, setStatus] = useState<'error' | 'success' | undefined>()
@@ -59,11 +61,12 @@ export function SignInScreen() {
     return () => { if (clearTimer.current) clearTimeout(clearTimer.current) }
   }, [])
 
-  const startCode = (res: { devCode: string | null; expiresAt: string; expiresInSeconds?: number }) => {
+  const startCode = (res: { devCode: string | null; expiresAt: string; expiresInSeconds?: number; resendInSeconds?: number }) => {
     const secs = res.expiresInSeconds
       ?? Math.max(1, Math.round((Date.parse(res.expiresAt) - Date.now()) / 1000) || FALLBACK_CODE_SECONDS)
     setDevCode(res.devCode)
     setDeadline(Date.now() + secs * 1000)
+    setResendAt(Date.now() + (res.resendInSeconds ?? FALLBACK_RESEND_SECONDS) * 1000)
     setExpired(false); setCode(''); setStatus(undefined); setError(null)
   }
 
@@ -180,7 +183,7 @@ export function SignInScreen() {
                     onComplete={(v) => { if (!busy) verify(v) }} />
                 </View>
                 {status !== 'success' && (
-                  <CodeTimer key={deadline} deadline={deadline} onResend={resend} resending={resending}
+                  <CodeTimer key={deadline} deadline={deadline} resendAt={resendAt} onResend={resend} resending={resending}
                     onExpire={() => { setExpired(true); setStatus(undefined); setError(null) }} />
                 )}
                 {!expired && <Button label="Verify" variant="cta" onPress={() => verify()} loading={busy} disabled={status === 'success'} />}
