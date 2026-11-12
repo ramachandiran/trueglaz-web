@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   api, ApiError, money, useApi, useSession,
-  type Address, type Order, type PaymentMethod, type PaymentPreference,
-} from '@trueglaz/core'
+  type Address, type Order, type PaymentMethod, type PaymentPreference, gstinProblem } from '@trueglaz/core'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { photoKindFor } from '../components/GearPhoto'
@@ -71,6 +70,11 @@ export function CheckoutPage() {
   const [address, setAddress] = useState<Addr>({ ...EMPTY, recipientName: session?.displayName ?? '' })
   const [keep, setKeep] = useState(true) // save the new address / update the saved one
   const [touched, setTouched] = useState(false)
+  // Buying for a business (TG-119): optional; the invoice is made out to it.
+  const [forBusiness, setForBusiness] = useState(false)
+  const [bizName, setBizName] = useState('')
+  const [gstin, setGstin] = useState('')
+  const gstinErr = forBusiness && gstin.length >= 15 ? gstinProblem(gstin) : null
   const sentToOrder = useRef<string | null>(null) // the address the order currently carries
 
   // -- payment state -------------------------------------------------------
@@ -231,7 +235,13 @@ export function CheckoutPage() {
     try {
       if (!order) {
         if (!reservationId) throw new Error('Your hold on this item is not ready yet')
-        const created = await api.checkout(reservationId, orderAddress(address))
+        if (forBusiness) {
+          if (!bizName.trim()) throw new Error('Enter the business name as it is registered for GST')
+          const problem = gstinProblem(gstin)
+          if (problem) throw new Error(problem)
+        }
+        const created = await api.checkout(reservationId, orderAddress(address),
+          forBusiness ? { name: bizName.trim(), gstin } : null)
         sentToOrder.current = JSON.stringify(orderAddress(address))
         setOrder(created)
       } else {
@@ -427,6 +437,27 @@ export function CheckoutPage() {
               <AddressForm value={address} onChange={(v) => { setAddress(v); setTouched(true) }} showErrors={touched}
                 keep={keep} onKeep={setKeep} keepLabel="Save it to my addresses for next time" />
             )}
+
+            <div className="co__biz">
+              <label className="co__biz-toggle">
+                <input type="checkbox" checked={forBusiness} disabled={!!order} onChange={(e) => setForBusiness(e.target.checked)} />
+                <span><strong>Buying for a business?</strong> Add your GST details and the invoice is made out to the business.</span>
+              </label>
+              {forBusiness && (
+                <div className="co__biz-fields">
+                  <label>Business name (as on the GST certificate)
+                    <input className="tg-input" value={bizName} disabled={!!order} onChange={(e) => setBizName(e.target.value)} autoComplete="organization" />
+                  </label>
+                  <label>GSTIN
+                    <input className="tg-input" value={gstin} disabled={!!order} maxLength={15} placeholder="22AAAAA0000A1Z5"
+                      aria-invalid={!!gstinErr} aria-describedby={gstinErr ? 'gstin-err' : undefined}
+                      onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))} />
+                  </label>
+                  {gstinErr && <p id="gstin-err" className="co__err">{gstinErr}</p>}
+                  {order && <p className="co__muted">Already on this order.</p>}
+                </div>
+              )}
+            </div>
 
             <div className="co__nav">
               <Link to={`/listings/${listingId}`} className="co__back">← Back to the item</Link>

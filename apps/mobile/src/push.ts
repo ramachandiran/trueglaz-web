@@ -19,6 +19,8 @@ import { openLink } from './linking'
  */
 
 const TOKEN_KEY = 'trueglaz.pushToken'
+/** Set when the person switched push off here, so the next launch does not quietly switch it back on. */
+const OFF_KEY = 'trueglaz.pushOff'
 
 /** One Android channel per kind of message, so people can mute one in system settings. */
 const CHANNELS: { id: string; name: string; importance: Notifications.AndroidImportance }[] = [
@@ -68,6 +70,9 @@ export async function pushState(): Promise<PushState> {
 export async function enablePush(ask: boolean): Promise<PushState> {
   if (!pushSupported) return 'unsupported'
   configure()
+  // A silent re-register at launch respects "off"; asking means they want it on.
+  if (!ask && (await AsyncStorage.getItem(OFF_KEY).catch(() => null))) return pushState()
+  if (ask) await AsyncStorage.removeItem(OFF_KEY).catch(() => {})
   let state = await pushState()
   if (state === 'undetermined' && ask) {
     const r = await Notifications.requestPermissionsAsync()
@@ -86,13 +91,24 @@ async function register(token: string) {
   await AsyncStorage.setItem(TOKEN_KEY, token)
 }
 
-/** Stop pushes to this phone: on sign-out, or when the person turns push off here. */
-export async function disablePush() {
+/**
+ * Stop pushes to this phone: on sign-out, or when the person turns push off
+ * here (`byChoice`), which is remembered so a relaunch does not undo it.
+ */
+export async function disablePush(byChoice = false) {
+  if (byChoice) await AsyncStorage.setItem(OFF_KEY, '1').catch(() => {})
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY)
     if (token) await api.removePushDevice(token)
     await AsyncStorage.removeItem(TOKEN_KEY)
   } catch { /* signed out already, or offline: the server drops dead tokens itself */ }
+}
+
+/** Whether this phone is registered for pushes right now (allowed, and not switched off here). */
+export async function pushIsOn(): Promise<boolean> {
+  if (!pushSupported) return false
+  if ((await pushState()) !== 'granted') return false
+  return !!(await AsyncStorage.getItem(TOKEN_KEY).catch(() => null))
 }
 
 /** The system settings page for this app, where a "Don't allow" can be undone. */

@@ -397,9 +397,12 @@ export const api = {
   checkout: (
     reservationId: string,
     deliveryAddress: Record<string, unknown>,
+    /** Buying for a business: the invoice is made out to it (TG-119). */
+    business?: { name: string; gstin: string } | null,
   ) =>
     post<Order>(`/reservations/${reservationId}/checkout`, {
       deliveryAddress,
+      ...(business ? { business } : {}),
       // Omitted rather than sent empty: the server treats a blank code as
       // "no code", but a request that says nothing is clearer than one that
       // says nothing twice.

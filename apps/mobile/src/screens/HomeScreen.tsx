@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -6,6 +6,7 @@ import { api, isSeller, money, useApi, useSession, type BuyerHome, type HomeList
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { mediaUri, sizedUri } from '../components/ModelImage'
+import { OrderTracker } from '../components/OrderTracker'
 import { GearArt, Pill, PhotoBadge, ProductCard, RoundIcon, SectionHead, lift } from '../components/kit'
 
 function greeting(): string {
@@ -28,6 +29,9 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   const notif = useApi(() => api.notifications(), [])
   const mine = useApi(() => (session ? api.buyerHome() : Promise.resolve(null)), [session?.userId])
   const vault = useApi(() => (session ? api.vault() : Promise.resolve(null)), [session?.userId])
+  const orders = useApi(() => (session ? api.myOrders() : Promise.resolve(null)), [session?.userId])
+  // Back on Home after paying, cancelling or reading an order: show where things stand now.
+  useEffect(() => navigation.addListener('focus', () => { orders.reload(); notif.reload() }), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
   const firstName = session?.displayName?.split(' ')[0] ?? null
   const unread = notif.data?.unread ?? 0
 
@@ -41,7 +45,6 @@ export function HomeScreen({ navigation }: { navigation: any }) {
 
   const d = home.data
   const b = mine.data ?? null
-  const onTheWay = b?.stats.inProgress ?? 0
   const rail = (title: string, sub: string, list: HomeListing[]) => list.length > 0 && (
     <View>
       <SectionHead title={title} sub={sub} onAll={() => navigation.navigate('Shop')} />
@@ -69,7 +72,6 @@ export function HomeScreen({ navigation }: { navigation: any }) {
           <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{greeting()}</Txt>
           <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{firstName ?? 'Welcome'}</Txt>
         </View>
-        <RoundIcon icon="search" label="Search" onPress={() => navigation.navigate('Shop')} />
         <View>
           <RoundIcon icon="notifications-outline" label={unread ? `Notifications, ${unread} unread` : 'Notifications'} onPress={() => navigation.navigate('Notifications')} />
           {unread > 0 && <View style={{ position: 'absolute', top: 9, right: 10, width: 9, height: 9, borderRadius: 5, backgroundColor: t.colors.cta, borderWidth: 2, borderColor: t.colors.bgRaised }} />}
@@ -78,22 +80,14 @@ export function HomeScreen({ navigation }: { navigation: any }) {
 
       <Hero t={t} b={b} signedIn={!!session} seller={isSeller(session)} navigation={navigation} />
 
-      {onTheWay > 0 && (
-        <Pressable onPress={() => navigation.navigate('Orders')} accessibilityRole="link"
-          style={[{ marginHorizontal: t.space.x4, marginTop: -t.space.x2, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8,
-            backgroundColor: t.colors.bgRaised, borderRadius: t.radius.pill, paddingVertical: 9, paddingHorizontal: 16 }, lift(t)]}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.colors.good }} />
-          <Txt style={{ fontSize: t.size.sm, color: t.colors.text }}>
-            <Txt style={{ fontWeight: t.weight.bold as never }}>{onTheWay}</Txt> {onTheWay === 1 ? 'order' : 'orders'} on the way · Track
-          </Txt>
-        </Pressable>
-      )}
+      {/* Orders in progress (TG-110), where the one-line "N on the way" used to be. */}
+      <OrderTracker t={t} orders={orders.data ?? null} imageBySlug={stockBySlug}
+        onOpen={(id) => navigation.navigate('OrderDetail', { id })} onAll={() => navigation.navigate('Orders')} />
 
-      {rail('Just in', 'Fresh off the inspection bench', d?.justIn ?? [])}
+      {/* The hero already says "just in"; the first rail is the savings instead (TG-114). */}
+      {rail('Biggest savings', 'Against the new price', d?.bestSavings ?? [])}
 
       {session && <ForYou t={t} vault={vault.data ?? null} seller={isSeller(session)} navigation={navigation} />}
-
-      {rail('Biggest savings', 'Against the new price', d?.bestSavings ?? [])}
 
       {(d?.recentlySold ?? []).length > 0 && (
         <View>

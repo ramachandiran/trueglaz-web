@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { api, ApiError, useSession, type AuthResult, type PhotographyGenre } from '@trueglaz/core'
+import { api, ApiError, indianMobile, localMobile, useSession, type AuthResult, type PhotographyGenre } from '@trueglaz/core'
 import { Logo } from '../components/Logo'
 import './SignInPage.css'
 
@@ -179,7 +179,7 @@ export function SignInPage() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
-        mobile: mobile.trim(),
+        mobile: provedIsEmail ? (indianMobile(mobile) ?? mobile.trim()) : mobile.trim(),
         photographyGenres: chosen,
       }))
     } catch (err) {
@@ -377,17 +377,27 @@ export function SignInPage() {
                 Mobile
                 {!provedIsEmail && <span className="signin__proved">confirmed</span>}
               </label>
-              <input
-                id="mobile"
-                className="tg-input"
-                type="tel"
-                autoComplete="tel"
-                required
-                readOnly={!provedIsEmail}
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                placeholder="+919876543210"
-              />
+              {provedIsEmail ? (
+                // +91 is fixed (TG-109): people type the ten digits they know.
+                <div className="signin__phone">
+                  <span className="signin__cc" aria-hidden="true">+91</span>
+                  <input
+                    id="mobile"
+                    className="tg-input"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    required
+                    aria-label="Mobile number, after +91"
+                    value={localMobile(mobile)}
+                    onChange={(e) => setMobile(localMobile(e.target.value))}
+                    placeholder="98765 43210"
+                    maxLength={10}
+                  />
+                </div>
+              ) : (
+                <input id="mobile" className="tg-input" type="tel" readOnly value={mobile} />
+              )}
               <p className="tg-muted signin__hint">
                 {provedIsEmail
                   ? 'We use your mobile for delivery updates. You will confirm it later, from your profile.'

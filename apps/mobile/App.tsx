@@ -33,6 +33,7 @@ import { ProfileScreen } from './src/screens/ProfileScreen'
 import { VaultScreen } from './src/screens/VaultScreen'
 import { NotificationsScreen } from './src/screens/NotificationsScreen'
 import { AddressesScreen } from './src/screens/AddressesScreen'
+import { WishlistScreen } from './src/screens/WishlistScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen'
 import { onPushReceived, setBadge, usePushWhileSignedIn } from './src/push'
@@ -96,7 +97,6 @@ function MainTabs() {
       <Tabs.Screen name="Shop" component={CatalogScreen} options={{ tabBarIcon: tabIcon('search-outline', 'search') }} />
       <Tabs.Screen name="Sell" component={SellScreen} options={{ tabBarIcon: tabIcon('cube-outline', 'cube') }} />
       <Tabs.Screen name="Vault" component={VaultScreen} options={{ tabBarIcon: tabIcon('shield-checkmark-outline', 'shield-checkmark') }} />
-      <Tabs.Screen name="Orders" component={OrdersScreen} options={{ tabBarIcon: tabIcon('receipt-outline', 'receipt') }} />
       <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread }} />
     </Tabs.Navigator>
     </>
@@ -118,6 +118,8 @@ function AppStack() {
       <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false }} />
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
+      {/* Off the tab bar (TG-111): reached from the home order card and Profile. */}
+      <Root.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />
       <Root.Screen name="Pay" component={PayScreen} options={{ title: 'Payment' }} />
       <Root.Screen name="OrderPlaced" component={OrderPlacedScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
@@ -125,6 +127,7 @@ function AppStack() {
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />
       <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
       <Root.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Addresses' }} />
+      <Root.Screen name="Wishlist" component={WishlistScreen} options={{ headerShown: false }} />
       <Root.Screen name="PayoutAccount" component={PayoutAccountScreen} options={{ title: 'Payout account' }} />
       <Root.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notification settings' }} />
     </Root.Navigator>

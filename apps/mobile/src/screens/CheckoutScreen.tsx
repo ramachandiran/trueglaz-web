@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
-import { api, money, useApi, type Address, type Reservation } from '@trueglaz/core'
+import { api, gstinProblem, money, useApi, type Address, type Reservation } from '@trueglaz/core'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
@@ -72,10 +73,21 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
     }
   }
 
+  // Buying for a business (TG-119): optional; the invoice is made out to it.
+  const [forBusiness, setForBusiness] = useState(false)
+  const [bizName, setBizName] = useState('')
+  const [gstin, setGstin] = useState('')
+  const gstinErr = forBusiness && gstin.length >= 15 ? gstinProblem(gstin) : null
+
   const placeOrder = async () => {
     if (!reservation) return
     const address = buildAddress()
     if (!address) return
+    if (forBusiness) {
+      if (!bizName.trim()) { setError('Enter the business name as it is registered for GST.'); return }
+      const problem = gstinProblem(gstin)
+      if (problem) { setError(problem); return }
+    }
     setError(null); setPlacing(true)
     try {
       if (adding) {
@@ -85,7 +97,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
           phone: phone.trim() || null, isDefault: !addresses.data?.length,
         }).catch(() => {})
       }
-      const order = await api.checkout(reservation.id, address)
+      const order = await api.checkout(reservation.id, address, forBusiness ? { name: bizName.trim(), gstin: gstin.toUpperCase().replace(/[^0-9A-Z]/g, '') } : null)
       // Always through the Pay screen: it opens the payment session first, which
       // every gateway needs — the demo one included. Paying straight from here
       // skipped that and was refused with "Open a payment session" (TG-107).
@@ -150,6 +162,28 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
                 <View style={{ flex: 1 }}><Field label="Pincode" value={pincode} onChangeText={setPincode} keyboardType="number-pad" /></View>
                 <View style={{ flex: 1 }}><Field label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" /></View>
               </View>
+            </View>
+          )}
+        </Card>
+
+        <Card style={{ gap: t.space.x3 }}>
+          <Pressable onPress={() => setForBusiness((v) => !v)} accessibilityRole="checkbox" accessibilityState={{ checked: forBusiness }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
+              borderColor: forBusiness ? t.colors.cta : t.colors.textMuted, backgroundColor: forBusiness ? t.colors.cta : 'transparent' }}>
+              {forBusiness && <Ionicons name="checkmark" size={15} color={t.colors.onCta} />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>Buying for a business?</Txt>
+              <Muted size={t.size.xs}>Add your GST details and the invoice is made out to the business.</Muted>
+            </View>
+          </Pressable>
+          {forBusiness && (
+            <View style={{ gap: t.space.x3 }}>
+              <Field label="Business name (as on the GST certificate)" value={bizName} onChangeText={setBizName} autoCapitalize="words" />
+              <Field label="GSTIN" value={gstin} onChangeText={(v: string) => setGstin(v.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))}
+                autoCapitalize="characters" autoCorrect={false} maxLength={15} placeholder="22AAAAA0000A1Z5" />
+              {gstinErr && <Txt style={{ color: t.colors.bad, fontSize: t.size.xs }}>{gstinErr}</Txt>}
             </View>
           )}
         </Card>
