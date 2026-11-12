@@ -73,7 +73,16 @@ jobs:
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
             printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
             node -e "const j=require('./google-services.json'); if(!j.project_info||!j.client) throw new Error('GOOGLE_SERVICES_JSON is not a google-services.json')"
-            echo "Push: Firebase config added"
+            # It must hold a client for this app's package, or Gradle stops the
+            # whole build. A file for another package means no push, not no APK.
+            PKG=$(node -p "require('./app.json').expo.android.package")
+            FOUND=$(node -p "require('./google-services.json').client.map(c => c.client_info.android_client_info.package_name).join(', ')")
+            if node -e "const j=require('./google-services.json'); process.exit(j.client.some(c => c.client_info.android_client_info.package_name === '$PKG') ? 0 : 1)"; then
+              echo "Push: Firebase config added for $PKG"
+            else
+              rm google-services.json
+              echo "::warning::GOOGLE_SERVICES_JSON has no Android app '$PKG' (it has: $FOUND). Register '$PKG' in Firebase and update the secret. This APK cannot receive push notifications."
+            fi
           else
             echo "::warning::No GOOGLE_SERVICES_JSON secret: this APK cannot receive push notifications."
           fi
