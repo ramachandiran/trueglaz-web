@@ -86,13 +86,10 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
         }).catch(() => {})
       }
       const order = await api.checkout(reservation.id, address)
-      if (meta.data?.paymentGateway === 'stub') {
-        await api.stubPay(order.id, 'approve')
-        navigation.replace('OrderDetail', { id: order.id, justPaid: true })
-      } else {
-        // A real gateway: open its checkout. The order is placed; paying is the next step.
-        navigation.replace('Pay', { orderId: order.id })
-      }
+      // Always through the Pay screen: it opens the payment session first, which
+      // every gateway needs — the demo one included. Paying straight from here
+      // skipped that and was refused with "Open a payment session" (TG-107).
+      navigation.replace('Pay', { orderId: order.id })
     } catch (e) { setError((e as Error).message) } finally { setPlacing(false) }
   }
 

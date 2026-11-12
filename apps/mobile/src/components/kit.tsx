@@ -208,15 +208,25 @@ export function ProductCard({ g, img, width, height = 176, onPress, onAction, ac
 }
 
 /** A row in a list of places to go: a bold title, a muted line under it, a chevron. */
-export function ListRow({ title, sub, onPress, right, last }: { title: string; sub?: string; onPress?: () => void; right?: React.ReactNode; last?: boolean }) {
+export function ListRow({ title, sub, onPress, right, last, badge }: {
+  title: string; sub?: string; onPress?: () => void; right?: React.ReactNode; last?: boolean
+  /** A count that needs attention (unread notifications): shown as an orange pill, and the subtitle turns orange. */
+  badge?: number
+}) {
   const t = useTheme()
+  const hot = !!badge && badge > 0
   return (
-    <Pressable onPress={onPress} accessibilityRole="button"
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={hot ? `${title}, ${badge} new` : undefined}
       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: last ? 0 : 1, borderBottomColor: t.colors.border, gap: t.space.x3 }}>
       <View style={{ flex: 1 }}>
         <Txt style={{ color: t.colors.text, fontSize: t.size.md + 1, fontWeight: t.weight.bold as never }}>{title}</Txt>
-        {sub && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, marginTop: 2 }}>{sub}</Txt>}
+        {sub && <Txt style={{ color: hot ? t.colors.accent : t.colors.textMuted, fontSize: t.size.xs, marginTop: 2, fontWeight: (hot ? t.weight.bold : t.weight.normal) as never }}>{sub}</Txt>}
       </View>
+      {hot && (
+        <View style={{ minWidth: 24, height: 24, paddingHorizontal: 7, borderRadius: 12, backgroundColor: t.colors.cta, alignItems: 'center', justifyContent: 'center' }}>
+          <Txt style={{ color: t.colors.onCta, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{badge! > 99 ? '99+' : badge}</Txt>
+        </View>
+      )}
       {right}
       {onPress && <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />}
     </Pressable>

@@ -60,7 +60,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
             <ListRow title="Payout account" sub={profile.data ? (profile.data.payoutAccount ? 'Where we pay you for gear you sell' : 'Not set: add one to be paid') : undefined}
               onPress={() => navigation.navigate('PayoutAccount')} />
           )}
-          <ListRow title="Notifications" sub={unread > 0 ? `${unread} unread` : 'All caught up'}
+          <ListRow title="Notifications" sub={unread > 0 ? `${unread} new — tap to read` : 'All caught up'} badge={unread}
             onPress={() => navigation.navigate('Notifications')} />
           <ListRow title="Notification settings" sub="Push on this phone, and what you hear about"
             onPress={() => navigation.navigate('NotificationSettings')} last />

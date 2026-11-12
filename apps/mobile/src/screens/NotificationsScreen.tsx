@@ -1,10 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, relative, useApi, type Notification, type Theme } from '@trueglaz/core'
+import { api, dateTime, relative, useApi, type Notification, type Theme } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
+import { BottomSheet } from '../components/BottomSheet'
+import { Button } from '../components/form'
 import { openLink, routeForLink } from '../linking'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
@@ -26,11 +28,14 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
 
   useEffect(() => navigation.addListener('focus', reload), [navigation, reload])
 
-  // Tapping opens what it is about, and marks it read on the way.
+  // Tapping shows the whole message in a sheet and marks it read; the sheet
+  // then offers to open what it is about (TG-106).
+  const [shown, setShown] = useState<Notification | null>(null)
   const open = (n: Notification) => {
     if (!n.readAt) api.markNotificationRead(n.id).then(reload).catch(() => {})
-    openLink(navigation, n.link)
+    setShown(n)
   }
+  const goTo = (n: Notification) => { setShown(null); openLink(navigation, n.link) }
   const markAll = () => { api.markAllNotificationsRead().then(reload).catch(() => {}) }
 
   const items = data?.items ?? []
@@ -38,8 +43,8 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: t.space.x4, paddingBottom: t.space.x2 }}>
-        <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>Notifications</Txt>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: t.space.x4, paddingTop: t.space.x3, paddingBottom: t.space.x1, minHeight: 36 }}>
+        <Muted size={t.size.sm}>{anyUnread ? `${data?.unread} new` : items.length ? 'All read' : ''}</Muted>
         {anyUnread && (
           <Pressable onPress={markAll}>
             <Txt style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Mark all read</Txt>
@@ -86,6 +91,44 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
           }}
         />
       )}
+
+      {shown && (() => {
+        const cs = categoryStyle(shown.category, t)
+        const where = routeForLink(shown.link)
+        return (
+          <BottomSheet onClose={() => setShown(null)} scroll footer={(
+            <>
+              {where && <Button label={actionLabel(shown.link)} variant="cta" onPress={() => goTo(shown)} />}
+              <Button label="Close" variant="ghost" onPress={() => setShown(null)} />
+            </>
+          )}>
+            <View style={{ flexDirection: 'row', gap: t.space.x3, alignItems: 'center' }}>
+              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: cs.bg, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={cs.icon} size={21} color={cs.fg} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{shown.title}</Txt>
+                <Muted size={t.size.xs}>{dateTime(shown.at)} · {relative(shown.at)}</Muted>
+              </View>
+            </View>
+            <Txt style={{ color: t.colors.text, fontSize: t.size.md, lineHeight: 22 }}>{shown.body}</Txt>
+          </BottomSheet>
+        )
+      })()}
     </View>
   )
+}
+
+/** What the button in the sheet says, from where the link goes. */
+function actionLabel(link?: string | null): string {
+  const head = link?.split(/[/?#]/).filter(Boolean)[0]
+  switch (head) {
+    case 'orders': return 'View order'
+    case 'listings': return 'View listing'
+    case 'items': case 'sell': return 'View item'
+    case 'vault': return 'Open vault'
+    case 'profile': return 'Open profile'
+    case 'catalog': return 'Browse the shop'
+    default: return 'Open'
+  }
 }

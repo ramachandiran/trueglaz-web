@@ -1,7 +1,7 @@
 import 'react-native-get-random-values' // crypto.getRandomValues for the vault's client-side encryption; must load first
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
-import { View } from 'react-native'
+import { AppState, View } from 'react-native'
 import { NavigationContainer, DefaultTheme, DarkTheme, useNavigation } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -35,7 +35,7 @@ import { NotificationsScreen } from './src/screens/NotificationsScreen'
 import { AddressesScreen } from './src/screens/AddressesScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen'
-import { setBadge, usePushWhileSignedIn } from './src/push'
+import { onPushReceived, setBadge, usePushWhileSignedIn } from './src/push'
 
 /** The React Native adapter for core's storage port (web uses localStorage). */
 const nativeStorage: Storage = {
@@ -64,6 +64,14 @@ function MainTabs() {
   // something, or any other stacked screen — so the count never goes stale.
   const notif = useApi(() => api.notifications(), [])
   useEffect(() => navigation.addListener('focus', () => notif.reload()), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
+  // New ones arrive while you are already on a tab: check every 30 s while the
+  // app is open, at once when it comes back to the front, and when a push lands.
+  useEffect(() => {
+    const id = setInterval(() => { if (AppState.currentState === 'active') notif.reload() }, 30_000)
+    const app = AppState.addEventListener('change', (s) => { if (s === 'active') notif.reload() })
+    const off = onPushReceived(() => notif.reload())
+    return () => { clearInterval(id); app.remove(); off() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const unread = notif.data?.unread || undefined
   // Pushes: register this phone if already allowed, and open what a tapped one is about.
   usePushWhileSignedIn(navigation)
