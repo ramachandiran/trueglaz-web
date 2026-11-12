@@ -96,3 +96,22 @@ export function localMobile(input: string): string {
   const d = input.replace(/\D/g, '')
   return (d.length > 10 && d.startsWith('91') ? d.slice(2) : d).slice(0, 10)
 }
+
+/**
+ * What is wrong with a GSTIN as typed, or null when it is right (TG-119): shape,
+ * state code and the GSTN mod-36 check character, the same checks as the server.
+ */
+export function gstinProblem(raw: string): string | null {
+  const g = raw.toUpperCase().replace(/[^0-9A-Z]/g, '')
+  if (g.length !== 15) return 'A GSTIN has 15 characters'
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(g)) return 'That does not look like a GSTIN'
+  const state = Number(g.slice(0, 2))
+  if (!((state >= 1 && state <= 38) || state === 97 || state === 99)) return 'The first two digits are not a state code'
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  let sum = 0
+  for (let i = 0; i < 14; i++) {
+    const v = chars.indexOf(g[i]) * (i % 2 === 0 ? 1 : 2)
+    sum += Math.floor(v / 36) + (v % 36)
+  }
+  return chars[(36 - (sum % 36)) % 36] === g[14] ? null : 'That GSTIN has a typo: check it against the GST certificate'
+}

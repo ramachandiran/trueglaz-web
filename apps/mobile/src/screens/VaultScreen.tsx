@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { VaultIntro } from './VaultIntro'
 import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useNavigation, useRoute } from '@react-navigation/native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
   api, money, dateOnly, useApi, ApiError,
@@ -59,6 +60,17 @@ export function VaultScreen() {
   const rePrivacy = () => setPTick((n) => n + 1)
 
   useEffect(() => { ensureLoaded().then(rePrivacy) }, [])
+
+  // Opened from Profile's "Get a free quote" (TG-118): straight into that item's quote.
+  const route = useRoute<any>()
+  const nav = useNavigation<any>()
+  const quoteFor: string | undefined = route.params?.quoteFor
+  useEffect(() => {
+    if (!quoteFor || !data) return
+    const it = data.find((i) => i.id === quoteFor)
+    if (it) setInsuring({ item: it, what: 'quote' })
+    nav.setParams({ quoteFor: undefined })
+  }, [quoteFor, data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const e2ee = isE2eeOn()
   const unlocked = isUnlocked()

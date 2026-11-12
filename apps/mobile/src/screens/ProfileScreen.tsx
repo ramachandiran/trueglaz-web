@@ -10,7 +10,7 @@ import { Button, Field } from '../components/form'
 import { BottomSheet } from '../components/BottomSheet'
 import { API_ORIGIN } from '../config'
 import { disablePush, enablePush, pushIsOn, pushSupported } from '../push'
-import { Chip, RoundIcon, lift } from '../components/kit'
+import { Chip, lift } from '../components/kit'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 const LIVE = ['pending_payment', 'paid', 'dispatched', 'delivered']
@@ -66,18 +66,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + t.space.x2, paddingBottom: t.space.x7, paddingHorizontal: t.space.x4, gap: t.space.x4 }}>
-        {/* title + inbox */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -0.8 }}>Profile</Txt>
-          <View>
-            <RoundIcon icon="notifications-outline" size={46} label={unread ? `Notifications, ${unread} new` : 'Notifications'} onPress={() => navigation.navigate('Notifications')} />
-            {unread > 0 && (
-              <View style={{ position: 'absolute', top: 2, right: 0, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: t.colors.cta, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: t.colors.bg }}>
-                <Txt style={{ color: t.colors.onCta, fontSize: 10, fontWeight: t.weight.bold as never }}>{unread > 99 ? '99+' : unread}</Txt>
-              </View>
-            )}
-          </View>
-        </View>
+        <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -0.8 }}>Profile</Txt>
 
         {/* who you are */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
@@ -100,11 +89,9 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
           style={[{ backgroundColor: t.colors.brand, borderRadius: 20, padding: 20, overflow: 'hidden', gap: 6 }, lift(t)]}>
           <View style={{ position: 'absolute', right: -40, top: -40, width: 170, height: 170, borderRadius: 85, backgroundColor: t.colors.brandAlt, opacity: 0.6 }} />
           <View style={{ position: 'absolute', right: 30, bottom: -60, width: 130, height: 130, borderRadius: 65, backgroundColor: t.colors.brandAlt, opacity: 0.4 }} />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="shield-checkmark" size={18} color={t.colors.brandAccent} />
             <Txt style={{ color: t.colors.onBrand, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: 0.3 }}>TrueGlaz Vault</Txt>
-            <View style={{ backgroundColor: t.colors.cta, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 10 }}>
-              <Txt style={{ color: t.colors.onCta, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{seller ? 'Seller' : 'Buyer'}</Txt>
-            </View>
           </View>
           {gear.length ? (
             <>
@@ -112,12 +99,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
                 <Txt style={{ color: t.colors.onBrand, fontSize: 36, fontWeight: t.weight.bold as never, letterSpacing: -1 }}>~{money(worth)}</Txt>
                 <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm }}>{gear.length} {gear.length === 1 ? 'item' : 'items'}</Txt>
               </View>
-              <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)', marginTop: 8, overflow: 'hidden' }}>
-                <View style={{ width: `${Math.round((insured / gear.length) * 100)}%`, height: 6, backgroundColor: t.colors.cta }} />
-              </View>
-              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs, marginTop: 4 }}>
-                {insured === gear.length ? 'Everything is insured' : `${insured} of ${gear.length} insured · insure the rest`}
-              </Txt>
+              <Protection t={t} gear={gear} onQuote={(id) => navigation.navigate('Vault', { quoteFor: id })} onOpen={() => navigation.navigate('Vault')} />
             </>
           ) : (
             <>
@@ -130,7 +112,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
         {/* three shortcuts */}
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <Tile t={t} icon="receipt-outline" title="Orders" sub={activeOrders ? `${activeOrders} active` : 'None active'} onPress={() => navigation.navigate('Orders')} />
-          <Tile t={t} icon="search-circle-outline" title="Wanted" sub={openAsks ? `${openAsks} open` : 'Ask for gear'} onPress={() => navigation.navigate('Shop')} />
+          <Tile t={t} icon="heart-outline" title="Wishlist" sub={openAsks ? `${openAsks} ${openAsks === 1 ? 'item' : 'items'}` : 'Ask for gear'} onPress={() => navigation.navigate('Wishlist')} />
           <Tile t={t} icon="cube-outline" title="Selling" sub={seller ? (listed ? `${listed} listed` : 'Nothing listed') : 'Start selling'} onPress={() => navigation.navigate('Sell')} />
         </View>
 
@@ -142,7 +124,17 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
               value={p ? (p.payoutAccount ? (p.payoutAccount.method === 'upi' ? 'UPI' : `Bank ··${p.payoutAccount.accountLast4 ?? ''}`) : 'Not set') : undefined}
               onPress={() => navigation.navigate('PayoutAccount')} />
           )}
-          <Row t={t} icon="notifications-outline" title="Notifications" onPress={() => navigation.navigate('NotificationSettings')}
+          <Row t={t} icon="mail-unread-outline" title="Notifications" onPress={() => navigation.navigate('Notifications')}
+            right={unread > 0 ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ minWidth: 24, height: 24, paddingHorizontal: 7, borderRadius: 12, backgroundColor: t.colors.cta, alignItems: 'center', justifyContent: 'center' }}>
+                  <Txt style={{ color: t.colors.onCta, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{unread > 99 ? '99+' : unread}</Txt>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
+              </View>
+            ) : undefined}
+            value={unread > 0 ? undefined : 'All read'} />
+          <Row t={t} icon="notifications-outline" title="Push notifications" onPress={() => navigation.navigate('NotificationSettings')}
             right={pushSupported && push !== null ? (
               pushBusy ? <ActivityIndicator color={t.colors.accent} /> : (
                 <Switch value={push} onValueChange={togglePush} accessibilityLabel="Push notifications on this phone"
@@ -198,6 +190,81 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
             <Button label="Close" variant="ghost" onPress={() => setSheet(null)} />
           </View>
         </BottomSheet>
+      )}
+    </View>
+  )
+}
+
+/**
+ * The insurance part of the vault card (TG-118): how much gear is not covered,
+ * in money, with the next step one tap away; or, when all of it is, a quiet tick.
+ */
+function Protection({ t, gear, onQuote, onOpen }: {
+  t: Theme; gear: import('@trueglaz/core').VaultItem[]; onQuote: (id: string) => void; onOpen: () => void
+}) {
+  const value = (i: (typeof gear)[number]) => i.valuation?.midMinor ?? i.costMinor ?? 0
+  const bare = gear.filter((i) => !i.policy)
+  const asked = bare.filter((i) => i.insuranceRequest)
+  const open = bare.filter((i) => !i.insuranceRequest)
+  const covered = gear.filter((i) => i.policy).reduce((n, i) => n + value(i), 0)
+  const atRisk = open.reduce((n, i) => n + value(i), 0)
+  const share = gear.length ? Math.round((gear.filter((i) => i.policy).length / gear.length) * 100) : 0
+
+  if (bare.length === 0) {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, backgroundColor: 'rgba(82,181,131,0.16)', borderRadius: 14, padding: 12 }}>
+        <Ionicons name="shield-checkmark" size={26} color={t.colors.good} />
+        <View style={{ flex: 1 }}>
+          <Txt style={{ color: t.colors.onBrand, fontWeight: t.weight.bold as never }}>All your gear is insured</Txt>
+          <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs }}>~{money(covered)} covered</Txt>
+        </View>
+      </View>
+    )
+  }
+  const biggest = [...open].sort((a, b) => value(b) - value(a))[0]
+  return (
+    <View style={{ marginTop: 10, backgroundColor: t.colors.bgRaised, borderRadius: 16, padding: 14, gap: 10 }}>
+      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+        <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: t.colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="shield-outline" size={22} color={t.colors.cta} />
+        </View>
+        <View style={{ flex: 1 }}>
+          {open.length > 0 ? (
+            <>
+              <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>~{money(atRisk)} of your gear isn't insured</Txt>
+              <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, marginTop: 2, lineHeight: 17 }}>
+                Cover for theft, fire, flood and accidental damage. A licensed agent calls you with a price; nothing to pay now.
+              </Txt>
+            </>
+          ) : (
+            <>
+              <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>Quote on its way</Txt>
+              <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, marginTop: 2 }}>An agent will call you about {asked.length === 1 ? 'your item' : `${asked.length} items`}.</Txt>
+            </>
+          )}
+        </View>
+      </View>
+      <View>
+        <View style={{ height: 6, borderRadius: 3, backgroundColor: t.colors.bgSunken, overflow: 'hidden' }}>
+          <View style={{ width: `${share}%`, height: 6, backgroundColor: t.colors.good }} />
+        </View>
+        <Txt style={{ color: t.colors.textMuted, fontSize: 11, marginTop: 4 }}>
+          {gear.length - bare.length} of {gear.length} insured{asked.length && open.length ? ` · ${asked.length} quote${asked.length === 1 ? '' : 's'} on the way` : ''}
+        </Txt>
+      </View>
+      {open.length > 0 && biggest && (
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Pressable onPress={() => onQuote(biggest.id)} accessibilityRole="button"
+            style={{ flex: 1, backgroundColor: t.colors.cta, borderRadius: t.radius.pill, paddingVertical: 11, alignItems: 'center' }}>
+            <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>Get a free quote</Txt>
+          </Pressable>
+          {open.length > 1 && (
+            <Pressable onPress={onOpen} accessibilityRole="button"
+              style={{ borderRadius: t.radius.pill, paddingVertical: 11, paddingHorizontal: 14, borderWidth: 1, borderColor: t.colors.border }}>
+              <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>See all</Txt>
+            </Pressable>
+          )}
+        </View>
       )}
     </View>
   )

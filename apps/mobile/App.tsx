@@ -33,6 +33,7 @@ import { ProfileScreen } from './src/screens/ProfileScreen'
 import { VaultScreen } from './src/screens/VaultScreen'
 import { NotificationsScreen } from './src/screens/NotificationsScreen'
 import { AddressesScreen } from './src/screens/AddressesScreen'
+import { WishlistScreen } from './src/screens/WishlistScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen'
 import { onPushReceived, setBadge, usePushWhileSignedIn } from './src/push'
@@ -126,6 +127,7 @@ function AppStack() {
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />
       <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
       <Root.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Addresses' }} />
+      <Root.Screen name="Wishlist" component={WishlistScreen} options={{ title: 'Wishlist' }} />
       <Root.Screen name="PayoutAccount" component={PayoutAccountScreen} options={{ title: 'Payout account' }} />
       <Root.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notification settings' }} />
     </Root.Navigator>

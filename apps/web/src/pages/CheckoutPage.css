@@ -505,3 +505,11 @@
   .co__next { width: 100%; }
   .co__back { text-align: center; }
 }
+
+/* Buying for a business (TG-119). */
+.co__biz { margin-top: var(--tg-space-4, 16px); padding: 14px 16px; border: 1px solid var(--tg-border); border-radius: 12px; }
+.co__biz-toggle { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.co__biz-toggle input { margin-top: 3px; }
+.co__biz-fields { display: grid; gap: 12px; margin-top: 12px; }
+.co__biz-fields label { display: grid; gap: 4px; font-size: var(--tg-text-sm); color: var(--tg-text-muted); }
+.co__err { margin: 0; color: var(--tg-bad, #b3261e); font-size: var(--tg-text-sm); }
