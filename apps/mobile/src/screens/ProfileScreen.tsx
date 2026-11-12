@@ -89,17 +89,19 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
           style={[{ backgroundColor: t.colors.brand, borderRadius: 20, padding: 20, overflow: 'hidden', gap: 6 }, lift(t)]}>
           <View style={{ position: 'absolute', right: -40, top: -40, width: 170, height: 170, borderRadius: 85, backgroundColor: t.colors.brandAlt, opacity: 0.6 }} />
           <View style={{ position: 'absolute', right: 30, bottom: -60, width: 130, height: 130, borderRadius: 65, backgroundColor: t.colors.brandAlt, opacity: 0.4 }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="shield-checkmark" size={18} color={t.colors.brandAccent} />
-            <Txt style={{ color: t.colors.onBrand, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: 0.3 }}>TrueGlaz Vault</Txt>
-          </View>
+          <Txt style={{ color: t.colors.onBrand, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: 0.3 }}>TrueGlaz Vault</Txt>
           {gear.length ? (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
                 <Txt style={{ color: t.colors.onBrand, fontSize: 36, fontWeight: t.weight.bold as never, letterSpacing: -1 }}>~{money(worth)}</Txt>
                 <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm }}>{gear.length} {gear.length === 1 ? 'item' : 'items'}</Txt>
               </View>
-              <Protection t={t} gear={gear} onQuote={(id) => navigation.navigate('Vault', { quoteFor: id })} onOpen={() => navigation.navigate('Vault')} />
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)', marginTop: 8, overflow: 'hidden' }}>
+                <View style={{ width: `${Math.round((insured / gear.length) * 100)}%`, height: 6, backgroundColor: t.colors.cta }} />
+              </View>
+              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs, marginTop: 4 }}>
+                {insured === gear.length ? 'Everything is insured' : `${insured} of ${gear.length} insured · insure the rest`}
+              </Txt>
             </>
           ) : (
             <>
@@ -108,6 +110,9 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
             </>
           )}
         </Pressable>
+
+        {/* insurance, its own card so it reads as an offer, not a footnote (TG-118) */}
+        <InsureBanner t={t} gear={gear} onQuote={(id) => navigation.navigate('Vault', { quoteFor: id })} />
 
         {/* three shortcuts */}
         <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -196,77 +201,64 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
 }
 
 /**
- * The insurance part of the vault card (TG-118): how much gear is not covered,
- * in money, with the next step one tap away; or, when all of it is, a quiet tick.
+ * Gear insurance on Profile (TG-118): what is not covered, in rupees, and one
+ * tap to a free quote for the most valuable uninsured item. Hidden once
+ * everything is insured; the vault card says so.
  */
-function Protection({ t, gear, onQuote, onOpen }: {
-  t: Theme; gear: import('@trueglaz/core').VaultItem[]; onQuote: (id: string) => void; onOpen: () => void
+function InsureBanner({ t, gear, onQuote }: {
+  t: Theme; gear: import('@trueglaz/core').VaultItem[]; onQuote: (id: string) => void
 }) {
   const value = (i: (typeof gear)[number]) => i.valuation?.midMinor ?? i.costMinor ?? 0
-  const bare = gear.filter((i) => !i.policy)
-  const asked = bare.filter((i) => i.insuranceRequest)
-  const open = bare.filter((i) => !i.insuranceRequest)
-  const covered = gear.filter((i) => i.policy).reduce((n, i) => n + value(i), 0)
-  const atRisk = open.reduce((n, i) => n + value(i), 0)
-  const share = gear.length ? Math.round((gear.filter((i) => i.policy).length / gear.length) * 100) : 0
+  const open = gear.filter((i) => !i.policy && !i.insuranceRequest)
+  const asked = gear.filter((i) => !i.policy && i.insuranceRequest)
+  if (!gear.length || (open.length === 0 && asked.length === 0)) return null
 
-  if (bare.length === 0) {
+  if (open.length === 0) {
     return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, backgroundColor: 'rgba(82,181,131,0.16)', borderRadius: 14, padding: 12 }}>
-        <Ionicons name="shield-checkmark" size={26} color={t.colors.good} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.colors.bgRaised, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: t.colors.border }}>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.colors.warnSoft, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="call-outline" size={20} color={t.colors.warn} />
+        </View>
         <View style={{ flex: 1 }}>
-          <Txt style={{ color: t.colors.onBrand, fontWeight: t.weight.bold as never }}>All your gear is insured</Txt>
-          <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs }}>~{money(covered)} covered</Txt>
+          <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>Insurance quote on its way</Txt>
+          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>A licensed agent will call you with a price.</Txt>
         </View>
       </View>
     )
   }
+
+  const atRisk = open.reduce((n, i) => n + value(i), 0)
   const biggest = [...open].sort((a, b) => value(b) - value(a))[0]
   return (
-    <View style={{ marginTop: 10, backgroundColor: t.colors.bgRaised, borderRadius: 16, padding: 14, gap: 10 }}>
-      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-        <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: t.colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="shield-outline" size={22} color={t.colors.cta} />
+    <Pressable onPress={() => onQuote(biggest.id)} accessibilityRole="button"
+      accessibilityLabel={`Insure your gear. About ${money(atRisk)} is not insured. Get a free quote.`}
+      style={[{ borderRadius: 18, padding: 16, backgroundColor: t.colors.bgRaised, borderWidth: 1.5, borderColor: t.colors.cta, gap: 12 }, lift(t)]}>
+      <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+        <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: t.colors.cta, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="shield-checkmark" size={28} color={t.colors.onCta} />
         </View>
         <View style={{ flex: 1 }}>
-          {open.length > 0 ? (
-            <>
-              <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>~{money(atRisk)} of your gear isn't insured</Txt>
-              <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, marginTop: 2, lineHeight: 17 }}>
-                Cover for theft, fire, flood and accidental damage. A licensed agent calls you with a price; nothing to pay now.
-              </Txt>
-            </>
-          ) : (
-            <>
-              <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>Quote on its way</Txt>
-              <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, marginTop: 2 }}>An agent will call you about {asked.length === 1 ? 'your item' : `${asked.length} items`}.</Txt>
-            </>
-          )}
+          <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1 }}>GEAR INSURANCE</Txt>
+          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, marginTop: 1 }}>Protect ~{money(atRisk)}</Txt>
+          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
+            {open.length === 1 ? '1 item is' : `${open.length} items are`} not insured
+          </Txt>
         </View>
       </View>
-      <View>
-        <View style={{ height: 6, borderRadius: 3, backgroundColor: t.colors.bgSunken, overflow: 'hidden' }}>
-          <View style={{ width: `${share}%`, height: 6, backgroundColor: t.colors.good }} />
-        </View>
-        <Txt style={{ color: t.colors.textMuted, fontSize: 11, marginTop: 4 }}>
-          {gear.length - bare.length} of {gear.length} insured{asked.length && open.length ? ` · ${asked.length} quote${asked.length === 1 ? '' : 's'} on the way` : ''}
-        </Txt>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {['Theft', 'Fire & flood', 'Accidental damage'].map((c) => (
+          <View key={c} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.colors.bgSunken, borderRadius: t.radius.pill, paddingVertical: 4, paddingHorizontal: 10 }}>
+            <Ionicons name="checkmark" size={13} color={t.colors.good} />
+            <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>{c}</Txt>
+          </View>
+        ))}
       </View>
-      {open.length > 0 && biggest && (
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pressable onPress={() => onQuote(biggest.id)} accessibilityRole="button"
-            style={{ flex: 1, backgroundColor: t.colors.cta, borderRadius: t.radius.pill, paddingVertical: 11, alignItems: 'center' }}>
-            <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>Get a free quote</Txt>
-          </Pressable>
-          {open.length > 1 && (
-            <Pressable onPress={onOpen} accessibilityRole="button"
-              style={{ borderRadius: t.radius.pill, paddingVertical: 11, paddingHorizontal: 14, borderWidth: 1, borderColor: t.colors.border }}>
-              <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>See all</Txt>
-            </Pressable>
-          )}
-        </View>
-      )}
-    </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: t.colors.cta, borderRadius: t.radius.pill, paddingVertical: 12, paddingHorizontal: 18 }}>
+        <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>Get a free quote</Txt>
+        <Ionicons name="arrow-forward" size={18} color={t.colors.onCta} />
+      </View>
+      <Txt style={{ color: t.colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: -4 }}>A licensed agent calls you with a price. Nothing to pay now.</Txt>
+    </Pressable>
   )
 }
 
