@@ -124,6 +124,13 @@ export function usePushWhileSignedIn(navigation: any) {
   }, [navigation])
 }
 
+/** Call [fn] when a push arrives while the app is open (to refresh counts). Returns an unsubscribe. */
+export function onPushReceived(fn: () => void): () => void {
+  if (!pushSupported) return () => {}
+  const sub = Notifications.addNotificationReceivedListener(() => fn())
+  return () => sub.remove()
+}
+
 /** The current permission state, refreshed when asked. */
 export function usePushState(): [PushState | null, () => void] {
   const [state, setState] = useState<PushState | null>(null)
