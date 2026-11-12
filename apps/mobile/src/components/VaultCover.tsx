@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Linking, Modal, Pressable, ScrollView, View } from 'react-native'
+import { Alert, Linking, Pressable, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as DocumentPicker from 'expo-document-picker'
 import * as ImagePicker from 'expo-image-picker'
@@ -10,11 +10,13 @@ import {
   type VaultItem, type InsuranceDocument, type InsuranceTerms, type CallTime, type Tone,
 } from '@trueglaz/core'
 import { Txt } from './Txt'
+import { BottomSheet } from './BottomSheet'
 import { Chip, Pill } from './kit'
 import { Button, Field } from './form'
 import { ErrorNote, Loading, Muted } from './ui'
 import { useTheme } from '../theme/ThemeContext'
 import { PushPrompt } from './PushPrompt'
+import { encField, isUnlocked } from '../state/vaultKey'
 
 /**
  * Insurance on a vault card, as a quote referral: TrueGlaz is not the insurer
@@ -168,12 +170,27 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
+  // The serial, typed here when the item has none yet (TG-102); saved to the vault item.
+  const [serialIn, setSerialIn] = useState('')
+  const [serialSaving, setSerialSaving] = useState(false)
 
   const s = start.data
+  const serialLocked = !!item.e2ee && !isUnlocked()
+  async function saveSerial() {
+    const v = serialIn.trim()
+    if (v.length < 3) { setErr('Enter the serial number as printed on the item.'); return }
+    setSerialSaving(true); setErr(null)
+    try {
+      await api.updateGear(item.id, item.e2ee ? { serialCipher: encField(v) } : { serial: v })
+      setSerialIn(''); start.reload()
+    } catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not save the serial number') }
+    finally { setSerialSaving(false) }
+  }
   const coverValue = cover ?? (s?.coverSuggestionMinor ? String(Math.round(s.coverSuggestionMinor / 100)) : '')
   const coverMinor = Math.round((parseFloat(coverValue.replace(/,/g, '')) || 0) * 100)
   const blocker = !s ? null
-    : !s.hasSerial ? 'Add the serial number to this item first — insurers put it on the policy.'
+    : !s.hasSerial && serialLocked ? 'Unlock your vault to add the serial number — insurers put it on the policy.'
+    : !s.hasSerial ? 'Add the serial number below — insurers put it on the policy.'
     : !s.phoneHint ? 'Add your phone number in Profile so the agent can call you.'
     : null
   const canSend = !!s && !blocker && (!!invoice || !!s.trueglazInvoice) && coverMinor > 0 && !!callTime && consent && !busy
@@ -248,6 +265,19 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
       {s && step === 2 && (
         <>
           {blocker && <Txt style={{ color: t.colors.text, backgroundColor: t.colors.badSoft, padding: 10, borderRadius: t.radius.md, fontSize: t.size.sm }}>{blocker}</Txt>}
+          <Section title="Serial number" required />
+          {s.hasSerial ? (
+            <FileBox ok title={s.serialLast4 ? `Serial ending ${s.serialLast4}` : 'Serial number on file'}
+              sub={item.fromTrueglaz ? 'From our inspection of this unit' : 'From your vault'} />
+          ) : !serialLocked && (
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
+              <View style={{ flex: 1 }}>
+                <Field label="As printed on the item" value={serialIn} onChangeText={setSerialIn} autoCapitalize="characters"
+                  autoCorrect={false} returnKeyType="done" onSubmitEditing={saveSerial} />
+              </View>
+              <Button label={serialSaving ? 'Saving…' : 'Save'} variant="cta" onPress={saveSerial} loading={serialSaving} />
+            </View>
+          )}
           <Section title="Purchase invoice" required />
           {s.trueglazInvoice && !invoice ? (
             <FileBox ok title={`TrueGlaz invoice ${s.trueglazInvoice.number}`} sub="Attached for you — bought on TrueGlaz" />
@@ -479,22 +509,15 @@ export function Sheet({ title, kicker, onClose, footer, children }: {
 }) {
   const t = useTheme()
   return (
-    <Modal transparent animationType="slide" visible onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(20,30,40,0.45)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: t.colors.bg, borderTopLeftRadius: t.radius.lg, borderTopRightRadius: t.radius.lg, padding: t.space.x4, maxHeight: '92%' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: t.space.x3 }}>
-            <View style={{ flex: 1 }}>
-              {kicker && <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{kicker}</Txt>}
-              <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: kicker ? 24 : t.size.lg, fontWeight: t.weight.bold as never }}>{title}</Txt>
-            </View>
-            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Txt style={{ color: t.colors.textMuted, fontSize: t.size.xl }}>×</Txt></Pressable>
-          </View>
-          <ScrollView contentContainerStyle={{ gap: t.space.x3, paddingBottom: t.space.x2 }} keyboardShouldPersistTaps="handled">
-            {children}
-          </ScrollView>
-          {footer && <View style={{ gap: 10, paddingTop: t.space.x3 }}>{footer}</View>}
+    <BottomSheet onClose={onClose} background={t.colors.bg} maxHeight="92%" footer={footer} scroll>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: t.space.x1 }}>
+        <View style={{ flex: 1 }}>
+          {kicker && <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{kicker}</Txt>}
+          <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: kicker ? 24 : t.size.lg, fontWeight: t.weight.bold as never }}>{title}</Txt>
         </View>
+        <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Txt style={{ color: t.colors.textMuted, fontSize: t.size.xl }}>×</Txt></Pressable>
       </View>
-    </Modal>
+      {children}
+    </BottomSheet>
   )
 }
