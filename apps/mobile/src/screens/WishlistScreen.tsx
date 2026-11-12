@@ -13,9 +13,6 @@ import { BottomSheet } from '../components/BottomSheet'
 import { sizedUri } from '../components/ModelImage'
 
 const LIVE = ['submitted', 'published']
-const ENDED: Record<string, string> = {
-  fulfilled: 'Found', rejected: 'Not accepted', withdrawn: 'Removed', expired: 'Expired',
-}
 
 /**
  * The buyer's wishlist (TG-117): gear they want that is not in the shop yet.
@@ -32,7 +29,6 @@ export function WishlistScreen() {
   const images = useApi(() => api.modelImages(), [])
   const [adding, setAdding] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
-  const [showEarlier, setShowEarlier] = useState(false)
 
   const asks = useMemo(() => new Map<string, BuyerAsk>((home.data?.asks ?? []).map((a) => [a.id, a])), [home.data])
   const img = useMemo(() => new Map((images.data?.models ?? []).map((m) => [m.slug, sizedUri(m.image, 300)])), [images.data])
@@ -40,7 +36,6 @@ export function WishlistScreen() {
   // A wish past its date is over even if the nightly sweep has not marked it yet.
   const lapsed = (r: MyRequest) => !!r.expiresAt && new Date(r.expiresAt).getTime() < Date.now()
   const live = (data?.requests ?? []).filter((r) => LIVE.includes(r.state) && !lapsed(r))
-  const earlier = (data?.requests ?? []).filter((r) => !LIVE.includes(r.state) || lapsed(r))
 
   const reload = () => { mine.reload(); home.reload() }
   const remove = (r: MyRequest) => Alert.alert('Remove this wish?', r.wanted, [
@@ -86,26 +81,6 @@ export function WishlistScreen() {
               </View>
             ))}
 
-          {earlier.length > 0 && (
-            <View style={{ marginTop: t.space.x2 }}>
-              <Pressable onPress={() => setShowEarlier((v) => !v)} accessibilityRole="button" hitSlop={8}
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 }}>
-                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>Earlier wishes · {earlier.length}</Txt>
-                <Ionicons name={showEarlier ? 'chevron-up' : 'chevron-down'} size={18} color={t.colors.textMuted} />
-              </Pressable>
-              {showEarlier && (
-                <View style={{ backgroundColor: t.colors.bgRaised, borderRadius: 16, paddingHorizontal: 14 }}>
-                  {earlier.map((r, i) => (
-                    <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: i === earlier.length - 1 ? 0 : 1, borderBottomColor: t.colors.border }}>
-                      <Ionicons name={r.state === 'fulfilled' ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={r.state === 'fulfilled' ? t.colors.good : t.colors.textMuted} />
-                      <Txt numberOfLines={1} style={{ color: t.colors.text, flex: 1 }}>{r.wanted}</Txt>
-                      <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{LIVE.includes(r.state) ? 'Expired' : ENDED[r.state] ?? r.state}</Txt>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
         </View>
       </ScrollView>
 
