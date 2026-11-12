@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Animated, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, useSession, type AuthResult, type Session } from '@trueglaz/core'
+import { api, indianMobile, localMobile, useSession, type AuthResult, type Session } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { Button, Field } from '../components/form'
 import { OtpBoxes } from '../components/OtpBoxes'
@@ -122,12 +122,12 @@ export function SignInScreen() {
   const completeSignUp = async () => {
     if (!firstName.trim() || !lastName.trim()) { setError('Tell us your name.'); return }
     if (!EMAIL_RE.test(email.trim())) { setError('Enter a valid email address.'); return }
-    if (!looksLikePhone(mobile)) { setError('Enter a valid mobile number.'); return }
+    if (!indianMobile(mobile)) { setError('Enter your 10-digit mobile number.'); return }
     setError(null); setBusy(true)
     try {
       const res = await api.signUp(contact.trim(), code.trim(), {
         firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(),
-        mobile: mobile.trim(), photographyGenres: genres,
+        mobile: indianMobile(mobile)!, photographyGenres: genres,
       })
       succeed(toSession(res), `Welcome to TrueGlaz, ${firstName.trim()}`)
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
@@ -199,7 +199,22 @@ export function SignInScreen() {
                   <View style={{ flex: 1 }}><Field label="Last name" value={lastName} onChangeText={setLastName} /></View>
                 </View>
                 <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoCorrect={false} />
-                <Field label="Mobile" value={mobile} onChangeText={setMobile} keyboardType="phone-pad" placeholder="+91…" />
+                <View style={{ gap: t.space.x1 }}>
+                  <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Mobile</Txt>
+                  {/* +91 is fixed (TG-109): people type the ten digits they know. */}
+                  <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+                    <View style={{ justifyContent: 'center', paddingHorizontal: 12, borderWidth: 1, borderRightWidth: 0, borderColor: t.colors.border,
+                      borderTopLeftRadius: t.radius.md, borderBottomLeftRadius: t.radius.md, backgroundColor: t.colors.bgSunken }}>
+                      <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>+91</Txt>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Field value={localMobile(mobile)} onChangeText={(v: string) => setMobile(localMobile(v))} keyboardType="number-pad"
+                        placeholder="98765 43210" maxLength={10} textContentType="telephoneNumber" autoComplete="tel"
+                        accessibilityLabel="Mobile number, after +91"
+                        style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }} />
+                    </View>
+                  </View>
+                </View>
                 {genreOptions.length > 0 && (
                   <View style={{ gap: t.space.x2 }}>
                     <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>What do you shoot? (optional)</Txt>

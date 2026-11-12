@@ -79,3 +79,20 @@ export function singularCategory(name: string): string {
   }
   return known[name] ?? name.replace(/s$/, '')
 }
+
+/**
+ * An Indian mobile as typed, with or without +91, 0 or spaces, to E.164
+ * (+919876543210); null when it is not ten digits starting 6–9 (TG-109).
+ */
+export function indianMobile(input: string): string | null {
+  let d = input.replace(/\D/g, '')
+  if (d.length === 12 && d.startsWith('91')) d = d.slice(2)
+  else if (d.length === 11 && d.startsWith('0')) d = d.slice(1)
+  return /^[6-9]\d{9}$/.test(d) ? `+91${d}` : null
+}
+
+/** The ten digits after +91, for a field that shows +91 itself. */
+export function localMobile(input: string): string {
+  const d = input.replace(/\D/g, '')
+  return (d.length > 10 && d.startsWith('91') ? d.slice(2) : d).slice(0, 10)
+}

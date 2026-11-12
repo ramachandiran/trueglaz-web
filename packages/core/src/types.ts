@@ -1390,6 +1390,8 @@ export interface Meta {
   gatewayRefunds: boolean
   /** The platform's return window after delivery, in hours. */
   returnWindowHours: number
+  /** How to reach us, from the company profile; for Help screens. */
+  support?: { name: string | null; legalName: string | null; email: string | null; phone: string | null; website: string | null } | null
 }
 
 /** One option on the signup form's genre box. */

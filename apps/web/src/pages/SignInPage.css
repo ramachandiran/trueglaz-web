@@ -323,3 +323,12 @@
   color: var(--tg-accent); text-decoration: underline; text-underline-offset: 2px;
 }
 .signin__resend:disabled { opacity: .6; cursor: default; }
+
+/* +91 fixed in front of the mobile field (TG-109). */
+.signin__phone { display: flex; align-items: stretch; gap: 0; }
+.signin__cc {
+  display: inline-flex; align-items: center; padding: 0 12px; border: 1px solid var(--tg-border);
+  border-right: 0; border-radius: var(--tg-radius-md, 8px) 0 0 var(--tg-radius-md, 8px);
+  background: var(--tg-bg-sunken, #f1efe4); color: var(--tg-text); font-weight: 600;
+}
+.signin__phone .tg-input { flex: 1; border-top-left-radius: 0; border-bottom-left-radius: 0; }

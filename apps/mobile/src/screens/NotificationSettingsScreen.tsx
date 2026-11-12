@@ -54,7 +54,7 @@ export function NotificationSettingsScreen() {
             </>
           )}
           {push === 'granted' && (
-            <Pill label="Stop pushes on this phone" small variant="ghost" onPress={async () => { await disablePush(); refreshPush() }} />
+            <Pill label="Stop pushes on this phone" small variant="ghost" onPress={async () => { await disablePush(true); refreshPush() }} />
           )}
         </Surface>
       )}

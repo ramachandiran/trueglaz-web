@@ -10,7 +10,7 @@ import { api } from '@trueglaz/core'
  */
 export type AppRoute =
   | { screen: string; params?: Record<string, unknown> }
-  | { tab: 'Home' | 'Shop' | 'Sell' | 'Vault' | 'Orders' | 'Profile'; params?: Record<string, unknown> }
+  | { tab: 'Home' | 'Shop' | 'Sell' | 'Vault' | 'Profile'; params?: Record<string, unknown> }
 
 export function routeForLink(link?: string | null): AppRoute | null {
   if (!link) return null
@@ -20,7 +20,7 @@ export function routeForLink(link?: string | null): AppRoute | null {
   switch (head) {
     case 'listings': return id ? { screen: 'Listing', params: { id } } : { tab: 'Shop' }
     case 'items': return id ? { screen: 'SellerItem', params: { id } } : { tab: 'Sell' }
-    case 'orders': return id ? { screen: 'OrderDetail', params: { id } } : { tab: 'Orders' }
+    case 'orders': return id ? { screen: 'OrderDetail', params: { id } } : { screen: 'Orders' }
     case 'sell': return { tab: 'Sell' }
     case 'vault': return { tab: 'Vault', params: id ? { itemId: id } : undefined }
     case 'catalog': return { tab: 'Shop' }

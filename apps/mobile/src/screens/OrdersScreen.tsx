@@ -63,7 +63,7 @@ export function OrdersScreen({ navigation }: { navigation: any }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <PageTitle title="My Orders" />
+      <PageTitle title="My Orders" back={navigation.canGoBack() ? () => navigation.goBack() : undefined} />
       <View style={{ marginTop: t.space.x3 }}>
         <ChipRow>
           {TABS.map((x) => {
