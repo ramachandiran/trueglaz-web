@@ -39,12 +39,19 @@ export function StatusHero({
  * The "YOUR PROGRESS" label + vertical tracker, exactly as the Start selling
  * screen presents a journey. Reused so every journey reads the same.
  */
-export function ProgressSection({ steps, label = 'YOUR PROGRESS' }: { steps: TrackStep[]; label?: string }) {
+export function ProgressSection({ steps, label = 'YOUR PROGRESS', animateFrom, stepMs, aside }: {
+  steps: TrackStep[]; label?: string; animateFrom?: number; stepMs?: number
+  /** Shown at the right of the label, e.g. an "Updated" chip. */
+  aside?: React.ReactNode
+}) {
   const t = useTheme()
   return (
     <View style={{ gap: t.space.x2 }}>
-      <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>{label}</Txt>
-      <StatusTracker steps={steps} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 }}>
+        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>{label}</Txt>
+        {aside}
+      </View>
+      <StatusTracker steps={steps} animateFrom={animateFrom} stepMs={stepMs} />
     </View>
   )
 }

@@ -7,6 +7,11 @@ import { useTheme } from '../theme/ThemeContext'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { sizedUri } from '../components/ModelImage'
 import { Chip, ChipRow, GearArt, PageTitle, Pill, Surface } from '../components/kit'
+import { FadeIn, LiveDot, statusKey, useStatusChange } from '../components/motion'
+import { UpdatedChip } from '../components/OrderTracker'
+
+/** States where something is still happening, so the status dot breathes. */
+const MOVING = ['pending_payment', 'paid', 'dispatched', 'delivered']
 
 /** The three tabs an order can sit under, by its state. */
 const TABS = [
@@ -83,10 +88,12 @@ export function OrdersScreen({ navigation }: { navigation: any }) {
           contentContainerStyle={{ padding: t.space.x4, gap: 14, paddingBottom: t.space.x6 }}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={t.colors.accent} />}
           ListEmptyComponent={<Empty title={tab === 'live' ? 'Nothing on the way' : 'Nothing here yet'} hint="Anything you buy shows up here." />}
-          renderItem={({ item: o }) => (
-            <OrderCard t={t} o={o}
-              img={o.lines[0]?.modelSlug ? imageBySlug.get(o.lines[0].modelSlug) : undefined}
-              onOpen={() => navigation.navigate('OrderDetail', { id: o.id })} />
+          renderItem={({ item: o, index }) => (
+            <FadeIn index={index} key={`${tab}-${o.id}`}>
+              <OrderCard t={t} o={o}
+                img={o.lines[0]?.modelSlug ? imageBySlug.get(o.lines[0].modelSlug) : undefined}
+                onOpen={() => navigation.navigate('OrderDetail', { id: o.id })} />
+            </FadeIn>
           )}
         />
       )}
@@ -101,11 +108,13 @@ function OrderCard({ t, o, img, onOpen }: { t: Theme; o: OrderSummary; img?: str
   // reads the item: shipped, delivered, a return or a cancellation in progress.
   const [status, colour] = o.state === 'paid' && first ? lineStatus(t, first) : statusOf(t, o.state)
   const name = first ? first.title.split('·')[0].trim() : 'Order'
+  const moved = useStatusChange(o.id, statusKey(o.state, first?.state), 'peek')
+  const moving = MOVING.includes(o.state) && first?.state !== 'delivered'
   return (
     <Surface style={{ padding: t.space.x4 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>Order {o.orderNumber}</Txt>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{dateOnly(o.createdAt)}</Txt>
+        {moved.changed ? <UpdatedChip t={t} /> : <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{dateOnly(o.createdAt)}</Txt>}
       </View>
       <View style={{ flexDirection: 'row', gap: t.space.x3, marginTop: t.space.x3, alignItems: 'center' }}>
         <GearArt uri={img} width={54} height={54} radius={10} icon={24} lens={/\d+mm\b|f\/\d/i.test(name)} />
@@ -125,7 +134,10 @@ function OrderCard({ t, o, img, onOpen }: { t: Theme; o: OrderSummary; img?: str
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm }}>
           Total: <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{money(o.totalMinor)}</Txt>
         </Txt>
-        <Txt style={{ color: colour, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{status}</Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+          <LiveDot color={colour} live={moving} />
+          <Txt style={{ color: colour, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{status}</Txt>
+        </View>
       </View>
     </Surface>
   )
