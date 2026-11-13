@@ -14,6 +14,7 @@ import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, stateTone } from 
 import { ModelThumb, useModelImages } from '../components/ModelImage'
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
+import { FadeIn, Pop, statusKey, useStatusChange } from '../components/motion'
 
 /** Once a buyer owns a unit, one tap files it in their Gear Vault, pre-filled. */
 const OWNED_STATES = ['delivered', 'accepted']
@@ -122,6 +123,11 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   const pictures = useModelImages()
   const reasons = useApi(() => api.reasonCodes('return'), [])
 
+  // TG-120: has this order moved since the buyer last opened it? If so the
+  // tracker replays from the step it was on; opening it marks it seen.
+  const firstLine = data?.lines?.[0]
+  const moved = useStatusChange(id, data ? statusKey(data.order.state, firstLine?.state) : undefined, 'commit')
+
   const [busyLine, setBusyLine] = useState<string | null>(null)
   const [returnFor, setReturnFor] = useState<OrderLine | null>(null)
   const [reasonCode, setReasonCode] = useState<string | null>(null)
@@ -189,6 +195,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
           <Muted size={t.size.xs}>Placed {dateTime(order.createdAt)}</Muted>
         </View>
 
+        <FadeIn>
         {justPaid ? (
           <StatusHero tone="good" badge="Paid" title="Payment confirmed 🎉" body="We'll prepare your item for dispatch." />
         ) : awaitingPayment || unpaid ? (
@@ -205,8 +212,32 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
             body={ORDER_BLURB[lines[0]?.state ?? order.state]}
           />
         )}
+        </FadeIn>
 
-        <ProgressSection steps={orderSteps(order.state, lines[0])} label="ORDER STATUS" />
+        {moved.ready ? (() => {
+          const steps = orderSteps(order.state, lines[0])
+          // The step the buyer last saw as current; the replay starts there.
+          let from = 0
+          if (moved.changed && moved.from) {
+            const [prevOrder, prevLine] = moved.from.split('/')
+            const before = orderSteps(prevOrder, prevLine ? ({ ...lines[0], state: prevLine } as OrderLine) : undefined)
+            const at = before.findIndex((x) => x.state === 'current')
+            from = Math.max(0, at === -1 ? before.length - 1 : at)
+            if (before.length !== steps.length || before[from]?.title !== steps[from]?.title) from = 0
+          }
+          const label = unpaid ? 'Awaiting payment' : LINE_STATUS[lines[0]?.state ?? ''] ?? 'Updated'
+          return (
+            <ProgressSection steps={steps} label="ORDER STATUS" animateFrom={from} stepMs={moved.changed ? 280 : 90}
+              aside={moved.changed ? (
+                <Pop delay={250}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 4, paddingHorizontal: 10 }}>
+                    <Ionicons name="sparkles" size={12} color={t.colors.accent} />
+                    <Txt style={{ color: t.colors.accent, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Updated · {label}</Txt>
+                  </View>
+                </Pop>
+              ) : undefined} />
+          )
+        })() : <View style={{ minHeight: 200 }} />}
 
         <Card style={{ gap: t.space.x3 }}>
           <SectionTitle>Items</SectionTitle>

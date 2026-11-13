@@ -1,8 +1,9 @@
-import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native'
+import { Animated, Pressable, ScrollView, View, useWindowDimensions } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { courierName, money, relative, type OrderSummary, type Theme } from '@trueglaz/core'
 import { Txt } from './Txt'
 import { GearArt, lift } from './kit'
+import { FadeIn, LiveDot, Pop, statusKey, useFill, useStatusChange } from './motion'
 
 type Line = OrderSummary['lines'][number]
 
@@ -63,55 +64,86 @@ export function OrderTracker({ t, orders, imageBySlug, onOpen, onAll }: {
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={cardWidth + 12} decelerationRate="fast"
         contentContainerStyle={{ paddingHorizontal: t.space.x4, gap: 12, paddingBottom: 6 }}>
-        {live.map(({ o, p }) => {
-          const name = (p.line?.title ?? 'Your order').split('·')[0].trim()
-          const img = p.line?.modelSlug ? imageBySlug.get(p.line.modelSlug) ?? null : null
-          const toneFg = p.tone === 'good' ? t.colors.good : p.tone === 'warn' ? t.colors.warn : t.colors.cta
-          return (
-            <Pressable key={o.id} onPress={() => onOpen(o.id)} accessibilityRole="button"
-              accessibilityLabel={`Order ${o.orderNumber}: ${name}, ${p.title}`}
-              style={[{ width: cardWidth, backgroundColor: t.colors.bgRaised, borderRadius: 16, padding: 14, gap: 12 }, lift(t)]}>
-              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                <GearArt uri={img} width={56} height={56} radius={12} icon={24} lens={/\d+mm\b|f\/\d/i.test(name)} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{name}</Txt>
-                  <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>Order {o.orderNumber} · {money(o.totalMinor)}</Txt>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />
-              </View>
-
-              <View style={{ gap: 4 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: toneFg }} />
-                  <Txt style={{ color: t.colors.text, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{p.title}</Txt>
-                </View>
-                {!!p.note && <Txt numberOfLines={1} style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{p.note}</Txt>}
-              </View>
-
-              {p.step >= 0 && (
-                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                  <View style={{ flexDirection: 'row', gap: 4 }}>
-                    {STEPS.map((s, i) => (
-                      <View key={s} style={{ flex: 1, height: 5, borderRadius: 3,
-                        backgroundColor: i < p.step ? t.colors.good : i === p.step ? toneFg : t.colors.bgSunken }} />
-                    ))}
-                  </View>
-                  <View style={{ flexDirection: 'row', marginTop: 5 }}>
-                    {STEPS.map((s, i) => (
-                      <Txt key={s} style={{ flex: 1, fontSize: 10, color: i <= p.step ? t.colors.text : t.colors.textMuted, fontWeight: (i === p.step ? t.weight.bold : t.weight.normal) as never }}>{s}</Txt>
-                    ))}
-                  </View>
-                </View>
-              )}
-              {p.step < 0 && (
-                <View style={{ alignSelf: 'flex-start', backgroundColor: t.colors.cta, borderRadius: t.radius.pill, paddingVertical: 7, paddingHorizontal: 14 }}>
-                  <Txt style={{ color: t.colors.onCta, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Pay {money(o.totalMinor)}</Txt>
-                </View>
-              )}
-            </Pressable>
-          )
-        })}
+        {live.map(({ o, p }, i) => (
+          <FadeIn key={o.id} index={i}>
+            <TrackCard t={t} o={o} p={p} width={cardWidth} imageBySlug={imageBySlug} onOpen={onOpen} />
+          </FadeIn>
+        ))}
       </ScrollView>
     </View>
+  )
+}
+
+/** One order on the home card: fills its progress bar, pulses while moving, and says when it changed. */
+function TrackCard({ t, o, p, width, imageBySlug, onOpen }: {
+  t: Theme; o: OrderSummary; p: NonNullable<ReturnType<typeof progress>>; width: number
+  imageBySlug: Map<string, string | null>; onOpen: (id: string) => void
+}) {
+  const name = (p.line?.title ?? 'Your order').split('·')[0].trim()
+  const img = p.line?.modelSlug ? imageBySlug.get(p.line.modelSlug) ?? null : null
+  const toneFg = p.tone === 'good' ? t.colors.good : p.tone === 'warn' ? t.colors.warn : t.colors.cta
+  const moved = useStatusChange(o.id, statusKey(o.state, o.lines[0]?.state), 'peek')
+  return (
+    <Pressable onPress={() => onOpen(o.id)} accessibilityRole="button"
+      accessibilityLabel={`Order ${o.orderNumber}: ${name}, ${p.title}${moved.changed ? ', updated' : ''}`}
+      style={[{ width, backgroundColor: t.colors.bgRaised, borderRadius: 16, padding: 14, gap: 12 }, lift(t)]}>
+      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+        <GearArt uri={img} width={56} height={56} radius={12} icon={24} lens={/\d+mm\b|f\/\d/i.test(name)} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Txt numberOfLines={1} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{name}</Txt>
+          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>Order {o.orderNumber} · {money(o.totalMinor)}</Txt>
+        </View>
+        {moved.changed ? <UpdatedChip t={t} /> : <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />}
+      </View>
+
+      <View style={{ gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <LiveDot color={toneFg} live={p.step < 3} />
+          <Txt style={{ color: t.colors.text, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{p.title}</Txt>
+        </View>
+        {!!p.note && <Txt numberOfLines={1} style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{p.note}</Txt>}
+      </View>
+
+      {p.step >= 0 && (
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <View style={{ flexDirection: 'row', gap: 4 }}>
+            {STEPS.map((s, i) => (
+              <Segment key={s} back={t.colors.bgSunken} color={i < p.step ? t.colors.good : toneFg} on={i <= p.step} delay={200 + i * 160} />
+            ))}
+          </View>
+          <View style={{ flexDirection: 'row', marginTop: 5 }}>
+            {STEPS.map((s, i) => (
+              <Txt key={s} style={{ flex: 1, fontSize: 10, color: i <= p.step ? t.colors.text : t.colors.textMuted, fontWeight: (i === p.step ? t.weight.bold : t.weight.normal) as never }}>{s}</Txt>
+            ))}
+          </View>
+        </View>
+      )}
+      {p.step < 0 && (
+        <View style={{ alignSelf: 'flex-start', backgroundColor: t.colors.cta, borderRadius: t.radius.pill, paddingVertical: 7, paddingHorizontal: 14 }}>
+          <Txt style={{ color: t.colors.onCta, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Pay {money(o.totalMinor)}</Txt>
+        </View>
+      )}
+    </Pressable>
+  )
+}
+
+/** One piece of the Paid > Packed > Shipped > Delivered bar, filling left to right in turn. */
+function Segment({ back, color, on, delay }: { back: string; color: string; on: boolean; delay: number }) {
+  const fill = useFill(delay, 320)
+  return (
+    <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: back, overflow: 'hidden' }}>
+      {on && <Animated.View style={{ height: 5, borderRadius: 3, backgroundColor: color, width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />}
+    </View>
+  )
+}
+
+export function UpdatedChip({ t }: { t: Theme }) {
+  return (
+    <Pop delay={500}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
+        <Ionicons name="sparkles" size={11} color={t.colors.accent} />
+        <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never }}>Updated</Txt>
+      </View>
+    </Pop>
   )
 }
