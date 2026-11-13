@@ -1,16 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, ApiError, dateOnly, money, useApi, type BuyerAsk, type MyRequest, type Theme } from '@trueglaz/core'
+import { api, ApiError, dateOnly, money, useApi, type BuyerAsk, type MyRequest, type ProductModel, type Theme } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Field } from '../components/form'
 import { ErrorNote, Loading } from '../components/ui'
 import { Chip, GearArt, PageTitle, Pill, lift } from '../components/kit'
 import { BottomSheet } from '../components/BottomSheet'
-import { sizedUri } from '../components/ModelImage'
+import { ModelThumb, sizedUri, useModelImages } from '../components/ModelImage'
 
 const LIVE = ['submitted', 'published']
 
@@ -226,18 +226,49 @@ function EmptyHero({ t, onAdd }: { t: Theme; onAdd: () => void }) {
 
 function AddSheet({ t, days, onDone, onClose }: { t: Theme; days: number; onDone: () => void; onClose: () => void }) {
   const grades = useApi(() => api.grades(), [])
+  const brands = useApi(() => api.brands(), [])
+  const pictures = useModelImages()
   const [wanted, setWanted] = useState('')
+  const [model, setModel] = useState<ProductModel | null>(null)
+  const [results, setResults] = useState<ProductModel[]>([])
+  const [searching, setSearching] = useState(false)
   const [price, setPrice] = useState('')
   const [grade, setGrade] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const seq = useRef(0)
+
+  const brandOf = (m: ProductModel) => brands.data?.find((b) => b.id === m.brandId)?.name ?? null
+  const label = (m: ProductModel) => [brandOf(m), m.name].filter(Boolean).join(' ')
+
+  // TG-122: suggest catalogue models as they type, a moment after they pause.
+  // Picking one ties the wish to the model, so matches and its picture are exact;
+  // anything not in the catalogue can still be typed and sent as words.
+  useEffect(() => {
+    const q = wanted.trim()
+    if (model || q.length < 2) { setResults([]); setSearching(false); return }
+    const mine = ++seq.current
+    setSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const page = await api.searchModels(q, 6)
+        if (mine === seq.current) setResults(page.content)
+      } catch { if (mine === seq.current) setResults([]) }
+      finally { if (mine === seq.current) setSearching(false) }
+    }, 220)
+    return () => clearTimeout(timer)
+  }, [wanted, model])
+
+  const pick = (m: ProductModel) => { setModel(m); setWanted(label(m)); setResults([]) }
+  const type = (text: string) => { setWanted(text); if (model) setModel(null) }
 
   const save = async () => {
     setBusy(true); setError(null)
     try {
       await api.askFor({
-        modelFreeText: wanted.trim(),
+        productModelId: model?.id ?? null,
+        modelFreeText: model ? null : wanted.trim(),
         minGradeCode: grade || null,
         maxPriceMinor: price ? Math.round(Number(price.replace(/[^\d.]/g, '')) * 100) : null,
         note: note.trim() || null,
@@ -252,8 +283,43 @@ function AddSheet({ t, days, onDone, onClose }: { t: Theme; days: number; onDone
     <BottomSheet onClose={onClose} scroll
       header={<Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never, marginBottom: 8 }}>Add a wish</Txt>}
       footer={<Pill block label={busy ? 'Adding…' : 'Add to wishlist'} disabled={busy || wanted.trim().length < 3} onPress={save} />}>
-      <Field label="What are you looking for?" value={wanted} onChangeText={setWanted} autoFocus
-        placeholder="e.g. Sony 70-200mm f/2.8 GM II" hint={`Make and model is enough. It stays for ${days} days.`} />
+      <View style={{ gap: 6 }}>
+        <Field label="What are you looking for?" value={wanted} onChangeText={type} autoFocus autoCorrect={false}
+          placeholder="e.g. Sony 70-200 GM II" />
+        {model ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.colors.goodSoft, borderRadius: 12, padding: 8 }}>
+            <ModelThumb image={pictures.byId(model.id)} size={40} />
+            <View style={{ flex: 1 }}>
+              <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{label(model)}</Txt>
+              <Txt style={{ color: t.colors.good, fontSize: t.size.xs }}>From our catalogue · we match it exactly</Txt>
+            </View>
+            <Pressable onPress={() => { setModel(null); setWanted('') }} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear">
+              <Ionicons name="close-circle" size={20} color={t.colors.textMuted} />
+            </Pressable>
+          </View>
+        ) : results.length > 0 ? (
+          <View accessibilityRole="list" style={{ borderWidth: 1, borderColor: t.colors.border, borderRadius: 12, overflow: 'hidden', backgroundColor: t.colors.bgRaised }}>
+            {results.map((m, i) => (
+              <Pressable key={m.id} onPress={() => pick(m)} accessibilityRole="button" accessibilityLabel={label(m)}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10,
+                  backgroundColor: pressed ? t.colors.bgSunken : 'transparent', borderTopWidth: i ? 1 : 0, borderTopColor: t.colors.border })}>
+                <ModelThumb image={pictures.byId(m.id)} size={36} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>{m.name}</Txt>
+                  {!!brandOf(m) && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{brandOf(m)}</Txt>}
+                </View>
+                <Ionicons name="arrow-up-outline" size={16} color={t.colors.textMuted} style={{ transform: [{ rotate: '-45deg' }] }} />
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
+            {searching ? 'Looking in the catalogue…'
+              : wanted.trim().length >= 2 ? 'Not in our catalogue. That is fine: we will look for it as you typed it.'
+              : `Make and model is enough. It stays for ${days} days.`}
+          </Txt>
+        )}
+      </View>
       <Field label="Your top price (optional)" value={price} onChangeText={setPrice} keyboardType="number-pad" placeholder="₹" />
       <View style={{ gap: 8 }}>
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>Lowest condition you'd take</Txt>

@@ -44,7 +44,9 @@ function configure() {
   configured = true
   // Shown as a banner while the app is open too: it is news the person asked for.
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: true }),
+    // Only asked while the app is open: our own banner shows it then (TG-123),
+    // so the phone's would be a second copy. It still goes in the tray.
+    handleNotification: async () => ({ shouldShowBanner: false, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: true }),
   })
   if (Platform.OS === 'android') {
     for (const c of CHANNELS) {
