@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Alert, Animated, Linking, Pressable, View } from 'react-native'
+import { confirm, notify } from './Confirm'
+import { Animated, Linking, Pressable, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as DocumentPicker from 'expo-document-picker'
 import * as ImagePicker from 'expo-image-picker'
@@ -16,7 +17,6 @@ import { Button, Field } from './form'
 import { ErrorNote, Loading, Muted } from './ui'
 import { useTheme } from '../theme/ThemeContext'
 import { PushPrompt } from './PushPrompt'
-import { encField, isUnlocked } from '../state/vaultKey'
 import { FadeIn, Pop, PulseRing, useFill } from './motion'
 
 /**
@@ -30,7 +30,7 @@ const MAX_BYTES = 10 * 1024 * 1024
 
 export async function openInsuranceDocument(docId: string) {
   try { const { url } = await api.insuranceDocumentLink(docId); await Linking.openURL(url) }
-  catch (e) { Alert.alert('Could not open it', e instanceof ApiError ? e.message : 'Please try again') }
+  catch (e) { notify('Could not open it', e instanceof ApiError ? e.message : 'Please try again') }
 }
 
 function useTone() {
@@ -69,14 +69,16 @@ export function CoverRow({ item, onQuote, onAddPolicy, onClaimHelp, onChanged }:
   const r = item.insuranceRequest
   const p = item.policy
 
-  function withdraw() {
-    Alert.alert('Withdraw request', 'Withdraw your insurance quote request?', [
-      { text: 'Keep it', style: 'cancel' },
-      { text: 'Withdraw', style: 'destructive', onPress: async () => {
-        try { await api.withdrawInsurance(item.id); onChanged() }
-        catch (e) { Alert.alert('Could not withdraw', e instanceof ApiError ? e.message : 'Please try again') }
-      } },
-    ])
+  async function withdraw() {
+    const notBuying = r?.status === 'quote_shared'
+    const ok = await confirm({
+      title: notBuying ? 'Not buying this policy?' : 'Withdraw your quote request?',
+      message: notBuying ? 'We will close this request. You can ask for a new quote any time.' : 'The agent will stop working on it. You can ask again any time.',
+      confirmLabel: notBuying ? 'Close request' : 'Withdraw', cancelLabel: 'Keep it', destructive: true,
+    })
+    if (!ok) return
+    try { await api.withdrawInsurance(item.id); onChanged() }
+    catch (e) { notify('Could not withdraw', e instanceof ApiError ? e.message : 'Please try again') }
   }
 
   const divider = <View style={{ height: 1, backgroundColor: t.colors.border, marginVertical: t.space.x3 }} />
@@ -102,18 +104,18 @@ export function CoverRow({ item, onQuote, onAddPolicy, onClaimHelp, onChanged }:
         <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x3, alignItems: 'center', flexWrap: 'wrap' }}>
           {r.status === 'requested' || r.status === 'with_agent' ? (
             <>
-              <View style={{ flex: 1 }}><Pill label="Submitted for quote" icon="checkmark" small block variant="ghost" disabled /></View>
-              <Pill label="Add policy" small variant="ghost" onPress={onAddPolicy} />
+              <View style={{ flex: 1 }}><Pill label="Add policy" icon="cloud-upload-outline" small block onPress={onAddPolicy} /></View>
+              <View style={{ flex: 1 }}><Pill label="Withdraw request" icon="close-circle-outline" small block variant="ghost" onPress={withdraw} /></View>
             </>
           ) : r.status === 'quote_shared' ? (
-            <View style={{ flex: 1 }}><Pill label={r.reuploadReason ? 'Upload policy again' : 'Add your policy'} icon="cloud-upload-outline" small block onPress={onAddPolicy} /></View>
+            <>
+              <View style={{ flex: 1 }}><Pill label={r.reuploadReason ? 'Upload policy again' : 'Add your policy'} icon="cloud-upload-outline" small block onPress={onAddPolicy} /></View>
+              {!r.reuploadReason && <View style={{ flex: 1 }}><Pill label="Not buying it" small block variant="ghost" onPress={withdraw} /></View>}
+            </>
           ) : (
             <View style={{ flex: 1 }}><Pill label="Policy sent for checking" small block variant="ghost" disabled /></View>
           )}
         </View>
-        {(r.status === 'requested' || r.status === 'with_agent' || (r.status === 'quote_shared' && !r.reuploadReason)) && (
-          <View style={{ marginTop: 10 }}><LinkText label={r.status === 'quote_shared' ? 'Not buying it' : 'Withdraw request'} onPress={withdraw} /></View>
-        )}
       </View>
     )
   }
@@ -168,13 +170,12 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
   const [serialSaving, setSerialSaving] = useState(false)
 
   const s = start.data
-  const serialLocked = !!item.e2ee && !isUnlocked()
   async function saveSerial() {
     const v = serialIn.trim()
     if (v.length < 3) { setErr('Enter the serial number as printed on the item.'); return }
     setSerialSaving(true); setErr(null)
     try {
-      await api.updateGear(item.id, item.e2ee ? { serialCipher: encField(v) } : { serial: v })
+      await api.updateGear(item.id, { serial: v })
       setSerialIn(''); start.reload()
     } catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not save the serial number') }
     finally { setSerialSaving(false) }
@@ -182,7 +183,6 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
   const coverValue = cover ?? (s?.coverSuggestionMinor ? String(Math.round(s.coverSuggestionMinor / 100)) : '')
   const coverMinor = Math.round((parseFloat(coverValue.replace(/,/g, '')) || 0) * 100)
   const blocker = !s ? null
-    : !s.hasSerial && serialLocked ? 'Unlock your vault to add the serial number — insurers put it on the policy.'
     : !s.hasSerial ? 'Add the serial number below — insurers put it on the policy.'
     : !s.phoneHint ? 'Add your phone number in Profile so the agent can call you.'
     : null
@@ -264,7 +264,7 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
           {s.hasSerial ? (
             <FileBox ok title={s.serialLast4 ? `Serial ending ${s.serialLast4}` : 'Serial number on file'}
               sub={item.fromTrueglaz ? 'From our inspection of this unit' : 'From your vault'} />
-          ) : !serialLocked && (
+          ) : (
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
               <View style={{ flex: 1 }}>
                 <Field label="As printed on the item" value={serialIn} onChangeText={setSerialIn} autoCapitalize="characters"

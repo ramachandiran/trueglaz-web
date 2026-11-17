@@ -15,6 +15,12 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   // Once the item exists, a retry must not create it again: it only finishes
   // the photo uploads that failed (TG-14).
   const created = useRef<{ id: string; uploaded: number } | null>(null)
+  // TG-138: opened from the review page's Edit — the same form, filled in,
+  // saving over the draft instead of adding a new one.
+  const editItemId: string | null = route.params?.editItemId ?? null
+  const editing = useApi(() => (editItemId ? api.item(editItemId) : Promise.resolve(null)), [editItemId])
+  const editPhotos = useApi(() => (editItemId ? api.itemMedia(editItemId) : Promise.resolve([])), [editItemId])
+  const filled = useRef(false)
 
   const categories = useApi(() => api.categories(), [])
   const brands = useApi(() => api.brands(), [])
@@ -39,11 +45,31 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const scroller = useRef<{ scrollTo: (o: { y: number; animated?: boolean }) => void } | null>(null)
+  const cardY = useRef(0)
+  const modelY = useRef(0)
+
+  useEffect(() => { if (editItemId) navigation.setOptions({ title: 'Edit item' }) }, [editItemId, navigation])
+
+  // Fill the form from the draft, once.
+  useEffect(() => {
+    const it = editing.data?.item
+    if (!it || filled.current) return
+    filled.current = true
+    setCategoryId(it.categoryId); setBrandId(it.brandId)
+    setProductModelId(it.productModelId)
+    setModelFreeText(it.modelFreeText ?? models.data?.content.find((m) => m.id === it.productModelId)?.name ?? '')
+    setDescription(it.description ?? ''); setReasonToSell(it.reasonToSell ?? ''); setSerialNumber(it.serialNumber ?? '')
+    setDeclaredGradeCode(it.declaredGradeCode)
+    setAsking(String(Math.round(it.askingAmountMinor / 100)))
+    setFloor(it.floorAmountMinor != null ? String(Math.round(it.floorAmountMinor / 100)) : '')
+    setUnderWarranty(!!it.underWarranty); setHasBill(it.hasBill); setHasBox(it.hasBox); setHasAccessories(it.hasAccessories)
+  }, [editing.data, models.data])
 
   // Default the type to Cameras — the most common consignment — once the
   // categories load, matching the web form.
   useEffect(() => {
-    if (categoryId || !categories.data) return
+    if (editItemId || categoryId || !categories.data) return
     const cam = categories.data.find((c) => c.slug === 'cameras') ?? categories.data.find((c) => /camera/i.test(c.name))
     if (cam) setCategoryId(cam.id)
   }, [categories.data]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -69,16 +95,23 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
     if (floorMinor > askingMinor) { setError('The floor cannot be above the asking price.'); return }
 
     setError(null); setBusy(true)
+    const body = {
+      productModelId, modelFreeText: modelFreeText.trim(), categoryId, brandId,
+      description: description.trim(), reasonToSell: reasonToSell.trim(),
+      underWarranty, hasBill, hasBox, hasAccessories,
+      serialNumber: serialNumber.trim(), declaredGradeCode,
+      askingAmountMinor: askingMinor, floorAmountMinor: floorMinor,
+    }
+    if (editItemId && !created.current) {
+      try {
+        await api.updateDraftItem(route.params.submissionId, editItemId, body)
+        created.current = { id: editItemId, uploaded: 0 }
+      } catch (e) { setError((e as Error).message); setBusy(false); return }
+    }
     try {
       if (!created.current) {
         if (!submissionId.current) submissionId.current = (await api.createSubmission('guided')).id
-        const item = await api.addItem(submissionId.current, {
-        productModelId, modelFreeText: modelFreeText.trim(), categoryId, brandId,
-        description: description.trim(), reasonToSell: reasonToSell.trim(),
-        underWarranty, hasBill, hasBox, hasAccessories,
-        serialNumber: serialNumber.trim(), declaredGradeCode,
-        askingAmountMinor: askingMinor, floorAmountMinor: floorMinor,
-        })
+        const item = await api.addItem(submissionId.current, body)
         created.current = { id: item.id, uploaded: 0 }
       }
       const c = created.current
@@ -91,8 +124,9 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
         c.uploaded = i + 1
       }
       setProgress(null)
-      // 1:1 flow: land straight on the item (now a draft) to review and submit.
-      navigation.replace('SellerItem', { id: c.id })
+      // TG-138: the next page is the review — check it, edit it, or submit it.
+      if (editItemId) navigation.goBack()
+      else navigation.replace('SellerItem', { id: c.id })
     } catch (e) {
       const msg = (e as Error).message
       setError(created.current
@@ -101,12 +135,12 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
     } finally { setBusy(false); setProgress(null) }
   }
 
-  if (categories.loading || brands.loading || grades.loading) {
+  if (categories.loading || brands.loading || grades.loading || (editItemId && !editing.data)) {
     return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scroller as never} style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }} keyboardShouldPersistTaps="handled">
       <Card style={{ gap: t.space.x3 }}>
         <SectionTitle>Type</SectionTitle>
         <ChipRow options={(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))} selected={categoryId} onSelect={(v) => { setCategoryId(v); setProductModelId(null) }} />
@@ -117,8 +151,10 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
         <ChipRow options={(brands.data ?? []).map((b) => ({ value: b.id, label: b.name }))} selected={brandId} onSelect={(v) => { setBrandId(v); setProductModelId(null) }} />
       </Card>
 
+      {/* zIndex: the suggestions open upwards over the cards above (TG-138). */}
+      <View style={{ zIndex: 10, elevation: 10 }} onLayout={(e) => { cardY.current = e.nativeEvent.layout.y }}>
       <Card style={{ gap: t.space.x3 }}>
-        <View style={{ gap: t.space.x1 }}>
+        <View style={{ gap: t.space.x1 }} onLayout={(e) => { modelY.current = e.nativeEvent.layout.y }}>
           <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Model</Txt>
           <ModelAutocomplete
             value={modelFreeText}
@@ -128,12 +164,14 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
             categoryId={categoryId}
             onChangeText={(text) => { setModelFreeText(text); setProductModelId(null) }}
             onPick={(m) => { setModelFreeText(m.name); setProductModelId(m.id); if (m.brandId) setBrandId(m.brandId) }}
+            onFocus={() => scroller.current?.scrollTo({ y: Math.max(0, cardY.current + modelY.current - 260), animated: true })}
           />
         </View>
         <Field label="Description" value={description} onChangeText={setDescription} multiline placeholder="Condition, shutter count, anything a buyer should know" />
         <Field label="Reason for selling" value={reasonToSell} onChangeText={setReasonToSell} multiline />
         <Field label="Serial number" value={serialNumber} onChangeText={setSerialNumber} autoCapitalize="characters" />
       </Card>
+      </View>
 
       <Card style={{ gap: t.space.x3 }}>
         <SectionTitle>Condition you think it is</SectionTitle>
@@ -143,6 +181,13 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
 
       <Card style={{ gap: t.space.x3 }}>
         <SectionTitle>Photos</SectionTitle>
+        {(editPhotos.data?.length ?? 0) > 0 && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
+            {editPhotos.data!.map((m) => (
+              <Image key={m.id} source={{ uri: m.sizes[200] ?? m.url }} style={{ width: 88, height: 88, borderRadius: t.radius.md }} resizeMode="cover" />
+            ))}
+          </View>
+        )}
         <Muted size={t.size.xs}>Add clear photos of the actual item — buyers trust a listing with real pictures.</Muted>
         {photos.length > 0 && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
@@ -178,13 +223,13 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
       {progress && <Muted size={t.size.xs}>{progress}</Muted>}
-      <Button label={created.current ? 'Finish uploading photos' : 'Add item'} loading={busy} onPress={save} />
+      <Button label={created.current ? 'Finish uploading photos' : editItemId ? 'Save and review' : 'Review'} variant="cta" loading={busy} onPress={save} />
     </ScrollView>
   )
 }
 
 function ModelAutocomplete({
-  value, models, brands, brandId, categoryId, onChangeText, onPick,
+  value, models, brands, brandId, categoryId, onChangeText, onPick, onFocus,
 }: {
   value: string
   models: ProductModel[]
@@ -193,6 +238,7 @@ function ModelAutocomplete({
   categoryId: string | null
   onChangeText: (text: string) => void
   onPick: (m: ProductModel) => void
+  onFocus?: () => void
 }) {
   const t = useTheme()
   const [open, setOpen] = useState(false)
@@ -212,20 +258,36 @@ function ModelAutocomplete({
     }).slice(0, 8)
   }, [models, brandId, categoryId, value, brandName])
 
+  // TG-138: the keyboard covers whatever is below the field, so the
+  // suggestions open upwards, over the cards above, closest match nearest the
+  // finger. The list scrolls inside itself past four rows.
   return (
     <View>
-      <Field value={value} onChangeText={(x) => { onChangeText(x); setOpen(true) }} onFocus={() => setOpen(true)} placeholder="Start typing — e.g. R6, 70-200, X-T5" />
       {open && matches.length > 0 && (
-        <View style={{ borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.md, marginTop: 4, overflow: 'hidden', backgroundColor: t.colors.bgRaised }}>
-          {matches.map((m) => (
-            <Pressable key={m.id} onPress={() => { onPick(m); setOpen(false) }}
-              style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x3, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
-              <Txt style={{ color: t.colors.text }}>{m.name}</Txt>
-              <Muted size={t.size.xs}>{brandName.get(m.brandId ?? '') ?? ''}</Muted>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: '100%', marginBottom: 6, zIndex: 20, elevation: 12,
+          borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.md, overflow: 'hidden', backgroundColor: t.colors.bgRaised,
+          shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: -4 } }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: t.space.x3, paddingVertical: 6, backgroundColor: t.colors.bgSunken }}>
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{matches.length} MATCH{matches.length === 1 ? '' : 'ES'}</Txt>
+            <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close suggestions">
+              <Txt style={{ color: t.colors.accent, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Close</Txt>
             </Pressable>
-          ))}
+          </View>
+          <ScrollView style={{ maxHeight: 4 * 56 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+            {[...matches].reverse().map((m) => (
+              <Pressable key={m.id} onPress={() => { onPick(m); setOpen(false) }}
+                style={({ pressed }) => ({ paddingHorizontal: t.space.x3, paddingVertical: 10, minHeight: 56, justifyContent: 'center',
+                  borderTopWidth: 1, borderTopColor: t.colors.border, backgroundColor: pressed ? t.colors.accentSoft : 'transparent' })}>
+                <Txt style={{ color: t.colors.text }}>{m.name}</Txt>
+                <Muted size={t.size.xs}>{brandName.get(m.brandId ?? '') ?? ''}</Muted>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       )}
+      <Field value={value} onChangeText={(x) => { onChangeText(x); setOpen(true) }}
+        onFocus={() => { setOpen(true); onFocus?.() }} onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Start typing — e.g. R6, 70-200, X-T5" />
     </View>
   )
 }

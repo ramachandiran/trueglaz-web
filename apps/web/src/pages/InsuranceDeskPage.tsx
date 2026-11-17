@@ -164,7 +164,7 @@ function Detail({ id, onChanged }: { id: string; onChanged: (status: InsuranceSt
         <dt>Email</dt><dd>{x.email ?? '—'}</dd>
         <dt>Serial</dt>
         <dd>
-          {serial ?? (x.serialLast4 ? `••••${x.serialLast4}` : x.serialReadable ? '—' : 'PIN-locked — see the invoice')}
+          {serial ?? (x.serialLast4 ? `••••${x.serialLast4}` : x.serialReadable ? '—' : 'Not on file — see the invoice')}
           {!serial && x.serialReadable && (<>{' '}
             <button className="desk__link" onClick={async () => {
               try { setSerial((await api.insuranceSerial(id)).serial) } catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not show it') }

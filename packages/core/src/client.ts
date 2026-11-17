@@ -10,7 +10,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, DigilockerResult, StaffPayoutAccount, VaultKeyBlobsStored, MigratedItem, PlainVaultItem,
+  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, DigilockerResult, StaffPayoutAccount,
   OrderLineEvent, ReturnEvidence, StaffOrderLine, DispatchInput, TeamView, TeamGrantResult, CancelRequest, StaffCancelRow, CancelDecision,
 } from './types'
 
@@ -240,6 +240,28 @@ export interface BrowseParams {
   maxPriceMinor?: number
   page?: number
   size?: number
+}
+
+/** One item a seller is consigning: what the sell form sends to add or edit it. */
+export interface SellItemInput {
+  productModelId?: string | null
+  modelFreeText?: string | null
+  categoryId: string
+  brandId: string
+  // The API refuses an item with any of these blank: they are what a buyer
+  // reads and what we check the serial against, so they are not optional.
+  description: string
+  reasonToSell: string
+  underWarranty: boolean
+  hasBill: boolean
+  hasBox: boolean
+  hasAccessories: boolean
+  serialNumber: string
+  declaredGradeCode: string
+  askingAmountMinor: number
+  floorAmountMinor: number
+  declaredValueMinor?: number | null
+  includedAccessories?: string[] | null
 }
 
 export const api = {
@@ -564,27 +586,11 @@ export const api = {
   submission: (id: string) => get<SubmissionView>(`/submissions/${id}`),
   addItem: (
     submissionId: string,
-    body: {
-      productModelId?: string | null
-      modelFreeText?: string | null
-      categoryId: string
-      brandId: string
-      // The API refuses an item with any of these blank: they are what a buyer
-      // reads and what we check the serial against, so they are not optional.
-      description: string
-      reasonToSell: string
-      underWarranty: boolean
-      hasBill: boolean
-      hasBox: boolean
-      hasAccessories: boolean
-      serialNumber: string
-      declaredGradeCode: string
-      askingAmountMinor: number
-      floorAmountMinor: number
-      declaredValueMinor?: number | null
-      includedAccessories?: string[] | null
-    },
+    body: SellItemInput,
   ) => post<ConsignmentItem>(`/submissions/${submissionId}/items`, body),
+  /** Change an item still in draft — the review page's Edit (TG-138). Same body as addItem. */
+  updateDraftItem: (submissionId: string, itemId: string, body: SellItemInput) =>
+    put<ConsignmentItem>(`/submissions/${submissionId}/items/${itemId}`, body),
   submitSubmission: (id: string) => post<Submission>(`/submissions/${id}/submit`),
   /** The seller records the courier handoff for a pre-approved parcel. */
   shipSubmission: (
@@ -889,17 +895,4 @@ export const api = {
     post<InsuranceDeskDetail>(`/staff/insurance/requests/${id}/close`, { reason }),
   /** Add a just-bought item to the vault, pre-filled from the order line. */
   addGearFromOrderLine: (lineId: string) => post<VaultItem>(`/vault/from-order-line/${lineId}`),
-  /** The wrapped vault key for this user, or null if the vault isn't secured yet. */
-  vaultKey: async (): Promise<VaultKeyBlobsStored | null> => {
-    try { return await get<VaultKeyBlobsStored>('/vault/key') }
-    catch (e) { if (e instanceof ApiError && e.status === 404) return null; throw e }
-  },
-  setVaultKey: (blobs: VaultKeyBlobsStored) => put<void>('/vault/key', blobs),
-  /** Turn on the PIN: store the wrapped key and the re-encrypted existing items. */
-  activateVaultE2ee: (key: VaultKeyBlobsStored, items: MigratedItem[]) =>
-    post<void>('/vault/e2ee/activate', { key, items }),
-  /** Remove the PIN keeping every detail: the device sends them decrypted (TG-136). */
-  removeVaultPin: (items: PlainVaultItem[]) => post<void>('/vault/e2ee/remove', { items }),
-  /** Turn the PIN off (clears unreadable encrypted fields; used for a full reset). */
-  disableVaultE2ee: () => del<void>('/vault/e2ee'),
 }

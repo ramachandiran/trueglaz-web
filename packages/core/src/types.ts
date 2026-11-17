@@ -2047,16 +2047,10 @@ export interface VaultItem {
   id: string
   modelLabel: string
   productModelId: string | null
-  /** false = server-managed encryption (default); true = PIN/E2EE. */
-  e2ee: boolean
-  /** Default mode: decrypted for the owner. E2EE mode: these are null. */
+  /** Sealed at rest by the server; returned in the clear to the owner only. */
   serial: string | null
   costMinor: number | null
   notes: string | null
-  /** E2EE mode: opaque blobs the client decrypts. Default mode: null. */
-  serialCipher: string | null
-  costCipher: string | null
-  notesCipher: string | null
   purchaseDate: string | null
   warrantyExpiry: string | null
   warrantySource: 'derived' | 'manual' | 'none'
@@ -2072,40 +2066,12 @@ export interface VaultItem {
 export interface AddGearInput {
   productModelId?: string | null
   modelFreeText?: string | null
-  /** Default mode: plaintext, sealed server-side. */
+  /** Plaintext over TLS; the server seals it. */
   serial?: string | null
   costMinor?: number | null
   notes?: string | null
-  /** E2EE mode: already-encrypted blobs. */
-  serialCipher?: string | null
-  costCipher?: string | null
-  notesCipher?: string | null
   purchaseDate?: string | null
   warrantyExpiry?: string | null
-}
-
-/** One item's re-encrypted fields, sent when turning on the PIN. */
-export interface MigratedItem {
-  id: string
-  serialCipher?: string | null
-  costCipher?: string | null
-  notesCipher?: string | null
-}
-
-/** One item's details in the clear, decrypted on the device, when removing the PIN (TG-136). */
-export interface PlainVaultItem {
-  id: string
-  serial?: string | null
-  costMinor?: number | null
-  notes?: string | null
-}
-
-/** The user's wrapped vault key, as stored by the server (all opaque to it). */
-export interface VaultKeyBlobsStored {
-  kdf: string
-  salt: string
-  wrappedDekPin: string
-  wrappedDekRecovery: string
 }
 
 /** One choice in a filter group: the value to send back, its label, and how many it would show. */

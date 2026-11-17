@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { confirm, notify } from '../components/Confirm'
 import { VaultIntro } from './VaultIntro'
-import { Alert, Animated, FlatList, Pressable, RefreshControl, View } from 'react-native'
+import { Animated, FlatList, Pressable, RefreshControl, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
-  api, money, dateOnly, useApi, ApiError, VAULT_PIN_ENABLED,
+  api, money, dateOnly, useApi, ApiError,
   type VaultItem, type ProductModel,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -15,10 +16,6 @@ import { Button, Field } from '../components/form'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
 import { ClaimSheet, CoverRow, PolicySheet, QuoteSheet, Sheet } from '../components/VaultCover'
 import { ModelThumb, useModelImages } from '../components/ModelImage'
-import {
-  isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
-  enableE2ee, unlockVault, changePin, recoverVault, disableE2ee, removePin, recoverAndRemovePin,
-} from '../state/vaultKey'
 import { FadeIn, Pop, statusKey, useCountUp, useFill, useStatusChange } from '../components/motion'
 import { InsureBanner } from '../components/InsureBanner'
 
@@ -27,24 +24,6 @@ function estimate(it: VaultItem): number {
   return it.valuation?.midMinor ?? it.costMinor ?? 0
 }
 
-/** The sensitive fields as the owner should see them, decrypting if unlocked. */
-function shownSerial(it: VaultItem): string | null {
-  if (!it.e2ee) return it.serial
-  if (it.serialCipher && isUnlocked()) { try { return decField(it.serialCipher) } catch { return null } }
-  return null
-}
-function shownCost(it: VaultItem): number | null {
-  if (!it.e2ee) return it.costMinor
-  if (it.costCipher && isUnlocked()) {
-    try { const n = parseInt(decField(it.costCipher), 10); return Number.isFinite(n) ? n : null } catch { return null }
-  }
-  return null
-}
-function hasLockedFields(it: VaultItem): boolean {
-  return it.e2ee && !isUnlocked() && (it.serialCipher != null || it.costCipher != null || it.notesCipher != null)
-}
-
-type PrivacyMode = 'setup' | 'unlock' | 'change' | 'recover' | 'disable'
 
 const WARRANTY_LABEL: Record<VaultItem['warrantyStatus'], string> = {
   active: 'Under warranty', expiring: 'Warranty ending soon', expired: 'Warranty expired', unknown: 'Warranty unknown',
@@ -57,12 +36,6 @@ export function VaultScreen() {
   const { data, error, loading, reload } = useApi(() => api.vault(), [])
   const [adding, setAdding] = useState(false)
   const [insuring, setInsuring] = useState<{ item: VaultItem; what: 'quote' | 'policy' | 'claim' } | null>(null)
-  const [privacy, setPrivacy] = useState<PrivacyMode | null>(null)
-  const [, setPTick] = useState(0)
-  const rePrivacy = () => setPTick((n) => n + 1)
-
-  useEffect(() => { ensureLoaded().then(rePrivacy) }, [])
-
   // Opened with a quote to start (a link from elsewhere): straight into that item's quote.
   const route = useRoute<any>()
   const nav = useNavigation<any>()
@@ -74,8 +47,6 @@ export function VaultScreen() {
     nav.setParams({ quoteFor: undefined })
   }, [quoteFor, data]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const e2ee = isE2eeOn()
-  const unlocked = isUnlocked()
   const items = data ?? []
   const total = useMemo(() => items.reduce((n, it) => n + estimate(it), 0), [items])
   const insured = items.filter((i) => i.policy).length
@@ -85,13 +56,10 @@ export function VaultScreen() {
   const shownTotal = useCountUp(total)
   const coverFill = useFill(350, 600, [insured, items.length])
 
-  function afterPrivacy() { setPrivacy(null); rePrivacy(); reload() }
-
-  function remove(item: VaultItem) {
-    Alert.alert('Remove gear', `Remove ${item.modelLabel} from your vault?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => { try { await api.removeGear(item.id); reload() } catch { /* ignore */ } } },
-    ])
+  async function remove(item: VaultItem) {
+    if (!(await confirm({ title: 'Remove from your vault?', message: `${item.modelLabel} and its details will be removed.`, confirmLabel: 'Remove', destructive: true }))) return
+    try { await api.removeGear(item.id); reload() }
+    catch (e) { notify('Could not remove it', e instanceof ApiError ? e.message : 'Please try again') }
   }
 
   const warrantyTone = (s: VaultItem['warrantyStatus']) =>
@@ -101,23 +69,9 @@ export function VaultScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <PageTitle title="Gear Vault" sub="What you own, valued from real sales."
-        actions={<RoundIcon icon="add" label="Add gear" tone="cta" onPress={() => setAdding(true)} />} />
+      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." />
       <View style={{ height: t.space.x3 }} />
 
-      <View style={{ paddingHorizontal: t.space.x4, paddingBottom: t.space.x2 }}>
-        <PrivacyBar
-          e2ee={e2ee}
-          unlocked={unlocked}
-          onSetup={() => setPrivacy('setup')}
-          onUnlock={() => setPrivacy('unlock')}
-          onRecover={() => setPrivacy('recover')}
-          onChange={() => setPrivacy('change')}
-          onDisable={() => setPrivacy('disable')}
-          onLock={() => { lockVault(); rePrivacy() }}
-          onRemove={async () => { await removePin(items); afterPrivacy() }}
-        />
-      </View>
 
       {loading && !data && <Loading />}
       {error && <View style={{ padding: t.space.x4 }}><ErrorNote error={error} onRetry={reload} /></View>}
@@ -152,11 +106,18 @@ export function VaultScreen() {
             </FadeIn>
             </View>
           ) : undefined}
-          ListEmptyComponent={<Empty title="Your vault is empty" hint="Add gear you own to track its value, warranty and insurance." />}
+          ListEmptyComponent={
+            <View style={{ gap: t.space.x3 }}>
+              <Empty title="Your vault is empty" hint="Add gear you own to track its value, warranty and insurance." />
+              <Button label="+ Add your first item" variant="cta" onPress={() => setAdding(true)} />
+            </View>
+          }
+          ListFooterComponent={items.length > 0 ? (
+            <Button label="+ Add gear" variant="ghost" onPress={() => setAdding(true)} style={{ marginTop: t.space.x1 }} />
+          ) : undefined}
           renderItem={({ item, index }) => {
-            const cost = shownCost(item)
-            const serial = shownSerial(item)
-            const locked = hasLockedFields(item)
+            const cost = item.costMinor
+            const serial = item.serial
             const estVal = item.valuation?.midMinor ?? cost ?? null
             const wt = warrantyTone(item.warrantyStatus)
             return (
@@ -167,9 +128,7 @@ export function VaultScreen() {
                   <ModelThumb image={pictures.byId(item.productModelId)} size={72} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Txt numberOfLines={1} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: -0.2 }}>{item.modelLabel}</Txt>
-                    {locked ? (
-                      <Txt style={{ color: t.colors.warn, fontSize: t.size.xs, marginTop: 2 }}>🔒 Locked — unlock to see price &amp; serial</Txt>
-                    ) : cost != null || serial ? (
+                    {cost != null || serial ? (
                       <Muted size={t.size.xs} style={{ marginTop: 2 }}>
                         {[cost != null ? `Bought ${money(cost)}` : null, item.purchaseDate ? dateOnly(item.purchaseDate) : null, serial ? `ser ••${serial.slice(-4)}` : null].filter(Boolean).join(' · ')}
                       </Muted>
@@ -183,7 +142,7 @@ export function VaultScreen() {
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, letterSpacing: -0.3 }}>
-                      {estVal != null ? `~${money(estVal)}` : locked ? '🔒' : '…'}
+                      {estVal != null ? `~${money(estVal)}` : '…'}
                     </Txt>
                     <Muted size={t.size.xs}>est. value</Muted>
                   </View>
@@ -204,9 +163,6 @@ export function VaultScreen() {
 
       {adding && (
         <AddModal
-          e2ee={e2ee}
-          unlocked={unlocked}
-          onNeedUnlock={() => { setAdding(false); setPrivacy('unlock') }}
           onClose={() => setAdding(false)}
           onAdded={() => { setAdding(false); reload() }}
         />
@@ -214,187 +170,15 @@ export function VaultScreen() {
       {insuring?.what === 'quote' && <QuoteSheet item={insuring.item} onClose={() => setInsuring(null)} onDone={() => { setInsuring(null); reload() }} />}
       {insuring?.what === 'policy' && <PolicySheet item={insuring.item} onClose={() => setInsuring(null)} onDone={() => { setInsuring(null); reload() }} />}
       {insuring?.what === 'claim' && <ClaimSheet onClose={() => setInsuring(null)} />}
-      {privacy && <PrivacySheet mode={privacy} items={items} onDone={afterPrivacy} onClose={() => setPrivacy(null)} />}
       {/* The Vault's own invitation lives here, not over Home or Shop (UX-02). */}
       <VaultIntro onClosed={reload} />
     </View>
   )
 }
 
-// -- privacy -------------------------------------------------------------------
-
-function PrivacyBar({ e2ee, unlocked, onSetup, onUnlock, onRecover, onChange, onDisable, onLock, onRemove }: {
-  e2ee: boolean; unlocked: boolean
-  onSetup: () => void; onUnlock: () => void; onRecover: () => void
-  onChange: () => void; onDisable: () => void; onLock: () => void; onRemove: () => Promise<void>
-}) {
-  const t = useTheme()
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const wrap = (border: string, bg: string) => ({
-    flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const,
-    gap: t.space.x2, borderWidth: 1, borderColor: border, backgroundColor: bg,
-    borderRadius: t.radius.md, paddingVertical: 8, paddingHorizontal: 12,
-  })
-  if (!VAULT_PIN_ENABLED) {
-    // TG-136: no lock for anyone new. Someone who set a PIN before is asked for
-    // it once, and the vault moves back to standard privacy with nothing lost.
-    if (!e2ee) return null
-    if (!unlocked) {
-      return (
-        <View style={wrap(t.colors.warn, t.colors.bgRaised)}>
-          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, flex: 1 }}>🔒 Vault PINs are going away. Enter yours once to see your details again.</Txt>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <Button label="Enter PIN" onPress={onUnlock} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
-            <Button label="Forgot?" variant="ghost" onPress={onRecover} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
-          </View>
-        </View>
-      )
-    }
-    // Unlocked but the switch did not finish (e.g. the network dropped).
-    return (
-      <View style={wrap(t.colors.warn, t.colors.bgRaised)}>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, flex: 1 }}>{err ?? 'Your vault still has a PIN. Finish moving to standard privacy.'}</Txt>
-        <Button label={busy ? 'Working…' : 'Remove PIN'} loading={busy} style={{ paddingVertical: 5, paddingHorizontal: 10 }}
-          onPress={async () => {
-            setBusy(true); setErr(null)
-            try { await onRemove() } catch (e) { setErr(e instanceof ApiError ? e.message : 'That did not work. Try again.') } finally { setBusy(false) }
-          }} />
-      </View>
-    )
-  }
-  if (!e2ee) {
-    return (
-      <View style={wrap(t.colors.border, t.colors.bgRaised)}>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, flex: 1 }}>🔓 Standard privacy — only you see your details</Txt>
-        <Button label="Add a PIN" variant="ghost" onPress={onSetup} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
-      </View>
-    )
-  }
-  if (!unlocked) {
-    return (
-      <View style={wrap(t.colors.warn, t.colors.bgRaised)}>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, flex: 1 }}>🔒 Vault locked</Txt>
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          <Button label="Unlock" onPress={onUnlock} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
-          <Button label="Forgot?" variant="ghost" onPress={onRecover} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
-        </View>
-      </View>
-    )
-  }
-  return (
-    <View style={wrap(t.colors.good, t.colors.bgRaised)}>
-      <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, flex: 1 }}>🔓 Unlocked · PIN protected</Txt>
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        <Button label="Lock" variant="ghost" onPress={onLock} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
-        <Button label="Change" variant="ghost" onPress={onChange} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
-        <Button label="Off" variant="ghost" onPress={onDisable} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
-      </View>
-    </View>
-  )
-}
-
-function PrivacySheet({ mode: opened, items, onDone, onClose }: {
-  mode: PrivacyMode; items: VaultItem[]; onDone: () => void; onClose: () => void
-}) {
-  const t = useTheme()
-  // "Lost the code too?" moves a recovery to the reset without closing.
-  const [mode, setMode] = useState<PrivacyMode>(opened)
-  // TG-136: while the PIN is off, unlocking or recovering also removes it.
-  const retiring = !VAULT_PIN_ENABLED
-  const [pin, setPin] = useState('')
-  const [pin2, setPin2] = useState('')
-  const [code, setCode] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const [recovery, setRecovery] = useState<string | null>(null)
-
-  const needsNewPin = mode === 'setup' || mode === 'change' || (mode === 'recover' && !retiring)
-  const pinOk = /^\d{4,}$/.test(pin)
-  const title = {
-    setup: 'Turn on extra privacy', unlock: retiring ? 'Remove your vault PIN' : 'Unlock your vault', change: 'Change your PIN',
-    recover: 'Recover your vault', disable: 'Turn off extra privacy',
-  }[mode]
-
-  async function run() {
-    setBusy(true); setErr(null)
-    try {
-      if (needsNewPin && pin !== pin2) throw new Error('PINs do not match')
-      if (retiring && mode === 'unlock') { await unlockVault(pin); await removePin(items); onDone(); return }
-      if (retiring && mode === 'recover') { await recoverAndRemovePin(code, items); onDone(); return }
-      if (mode === 'setup') { setRecovery(await enableE2ee(pin, items)); return }
-      if (mode === 'change') { setRecovery(await changePin(pin)); return }
-      if (mode === 'recover') { setRecovery(await recoverVault(code, pin)); return }
-      if (mode === 'unlock') { await unlockVault(pin); onDone(); return }
-      if (mode === 'disable') { await disableE2ee(); onDone(); return }
-    } catch (e) {
-      setErr(e instanceof ApiError ? e.message
-        : mode === 'unlock' ? 'That PIN is not right'
-        : mode === 'recover' ? 'That recovery code or PIN is not right'
-        : (e as Error).message || 'That did not work')
-    } finally { setBusy(false) }
-  }
-
-  const disabled = busy || (mode === 'unlock' ? pin.length < 4 : needsNewPin ? !pinOk : false) || (mode === 'recover' && !code.trim())
-
-  return (
-    <Sheet title={title} onClose={onClose}>
-      {recovery ? (
-        <>
-          <Muted size={t.size.sm}>Save this recovery code somewhere safe. It is the only way back if you forget your PIN — we can’t reset it for you.</Muted>
-          <View style={{ backgroundColor: t.colors.bgSunken, borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.md, padding: t.space.x4 }}>
-            <Txt selectable style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, textAlign: 'center', letterSpacing: 1 }}>{recovery}</Txt>
-          </View>
-          <Button label="I’ve saved it" onPress={onDone} />
-        </>
-      ) : mode === 'disable' ? (
-        <>
-          <Muted size={t.size.sm}>This clears the encrypted details (serial, price, notes) you can no longer read, and returns the vault to standard encryption. Your items, values and warranties are kept. Use this only if you’ve lost both your PIN and recovery code.</Muted>
-          {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
-          <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x2 }}>
-            <Button label="Cancel" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-            <Button label={busy ? 'Working…' : 'Reset & turn off'} onPress={run} loading={busy} style={{ flex: 1 }} />
-          </View>
-        </>
-      ) : (
-        <>
-          {mode === 'setup' && <Muted size={t.size.sm}>Your serial numbers, prices and notes will be encrypted with a PIN only you know — not even TrueGlaz can read them. You’ll need it to view those details.</Muted>}
-          {retiring && mode === 'unlock' && <Muted size={t.size.sm}>Vault PINs are going away for now. Enter yours once and your serial numbers, prices and notes move back to standard privacy — still only visible to you. Nothing is lost.</Muted>}
-          {retiring && mode === 'recover' && <Muted size={t.size.sm}>Enter the recovery code you saved when you set the PIN. Your details move back to standard privacy and the PIN is removed.</Muted>}
-          {mode === 'recover' && (
-            <Field label="Recovery code" placeholder="ABCD-EF12-…" value={code} onChangeText={setCode} autoFocus />
-          )}
-          {!(retiring && mode === 'recover') && (
-            <Field label={mode === 'unlock' ? 'Vault PIN' : 'New Vault PIN (4+ digits)'} placeholder="••••"
-              secureTextEntry keyboardType="numeric" value={pin} onChangeText={setPin} autoFocus={mode === 'unlock'} />
-          )}
-          {retiring && mode === 'recover' && (
-            <Pressable onPress={() => { setErr(null); setMode('disable') }} accessibilityRole="button">
-              <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, textDecorationLine: 'underline' }}>Lost the recovery code too?</Txt>
-            </Pressable>
-          )}
-          {needsNewPin && (
-            <Field label="Confirm PIN" placeholder="••••" secureTextEntry keyboardType="numeric" value={pin2} onChangeText={setPin2} />
-          )}
-          {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
-          <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x2 }}>
-            <Button label="Cancel" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-            <Button
-              label={busy ? 'Working…' : mode === 'unlock' ? (retiring ? 'Remove PIN' : 'Unlock') : retiring && mode === 'recover' ? 'Remove PIN' : mode === 'recover' ? 'Recover' : mode === 'change' ? 'Change PIN' : 'Turn on'}
-              onPress={run} disabled={disabled} loading={busy} style={{ flex: 1 }}
-            />
-          </View>
-        </>
-      )}
-    </Sheet>
-  )
-}
-
 // -- add gear ------------------------------------------------------------------
 
-function AddModal({ e2ee, unlocked, onNeedUnlock, onClose, onAdded }: {
-  e2ee: boolean; unlocked: boolean; onNeedUnlock: () => void; onClose: () => void; onAdded: () => void
-}) {
+function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
   const t = useTheme()
   const [q, setQ] = useState('')
   const [results, setResults] = useState<ProductModel[]>([])
@@ -412,27 +196,17 @@ function AddModal({ e2ee, unlocked, onNeedUnlock, onClose, onAdded }: {
   }
 
   const costMinor = cost ? Math.round(parseFloat(cost) * 100) : null
-  const hasPrivate = !!serial.trim() || costMinor != null
 
   async function submit() {
-    // In PIN mode, private fields must be encrypted on this device — that needs the key.
-    if (e2ee && hasPrivate && !unlocked) { onNeedUnlock(); return }
     setBusy(true); setErr(null)
     try {
-      const base = {
+      await api.addGear({
         productModelId: model?.id ?? null,
         modelFreeText: model ? null : q.trim() || null,
         purchaseDate: date.trim() || null,
-      }
-      if (e2ee) {
-        await api.addGear({
-          ...base,
-          serialCipher: serial.trim() ? encField(serial.trim()) : null,
-          costCipher: costMinor != null ? encField(String(costMinor)) : null,
-        })
-      } else {
-        await api.addGear({ ...base, serial: serial.trim() || null, costMinor })
-      }
+        serial: serial.trim() || null,
+        costMinor,
+      })
       onAdded()
     } catch (e) { setErr(e instanceof ApiError ? e.message : 'Could not add that') } finally { setBusy(false) }
   }
@@ -453,11 +227,10 @@ function AddModal({ e2ee, unlocked, onNeedUnlock, onClose, onAdded }: {
           ))}
         </View>
       )}
-      <Field label="Serial number" placeholder={e2ee ? 'Encrypted with your PIN' : 'Kept private & sealed'} value={serial} onChangeText={setSerial} />
+      <Field label="Serial number" placeholder="Kept private & sealed" value={serial} onChangeText={setSerial} />
       <Field label="What you paid (₹)" placeholder="e.g. 130000" keyboardType="numeric" value={cost} onChangeText={setCost} />
       <Field label="Purchase date (YYYY-MM-DD)" placeholder="2024-06-15" value={date} onChangeText={setDate} />
       <Muted size={t.size.xs}>We’ll estimate its value from our market and work out the warranty from the purchase date.</Muted>
-      {e2ee && hasPrivate && !unlocked && <Txt style={{ color: t.colors.warn, fontSize: t.size.xs }}>🔒 Unlock your vault to save the serial and price privately.</Txt>}
       {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
       <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x2 }}>
         <Button label="Cancel" variant="ghost" onPress={onClose} style={{ flex: 1 }} />

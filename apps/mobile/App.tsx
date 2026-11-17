@@ -1,4 +1,3 @@
-import 'react-native-get-random-values' // crypto.getRandomValues for the vault's client-side encryption; must load first
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import { AppState, KeyboardAvoidingView, View } from 'react-native'
@@ -39,6 +38,7 @@ import { DeleteAccountScreen } from './src/screens/DeleteAccountScreen'
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen'
 import { onPushReceived, setBadge, usePushWhileSignedIn } from './src/push'
 import { InAppBanner, noteInbox, resetInbox } from './src/components/InAppBanner'
+import { DialogHost } from './src/components/Confirm'
 
 const navRef = createNavigationContainerRef<any>()
 
@@ -147,7 +147,7 @@ function AppStack() {
       <Root.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />
       <Root.Screen name="Pay" component={PayScreen} options={{ title: 'Payment' }} />
       <Root.Screen name="OrderPlaced" component={OrderPlacedScreen} options={{ headerShown: false, gestureEnabled: false, ...ownBottom }} />
-      <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
+      <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ headerShown: false }} />
       <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />
       <Root.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
@@ -186,6 +186,7 @@ function Routes() {
       <StatusBar style={t.name === 'dark' ? 'light' : 'dark'} />
       {session ? <AppStack /> : <AuthStack />}
       {session && <InAppBanner navRef={navRef as never} />}
+      <DialogHost />
     </NavigationContainer>
   )
 }

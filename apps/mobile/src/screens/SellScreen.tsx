@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Pressable, ScrollView, View } from 'react-native'
+import { notify } from '../components/Confirm'
+import { Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, isSeller, money, STATE_LABELS, useApi, useSession, type Theme } from '@trueglaz/core'
@@ -109,7 +110,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
     } catch (e) {
       const msg = (e as Error).message || 'Could not start a submission.'
       setCreateError(msg)
-      Alert.alert('Could not start a submission', msg)
+      notify('Could not start a submission', msg)
     } finally { setCreating(false) }
   }
 

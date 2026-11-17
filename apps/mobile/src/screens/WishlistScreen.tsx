@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native'
+import { confirm, notify } from '../components/Confirm'
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -38,17 +39,13 @@ export function WishlistScreen() {
   const live = (data?.requests ?? []).filter((r) => LIVE.includes(r.state) && !lapsed(r))
 
   const reload = () => { mine.reload(); home.reload() }
-  const remove = (r: MyRequest) => Alert.alert('Remove this wish?', r.wanted, [
-    { text: 'Keep it', style: 'cancel' },
-    {
-      text: 'Remove', style: 'destructive', onPress: async () => {
-        setBusy(r.id)
-        try { await api.withdrawRequest(r.id); reload() }
-        catch (e) { Alert.alert('Could not remove it', (e as Error).message) }
-        finally { setBusy(null) }
-      },
-    },
-  ])
+  const remove = async (r: MyRequest) => {
+    if (!(await confirm({ title: 'Remove this wish?', message: r.wanted, confirmLabel: 'Remove', cancelLabel: 'Keep it', destructive: true }))) return
+    setBusy(r.id)
+    try { await api.withdrawRequest(r.id); reload() }
+    catch (e) { notify('Could not remove it', (e as Error).message) }
+    finally { setBusy(null) }
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
