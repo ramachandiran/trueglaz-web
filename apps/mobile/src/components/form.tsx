@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, TextInput, View, type TextInputProps } from 'react-native'
-import { Txt } from './Txt'
+import { MAX_FONT_SCALE, Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { mobileFontFamily } from '../theme/fonts'
 
@@ -47,6 +47,7 @@ export function Field({ label, hint, style, ...rest }: TextInputProps & { label?
       )}
       <TextInput
         placeholderTextColor={t.colors.textMuted}
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
         style={[
           {
             color: t.colors.text, fontFamily: mobileFontFamily.regular, fontSize: t.size.md,
