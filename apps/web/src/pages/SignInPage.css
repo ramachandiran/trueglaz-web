@@ -332,3 +332,11 @@
   background: var(--tg-bg-sunken, #f1efe4); color: var(--tg-text); font-weight: 600;
 }
 .signin__phone .tg-input { flex: 1; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+/* A team invite link (TG-133). */
+.signin__invite {
+  background: var(--tg-good-soft); color: var(--tg-text); border-radius: var(--tg-radius-md);
+  padding: 12px 14px; font-size: var(--tg-text-sm); line-height: 1.5; margin-bottom: var(--tg-space-3);
+  box-shadow: inset 3px 0 0 var(--tg-good);
+}
+.signin__invite--off { background: var(--tg-warn-soft); box-shadow: inset 3px 0 0 var(--tg-warn); }

@@ -1648,9 +1648,17 @@ export interface DispatchInput {
 
 export interface TeamRole { role: string; grantedAt: string | null; grantedByName: string | null }
 export interface TeamMember { userId: string; displayName: string; email: string | null; roles: TeamRole[]; lastSeenAt: string | null }
-export interface TeamInvite { id: string; email: string; role: string; invitedByName: string | null; createdAt: string | null }
+export interface TeamInvite {
+  id: string; email: string; role: string; invitedByName: string | null; createdAt: string | null
+  /** TG-133: emailed invites lapse after a week; resending renews them. */
+  expiresAt?: string | null; lastSentAt?: string | null; sendCount?: number; expired?: boolean
+  /** The sign-in link the email carries (path only). */
+  link?: string | null
+}
+/** What the sign-in page knows from an invite link alone. */
+export interface PublicInvite { email: string; role: string; invitedByName: string | null; expired: boolean; accepted: boolean }
 export interface TeamView { members: TeamMember[]; invites: TeamInvite[] }
-export interface TeamGrantResult { outcome: 'granted' | 'invited'; member: TeamMember | null; invite: TeamInvite | null }
+export interface TeamGrantResult { outcome: 'granted' | 'invited' | 'resent'; member: TeamMember | null; invite: TeamInvite | null }
 
 export interface ReturnCaseView {
   case: ReturnCase
