@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
-  api, money, dateOnly, useApi, ApiError,
+  api, money, dateOnly, useApi, ApiError, VAULT_PIN_ENABLED,
   type VaultItem, type ProductModel,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -17,7 +17,7 @@ import { ClaimSheet, CoverRow, PolicySheet, QuoteSheet, Sheet } from '../compone
 import { ModelThumb, useModelImages } from '../components/ModelImage'
 import {
   isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
-  enableE2ee, unlockVault, changePin, recoverVault, disableE2ee,
+  enableE2ee, unlockVault, changePin, recoverVault, disableE2ee, removePin, recoverAndRemovePin,
 } from '../state/vaultKey'
 import { FadeIn, Pop, statusKey, useCountUp, useFill, useStatusChange } from '../components/motion'
 import { InsureBanner } from '../components/InsureBanner'
@@ -115,6 +115,7 @@ export function VaultScreen() {
           onChange={() => setPrivacy('change')}
           onDisable={() => setPrivacy('disable')}
           onLock={() => { lockVault(); rePrivacy() }}
+          onRemove={async () => { await removePin(items); afterPrivacy() }}
         />
       </View>
 
@@ -222,17 +223,46 @@ export function VaultScreen() {
 
 // -- privacy -------------------------------------------------------------------
 
-function PrivacyBar({ e2ee, unlocked, onSetup, onUnlock, onRecover, onChange, onDisable, onLock }: {
+function PrivacyBar({ e2ee, unlocked, onSetup, onUnlock, onRecover, onChange, onDisable, onLock, onRemove }: {
   e2ee: boolean; unlocked: boolean
   onSetup: () => void; onUnlock: () => void; onRecover: () => void
-  onChange: () => void; onDisable: () => void; onLock: () => void
+  onChange: () => void; onDisable: () => void; onLock: () => void; onRemove: () => Promise<void>
 }) {
   const t = useTheme()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
   const wrap = (border: string, bg: string) => ({
     flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const,
     gap: t.space.x2, borderWidth: 1, borderColor: border, backgroundColor: bg,
     borderRadius: t.radius.md, paddingVertical: 8, paddingHorizontal: 12,
   })
+  if (!VAULT_PIN_ENABLED) {
+    // TG-136: no lock for anyone new. Someone who set a PIN before is asked for
+    // it once, and the vault moves back to standard privacy with nothing lost.
+    if (!e2ee) return null
+    if (!unlocked) {
+      return (
+        <View style={wrap(t.colors.warn, t.colors.bgRaised)}>
+          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, flex: 1 }}>🔒 Vault PINs are going away. Enter yours once to see your details again.</Txt>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <Button label="Enter PIN" onPress={onUnlock} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
+            <Button label="Forgot?" variant="ghost" onPress={onRecover} style={{ paddingVertical: 5, paddingHorizontal: 10 }} />
+          </View>
+        </View>
+      )
+    }
+    // Unlocked but the switch did not finish (e.g. the network dropped).
+    return (
+      <View style={wrap(t.colors.warn, t.colors.bgRaised)}>
+        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, flex: 1 }}>{err ?? 'Your vault still has a PIN. Finish moving to standard privacy.'}</Txt>
+        <Button label={busy ? 'Working…' : 'Remove PIN'} loading={busy} style={{ paddingVertical: 5, paddingHorizontal: 10 }}
+          onPress={async () => {
+            setBusy(true); setErr(null)
+            try { await onRemove() } catch (e) { setErr(e instanceof ApiError ? e.message : 'That did not work. Try again.') } finally { setBusy(false) }
+          }} />
+      </View>
+    )
+  }
   if (!e2ee) {
     return (
       <View style={wrap(t.colors.border, t.colors.bgRaised)}>
@@ -264,10 +294,14 @@ function PrivacyBar({ e2ee, unlocked, onSetup, onUnlock, onRecover, onChange, on
   )
 }
 
-function PrivacySheet({ mode, items, onDone, onClose }: {
+function PrivacySheet({ mode: opened, items, onDone, onClose }: {
   mode: PrivacyMode; items: VaultItem[]; onDone: () => void; onClose: () => void
 }) {
   const t = useTheme()
+  // "Lost the code too?" moves a recovery to the reset without closing.
+  const [mode, setMode] = useState<PrivacyMode>(opened)
+  // TG-136: while the PIN is off, unlocking or recovering also removes it.
+  const retiring = !VAULT_PIN_ENABLED
   const [pin, setPin] = useState('')
   const [pin2, setPin2] = useState('')
   const [code, setCode] = useState('')
@@ -275,10 +309,10 @@ function PrivacySheet({ mode, items, onDone, onClose }: {
   const [err, setErr] = useState<string | null>(null)
   const [recovery, setRecovery] = useState<string | null>(null)
 
-  const needsNewPin = mode === 'setup' || mode === 'change' || mode === 'recover'
+  const needsNewPin = mode === 'setup' || mode === 'change' || (mode === 'recover' && !retiring)
   const pinOk = /^\d{4,}$/.test(pin)
   const title = {
-    setup: 'Turn on extra privacy', unlock: 'Unlock your vault', change: 'Change your PIN',
+    setup: 'Turn on extra privacy', unlock: retiring ? 'Remove your vault PIN' : 'Unlock your vault', change: 'Change your PIN',
     recover: 'Recover your vault', disable: 'Turn off extra privacy',
   }[mode]
 
@@ -286,6 +320,8 @@ function PrivacySheet({ mode, items, onDone, onClose }: {
     setBusy(true); setErr(null)
     try {
       if (needsNewPin && pin !== pin2) throw new Error('PINs do not match')
+      if (retiring && mode === 'unlock') { await unlockVault(pin); await removePin(items); onDone(); return }
+      if (retiring && mode === 'recover') { await recoverAndRemovePin(code, items); onDone(); return }
       if (mode === 'setup') { setRecovery(await enableE2ee(pin, items)); return }
       if (mode === 'change') { setRecovery(await changePin(pin)); return }
       if (mode === 'recover') { setRecovery(await recoverVault(code, pin)); return }
@@ -323,11 +359,20 @@ function PrivacySheet({ mode, items, onDone, onClose }: {
       ) : (
         <>
           {mode === 'setup' && <Muted size={t.size.sm}>Your serial numbers, prices and notes will be encrypted with a PIN only you know — not even TrueGlaz can read them. You’ll need it to view those details.</Muted>}
+          {retiring && mode === 'unlock' && <Muted size={t.size.sm}>Vault PINs are going away for now. Enter yours once and your serial numbers, prices and notes move back to standard privacy — still only visible to you. Nothing is lost.</Muted>}
+          {retiring && mode === 'recover' && <Muted size={t.size.sm}>Enter the recovery code you saved when you set the PIN. Your details move back to standard privacy and the PIN is removed.</Muted>}
           {mode === 'recover' && (
             <Field label="Recovery code" placeholder="ABCD-EF12-…" value={code} onChangeText={setCode} autoFocus />
           )}
-          <Field label={mode === 'unlock' ? 'Vault PIN' : 'New Vault PIN (4+ digits)'} placeholder="••••"
-            secureTextEntry keyboardType="numeric" value={pin} onChangeText={setPin} autoFocus={mode === 'unlock'} />
+          {!(retiring && mode === 'recover') && (
+            <Field label={mode === 'unlock' ? 'Vault PIN' : 'New Vault PIN (4+ digits)'} placeholder="••••"
+              secureTextEntry keyboardType="numeric" value={pin} onChangeText={setPin} autoFocus={mode === 'unlock'} />
+          )}
+          {retiring && mode === 'recover' && (
+            <Pressable onPress={() => { setErr(null); setMode('disable') }} accessibilityRole="button">
+              <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, textDecorationLine: 'underline' }}>Lost the recovery code too?</Txt>
+            </Pressable>
+          )}
           {needsNewPin && (
             <Field label="Confirm PIN" placeholder="••••" secureTextEntry keyboardType="numeric" value={pin2} onChangeText={setPin2} />
           )}
@@ -335,7 +380,7 @@ function PrivacySheet({ mode, items, onDone, onClose }: {
           <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x2 }}>
             <Button label="Cancel" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
             <Button
-              label={busy ? 'Working…' : mode === 'unlock' ? 'Unlock' : mode === 'recover' ? 'Recover' : mode === 'change' ? 'Change PIN' : 'Turn on'}
+              label={busy ? 'Working…' : mode === 'unlock' ? (retiring ? 'Remove PIN' : 'Unlock') : retiring && mode === 'recover' ? 'Remove PIN' : mode === 'recover' ? 'Recover' : mode === 'change' ? 'Change PIN' : 'Turn on'}
               onPress={run} disabled={disabled} loading={busy} style={{ flex: 1 }}
             />
           </View>

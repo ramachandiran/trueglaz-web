@@ -159,3 +159,11 @@
 .ins-file__name small { color: var(--tg-text-muted); font-size: var(--tg-text-xs); }
 .ins-warn { background: var(--tg-bad-soft); color: var(--tg-text); border-radius: var(--tg-radius-md); padding: 10px 12px; font-size: var(--tg-text-sm); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* A quiet text action inside a vault dialog (TG-136). */
+.vault__link {
+  align-self: flex-start;
+  background: none; border: 0; padding: 0;
+  color: var(--tg-accent); font: inherit; font-size: 13px;
+  text-decoration: underline; cursor: pointer;
+}

@@ -2092,6 +2092,14 @@ export interface MigratedItem {
   notesCipher?: string | null
 }
 
+/** One item's details in the clear, decrypted on the device, when removing the PIN (TG-136). */
+export interface PlainVaultItem {
+  id: string
+  serial?: string | null
+  costMinor?: number | null
+  notes?: string | null
+}
+
 /** The user's wrapped vault key, as stored by the server (all opaque to it). */
 export interface VaultKeyBlobsStored {
   kdf: string

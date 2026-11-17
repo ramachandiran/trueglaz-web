@@ -10,7 +10,7 @@ import type {
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
-  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, DigilockerResult, StaffPayoutAccount, VaultKeyBlobsStored, MigratedItem,
+  VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, DigilockerResult, StaffPayoutAccount, VaultKeyBlobsStored, MigratedItem, PlainVaultItem,
   OrderLineEvent, ReturnEvidence, StaffOrderLine, DispatchInput, TeamView, TeamGrantResult, CancelRequest, StaffCancelRow, CancelDecision,
 } from './types'
 
@@ -898,6 +898,8 @@ export const api = {
   /** Turn on the PIN: store the wrapped key and the re-encrypted existing items. */
   activateVaultE2ee: (key: VaultKeyBlobsStored, items: MigratedItem[]) =>
     post<void>('/vault/e2ee/activate', { key, items }),
+  /** Remove the PIN keeping every detail: the device sends them decrypted (TG-136). */
+  removeVaultPin: (items: PlainVaultItem[]) => post<void>('/vault/e2ee/remove', { items }),
   /** Turn the PIN off (clears unreadable encrypted fields; used for a full reset). */
   disableVaultE2ee: () => del<void>('/vault/e2ee'),
 }

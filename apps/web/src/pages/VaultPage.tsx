@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   api, money, dateOnly, useApi,
-  type VaultItem, type ProductModel, ApiError,
+  type VaultItem, type ProductModel, ApiError, VAULT_PIN_ENABLED,
 } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
 import { AddPolicyModal, ClaimHelpModal, CoverStrip, Modal, QuoteModal } from '../components/VaultInsurance'
 import { ModelPhoto } from '../components/ModelPhoto'
 import {
-  isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
+  isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField, removePin,
 } from '../state/vaultKey'
 import { VaultPrivacyModal, type PrivacyMode } from '../components/VaultPrivacyModal'
 import './VaultPage.css'
@@ -84,6 +84,7 @@ export function VaultPage() {
         onChange={() => setPrivacy('change')}
         onDisable={() => setPrivacy('disable')}
         onLock={() => { lockVault(); rePrivacy() }}
+        onRemove={async () => { await removePin(items); afterPrivacy() }}
       />
 
       {items.length > 0 && (
@@ -135,11 +136,46 @@ export function VaultPage() {
 }
 
 /** The vault's privacy state and its controls — turn the PIN on, unlock, change, reset. */
-function PrivacyBar({ e2ee, unlocked, onSetup, onUnlock, onRecover, onChange, onDisable, onLock }: {
+function PrivacyBar({ e2ee, unlocked, onSetup, onUnlock, onRecover, onChange, onDisable, onLock, onRemove }: {
   e2ee: boolean; unlocked: boolean
   onSetup: () => void; onUnlock: () => void; onRecover: () => void
-  onChange: () => void; onDisable: () => void; onLock: () => void
+  onChange: () => void; onDisable: () => void; onLock: () => void; onRemove: () => Promise<void>
 }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  if (!VAULT_PIN_ENABLED) {
+    // TG-136: no lock for anyone new. Someone who set a PIN before is asked for
+    // it once, and the vault moves back to standard privacy with nothing lost.
+    if (!e2ee) return null
+    if (!unlocked) {
+      return (
+        <div className="vault__privacy vault__privacy--locked">
+          <span className="vault__privacy-state">
+            <LockIcon /> Vault PINs are going away. Enter yours once to see your serial, price &amp; notes again.
+          </span>
+          <span className="vault__privacy-acts">
+            <button className="tg-button tg-button--small" onClick={onUnlock}>Enter PIN</button>
+            <button className="tg-button tg-button--small tg-button--ghost" onClick={onRecover}>Forgot PIN?</button>
+          </span>
+        </div>
+      )
+    }
+    // Unlocked but the switch did not finish (e.g. the network dropped).
+    return (
+      <div className="vault__privacy vault__privacy--locked">
+        <span className="vault__privacy-state">
+          <LockIcon open /> {err ?? 'Your vault still has a PIN. Finish moving to standard privacy.'}
+        </span>
+        <span className="vault__privacy-acts">
+          <button className="tg-button tg-button--small" disabled={busy}
+            onClick={async () => {
+              setBusy(true); setErr(null)
+              try { await onRemove() } catch (e) { setErr(e instanceof ApiError ? e.message : 'That did not work. Try again.') } finally { setBusy(false) }
+            }}>{busy ? 'Working…' : 'Remove PIN'}</button>
+        </span>
+      </div>
+    )
+  }
   if (!e2ee) {
     return (
       <div className="vault__privacy">

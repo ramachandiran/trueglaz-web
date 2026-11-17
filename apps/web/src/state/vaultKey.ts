@@ -1,6 +1,6 @@
 import {
   api, createVaultKey, unlockWithPin, unlockWithRecovery, rewrapWithNewPin,
-  encryptField, decryptField, type VaultKeyBlobsStored, type VaultItem, type MigratedItem,
+  encryptField, decryptField, type VaultKeyBlobsStored, type VaultItem, type MigratedItem, type PlainVaultItem,
 } from '@trueglaz/core'
 
 /**
@@ -68,6 +68,37 @@ export async function recoverVault(code: string, newPin: string): Promise<string
   await api.setVaultKey(rewrapped.blobs)
   dek = recovered; blobs = rewrapped.blobs
   return rewrapped.recoveryCode
+}
+
+/**
+ * Remove the PIN keeping every detail (TG-136): decrypt each item here and send
+ * the details back to be sealed by the server, which drops the key in the same
+ * step. Needs the vault unlocked.
+ */
+export async function removePin(currentItems: VaultItem[]): Promise<void> {
+  if (!dek) throw new Error('Unlock the vault first')
+  const key = dek
+  const plain: PlainVaultItem[] = currentItems
+    .filter((it) => it.serialCipher || it.costCipher || it.notesCipher)
+    .map((it) => {
+      const cost = it.costCipher ? parseInt(decryptField(key, it.costCipher), 10) : NaN
+      return {
+        id: it.id,
+        serial: it.serialCipher ? decryptField(key, it.serialCipher) : null,
+        costMinor: Number.isFinite(cost) ? cost : null,
+        notes: it.notesCipher ? decryptField(key, it.notesCipher) : null,
+      }
+    })
+  await api.removeVaultPin(plain)
+  dek = null; blobs = null; e2eeOn = false
+}
+
+/** Forgot the PIN: open the vault with the recovery code, then remove the PIN. */
+export async function recoverAndRemovePin(code: string, currentItems: VaultItem[]): Promise<void> {
+  await ensureLoaded()
+  if (!blobs) throw new Error('This vault has no PIN')
+  dek = unlockWithRecovery(code, blobs)
+  await removePin(currentItems)
 }
 
 /** Turn the PIN off (clears unreadable encrypted fields; the full-reset path). */

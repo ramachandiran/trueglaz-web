@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ApiError, type VaultItem } from '@trueglaz/core'
-import { enableE2ee, unlockVault, changePin, recoverVault, disableE2ee } from '../state/vaultKey'
+import { ApiError, VAULT_PIN_ENABLED, type VaultItem } from '@trueglaz/core'
+import { enableE2ee, unlockVault, changePin, recoverVault, disableE2ee, removePin, recoverAndRemovePin } from '../state/vaultKey'
 import '../pages/VaultPage.css'
 
 export type PrivacyMode = 'setup' | 'unlock' | 'change' | 'recover' | 'disable'
@@ -10,9 +10,13 @@ export type PrivacyMode = 'setup' | 'unlock' | 'change' | 'recover' | 'disable'
  * the one-time code, or reset it off. The PIN and recovery code never leave the
  * device — only the wrapped key does, and TrueGlaz can't reset either for you.
  */
-export function VaultPrivacyModal({ mode, items, onDone, onClose }: {
+export function VaultPrivacyModal({ mode: opened, items, onDone, onClose }: {
   mode: PrivacyMode; items?: VaultItem[]; onDone: () => void; onClose: () => void
 }) {
+  // "Lost the code too?" moves a recovery to the reset without closing.
+  const [mode, setMode] = useState<PrivacyMode>(opened)
+  // TG-136: while the PIN is off, unlocking or recovering also removes it.
+  const retiring = !VAULT_PIN_ENABLED
   const [pin, setPin] = useState('')
   const [pin2, setPin2] = useState('')
   const [code, setCode] = useState('')
@@ -20,13 +24,15 @@ export function VaultPrivacyModal({ mode, items, onDone, onClose }: {
   const [err, setErr] = useState<string | null>(null)
   const [recovery, setRecovery] = useState<string | null>(null)
 
-  const needsNewPin = mode === 'setup' || mode === 'change' || mode === 'recover'
+  const needsNewPin = mode === 'setup' || mode === 'change' || (mode === 'recover' && !retiring)
   const pinOk = /^\d{4,}$/.test(pin)
 
   async function run() {
     setBusy(true); setErr(null)
     try {
       if (needsNewPin && pin !== pin2) throw new Error('PINs do not match')
+      if (retiring && mode === 'unlock') { await unlockVault(pin); await removePin(items ?? []); onDone(); return }
+      if (retiring && mode === 'recover') { await recoverAndRemovePin(code, items ?? []); onDone(); return }
       if (mode === 'setup') { setRecovery(await enableE2ee(pin, items ?? [])); return }
       if (mode === 'change') { setRecovery(await changePin(pin)); return }
       if (mode === 'recover') { setRecovery(await recoverVault(code, pin)); return }
@@ -41,7 +47,7 @@ export function VaultPrivacyModal({ mode, items, onDone, onClose }: {
   }
 
   const title = {
-    setup: 'Turn on extra privacy', unlock: 'Unlock your vault', change: 'Change your PIN',
+    setup: 'Turn on extra privacy', unlock: retiring ? 'Remove your vault PIN' : 'Unlock your vault', change: 'Change your PIN',
     recover: 'Recover your vault', disable: 'Turn off extra privacy',
   }[mode]
 
@@ -68,14 +74,21 @@ export function VaultPrivacyModal({ mode, items, onDone, onClose }: {
         ) : (
           <>
             {mode === 'setup' && <p className="vault__hint">Your serial numbers, prices and notes will be encrypted with a PIN only you know — not even TrueGlaz can read them. You’ll need it to view those details.</p>}
+            {retiring && mode === 'unlock' && <p className="vault__hint">Vault PINs are going away for now. Enter yours once and your serial numbers, prices and notes move back to standard privacy — still only visible to you. Nothing is lost.</p>}
+            {retiring && mode === 'recover' && <p className="vault__hint">Enter the recovery code you saved when you set the PIN. Your details move back to standard privacy and the PIN is removed.</p>}
             {mode === 'recover' && (
               <label className="vault__field"><span>Recovery code</span>
                 <input className="tg-input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABCD-EF12-…" autoFocus />
               </label>
             )}
-            <label className="vault__field"><span>{mode === 'unlock' ? 'Vault PIN' : 'New Vault PIN (4+ digits)'}</span>
-              <input className="tg-input" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} autoFocus={mode === 'unlock'} />
-            </label>
+            {!(retiring && mode === 'recover') && (
+              <label className="vault__field"><span>{mode === 'unlock' ? 'Vault PIN' : 'New Vault PIN (4+ digits)'}</span>
+                <input className="tg-input" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} autoFocus={mode === 'unlock'} />
+              </label>
+            )}
+            {retiring && mode === 'recover' && (
+              <button type="button" className="vault__link" onClick={() => { setErr(null); setMode('disable') }}>Lost the recovery code too?</button>
+            )}
             {needsNewPin && (
               <label className="vault__field"><span>Confirm PIN</span>
                 <input className="tg-input" type="password" inputMode="numeric" value={pin2} onChange={(e) => setPin2(e.target.value)} />
@@ -84,8 +97,8 @@ export function VaultPrivacyModal({ mode, items, onDone, onClose }: {
             {err && <p className="ops__error" role="alert">{err}</p>}
             <div className="vault__modal-actions">
               <button className="tg-button" onClick={onClose}>Cancel</button>
-              <button className="tg-button tg-button--primary" disabled={busy || (mode === 'unlock' ? pin.length < 4 : !pinOk) || (mode === 'recover' && !code.trim())} onClick={run}>
-                {busy ? 'Working…' : mode === 'unlock' ? 'Unlock' : mode === 'recover' ? 'Recover' : mode === 'change' ? 'Change PIN' : 'Turn on'}
+              <button className="tg-button tg-button--primary" disabled={busy || (mode === 'unlock' ? pin.length < 4 : needsNewPin ? !pinOk : false) || (mode === 'recover' && !code.trim())} onClick={run}>
+                {busy ? 'Working…' : mode === 'unlock' ? (retiring ? 'Remove PIN' : 'Unlock') : retiring && mode === 'recover' ? 'Remove PIN' : mode === 'recover' ? 'Recover' : mode === 'change' ? 'Change PIN' : 'Turn on'}
               </button>
             </div>
           </>

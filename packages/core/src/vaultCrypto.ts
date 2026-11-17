@@ -115,3 +115,13 @@ export function encryptField(dek: Uint8Array, plaintext: string): string {
 export function decryptField(dek: Uint8Array, blob: string): string {
   return bytesToStr(openBytes(dek, blob))
 }
+
+/**
+ * TG-136: the optional Vault PIN is switched off for now. People read the lock
+ * as a step they had to take before the vault worked. Everything behind it is
+ * kept so it can return by setting this to true (and the API's
+ * VAULT_PIN_ENABLED). While off, nobody is offered a PIN; anyone who already
+ * set one is asked once for it, and their details move back to standard
+ * privacy with nothing lost.
+ */
+export const VAULT_PIN_ENABLED = false
