@@ -173,8 +173,8 @@ export function OpsPage() {
   const validPage = Math.min(Math.max(1, page), pages || 1)
   const shown = sorted.slice((validPage - 1) * perPage, validPage * perPage)
 
-  const go = (next: string) => { clearParams('state', 'overdue', 'q', 'page'); setTabParam(next) }
-  const onSearch = (v: string) => { setSearch(v); clearParams('page') }
+  const go = (next: string) => setTabParam(next, ['state', 'overdue', 'q', 'page'])
+  const onSearch = (v: string) => setSearch(v, ['page'])
 
   const unit = active === 'intake' || active === 'inbound' ? 'submissions'
     : active === 'wanted' ? 'requests' : active === 'listed' ? 'listings' : 'items'

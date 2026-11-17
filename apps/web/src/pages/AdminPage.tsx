@@ -56,7 +56,7 @@ export function AdminPage() {
 
   const w = useBooks(inventory.data, recon.data)
   useConsoleTitle('Money & oversight', 'Inventory, escrow and payouts — the whole platform in one place')
-  useHashTarget(!pending.loading && !onHold.loading && !approved.loading)
+  useHashTarget(!pending.loading && !onHold.loading && !approved.loading && !inventory.loading && !recon.loading && !accounts.loading)
 
   return (
     <div className="ops dash">
@@ -449,7 +449,7 @@ function LedgerFeed() {
                   {debits === credits ? 'balanced' : 'UNBALANCED'}
                 </span>
               </summary>
-              <table className="sell__table">
+              <div className="c-table-wrap"><table className="sell__table">
                 <thead><tr><th>Account</th><th>Direction</th><th>Amount</th></tr></thead>
                 <tbody>
                   {t.entries.map((e, i) => (
@@ -460,7 +460,7 @@ function LedgerFeed() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
               {t.transaction.createdAt && <p className="tg-muted ops__fineprint">{dateTime(t.transaction.createdAt)}</p>}
             </details>
           )
