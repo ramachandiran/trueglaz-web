@@ -274,6 +274,8 @@ export interface AuthResult {
     roles: string[]
     sellerActivatedAt: string | null
   } | null
+  /** This sign-in cancelled a scheduled account deletion (TG-125). */
+  deletionCancelled?: boolean
   newUser: boolean
   contact: string | null
 }
@@ -910,6 +912,20 @@ export interface Address {
 }
 
 /** A one-time code was sent somewhere. `devCode` only exists on a dev server. */
+/** TG-125: something that has to finish before an account can be deleted. */
+export interface DeletionBlocker { code: string; count: number; message: string }
+export interface AccountDeletionStatus {
+  /** none | scheduled | deleted */
+  state: 'none' | 'scheduled' | 'deleted'
+  requestedAt: string | null
+  dueAt: string | null
+  graceDays: number
+  blockers: DeletionBlocker[]
+}
+export interface StaffAccountDeletion {
+  id: string; displayName: string; requestedAt: string | null; dueAt: string | null; deletedAt: string | null; state: 'scheduled' | 'deleted'
+}
+
 export interface CodeSent {
   sent: boolean
   contact: string

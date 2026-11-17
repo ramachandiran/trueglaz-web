@@ -112,7 +112,8 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
               )
             ) : undefined} />
           <Row t={t} icon="contrast-outline" title="Appearance" value={mode.slice(0, 1).toUpperCase() + mode.slice(1)} onPress={() => setSheet('appearance')} />
-          <Row t={t} icon="help-buoy-outline" title="Help and legal" onPress={() => setSheet('help')} last />
+          <Row t={t} icon="help-buoy-outline" title="Help and legal" onPress={() => setSheet('help')} />
+          <Row t={t} icon="shield-outline" title="Your data and account" value="Download, delete" onPress={() => navigation.navigate('DeleteAccount')} last />
         </View>
 
         <Pressable onPress={async () => { await disablePush(); await signOut() }} accessibilityRole="button" hitSlop={8}
