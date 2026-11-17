@@ -160,29 +160,3 @@
   .st__bands .st__input { width: 100px; }
   .st__bands .st__input--pct { width: 64px; }
 }
-
-/* Team (TG-85, TG-133) */
-.team { display: grid; gap: 24px; }
-.team .st__lede { margin-bottom: 0; }
-.team__roles-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-.team__role-card {
-  display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--tg-border); border-radius: 12px; cursor: pointer;
-  background: var(--tg-bg-raised); transition: border-color 150ms, box-shadow 150ms;
-}
-.team__role-card input { position: absolute; opacity: 0; pointer-events: none; }
-.team__role-card b { font-size: 14.5px; }
-.team__role-card span { font-size: 13px; color: var(--tg-text-muted); line-height: 1.4; }
-.team__role-card:hover { border-color: var(--c-navy-tint, var(--tg-border-strong)); }
-.team__role-card--on { border-color: var(--tg-brand); box-shadow: inset 0 0 0 1px var(--tg-brand); background: var(--c-navy-soft, var(--tg-bg-hover)); }
-.team__role-card:has(input:focus-visible) { outline: 2px solid var(--tg-accent); outline-offset: 2px; }
-.team__form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin: 16px 0 8px; }
-.team__field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--tg-text); }
-.team__field--email { flex: 1 1 260px; }
-.team__ok { color: var(--tg-good); font-size: 13.5px; margin: 10px 0 0; }
-.team__sent { display: block; font-size: 12px; color: var(--tg-text-muted); margin-top: 4px; }
-.team__acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
-.team__acts .tg-button { padding: 5px 12px; font-size: 13px; }
-.team__roles { display: flex; gap: 6px; flex-wrap: wrap; }
-.team__role { display: inline-flex; align-items: center; gap: 2px; padding-right: 3px; }
-.team__x { border: 0; background: none; cursor: pointer; color: inherit; opacity: .6; font-size: 15px; line-height: 1; padding: 0 5px; border-radius: 50%; }
-.team__x:hover { opacity: 1; background: var(--tg-bad-soft); color: var(--tg-bad); }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, ApiError, dateOnly, isAdmin, useApi, useSession, type StaffUserRow } from '@trueglaz/core'
 import { PayoutReviewStrip } from '../components/PayoutCheckPanel'
 import { QueueScreen } from '../components/QueueScreen'
+import { PeopleTabs } from '../components/PeopleTabs'
 import { useQueryState } from '../components/useQueryState'
 import './StaffUsersPage.css'
 
@@ -98,8 +99,8 @@ export function StaffUsersPage() {
       page={validPage}
       pages={pages}
       onPage={setPage}
-      summary={<><PayoutReviewStrip /><DeletionStrip /></>}
-      actions={isAdmin(session) ? <Link to="/admin/settings/team" className="tg-button tg-button--primary">+ Invite staff</Link> : undefined}
+      summary={<><PeopleTabs /><PayoutReviewStrip /><DeletionStrip /></>}
+      actions={isAdmin(session) ? <Link to="/admin/people/team" className="tg-button tg-button--primary">+ Invite staff</Link> : undefined}
     >
       <table className="q__table">
         <thead>

@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { api, ApiError, dateOnly, relative, useApi, useSession, type TeamInvite } from '@trueglaz/core'
-import { ErrorNote, Loading } from '../../components/ui'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { ErrorNote, Loading } from '../components/ui'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { useConsoleTitle } from '../components/consoleTitle'
+import { PeopleTabs } from '../components/PeopleTabs'
+import './TeamPage.css'
 
 const ROLES = [
   { code: 'staff', label: 'Staff', blurb: 'Operations, fulfilment, returns, people and the insurance desk' },
@@ -12,7 +15,8 @@ const label = (r: string) => ROLES.find((x) => x.code === r)?.label ?? r
 const ROLE_PILL: Record<string, string> = { admin: 'c-pill--cta', staff: 'c-pill--navy', technician: 'c-pill--good' }
 
 /**
- * Who works here (TG-85, TG-133).
+ * Who works here (TG-85, TG-133), under People with everyone else on the
+ * platform rather than in Settings: a colleague is a person, not a setting.
  *
  * An admin invites staff, technicians and other admins by email. Somebody who
  * already has an account gets the role at once and a notice that they have it.
@@ -20,7 +24,8 @@ const ROLE_PILL: Record<string, string> = { admin: 'c-pill--cta', staff: 'c-pill
  * first sign-in with that address turns it into the role. Invites can be sent
  * again, copied to share another way, or cancelled. Every change is audited.
  */
-export function TeamSettingsPage() {
+export function TeamPage() {
+  useConsoleTitle('People', 'Who can use this console, and what they can do')
   const { session } = useSession()
   const team = useApi(() => api.team(), [])
   const [email, setEmail] = useState('')
@@ -60,11 +65,7 @@ export function TeamSettingsPage() {
 
   return (
     <div className="team">
-      <h2 className="st__h">Team</h2>
-      <p className="st__lede">
-        Who can use this console and what they can do. Invite people by the email they will sign in with. Every change is
-        recorded in the audit log.
-      </p>
+      <PeopleTabs />
 
       <section className="c-card team__invite" aria-labelledby="team-invite">
         <div className="c-card__head"><h2 id="team-invite">Invite someone</h2></div>
@@ -87,12 +88,12 @@ export function TeamSettingsPage() {
             {busy === 'add' ? 'Sending…' : `Send invite as ${label(role)}`}
           </button>
         </form>
-        <p className="st__muted">
+        <p className="team__note">
           They get an email with a sign-in link that works for 7 days. Already have an account with that email? They get the role at
           once and a notice.
         </p>
         {notice && <p className="team__ok" role="status">{notice}</p>}
-        {error && <p className="st__error" role="alert">{error}</p>}
+        {error && <p className="team__error" role="alert">{error}</p>}
       </section>
 
       {t.invites.length > 0 && (
