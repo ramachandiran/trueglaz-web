@@ -148,6 +148,8 @@ export function SignInPage() {
       roles: res.user.roles,
       sellerActivatedAt: res.user.sellerActivatedAt,
     })
+    // Signing in during the 30 days cancelled a deletion (TG-125): show them where it says so.
+    if (res.deletionCancelled) { nav('/profile?deletion=cancelled#your-data', { replace: true }); return false }
     nav(res.user.sellerActivatedAt ? '/' : from, { replace: true })
     return false
   }

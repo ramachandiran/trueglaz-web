@@ -4,7 +4,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail, ManagedListing, NewModel,
-  Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutQueueRow, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
+  AccountDeletionStatus, StaffAccountDeletion, Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutQueueRow, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, InboundClock, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -626,6 +626,16 @@ export const api = {
 
   /** Sends a code to the contact already on file, before money is redirected. */
   requestPayoutCode: () => post<CodeSent>('/profile/payout-account/request-code'),
+  // -- leaving (TG-125) --
+  accountDeletion: () => get<AccountDeletionStatus>('/profile/account-deletion'),
+  requestDeletionCode: () => post<CodeSent>('/profile/account-deletion/request-code'),
+  confirmDeletion: (code: string) => post<AccountDeletionStatus>('/profile/account-deletion/confirm', { code }),
+  cancelDeletion: () => del<AccountDeletionStatus>('/profile/account-deletion'),
+  /** Everything held about the account, as the JSON the server would attach. */
+  myData: () => get<Record<string, unknown>>('/profile/export'),
+  /** The same, as a file (website): bytes plus the server's file name. */
+  myDataFile: () => download('/profile/export'),
+  staffAccountDeletions: () => get<StaffAccountDeletion[]>('/staff/account-deletions'),
   savePayoutAccount: (body: {
     code: string
     method: string

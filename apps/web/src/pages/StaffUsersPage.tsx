@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, ApiError, dateOnly, useApi, type StaffUserRow } from '@trueglaz/core'
 import { PayoutReviewStrip } from '../components/PayoutCheckPanel'
 import { QueueScreen } from '../components/QueueScreen'
+import { useQueryState } from '../components/useQueryState'
 import './StaffUsersPage.css'
 
 const GROUPS: Array<{ key: string; label: string; states: string[] | null }> = [
@@ -31,8 +32,8 @@ const GROUPS: Array<{ key: string; label: string; states: string[] | null }> = [
  * that is not enough, and it is where a note gets written.
  */
 export function StaffUsersPage() {
-  const [view, setView] = useState('pending_review')
-  const [search, setSearch] = useState('')
+  const [view, setView] = useQueryState('view', 'pending_review')
+  const [search, setSearch] = useQueryState('q')
   const [page, setPage] = useState(1)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -96,7 +97,7 @@ export function StaffUsersPage() {
       page={validPage}
       pages={pages}
       onPage={setPage}
-      summary={<PayoutReviewStrip />}
+      summary={<><PayoutReviewStrip /><DeletionStrip /></>}
     >
       <table className="q__table">
         <thead>
@@ -135,6 +136,42 @@ export function StaffUsersPage() {
         </tbody>
       </table>
     </QueueScreen>
+  )
+}
+
+/**
+ * Account deletions (TG-125): who asked to leave and when they go, so support
+ * can answer "did my request go through?" without a database query. Ids and
+ * dates only: an erased account has no name left to show.
+ */
+function DeletionStrip() {
+  const rows = useApi(() => api.staffAccountDeletions(), [])
+  const [open, setOpen] = useState(false)
+  const list = rows.data ?? []
+  if (list.length === 0) return null
+  const scheduled = list.filter((r) => r.state === 'scheduled')
+  const deleted = list.length - scheduled.length
+  return (
+    <div className="ppl__deletions">
+      <button className="tg-button tg-button--subtle" onClick={() => setOpen(!open)} aria-expanded={open}>
+        Account deletions: {scheduled.length} scheduled · {deleted} erased {open ? '▴' : '▾'}
+      </button>
+      {open && (
+        <table className="q__table">
+          <thead><tr><th>Account</th><th>State</th><th>Asked</th><th>Erased / due</th></tr></thead>
+          <tbody>
+            {list.map((r) => (
+              <tr key={r.id}>
+                <td>{r.state === 'scheduled' ? <Link to={`/admin/people/${r.id}`}>{r.displayName}</Link> : <span className="tg-muted">{r.id.slice(-12)}</span>}</td>
+                <td><span className={`tg-badge ${r.state === 'scheduled' ? 'tg-badge--warn' : ''}`}>{r.state}</span></td>
+                <td className="tg-muted">{r.requestedAt ? dateOnly(r.requestedAt) : '—'}</td>
+                <td>{r.deletedAt ? dateOnly(r.deletedAt) : r.dueAt ? dateOnly(r.dueAt) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   )
 }
 

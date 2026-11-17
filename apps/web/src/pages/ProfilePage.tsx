@@ -7,6 +7,7 @@ import {
 import { KycPanel } from '../components/KycPanel'
 import { NotificationsPanel } from '../components/NotificationsPanel'
 import { NotificationChoices } from '../components/NotificationChoices'
+import { AccountData } from '../components/AccountData'
 import { ErrorNote, Loading } from '../components/ui'
 import './ProfilePage.css'
 
@@ -66,6 +67,7 @@ export function ProfilePage() {
         <a href="#bank">Bank details</a>
         <a href="#identity">Identity</a>
         <a href="#security">Sign-in &amp; security</a>
+        <a href="#your-data">Your data</a>
       </nav>
 
       {/* First, above the details: it is the only section that can be waiting on
@@ -87,6 +89,7 @@ export function ProfilePage() {
       </section>
 
       <Security me={me} onChanged={profile.reload} />
+      <AccountData />
     </div>
   )
 }

@@ -40,6 +40,7 @@ import { SellPage } from './pages/SellPage'
 import { SellerHomePage } from './pages/SellerHomePage'
 import { VaultPage } from './pages/VaultPage'
 import { WantedPage } from './pages/WantedPage'
+import { DeleteAccountPage } from './pages/DeleteAccountPage'
 import { SignInPage } from './pages/SignInPage'
 import { RouteTitle } from './state/usePageTitle'
 
@@ -83,6 +84,8 @@ export function App() {
           <Route path="/listings/:id" element={<ListingDetailPage />} />
           <Route path="/wanted" element={<WantedPage />} />
           <Route path="/sign-in" element={<SignInPage />} />
+          {/* Public on purpose: Google Play links here for people without the app. */}
+          <Route path="/delete-account" element={<DeleteAccountPage />} />
           {/* DigiLocker's return address; not guarded, see the page. */}
           <Route path="/kyc/digilocker/return" element={<DigilockerReturnPage />} />
 

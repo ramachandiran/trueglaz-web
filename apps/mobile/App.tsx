@@ -1,11 +1,11 @@
 import 'react-native-get-random-values' // crypto.getRandomValues for the vault's client-side encryption; must load first
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
-import { AppState, View } from 'react-native'
+import { AppState, KeyboardAvoidingView, View } from 'react-native'
 import { NavigationContainer, DefaultTheme, DarkTheme, createNavigationContainerRef, useNavigation } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   api, setApiOrigin, setStorage, SessionProvider, useApi, useSession, type Storage,
@@ -35,6 +35,7 @@ import { NotificationsScreen } from './src/screens/NotificationsScreen'
 import { AddressesScreen } from './src/screens/AddressesScreen'
 import { WishlistScreen } from './src/screens/WishlistScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
+import { DeleteAccountScreen } from './src/screens/DeleteAccountScreen'
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen'
 import { onPushReceived, setBadge, usePushWhileSignedIn } from './src/push'
 import { InAppBanner, noteInbox, resetInbox } from './src/components/InAppBanner'
@@ -62,6 +63,7 @@ function tabIcon(outline: IoniconName, filled: IoniconName) {
 
 function MainTabs() {
   const t = useTheme()
+  const tabInsets = useSafeAreaInsets()
   const navigation = useNavigation()
   // The unread badge on the Profile tab. Refetch whenever the tabs regain
   // focus — i.e. coming back from the Notifications screen after reading
@@ -92,11 +94,15 @@ function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: t.colors.accent,
         tabBarInactiveTintColor: t.colors.textMuted,
-        tabBarLabelStyle: { fontFamily: mobileFontFamily.medium, fontSize: 11 },
+        // A fixed shape: room for icon and label above the phone's own bar,
+        // and labels that do not grow with the font setting (TG-124).
+        tabBarLabelStyle: { fontFamily: mobileFontFamily.medium, fontSize: 11, lineHeight: 14, marginBottom: 2 },
+        tabBarAllowFontScaling: false,
         // Rounded on top and lifted on a soft shadow instead of a hard top border.
         tabBarStyle: {
           backgroundColor: t.colors.bgRaised, borderTopWidth: 0,
           borderTopLeftRadius: 16, borderTopRightRadius: 16,
+          height: 62 + tabInsets.bottom, paddingTop: 6, paddingBottom: Math.max(tabInsets.bottom, 6),
           shadowColor: '#000', shadowOpacity: t.name === 'dark' ? 0.4 : 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: -4 }, elevation: 12,
         },
       }}
@@ -113,23 +119,34 @@ function MainTabs() {
 
 function AppStack() {
   const t = useTheme()
+  // Edge to edge on Android 15 (TG-124): every stacked screen ends above the
+  // system navigation bar, whatever kind the phone has. The few screens that
+  // place their own bottom bar opt out and pad themselves.
+  const insets = useSafeAreaInsets()
+  const ownBottom = { contentStyle: { backgroundColor: t.colors.bg } }
   return (
     <Root.Navigator
+      // Edge to edge, Android no longer shrinks the screen for the keyboard;
+      // every stacked screen moves its content up instead (TG-124).
+      screenLayout={({ children, options }) => (
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}
+          keyboardVerticalOffset={options.headerShown === false ? 0 : insets.top + 56}>{children}</KeyboardAvoidingView>
+      )}
       screenOptions={{
         headerStyle: { backgroundColor: t.colors.bgRaised },
         headerTintColor: t.colors.text,
         headerTitleStyle: { fontFamily: mobileFontFamily.bold },
-        contentStyle: { backgroundColor: t.colors.bg },
+        contentStyle: { backgroundColor: t.colors.bg, paddingBottom: insets.bottom },
       }}
     >
-      <Root.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
-      <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false }} />
+      <Root.Screen name="Tabs" component={MainTabs} options={{ headerShown: false, ...ownBottom }} />
+      <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false, ...ownBottom }} />
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
       {/* Off the tab bar (TG-111): reached from the home order card and Profile. */}
       <Root.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />
       <Root.Screen name="Pay" component={PayScreen} options={{ title: 'Payment' }} />
-      <Root.Screen name="OrderPlaced" component={OrderPlacedScreen} options={{ headerShown: false, gestureEnabled: false }} />
+      <Root.Screen name="OrderPlaced" component={OrderPlacedScreen} options={{ headerShown: false, gestureEnabled: false, ...ownBottom }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ title: 'My item' }} />
       <Root.Screen name="NewItem" component={NewItemScreen} options={{ title: 'Add an item' }} />
       <Root.Screen name="StartSelling" component={StartSellingScreen} options={{ title: 'Start selling' }} />
@@ -137,7 +154,8 @@ function AppStack() {
       <Root.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Addresses' }} />
       <Root.Screen name="Wishlist" component={WishlistScreen} options={{ headerShown: false }} />
       <Root.Screen name="PayoutAccount" component={PayoutAccountScreen} options={{ title: 'Payout account' }} />
-      <Root.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notification settings' }} />
+      <Root.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ title: 'Your data and account' }} />
+      <Root.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notification settings', ...ownBottom }} />
     </Root.Navigator>
   )
 }

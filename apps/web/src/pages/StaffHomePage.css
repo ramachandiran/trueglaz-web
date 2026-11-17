@@ -1,0 +1,31 @@
+/* The Control room (TG-126). The shared card, tile and table rules are in
+   components/console.css; this is what only the dashboard has. */
+.home__chart svg { display: block; margin-top: 4px; }
+.home__grid { stroke: var(--c-line-soft); }
+.home__axis { font-size: 11px; fill: var(--tg-text-muted); font-family: var(--tg-font-body); }
+.home__bar { cursor: pointer; outline: none; }
+.home__bar-old { fill: var(--c-navy-soft); }
+.home__bar-recent { fill: var(--tg-brand); }
+.home__bar-now { fill: var(--tg-cta); }
+.home__bar-zero { fill: var(--c-navy-tint); }
+.home__bar:hover rect:not([fill]), .home__bar:focus-visible rect:not([fill]) { filter: brightness(0.92); }
+.home__bar:hover .home__bar-old, .home__bar:focus-visible .home__bar-old { fill: var(--c-navy-tint); }
+.home__bar:focus-visible rect[fill='transparent'] { stroke: var(--tg-accent); stroke-width: 1.5; }
+.home__strong { color: var(--tg-text); font-weight: 600; }
+
+.home__ring { display: block; width: 190px; max-width: 100%; margin: 4px auto 0; }
+.home__slice { cursor: pointer; outline: none; transition: opacity 150ms; }
+.home__ring:hover .home__slice { opacity: 0.55; }
+.home__ring .home__slice:hover, .home__slice:focus-visible { opacity: 1; }
+.home__ring-lab { font: 600 15px var(--tg-font-heading); fill: var(--tg-text); }
+.home__ring-num { font: 600 20px var(--tg-font-heading); fill: var(--tg-text); }
+
+.home__moved-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.home__q .home__qtile { width: 40px; height: 40px; }
+.home__q .c-pill { flex: none; }
+.home__order { font-weight: 600; color: var(--tg-text); text-decoration: none; }
+.home__order:hover { color: var(--tg-accent); }
+.c-tile--navy { background: var(--c-navy-soft); color: var(--tg-brand); }
+
+/* Six stages read better as one column than as wrapped pairs. */
+.home .c-legend { grid-template-columns: 1fr; gap: 2px; }

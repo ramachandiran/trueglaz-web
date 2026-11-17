@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Animated, View } from 'react-native'
+import { Animated, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, useApi } from '@trueglaz/core'
@@ -63,8 +63,10 @@ export function OrderPlacedScreen({ route, navigation }: { route: any; navigatio
   )
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top, paddingBottom: insets.bottom + t.space.x4, paddingHorizontal: t.space.x4 }}>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+    // Scrolls when a small phone or a large font cannot fit it all (TG-124).
+    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} bounces={false}
+      contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom + t.space.x4, paddingHorizontal: t.space.x4 }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: t.space.x5 }}>
         <View style={{ width: 190, height: 160 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Animated.View style={[{ position: 'absolute', left: 26, top: 26 }, drop(bag, '-12deg', -70)]}>
             <Ionicons name="bag-handle" size={96} color={t.colors.brandAccent} />
@@ -92,6 +94,6 @@ export function OrderPlacedScreen({ route, navigation }: { route: any; navigatio
         <Pill block label="Track this order" onPress={() => navigation.replace('OrderDetail', { id: orderId, justPaid: true })} />
         <Pill block variant="ghost" label="Continue shopping" onPress={() => navigation.navigate('Tabs', { screen: 'Shop' })} />
       </FadeIn>
-    </View>
+    </ScrollView>
   )
 }

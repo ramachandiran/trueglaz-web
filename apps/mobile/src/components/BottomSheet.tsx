@@ -1,8 +1,9 @@
 import { useRef } from 'react'
 import {
-  Animated, Keyboard, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View,
+  Animated, Keyboard, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, StyleSheet, View,
   type DimensionValue,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext'
 
 /**
@@ -34,6 +35,9 @@ export function BottomSheet({
   padded?: boolean
 }) {
   const t = useTheme()
+  // Android 15 draws the app behind the navigation bar (edge to edge): keep the
+  // sheet's last button above the gesture bar or the 3-button bar (TG-124).
+  const insets = useSafeAreaInsets()
   const drag = useRef(new Animated.Value(0)).current
   const scrollTop = useRef(0)
   const closeRef = useRef(onClose)
@@ -58,7 +62,7 @@ export function BottomSheet({
   const pad = padded ? t.space.x4 : 0
   return (
     <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose} statusBarTranslucent>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,18,26,0.5)' }]} onPress={onClose}
           accessibilityRole="button" accessibilityLabel="Close" />
         <Animated.View
@@ -67,7 +71,7 @@ export function BottomSheet({
           onStartShouldSetResponder={() => { Keyboard.dismiss(); return false }}
           style={{
             backgroundColor: background ?? t.colors.bgRaised, borderTopLeftRadius: t.radius.lg, borderTopRightRadius: t.radius.lg,
-            maxHeight, paddingHorizontal: pad, paddingBottom: pad, transform: [{ translateY: drag }],
+            maxHeight, paddingHorizontal: pad, paddingBottom: pad + insets.bottom, transform: [{ translateY: drag }],
           }}>
           <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: padded ? 10 : 6 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: t.colors.border }} />

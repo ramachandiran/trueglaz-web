@@ -1,0 +1,9 @@
+.account-data__danger-title { color: var(--tg-bad); }
+.account-data__danger { border-color: var(--tg-bad); color: var(--tg-bad); background: transparent; }
+.account-data__danger:hover:not(:disabled) { background: color-mix(in srgb, var(--tg-bad) 10%, transparent); }
+.account-data__lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--tg-space-4); margin: var(--tg-space-3) 0; }
+.account-data__lists ul { margin: var(--tg-space-1) 0 0; padding-left: 1.2em; font-size: var(--tg-text-sm); color: var(--tg-text-muted); }
+.account-data__lists li { margin: 2px 0; }
+.account-data__list-title { margin: 0; font-weight: 600; font-size: var(--tg-text-sm); }
+.account-data__blockers { background: var(--tg-warn-soft); color: var(--tg-warn); border-radius: var(--tg-radius-md); padding: var(--tg-space-3); margin: var(--tg-space-3) 0; font-size: var(--tg-text-sm); }
+.account-data__blockers ul { margin: var(--tg-space-1) 0; padding-left: 1.2em; }

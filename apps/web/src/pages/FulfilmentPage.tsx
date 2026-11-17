@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError, CANCEL_REASONS, dateOnly, dateTime, isAdmin, money, useApi, useSession, type StaffCancelRow, type StaffOrderLine } from '@trueglaz/core'
 import { QueueScreen } from '../components/QueueScreen'
+import { useQueryState } from '../components/useQueryState'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { LineHistory } from '../components/LineHistory'
@@ -39,14 +40,29 @@ type Dialog =
  * closing a sale by hand once it has ended is an admin's call (TG-89), because
  * closing releases the seller's money. Each row opens its full history.
  */
+/**
+ * Whether a line belongs in a tab. "To dispatch" is a paid order's line only:
+ * a line of an order still waiting for payment is not packer work, and the
+ * Control room counts it the same way (TG-126).
+ */
+function inTabRule(t: Tab, l: StaffOrderLine): boolean {
+  const states = TABS.find((x) => x.key === t)!.states
+  if (!states.includes(l.state)) return false
+  return t !== 'open' || !l.orderState || l.orderState === 'paid'
+}
+
 export function FulfilmentPage() {
   const { session } = useSession()
   const admin = isAdmin(session)
   const all = useApi(() => api.orderLines(), [])
   const cancels = useApi(() => api.cancellations('requested'), [])
-  const [tab, setTab] = useState<Tab>('open')
+  // The tab and search live in the address so the Control room can open a
+  // queue directly (TG-126).
+  const [tabParam, setTabParam] = useQueryState('tab', 'open')
+  const tab = (TABS.some((t) => t.key === tabParam) ? tabParam : 'open') as Tab
+  const setTab = (t: Tab) => setTabParam(t)
   const [notice, setNotice] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useQueryState('q')
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState<string | null>(null)
   const [dialog, setDialog] = useState<Dialog | null>(null)
@@ -55,14 +71,13 @@ export function FulfilmentPage() {
 
   const rows = all.data ?? []
   const count = (t: Tab) => t === 'cancel' ? (cancels.data?.length ?? 0)
-    : rows.filter((l) => TABS.find((x) => x.key === t)!.states.includes(l.state)).length
+    : rows.filter((l) => inTabRule(t, l)).length
   const cancelRows = (cancels.data ?? []).filter((r) => {
     const t = search.trim().toLowerCase()
     return !t || [r.orderNumber, r.itemSku, r.itemLabel, r.buyerName, r.request.note].some((v) => v?.toLowerCase().includes(t))
   })
   const inTab = useMemo(() => {
-    const states = TABS.find((x) => x.key === tab)!.states
-    return rows.filter((l) => states.includes(l.state)).sort((a, b) => stamp(b) - stamp(a))
+    return rows.filter((l) => inTabRule(tab, l)).sort((a, b) => stamp(b) - stamp(a))
   }, [rows, tab])
   const filtered = inTab.filter((l) => {
     const t = search.trim().toLowerCase()

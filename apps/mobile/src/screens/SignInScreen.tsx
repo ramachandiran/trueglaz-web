@@ -9,6 +9,7 @@ import { CodeTimer } from '../components/CodeTimer'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { Card, Muted } from '../components/ui'
 import { useTheme } from '../theme/ThemeContext'
+import { takeFarewell } from '../farewell'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const looksLikePhone = (s: string) => /^[+()\d][\d\s()+-]{6,}$/.test(s.trim())
@@ -46,6 +47,8 @@ export function SignInScreen() {
   const [status, setStatus] = useState<'error' | 'success' | undefined>()
   const [shakeKey, setShakeKey] = useState(0)
   const [welcome, setWelcome] = useState<string | null>(null)
+  // Left by the delete-account screen as it signed out (TG-125).
+  const [farewell] = useState(() => takeFarewell())
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -97,9 +100,9 @@ export function SignInScreen() {
   }
 
   /** Right code: green boxes, the tick, then in. Short — it is a confirmation, not a show. */
-  const succeed = (session: Session, title: string) => {
+  const succeed = (session: Session, title: string, hold = 0) => {
     setStatus('success'); setError(null); setWelcome(title)
-    setTimeout(() => { signIn(session).catch((e) => { setWelcome(null); setStatus(undefined); setError((e as Error).message) }) }, reduced ? 350 : 900)
+    setTimeout(() => { signIn(session).catch((e) => { setWelcome(null); setStatus(undefined); setError((e as Error).message) }) }, (reduced ? 350 : 900) + hold)
   }
 
   const verify = async (typed?: string) => {
@@ -115,7 +118,10 @@ export function SignInScreen() {
         return
       }
       const first = res.user?.displayName?.split(' ')[0]
-      succeed(toSession(res), first ? `Welcome back, ${first}` : 'Welcome back')
+      // Signing in during the 30 days cancels a deletion (TG-125): say so, and
+      // leave it on screen long enough to read.
+      if (res.deletionCancelled) succeed(toSession(res), `Welcome back${first ? `, ${first}` : ''}. Your account is no longer being deleted.`, 1800)
+      else succeed(toSession(res), first ? `Welcome back, ${first}` : 'Welcome back')
     } catch (e) { fail((e as Error).message) } finally { setBusy(false) }
   }
 
@@ -140,7 +146,7 @@ export function SignInScreen() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: t.colors.brand }}>
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: t.colors.brand }}>
       <ScrollView keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: t.space.x5, gap: t.space.x6 }}>
         <Entrance reduced={reduced}>
@@ -149,6 +155,12 @@ export function SignInScreen() {
         </Entrance>
 
         <View style={{ width: '100%', maxWidth: 440, alignSelf: 'center' }}>
+          {farewell && step === 'contact' && (
+            <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', gap: 10, backgroundColor: t.colors.bgRaised, borderRadius: t.radius.md, padding: t.space.x3, marginBottom: t.space.x3 }}>
+              <Ionicons name="time-outline" size={18} color={t.colors.accent} style={{ marginTop: 1 }} />
+              <Txt style={{ flex: 1, color: t.colors.text, fontSize: t.size.sm }}>{farewell}</Txt>
+            </View>
+          )}
           <Card style={{ gap: t.space.x4, paddingVertical: t.space.x5 }}>
             {step === 'contact' && (
               <>
@@ -284,7 +296,7 @@ function SuccessOverlay({ title, reduced }: { title: string; reduced: boolean })
   return (
     <Animated.View accessibilityLiveRegion="polite" accessibilityLabel={`Signed in. ${title}`}
       style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.colors.brand, opacity: fade,
-        alignItems: 'center', justifyContent: 'center', gap: t.space.x5 }}>
+        alignItems: 'center', justifyContent: 'center', gap: t.space.x5, paddingHorizontal: t.space.x6 }}>
       <View style={{ width: 96, height: 96, alignItems: 'center', justifyContent: 'center' }}>
         {!reduced && (
           <Animated.View style={{ position: 'absolute', width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: t.colors.good,

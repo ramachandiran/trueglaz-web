@@ -4,9 +4,11 @@ import {
   type InsuranceDeskDetail, type InsuranceStatus,
 } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading } from '../components/ui'
+import { useQueryState } from '../components/useQueryState'
 import { openInsuranceDocument } from '../components/VaultInsurance'
 import './OpsPage.css'
 import './InsuranceDeskPage.css'
+import { useConsoleTitle } from '../components/consoleTitle'
 
 const TABS: { key: InsuranceStatus; label: string }[] = [
   { key: 'requested', label: 'New' },
@@ -38,7 +40,9 @@ const OUTCOMES = [
  * promised a call within 3 working days.
  */
 export function InsuranceDeskPage() {
-  const [tab, setTab] = useState<InsuranceStatus>('requested')
+  const [tabParam, setTabParam] = useQueryState('tab', 'requested')
+  const tab = (TABS.some((t) => t.key === tabParam) ? tabParam : 'requested') as InsuranceStatus
+  const setTab = (t: InsuranceStatus) => setTabParam(t)
   const counts = useApi(() => api.insuranceCounts(), [])
   const queue = useApi(() => api.insuranceQueue(tab), [tab])
   const [selected, setSelected] = useState<string | null>(null)
@@ -56,14 +60,11 @@ export function InsuranceDeskPage() {
     else queue.reload()
   }
   const overdue = rows.filter((r) => r.overdue).length
+  useConsoleTitle('Insurance desk', 'Quote requests from Gear Vault: pass each to the agent; the customer gets a call within 3 working days. TrueGlaz never prices cover or takes payment.')
 
   return (
     <div className="ops desk">
-      <h1 className="ops__title">Insurance desk</h1>
-      <p className="tg-muted ops__fineprint">
-        Quote requests from Gear Vault. Pass each one to the agent and get the customer a call within 3 working days.
-        TrueGlaz never prices cover or takes payment.
-      </p>
+
 
       <div className="desk__tabs" role="tablist">
         {TABS.map((t) => (

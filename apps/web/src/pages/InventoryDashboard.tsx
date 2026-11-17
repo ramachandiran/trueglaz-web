@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api, money, useApi, useSession, isStaff,
@@ -7,6 +7,9 @@ import {
 import { planMove, type Planned } from '../components/NextActions'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { QueueScreen } from '../components/QueueScreen'
+import { pageOf, useClearParams, useQueryState } from '../components/useQueryState'
+import { useStaffHome } from '../components/consoleTitle'
+import { useSearchParams } from 'react-router-dom'
 import { StateMenu } from '../components/StateMenu'
 import './InventoryDashboard.css'
 
@@ -56,16 +59,33 @@ const BENCH_STATES = ['RECEIVED', 'IN_INSPECTION', 'RE_INSPECTION', 'RETURN_RECE
 
 export function InventoryDashboard() {
   const { session } = useSession()
-  const [view, setView] = useState('all')
-  const [search, setSearch] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
+  // All of it in the address (TG-126): a Control room widget opens this list
+  // with ?state=, ?ids= or ?sold= and a label, and the tab, search and page
+  // survive a reload or a pasted link.
+  const [view, setView] = useQueryState('view', 'all')
+  const [search, setSearch] = useQueryState('q')
+  const [pageParam, setPageParam] = useQueryState('page', '1')
+  const currentPage = pageOf(pageParam)
+  const setCurrentPage = (n: number) => setPageParam(String(n))
+  const [stateParam] = useQueryState('state')
+  const [idsParam] = useQueryState('ids')
+  const [soldParam] = useQueryState('sold')
+  const [labelParam] = useQueryState('label')
+  const clear = useClearParams()
+  const [, setParams] = useSearchParams()
+  // The Control room's stages, so these tiles and its ring count the same states.
+  const home = useStaffHome(staffOrAdmin(session))
+  const tiles = (home.data?.pipeline ?? []).filter((s) => ['coming_in', 'workshop', 'on_sale', 'on_the_way'].includes(s.key))
+  const openStage = (states: string[], label: string) =>
+    setParams(stateParam === states.join(',') ? {} : { state: states.join(','), label }, { replace: true })
 
   const itemsPerPage = 10
   const staff = isStaff(session)
 
   // No state parameter means every state, which is what this screen is for.
   const all = useApi(() => api.itemQueue(), [])
-  const rows = all.data ?? []
+  const filter = useMemo(() => widgetFilter(stateParam, idsParam, soldParam), [stateParam, idsParam, soldParam])
+  const rows = useMemo(() => (all.data ?? []).filter(filter ?? (() => true)), [all.data, filter])
 
   // The whole rule table, once. Asking each row what it may do next would be
   // sixty calls to render ten lines, and the rules are the same seed data for
@@ -138,8 +158,8 @@ export function InventoryDashboard() {
   const startIndex = (validPage - 1) * itemsPerPage
   const paginatedItems = filtered.slice(startIndex, startIndex + itemsPerPage)
 
-  const handleSearchChange = (value: string) => { setSearch(value); setCurrentPage(1) }
-  const handleViewChange = (next: string) => { setView(next); setCurrentPage(1) }
+  const handleSearchChange = (value: string) => { setSearch(value); clear('page') }
+  const handleViewChange = (next: string) => { setView(next); clear('page') }
 
   /** The moves this person could make on this item, in rule order. */
   function movesFor(item: ConsignmentItem): Planned[] {
@@ -149,8 +169,25 @@ export function InventoryDashboard() {
 
   return (
     <QueueScreen
-      title="Inventory Database"
+      title="Inventory"
       subtitle="Every unit the platform holds, whatever stage it is at"
+      summary={tiles.length > 0 && (
+        <section className="c-grid c-grid--4" aria-label="Units by stage">
+          {tiles.map((t) => {
+            const states = t.states ?? []
+            const n = (all.data ?? []).filter((i) => states.includes(i.currentState)).length
+            const on = stateParam === states.join(',')
+            return (
+              <button key={t.key} type="button" className={`c-card c-hit${on ? ' c-mini--on' : ''}`} aria-pressed={on}
+                onClick={() => openStage(states, t.label)}>
+                <div className="c-mini"><div><div className="c-mini__lab">{t.label}</div><div className="c-mini__num">{n}</div></div></div>
+              </button>
+            )
+          })}
+        </section>
+      )}
+      filter={filter ? { label: labelParam || describe(stateParam, soldParam), onClear: () => clear('state', 'ids', 'sold', 'label', 'page', 'view') } : null}
+      unit="units"
       tabs={shown.map((t) => ({ key: t.key, label: t.label, count: countFor(t.states) }))}
       active={stage.key}
       onTab={handleViewChange}
@@ -225,4 +262,43 @@ export function InventoryDashboard() {
 
     </QueueScreen>
   )
+}
+
+/**
+ * The filter a Control room widget opened this list with, as a test on one
+ * item - the same reading the widget's own count makes, so the number on the
+ * tile is the number of rows here.
+ *
+ *  - state: a comma list of exact states
+ *  - ids:   a comma list of item ids (for counts no state can express)
+ *  - sold:  "7d" for the last seven days, or "YYYY-MM" for a month in India time
+ */
+function widgetFilter(state: string, ids: string, sold: string): ((i: ConsignmentItem) => boolean) | null {
+  const tests: ((i: ConsignmentItem) => boolean)[] = []
+  if (state) { const set = new Set(state.split(',')); tests.push((i) => set.has(i.currentState)) }
+  if (ids) { const set = new Set(ids.split(',')); tests.push((i) => set.has(i.id)) }
+  if (sold === '7d') {
+    const since = Date.now() - 7 * 24 * 3600 * 1000
+    tests.push((i) => !!i.soldAt && Date.parse(i.soldAt) > since)
+  } else if (/^\d{4}-\d{2}$/.test(sold)) {
+    tests.push((i) => !!i.soldAt && istMonth(i.soldAt) === sold)
+  }
+  return tests.length ? (i) => tests.every((t) => t(i)) : null
+}
+
+/** "2026-11" for an instant, read in India time like the server's monthly figures. */
+export function istMonth(iso: string): string {
+  const d = new Date(Date.parse(iso) + 330 * 60 * 1000)
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+function describe(state: string, sold: string): string {
+  if (sold === '7d') return 'Sold in the last 7 days'
+  if (sold) return `Sold in ${new Date(`${sold}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}`
+  if (state) return state.split(',').map((s) => s.replace(/_/g, ' ').toLowerCase()).join(', ')
+  return 'Filtered'
+}
+
+function staffOrAdmin(session: ReturnType<typeof useSession>['session']): boolean {
+  return isStaff(session)
 }

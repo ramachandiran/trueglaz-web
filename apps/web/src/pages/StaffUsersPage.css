@@ -126,3 +126,4 @@
   font-size: var(--tg-text-sm);
 }
 .people__payouts ul { margin: var(--tg-space-2) 0 0; padding-left: 1.1rem; display: grid; gap: var(--tg-space-1); }
+.ppl__deletions { margin-top: var(--tg-space-3); }
