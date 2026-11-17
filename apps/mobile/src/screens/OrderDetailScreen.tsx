@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 import { BottomSheet } from '../components/BottomSheet'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as ImagePicker from 'expo-image-picker'
 import { api, dateTime, money, useApi, type OrderLine, type ReturnEvidence } from '@trueglaz/core'
@@ -10,8 +9,9 @@ import { LineCancel } from '../components/LineCancel'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
-import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, stateTone } from '../components/ui'
-import { ModelThumb, useModelImages } from '../components/ModelImage'
+import { Card, ErrorNote, Loading, Muted, stateTone } from '../components/ui'
+import { sizedUri, useModelImages } from '../components/ModelImage'
+import { DetailHeader, DetailRef, SummaryCard } from '../components/DetailParts'
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { FadeIn, Pop, statusKey, useStatusChange } from '../components/motion'
@@ -114,7 +114,6 @@ function orderSteps(orderState: string, line: OrderLine | undefined): TrackStep[
 
 export function OrderDetailScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
-  const insets = useSafeAreaInsets()
   const id: string = route.params.id
   const justPaid: boolean = !!route.params?.justPaid
   const awaitingPayment: boolean = !!route.params?.awaitingPayment
@@ -135,6 +134,10 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   const [actionError, setActionError] = useState<string | null>(null)
   const [video, setVideo] = useState<ReturnEvidence | null>(null)
   const [progress, setProgress] = useState<number | null>(null)
+  // A cancellation request does not move the line, so its two halves (status
+  // and button) are remounted to read it again.
+  const [ver, setVer] = useState(0)
+  const changed = () => { setVer((v) => v + 1); reload() }
 
   // TG-90: the unboxing video is what the return is judged on. Recorded now
   // or picked from the gallery; uploaded straight to storage with progress.
@@ -180,20 +183,20 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   const { order, lines } = data
   const unpaid = order.state === 'pending_payment'
 
+  const first = lines[0]
+  const delivered = lines.filter((l) => l.state === 'delivered')
+  const owned = lines.filter((l) => OWNED_STATES.includes(l.state))
+  // The things a buyer can do now that are not "cancel": accept or return what
+  // arrived, keep it in the vault. They sit under the status, not at the bottom.
+  const hasNextStep = delivered.length > 0 || owned.length > 0
+  const thingTitle = (l: OrderLine) => (data.lineTitles?.[l.id] ?? 'Your item').split('·')[0].trim()
+  const pic = (l: OrderLine) => { const m = pictures.byId(data.lineModels?.[l.id]); return m ? sizedUri(m, 200) : null }
+
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <View style={{ paddingTop: insets.top + t.space.x1, paddingHorizontal: t.space.x4, paddingBottom: t.space.x2, flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={8}
-          style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="chevron-back" size={21} color={t.colors.text} />
-        </Pressable>
-        <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Order</Txt>
-      </View>
-      <ScrollView contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x7 }}>
-        <View style={{ gap: t.space.x2 }}>
-          <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{order.orderNumber}</Txt>
-          <Muted size={t.size.xs}>Placed {dateTime(order.createdAt)}</Muted>
-        </View>
+      <DetailHeader title="Order" onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
+        <DetailRef code={order.orderNumber} when={`Placed ${dateTime(order.createdAt)}`} />
 
         <FadeIn>
         {justPaid ? (
@@ -206,26 +209,48 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
           </View>
         ) : (
           <StatusHero
-            tone={stateTone(lines[0]?.state ?? order.state)}
-            badge={LINE_STATUS[lines[0]?.state ?? ''] ?? (lines[0]?.state ?? order.state).replace(/_/g, ' ')}
+            tone={stateTone(first?.state ?? order.state)}
+            badge={LINE_STATUS[first?.state ?? ''] ?? (first?.state ?? order.state).replace(/_/g, ' ')}
             title="Where your order is"
-            body={ORDER_BLURB[lines[0]?.state ?? order.state]}
+            body={ORDER_BLURB[first?.state ?? order.state]}
           />
         )}
         </FadeIn>
 
+        {!unpaid && lines.map((l) => (
+          <LineCancel key={`cs-${l.id}-${ver}`} lineId={l.id} state={l.state} totalMinor={order.totalMinor} onChanged={changed} part="status" />
+        ))}
+
+        {hasNextStep && (
+          <Card style={{ gap: t.space.x3, borderColor: delivered.length ? t.colors.accent : t.colors.border }}>
+            {delivered.map((l) => (
+              <View key={l.id} style={{ gap: t.space.x2 }}>
+                <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>Happy with {lines.length > 1 ? thingTitle(l) : 'it'}?</Txt>
+                {l.acceptanceWindowEndsAt && (
+                  <Muted size={t.size.xs}>Accept by {dateTime(l.acceptanceWindowEndsAt)}, or it accepts automatically.</Muted>
+                )}
+                <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
+                  <Button label="Accept delivery" onPress={() => accept(l)} loading={busyLine === l.id} style={{ flex: 1 }} />
+                  <Button label="Return" variant="ghost" onPress={() => { setReturnFor(l); setVideo(null); setActionError(null) }} style={{ flex: 1 }} />
+                </View>
+              </View>
+            ))}
+            {owned.map((l) => <VaultAdd key={l.id} lineId={l.id} state={l.state} />)}
+          </Card>
+        )}
+
         {moved.ready ? (() => {
-          const steps = orderSteps(order.state, lines[0])
+          const steps = orderSteps(order.state, first)
           // The step the buyer last saw as current; the replay starts there.
           let from = 0
           if (moved.changed && moved.from) {
             const [prevOrder, prevLine] = moved.from.split('/')
-            const before = orderSteps(prevOrder, prevLine ? ({ ...lines[0], state: prevLine } as OrderLine) : undefined)
+            const before = orderSteps(prevOrder, prevLine ? ({ ...first, state: prevLine } as OrderLine) : undefined)
             const at = before.findIndex((x) => x.state === 'current')
             from = Math.max(0, at === -1 ? before.length - 1 : at)
             if (before.length !== steps.length || before[from]?.title !== steps[from]?.title) from = 0
           }
-          const label = unpaid ? 'Awaiting payment' : LINE_STATUS[lines[0]?.state ?? ''] ?? 'Updated'
+          const label = unpaid ? 'Awaiting payment' : LINE_STATUS[first?.state ?? ''] ?? 'Updated'
           return (
             <ProgressSection steps={steps} label="ORDER STATUS" animateFrom={from} stepMs={moved.changed ? 280 : 90}
               aside={moved.changed ? (
@@ -239,54 +264,39 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
           )
         })() : <View style={{ minHeight: 200 }} />}
 
-        <Card style={{ gap: t.space.x3 }}>
-          <SectionTitle>Items</SectionTitle>
-          {lines.map((l, i) => (
-            <View key={l.id} style={{ gap: t.space.x2, marginTop: i === 0 ? 0 : t.space.x3, paddingTop: i === 0 ? 0 : t.space.x3, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: t.colors.border }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
-                <ModelThumb image={pictures.byId(data.lineModels?.[l.id])} size={48} />
-                <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
-                  <Txt numberOfLines={2} style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>
-                    {(data.lineTitles?.[l.id] ?? 'Your item').split('·')[0].trim()}
-                  </Txt>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
-                    <View style={{ backgroundColor: t.colors.goodSoft, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 8 }}>
-                      <Txt style={{ color: t.colors.good, fontSize: 10.5, fontWeight: t.weight.bold as never }}>Grade {l.gradeCodeAtSale}</Txt>
-                    </View>
-                    <Badge label={unpaid ? 'Awaiting payment' : LINE_STATUS[l.state] ?? l.state.replace(/_/g, ' ')} tone={stateTone(l.state)} />
-                  </View>
-                </View>
-                <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{money(l.itemPriceMinor)}</Txt>
-              </View>
-              {l.acceptanceWindowEndsAt && l.state === 'delivered' && (
-                <Muted size={t.size.xs}>Accept by {dateTime(l.acceptanceWindowEndsAt)}, or it accepts automatically.</Muted>
-              )}
-              {l.state === 'delivered' && (
-                <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
-                  <Button label="Accept delivery" onPress={() => accept(l)} loading={busyLine === l.id} style={{ flex: 1 }} />
-                  <Button label="Return" variant="ghost" onPress={() => { setReturnFor(l); setVideo(null); setActionError(null) }} style={{ flex: 1 }} />
-                </View>
-              )}
-              {!unpaid && <LineCancel lineId={l.id} state={l.state} totalMinor={order.totalMinor} onChanged={reload} />}
-              <LineReturnAndHistory lineId={l.id} state={l.state} acceptedBy={l.acceptedBy} />
-              {l.acceptedAt && <Muted size={t.size.xs}>Accepted {dateTime(l.acceptedAt)}</Muted>}
-              <VaultAdd lineId={l.id} state={l.state} />
-            </View>
-          ))}
-        </Card>
-
-        <Card style={{ gap: t.space.x2 }}>
-          <SectionTitle>Summary</SectionTitle>
-          <Row label="Subtotal" value={money(order.subtotalMinor)} />
-          {order.shippingMinor > 0 && <Row label="Delivery" value={money(order.shippingMinor)} />}
-          {order.taxMinor > 0 && <Row label="Tax" value={money(order.taxMinor)} />}
-          {order.discountMinor > 0 && <Row label="Discount" value={`− ${money(order.discountMinor)}`} />}
-          <View style={{ height: 1, backgroundColor: t.colors.border, marginVertical: 4 }} />
-          <Row label="Total" value={money(order.totalMinor)} bold />
-        </Card>
+        {/* TG-139: one designed summary — what was bought, with the same
+            picture as the orders list, and what it cost. */}
+        <SummaryCard
+          label="Order summary"
+          things={lines.map((l) => ({
+            key: l.id,
+            image: pic(l),
+            title: thingTitle(l),
+            chips: [
+              { label: `Grade ${l.gradeCodeAtSale}`, tone: 'good' as const },
+              { label: unpaid ? 'Awaiting payment' : LINE_STATUS[l.state] ?? l.state.replace(/_/g, ' '), tone: 'neutral' as const },
+            ],
+            sub: l.acceptedAt ? `Accepted ${dateTime(l.acceptedAt)}` : undefined,
+            price: money(l.itemPriceMinor),
+          }))}
+          rows={[
+            { label: `Item${lines.length > 1 ? `s (${lines.length})` : ''}`, value: money(order.subtotalMinor) },
+            { label: 'Delivery', value: order.shippingMinor > 0 ? money(order.shippingMinor) : 'Free', tone: order.shippingMinor > 0 ? undefined : 'good' },
+            ...(order.taxMinor > 0 ? [{ label: 'Tax', value: money(order.taxMinor) }] : []),
+            ...(order.discountMinor > 0 ? [{ label: 'Discount', value: `− ${money(order.discountMinor)}`, tone: 'good' as const }] : []),
+          ]}
+          total={{ label: unpaid ? 'To pay' : 'Total paid', value: money(order.totalMinor) }}
+        >
+          {lines.map((l) => <LineReturnAndHistory key={l.id} lineId={l.id} state={l.state} acceptedBy={l.acceptedBy} />)}
+        </SummaryCard>
 
         {actionError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{actionError}</Txt>}
       </ScrollView>
+
+      {/* The only button at the bottom: calling the order off, while it can be. */}
+      {!unpaid && lines.map((l) => (
+        <LineCancel key={`ca-${l.id}-${ver}`} lineId={l.id} state={l.state} totalMinor={order.totalMinor} onChanged={changed} part="action" />
+      ))}
 
       <BottomSheet visible={!!returnFor} onClose={() => setReturnFor(null)} scroll>
             <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Request a return</Txt>
@@ -335,12 +345,3 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   )
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  const t = useTheme()
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <Txt style={{ color: bold ? t.colors.text : t.colors.textMuted, fontWeight: (bold ? t.weight.bold : t.weight.normal) as never }}>{label}</Txt>
-      <Txt style={{ color: t.colors.text, fontWeight: (bold ? t.weight.bold : t.weight.normal) as never }}>{value}</Txt>
-    </View>
-  )
-}

@@ -4,7 +4,7 @@ import { AppShell } from './components/AppShell'
 import { StaffShell } from './components/StaffShell'
 import { storedMarketView } from './state/useMarketView'
 import { Guard } from './components/Guard'
-import { TeamSettingsPage } from './pages/settings/TeamSettingsPage'
+import { TeamPage } from './pages/TeamPage'
 import { DigilockerReturnPage } from './pages/DigilockerReturnPage'
 import { BalanceSheetPage } from './pages/BalanceSheetPage'
 import { AuditPage } from './pages/AuditPage'
@@ -124,6 +124,7 @@ export function App() {
           <Route path="/admin/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
           <Route path="/admin/insurance" element={<Guard need="staff"><InsuranceDeskPage /></Guard>} />
           <Route path="/admin/people" element={<Guard need="staff"><StaffUsersPage /></Guard>} />
+          <Route path="/admin/people/team" element={<Guard need="admin"><TeamPage /></Guard>} />
           <Route path="/admin/people/:id" element={<Guard need="staff"><StaffUserDetailPage /></Guard>} />
 
           <Route path="/admin/money" element={<Guard need="admin"><AdminPage /></Guard>} />
@@ -134,7 +135,8 @@ export function App() {
             <Route path="payouts" element={<SettingsGroupPage key="payouts" group="payouts" />} />
             <Route path="company" element={<CompanySettingsPage />} />
             <Route path="catalogue" element={<CatalogueSettingsPage />} />
-            <Route path="team" element={<TeamSettingsPage />} />
+            {/* Team moved to People (TG-134); old links and bookmarks still land. */}
+            <Route path="team" element={<Navigate to="/admin/people/team" replace />} />
             <Route path="security" element={<SettingsGroupPage key="security" group="security" />} />
             <Route path="notifications" element={<SettingsGroupPage key="notifications" group="notifications" />} />
             <Route path="models" element={<AdminModelsPage />} />

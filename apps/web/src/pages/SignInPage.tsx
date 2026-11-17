@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { api, ApiError, indianMobile, localMobile, useSession, type AuthResult, type PhotographyGenre } from '@trueglaz/core'
+import { api, ApiError, indianMobile, localMobile, useSession, type AuthResult, type PhotographyGenre, type PublicInvite } from '@trueglaz/core'
 import { Logo } from '../components/Logo'
 import './SignInPage.css'
 
@@ -55,6 +55,23 @@ export function SignInPage() {
   }
 
   const from = (location.state as { from?: string } | null)?.from ?? '/'
+
+  // A team invite link (TG-133): say whose invite it is and for what, and
+  // fill in the address it was sent to - the role only applies to that one.
+  const inviteToken = new URLSearchParams(location.search).get('invite')
+  const [invite, setInvite] = useState<PublicInvite | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!inviteToken) return
+    let live = true
+    api.teamInvite(inviteToken)
+      .then((i) => { if (!live) return; setInvite(i); if (!i.expired && !i.accepted) setContact((c) => c || i.email) })
+      .catch((e) => { if (live) setInviteError(e instanceof ApiError ? e.message : 'This invite link could not be read.') })
+    return () => { live = false }
+  }, [inviteToken])
+  // Joining the team, not shopping: the "what do you shoot" question is skipped.
+  const teamJoin = !!invite && !invite.expired && !invite.accepted
+  const roleName = (r: string) => ({ staff: 'Staff', technician: 'Technician', admin: 'Admin' } as Record<string, string>)[r] ?? r
 
   // Fetched once, not per render of the step: somebody who mistypes a code
   // three times should not refetch a list that cannot have changed.
@@ -241,6 +258,14 @@ export function SignInPage() {
             {step === 'details' ? 'Create your account' : 'Sign in'}
           </h2>
 
+          {inviteToken && step === 'contact' && (invite || inviteError) && (
+            <div className={`signin__invite${invite && !invite.expired && !invite.accepted ? '' : ' signin__invite--off'}`} role="status">
+              {inviteError ? inviteError
+                : invite!.accepted ? <>This invite has already been used. Sign in with <b>{invite!.email}</b> to reach the console.</>
+                : invite!.expired ? <>This invite has expired. Ask {invite!.invitedByName ?? 'the admin who invited you'} to send it again.</>
+                : <><b>{invite!.invitedByName ?? 'An admin'}</b> invited you to the TrueGlaz team as <b>{roleName(invite!.role)}</b>. Sign in with <b>{invite!.email}</b>; new here, and we&apos;ll create your account after the code.</>}
+            </div>
+          )}
           {step === 'contact' ? (
             <form onSubmit={sendCode} className="signin__form">
               <p className="tg-muted signin__blurb">
@@ -409,6 +434,7 @@ export function SignInPage() {
               {/* A group, not a list of inputs: without the fieldset and legend a
                   screen reader reads eleven unrelated checkboxes and never says
                   what the question was. */}
+              {!teamJoin && <>
               <fieldset className="signin__genres">
                 <legend className="signin__label">
                   What do you shoot?
@@ -435,12 +461,13 @@ export function SignInPage() {
                 It decides what we show you first, and what we go looking for when
                 somebody asks what to buy next.
               </p>
+              </>}
 
               <button
                 className="tg-button tg-button--primary signin__submit"
                 disabled={
                   busy || !firstName.trim() || !lastName.trim() ||
-                  !email.trim() || !mobile.trim() || chosen.length === 0
+                  !email.trim() || !mobile.trim() || (chosen.length === 0 && !teamJoin)
                 }
               >
                 {busy ? 'Creating…' : 'Create account'}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Alert, ScrollView, Switch, View } from 'react-native'
+import { confirm, notify } from '../components/Confirm'
+import { ScrollView, Switch, View } from 'react-native'
 import { api, useApi, type Address } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -15,22 +16,16 @@ export function AddressesScreen() {
   const setDefault = async (id: string) => {
     setBusyId(id)
     try { await api.makeDefaultAddress(id); addrs.reload() }
-    catch (e) { Alert.alert('Could not set default', (e as Error).message) }
+    catch (e) { notify('Could not set default', (e as Error).message) }
     finally { setBusyId(null) }
   }
 
-  const remove = (a: Address) => {
-    Alert.alert('Delete address?', `${a.recipientName}, ${a.line1}`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          setBusyId(a.id)
-          try { await api.removeAddress(a.id); addrs.reload() }
-          catch (e) { Alert.alert('Could not delete', (e as Error).message) }
-          finally { setBusyId(null) }
-        },
-      },
-    ])
+  const remove = async (a: Address) => {
+    if (!(await confirm({ title: 'Delete address?', message: `${a.recipientName}, ${a.line1}`, confirmLabel: 'Delete', destructive: true }))) return
+    setBusyId(a.id)
+    try { await api.removeAddress(a.id); addrs.reload() }
+    catch (e) { notify('Could not delete', (e as Error).message) }
+    finally { setBusyId(null) }
   }
 
   return (

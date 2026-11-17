@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiError, dateOnly, useApi, type StaffUserRow } from '@trueglaz/core'
+import { api, ApiError, dateOnly, isAdmin, useApi, useSession, type StaffUserRow } from '@trueglaz/core'
 import { PayoutReviewStrip } from '../components/PayoutCheckPanel'
 import { QueueScreen } from '../components/QueueScreen'
+import { PeopleTabs } from '../components/PeopleTabs'
 import { useQueryState } from '../components/useQueryState'
 import './StaffUsersPage.css'
 
@@ -32,6 +33,7 @@ const GROUPS: Array<{ key: string; label: string; states: string[] | null }> = [
  * that is not enough, and it is where a note gets written.
  */
 export function StaffUsersPage() {
+  const { session } = useSession()
   const [view, setView] = useQueryState('view', 'pending_review')
   const [search, setSearch] = useQueryState('q')
   const [page, setPage] = useState(1)
@@ -97,7 +99,8 @@ export function StaffUsersPage() {
       page={validPage}
       pages={pages}
       onPage={setPage}
-      summary={<><PayoutReviewStrip /><DeletionStrip /></>}
+      summary={<><PeopleTabs /><PayoutReviewStrip /><DeletionStrip /></>}
+      actions={isAdmin(session) ? <Link to="/admin/people/team" className="tg-button tg-button--primary">+ Invite staff</Link> : undefined}
     >
       <table className="q__table">
         <thead>

@@ -1,9 +1,9 @@
 import { uploadPhoto } from '../media/uploadPhoto'
-import { useMemo, useState } from 'react'
-import { Image, Pressable, ScrollView, View, Alert } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import { Image, Pressable, ScrollView, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import {
-  api, dateTime, HAPPY_PATH, money, OFF_PATH_TERMINALS, STATE_BLURBS, STATE_LABELS, useApi,
+  api, dateOnly, dateTime, HAPPY_PATH, money, OFF_PATH_TERMINALS, STATE_BLURBS, STATE_LABELS, useApi,
   type ItemStateTransition, type SellerApprovalView,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -12,24 +12,39 @@ import { type TrackState, type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { Button, Field } from '../components/form'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
-import { ModelThumb, useModelImages } from '../components/ModelImage'
+import { sizedUri, useModelImages } from '../components/ModelImage'
+import { DetailHeader, DetailRef, StickyFooter, SummaryCard } from '../components/DetailParts'
+import { confirm } from '../components/Confirm'
 
-export function SellerItemScreen({ route }: { route: any }) {
+/** Where a seller can still call it off (TG-139), and how. */
+const WITHDRAW_BOX = ['SUBMITTED', 'PRE_APPROVED']
+const WITHDRAW_LISTED = ['LISTED', 'UNSOLD_REVIEW']
+
+export function SellerItemScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
   const pictures = useModelImages()
   const id: string = route.params.id
   const item = useApi(() => api.item(id), [id])
   const approvals = useApi(() => api.myApprovals(), [])
   const models = useApi(() => api.models(), [])
+  const brands = useApi(() => api.brands(), [])
+  const categories = useApi(() => api.categories(), [])
+  const photos = useApi(() => api.itemMedia(id), [id])
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+
+  // Back from Edit: read the draft again.
+  useEffect(() => navigation.addListener('focus', () => { item.reload(); photos.reload() }), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const track = useMemo(
     () => (item.data ? sellerTrack(item.data.history, item.data.item.currentState) : []),
     [item.data],
   )
-  const modelName = useMemo(() => {
-    if (!item.data?.item.productModelId) return null
-    return models.data?.content.find((m) => m.id === item.data!.item.productModelId)?.name ?? null
-  }, [item.data, models.data])
+  const model = useMemo(
+    () => (item.data?.item.productModelId ? models.data?.content.find((m) => m.id === item.data!.item.productModelId) ?? null : null),
+    [item.data, models.data],
+  )
 
   const pending = useMemo<SellerApprovalView | null>(
     () => (approvals.data ?? []).find((a) => a.approval.consignmentItemId === id && a.approval.decision === 'pending') ?? null,
@@ -40,80 +55,184 @@ export function SellerItemScreen({ route }: { route: any }) {
   if (item.error) return <View style={{ flex: 1, backgroundColor: t.colors.bg, padding: t.space.x4 }}><ErrorNote error={item.error} onRetry={item.reload} /></View>
   if (!item.data) return null
 
-  const { item: it, defects, inspections } = item.data
+  const { item: it, defects, inspections, listings } = item.data
   const reloadAll = () => { item.reload(); approvals.reload() }
-  const isDraft = it.currentState === 'DRAFT'
+  const state = it.currentState
+  const isDraft = state === 'DRAFT'
+  const title = model?.name ?? it.modelFreeText ?? 'Consigned item'
+  const brandName = brands.data?.find((b) => b.id === it.brandId)?.name
+  const categoryName = categories.data?.find((c) => c.id === it.categoryId)?.name
+  const pic = pictures.byId(it.productModelId)
+  const live = listings.find((l) => l.state === 'published')
+  const included = [it.hasBill && 'Bill', it.hasBox && 'Box', it.hasAccessories && 'Accessories'].filter(Boolean).join(' · ') || 'None'
+  const canWithdraw = WITHDRAW_BOX.includes(state) || WITHDRAW_LISTED.includes(state)
+
+  async function run(key: string, fn: () => Promise<unknown>, after?: () => void) {
+    setBusy(key); setError(null)
+    try { await fn(); after ? after() : reloadAll() }
+    catch (e) { setError((e as Error).message) } finally { setBusy(null) }
+  }
+
+  const submit = () => run('submit', () => api.submitSubmission(it.submissionId))
+  const edit = () => navigation.navigate('NewItem', { editItemId: it.id, submissionId: it.submissionId })
+  async function deleteDraft() {
+    if (!(await confirm({ title: 'Delete this draft?', message: 'It has not been sent to us. Its details and photos will be removed.', confirmLabel: 'Delete draft', destructive: true }))) return
+    run('delete', () => api.withdrawSubmission(it.submissionId), () => navigation.goBack())
+  }
+  async function withdraw() {
+    const listed = WITHDRAW_LISTED.includes(state)
+    const ok = await confirm(listed
+      ? { title: 'Take it off sale?', message: 'We will stop selling it and send it back to you. This cannot be undone.', confirmLabel: 'Take it off sale', cancelLabel: 'Keep it listed', destructive: true }
+      : { title: 'Withdraw this item?', message: state === 'PRE_APPROVED' ? 'We will cancel the shipping label. Do not post it.' : 'We will stop reviewing it. You can send it again later.', confirmLabel: 'Withdraw', cancelLabel: 'Keep it', destructive: true })
+    if (!ok) return
+    run('withdraw', () => (listed ? api.withdrawItem(it.id) : api.withdrawSubmission(it.submissionId)))
+  }
+
+  const summary = (
+    <SummaryCard
+      label={isDraft ? 'Review your item' : 'Item summary'}
+      things={[{
+        key: it.id,
+        image: pic ? sizedUri(pic, 200) : null,
+        title,
+        chips: [
+          ...(it.assignedGradeCode ? [{ label: `Graded ${it.assignedGradeCode}`, tone: 'good' as const }] : []),
+          { label: `You said ${it.declaredGradeCode}`, tone: 'neutral' as const },
+          ...(!isDraft ? [{ label: STATE_LABELS[state] ?? state, tone: 'accent' as const }] : []),
+        ],
+        sub: [brandName, categoryName].filter(Boolean).join(' · ') || undefined,
+        price: money(it.askingAmountMinor),
+      }]}
+      rows={[
+        { label: 'Asking price', value: money(it.askingAmountMinor) },
+        { label: 'Lowest you’d take', value: it.floorAmountMinor != null ? money(it.floorAmountMinor) : '—' },
+        ...(live ? [{ label: 'Listed at', value: money(live.priceMinor), tone: 'good' as const }] : []),
+        ...(pending ? [{ label: 'You’d receive', value: money(pending.expectedNetMinor), tone: 'good' as const }] : []),
+        { label: 'Serial number', value: it.serialNumber ? (isDraft ? it.serialNumber : `••${it.serialNumber.slice(-4)}`) : '—' },
+        { label: 'Under warranty', value: it.underWarranty ? 'Yes' : 'No' },
+        { label: 'Included', value: included },
+      ]}
+    >
+      {isDraft && (
+        <View style={{ gap: t.space.x2 }}>
+          <View style={{ gap: 2 }}>
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>DESCRIPTION</Txt>
+            <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>{it.description || '—'}</Txt>
+          </View>
+          <View style={{ gap: 2 }}>
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>WHY YOU’RE SELLING</Txt>
+            <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>{it.reasonToSell || '—'}</Txt>
+          </View>
+        </View>
+      )}
+    </SummaryCard>
+  )
+
+  const photoStrip = (photos.data?.length ?? 0) > 0 && (
+    <View style={{ gap: t.space.x2 }}>
+      <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>YOUR PHOTOS · {photos.data!.length}</Txt>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.space.x2 }}>
+        {photos.data!.map((m) => (
+          <Image key={m.id} source={{ uri: sizedUri(m, 200) }} style={{ width: 84, height: 84, borderRadius: 12, backgroundColor: t.colors.bgSunken }} resizeMode="cover" />
+        ))}
+      </ScrollView>
+    </View>
+  )
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
-      <View style={{ gap: t.space.x2 }}>
-        <ModelThumb image={pictures.byId(it.productModelId)} size={96} want={400} />
-        <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: t.size.xs }}>{it.internalSku}</Txt>
-        <Txt style={{ color: t.colors.text, fontSize: t.size.xl, fontWeight: t.weight.bold as never }}>{modelName ?? it.modelFreeText ?? 'Consigned item'}</Txt>
-        <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
-          <StateBadge state={it.currentState} />
-          {it.assignedGradeCode && <Badge label={`Graded ${it.assignedGradeCode}`} tone="accent" />}
-        </View>
-        <Muted>Asking {money(it.askingAmountMinor)} · declared {it.declaredGradeCode}</Muted>
-      </View>
+    <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
+      <DetailHeader title={isDraft ? 'Review & submit' : 'My item'} onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
+        <DetailRef code={it.internalSku} when={`Added ${dateOnly(it.createdAt)}`} />
 
-      {isDraft && <SubmitForApproval submissionId={it.submissionId} onDone={reloadAll} />}
+        {isDraft ? (
+          <>
+            <StatusHero tone="accent" badge="Draft — not sent yet" title="Check everything, then submit"
+              body="Once you submit, TrueGlaz reviews it and tells you how to send it in. You can still edit it until then." />
+            {summary}
+            {photoStrip}
+            <Pressable onPress={deleteDraft} disabled={!!busy} accessibilityRole="button" style={{ alignSelf: 'center', padding: t.space.x2 }}>
+              <Txt style={{ color: t.colors.bad, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{busy === 'delete' ? 'Deleting…' : 'Delete draft'}</Txt>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <StatusHero
+              tone={stateTone(state)}
+              badge={STATE_LABELS[state] ?? state}
+              title="Where your item is"
+              body={STATE_BLURBS[state] ?? STATE_LABELS[state] ?? state}
+            />
 
-      {it.currentState === 'PRE_APPROVED' && <ShipToUs submissionId={it.submissionId} itemId={it.id} onDone={reloadAll} />}
+            {state === 'PRE_APPROVED' && <ShipToUs submissionId={it.submissionId} itemId={it.id} onDone={reloadAll} />}
+            {pending && <PriceDecision a={pending} onDone={reloadAll} />}
 
-      {pending && <PriceDecision a={pending} onDone={reloadAll} />}
+            <ProgressSection steps={track} label="ITEM STATUS" />
 
-      <StatusHero
-        tone={stateTone(it.currentState)}
-        badge={STATE_LABELS[it.currentState] ?? it.currentState}
-        title="Where your item is"
-        body={STATE_BLURBS[it.currentState] ?? STATE_LABELS[it.currentState] ?? it.currentState}
-      />
-      <ProgressSection steps={track} />
+            {summary}
+            {photoStrip}
 
-      {inspections.length > 0 && (
-        <Card style={{ gap: t.space.x3 }}>
-          <SectionTitle>Inspection</SectionTitle>
-          {inspections.map((r) => (
-            <View key={r.id} style={{ gap: t.space.x2 }}>
-              <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
-                <Badge label={r.purpose} />
-                <Badge label={`QC ${r.qcState}`} tone={r.qcState === 'confirmed' ? 'good' : r.qcState === 'overridden' ? 'warn' : 'neutral'} />
-                {r.finalGradeCode && <Badge label={`Grade ${r.finalGradeCode}`} tone="accent" />}
-              </View>
-              <Muted size={t.size.xs}>Submitted {dateTime(r.submittedAt)}{r.qcAt ? ` · QC ${dateTime(r.qcAt)}` : ''}</Muted>
+            {inspections.length > 0 && (
+              <Card style={{ gap: t.space.x3 }}>
+                <SectionTitle>Inspection</SectionTitle>
+                {inspections.map((r) => (
+                  <View key={r.id} style={{ gap: t.space.x2 }}>
+                    <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
+                      <Badge label={r.purpose} />
+                      <Badge label={`QC ${r.qcState}`} tone={r.qcState === 'confirmed' ? 'good' : r.qcState === 'overridden' ? 'warn' : 'neutral'} />
+                      {r.finalGradeCode && <Badge label={`Grade ${r.finalGradeCode}`} tone="accent" />}
+                    </View>
+                    <Muted size={t.size.xs}>Submitted {dateTime(r.submittedAt)}{r.qcAt ? ` · QC ${dateTime(r.qcAt)}` : ''}</Muted>
+                  </View>
+                ))}
+              </Card>
+            )}
+
+            {defects.length > 0 && (
+              <Card style={{ gap: t.space.x3 }}>
+                <SectionTitle>What we disclosed</SectionTitle>
+                {defects.map((d) => (
+                  <View key={d.id} style={{ backgroundColor: t.colors.bgSunken, borderRadius: t.radius.md, padding: t.space.x3, gap: 4 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{d.title}</Txt>
+                      <Badge label={d.severity} tone={d.severity === 'optical' ? 'bad' : d.severity === 'functional' ? 'warn' : 'neutral'} />
+                    </View>
+                    <Muted size={t.size.xs}>{d.descriptionPublic}</Muted>
+                  </View>
+                ))}
+              </Card>
+            )}
+
+            <View style={{ gap: t.space.x2 }}>
+              <Pressable onPress={() => setHistoryOpen(!historyOpen)} hitSlop={6} accessibilityRole="button">
+                <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{historyOpen ? 'Hide history' : 'History'}</Txt>
+              </Pressable>
+              {historyOpen && [...item.data.history].reverse().map((h) => (
+                <View key={h.id} style={{ borderBottomWidth: 1, borderBottomColor: t.colors.border, paddingVertical: t.space.x2 }}>
+                  <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>
+                    {h.fromState ? `${STATE_LABELS[h.fromState] ?? h.fromState} → ` : ''}{STATE_LABELS[h.toState] ?? h.toState}
+                  </Txt>
+                  <Muted size={t.size.xs}>{(h.actorRole ?? 'System')} · {dateTime(h.occurredAt)}</Muted>
+                </View>
+              ))}
             </View>
-          ))}
-        </Card>
-      )}
+          </>
+        )}
+        {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
+      </ScrollView>
 
-      {defects.length > 0 && (
-        <Card style={{ gap: t.space.x3 }}>
-          <SectionTitle>What we disclosed</SectionTitle>
-          {defects.map((d) => (
-            <View key={d.id} style={{ backgroundColor: t.colors.bgSunken, borderRadius: t.radius.md, padding: t.space.x3, gap: 4 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{d.title}</Txt>
-                <Badge label={d.severity} tone={d.severity === 'optical' ? 'bad' : d.severity === 'functional' ? 'warn' : 'neutral'} />
-              </View>
-              <Muted size={t.size.xs}>{d.descriptionPublic}</Muted>
-            </View>
-          ))}
-        </Card>
-      )}
-
-      <Card style={{ gap: t.space.x2 }}>
-        <SectionTitle>History</SectionTitle>
-        {[...item.data.history].reverse().map((h) => (
-          <View key={h.id} style={{ borderBottomWidth: 1, borderBottomColor: t.colors.border, paddingVertical: t.space.x2 }}>
-            <Txt style={{ color: t.colors.text, fontFamily: t.font.mono, fontSize: t.size.sm }}>
-              {h.fromState ? `${STATE_LABELS[h.fromState] ?? h.fromState} → ` : ''}{STATE_LABELS[h.toState] ?? h.toState}
-            </Txt>
-            <Muted size={t.size.xs}>{(h.actorRole ?? 'System')} · {dateTime(h.occurredAt)}</Muted>
-          </View>
-        ))}
-      </Card>
-    </ScrollView>
+      {isDraft ? (
+        <StickyFooter>
+          <Button label="Edit" variant="ghost" onPress={edit} disabled={!!busy} style={{ flex: 1 }} />
+          <Button label="Submit for review" variant="cta" onPress={submit} loading={busy === 'submit'} disabled={!!busy} style={{ flex: 2 }} />
+        </StickyFooter>
+      ) : canWithdraw ? (
+        <StickyFooter>
+          <Button label={WITHDRAW_LISTED.includes(state) ? 'Take it off sale' : 'Withdraw item'} variant="danger"
+            onPress={withdraw} loading={busy === 'withdraw'} disabled={!!busy} style={{ flex: 1 }} />
+        </StickyFooter>
+      ) : null}
+    </View>
   )
 }
 
@@ -186,7 +305,7 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
           <Field label="Date of shipment" value={shippedDate} onChangeText={setShippedDate} placeholder="YYYY-MM-DD" />
         </>
       ) : (
-        <Muted size={t.size.xs}>TrueGlaz's courier collects using the label from pre-approval. We'll mark it on its way.</Muted>
+        <Muted size={t.size.xs}>TrueGlaz's courier collects using the label we sent you. We'll mark it on its way.</Muted>
       )}
 
       <Field label="Package weight in kg (optional)" value={weightKg} onChangeText={setWeightKg} keyboardType="decimal-pad" />
@@ -199,27 +318,6 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
       <Button label="Mark as shipped" variant="cta" loading={busy} onPress={submit} />
-    </Card>
-  )
-}
-
-function SubmitForApproval({ submissionId, onDone }: { submissionId: string; onDone: () => void }) {
-  const t = useTheme()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const submit = async () => {
-    setBusy(true); setError(null)
-    try { await api.submitSubmission(submissionId); onDone() }
-    catch (e) { setError((e as Error).message) } finally { setBusy(false) }
-  }
-
-  return (
-    <Card style={{ borderColor: t.colors.accent, gap: t.space.x3 }}>
-      <SectionTitle>Ready to send?</SectionTitle>
-      <Muted>This is still a draft. Send it to TrueGlaz for pre-approval, then ship it to us to be inspected and graded.</Muted>
-      {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
-      <Button label="Submit for pre-approval" variant="cta" loading={busy} onPress={submit} />
     </Card>
   )
 }
@@ -258,12 +356,10 @@ function PriceDecision({ a, onDone }: { a: SellerApprovalView; onDone: () => voi
           <Button label="Counter" variant="ghost" disabled={busy || !typed || typed <= 0} onPress={() => decide('countered', Math.round(typed * 100))} />
         </View>
       )}
-      <Button label="Decline & take it back" variant="danger" loading={busy} onPress={() =>
+      <Button label="Decline & take it back" variant="danger" loading={busy} onPress={async () => {
         // Return shipping and handling are charged, so confirm before committing.
-        Alert.alert('Decline this price?', 'We will send it back to you. Return shipping and handling fees apply.', [
-          { text: 'Keep deciding', style: 'cancel' },
-          { text: 'Yes, decline', style: 'destructive', onPress: () => decide('declined') },
-        ])} />
+        if (await confirm({ title: 'Decline this price?', message: 'We will send it back to you. Return shipping and handling fees apply.', confirmLabel: 'Yes, decline', cancelLabel: 'Keep deciding', destructive: true })) decide('declined')
+      }} />
       {canCounter && <Muted size={t.size.xs}>You get one counter. Declining returns the item to you.</Muted>}
     </Card>
   )
@@ -280,7 +376,7 @@ function PriceDecision({ a, onDone }: { a: SellerApprovalView; onDone: () => voi
 // from `states` at runtime, so inserting a state into HAPPY_PATH can never
 // silently shift these out of alignment.
 const SELLER_MILESTONES: { title: string; desc: string; states: string[] }[] = [
-  { title: 'Submitted', desc: 'Sent to TrueGlaz for pre-approval.', states: ['SUBMITTED'] },
+  { title: 'Submitted', desc: 'Sent to TrueGlaz for review.', states: ['SUBMITTED'] },
   { title: 'Pre-approved', desc: 'Inbound label issued; ship it to us.', states: ['PRE_APPROVED', 'IN_TRANSIT_INBOUND'] },
   { title: 'Received at TrueGlaz', desc: 'In our custody and assigned a bin.', states: ['RECEIVED'] },
   { title: 'Inspection & grading', desc: 'Queued for a technician, then checked and graded.', states: ['AWAITING_INSPECTION', 'IN_INSPECTION', 'GRADED'] },

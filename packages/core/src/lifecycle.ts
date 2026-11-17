@@ -78,7 +78,7 @@ export const STATE_LABELS: Record<string, string> = {
 
 export const STATE_BLURBS: Record<string, string> = {
   DRAFT: 'The seller has started a submission but not sent it.',
-  SUBMITTED: 'Sent to TrueGlaz, waiting on pre-approval.',
+  SUBMITTED: 'Sent to TrueGlaz — we are reviewing it and will tell you how to send it in.',
   PRE_APPROVED: 'Inbound label issued; the ship-by clock is running.',
   IN_TRANSIT_INBOUND: 'With the courier, on its way to the hub.',
   RECEIVED: 'In TrueGlaz custody and assigned a storage bin.',

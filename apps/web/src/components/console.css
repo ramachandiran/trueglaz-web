@@ -213,3 +213,10 @@ a.c-row:hover .c-row__title { color: var(--tg-accent); }
 .staff-shell .dash__kpi-val { font-family: var(--tg-font-heading); font-weight: 600; }
 .staff-shell .ops__card { padding: 22px 24px; }
 .staff-shell .ops__subtitle { font-size: 16px; }
+
+/* -- People: Everyone / Team & invites (TG-134) ---------------------------- */
+.people-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--tg-bg-raised); border: 1px solid var(--tg-border); box-shadow: var(--c-shadow); justify-self: start; align-self: flex-start; }
+.people-tabs__tab { padding: 8px 16px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--tg-text-muted); text-decoration: none; white-space: nowrap; }
+.people-tabs__tab:hover { color: var(--tg-text); background: var(--tg-bg-hover); }
+.people-tabs__tab--on, .people-tabs__tab--on:hover { background: var(--c-navy-soft); color: var(--tg-brand); font-weight: 600; }
+:root[data-theme="dark"] .people-tabs__tab--on, :root[data-theme="midnight"] .people-tabs__tab--on { color: var(--tg-text); }

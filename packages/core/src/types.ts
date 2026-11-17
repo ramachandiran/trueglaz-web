@@ -1648,9 +1648,17 @@ export interface DispatchInput {
 
 export interface TeamRole { role: string; grantedAt: string | null; grantedByName: string | null }
 export interface TeamMember { userId: string; displayName: string; email: string | null; roles: TeamRole[]; lastSeenAt: string | null }
-export interface TeamInvite { id: string; email: string; role: string; invitedByName: string | null; createdAt: string | null }
+export interface TeamInvite {
+  id: string; email: string; role: string; invitedByName: string | null; createdAt: string | null
+  /** TG-133: emailed invites lapse after a week; resending renews them. */
+  expiresAt?: string | null; lastSentAt?: string | null; sendCount?: number; expired?: boolean
+  /** The sign-in link the email carries (path only). */
+  link?: string | null
+}
+/** What the sign-in page knows from an invite link alone. */
+export interface PublicInvite { email: string; role: string; invitedByName: string | null; expired: boolean; accepted: boolean }
 export interface TeamView { members: TeamMember[]; invites: TeamInvite[] }
-export interface TeamGrantResult { outcome: 'granted' | 'invited'; member: TeamMember | null; invite: TeamInvite | null }
+export interface TeamGrantResult { outcome: 'granted' | 'invited' | 'resent'; member: TeamMember | null; invite: TeamInvite | null }
 
 export interface ReturnCaseView {
   case: ReturnCase
@@ -2039,16 +2047,10 @@ export interface VaultItem {
   id: string
   modelLabel: string
   productModelId: string | null
-  /** false = server-managed encryption (default); true = PIN/E2EE. */
-  e2ee: boolean
-  /** Default mode: decrypted for the owner. E2EE mode: these are null. */
+  /** Sealed at rest by the server; returned in the clear to the owner only. */
   serial: string | null
   costMinor: number | null
   notes: string | null
-  /** E2EE mode: opaque blobs the client decrypts. Default mode: null. */
-  serialCipher: string | null
-  costCipher: string | null
-  notesCipher: string | null
   purchaseDate: string | null
   warrantyExpiry: string | null
   warrantySource: 'derived' | 'manual' | 'none'
@@ -2064,32 +2066,12 @@ export interface VaultItem {
 export interface AddGearInput {
   productModelId?: string | null
   modelFreeText?: string | null
-  /** Default mode: plaintext, sealed server-side. */
+  /** Plaintext over TLS; the server seals it. */
   serial?: string | null
   costMinor?: number | null
   notes?: string | null
-  /** E2EE mode: already-encrypted blobs. */
-  serialCipher?: string | null
-  costCipher?: string | null
-  notesCipher?: string | null
   purchaseDate?: string | null
   warrantyExpiry?: string | null
-}
-
-/** One item's re-encrypted fields, sent when turning on the PIN. */
-export interface MigratedItem {
-  id: string
-  serialCipher?: string | null
-  costCipher?: string | null
-  notesCipher?: string | null
-}
-
-/** The user's wrapped vault key, as stored by the server (all opaque to it). */
-export interface VaultKeyBlobsStored {
-  kdf: string
-  salt: string
-  wrappedDekPin: string
-  wrappedDekRecovery: string
 }
 
 /** One choice in a filter group: the value to send back, its label, and how many it would show. */

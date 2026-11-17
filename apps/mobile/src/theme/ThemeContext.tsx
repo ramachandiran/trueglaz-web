@@ -11,10 +11,10 @@ interface Ctx {
   setMode: (m: ThemeMode) => void
 }
 
-/** The app opens dark; Profile → Appearance still lets someone choose another. */
-const DEFAULT_MODE: ThemeMode = 'dark'
+/** The app opens light (TG-140); Profile → Appearance still lets someone choose dark or follow the phone. */
+const DEFAULT_MODE: ThemeMode = 'light'
 
-const ThemeCtx = createContext<Ctx>({ theme: themes.dark, mode: DEFAULT_MODE, setMode: () => {} })
+const ThemeCtx = createContext<Ctx>({ theme: themes.light, mode: DEFAULT_MODE, setMode: () => {} })
 
 const KEY = 'trueglaz.theme'
 

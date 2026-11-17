@@ -5,6 +5,7 @@ import { api, dateOnly, money, useApi } from '@trueglaz/core'
 import { Txt } from './Txt'
 import { Button, Field } from './form'
 import { Muted } from './ui'
+import { StickyFooter } from './DetailParts'
 import { useTheme } from '../theme/ThemeContext'
 
 const CANCELLABLE = ['open', 'packing', 'dispatched']
@@ -14,7 +15,14 @@ const CANCELLABLE = ['open', 'packing', 'dispatched']
  * The buyer asks with a reason; our team decides. The status stays on the
  * order after the decision, with the refund reference when there is one.
  */
-export function LineCancel({ lineId, state, totalMinor, onChanged }: { lineId: string; state: string; totalMinor: number; onChanged: () => void }) {
+export function LineCancel({ lineId, state, totalMinor, onChanged, part }: {
+  lineId: string; state: string; totalMinor: number; onChanged: () => void
+  /**
+   * TG-139: the order screen shows where a cancellation stands in its body and
+   * keeps the Cancel order button pinned at the bottom. Without `part`, both.
+   */
+  part?: 'status' | 'action'
+}) {
   const t = useTheme()
   const relevant = CANCELLABLE.includes(state) || state === 'cancelled'
   const cr = useApi(() => (relevant ? api.cancelRequestFor(lineId) : Promise.resolve(null)), [lineId, state])
@@ -37,7 +45,11 @@ export function LineCancel({ lineId, state, totalMinor, onChanged }: { lineId: s
     <View style={{ backgroundColor: bad ? t.colors.badSoft : t.colors.accentSoft, borderRadius: 10, padding: t.space.x3, gap: 6 }}>{children}</View>
   )
 
+  const showStatus = part !== 'action'
+  const showAction = part !== 'status'
+
   if (r?.state === 'approved' && r.outcome === 'pre_dispatch') {
+    if (!showStatus) return null
     return box(
       <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>
         <Txt style={{ fontWeight: t.weight.bold as never }}>Cancelled at your request</Txt> on {dateOnly(r.decidedAt)}.{' '}
@@ -49,6 +61,7 @@ export function LineCancel({ lineId, state, totalMinor, onChanged }: { lineId: s
   if (!CANCELLABLE.includes(state)) return null
 
   if (r?.state === 'requested') {
+    if (!showStatus) return null
     return box(
       <>
         <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>
@@ -65,12 +78,16 @@ export function LineCancel({ lineId, state, totalMinor, onChanged }: { lineId: s
 
   return (
     <View style={{ gap: t.space.x2 }}>
-      {r?.state === 'declined' && box(
+      {showStatus && r?.state === 'declined' && box(
         <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>
           <Txt style={{ fontWeight: t.weight.bold as never }}>We couldn’t cancel this: </Txt>{r.decisionNote}
         </Txt>, true,
       )}
-      <Button label={state === 'dispatched' ? 'Cancel — it’s on its way' : 'Cancel order'} variant="ghost" onPress={() => { setOpen(true); setError(null) }} />
+      {showAction && (() => {
+        const button = <Button label={state === 'dispatched' ? 'Cancel — it’s on its way' : 'Cancel order'} variant="danger"
+          onPress={() => { setOpen(true); setError(null) }} style={part === 'action' ? { flex: 1 } : undefined} />
+        return part === 'action' ? <StickyFooter>{button}</StickyFooter> : button
+      })()}
       <BottomSheet visible={open} onClose={() => setOpen(false)}>
           <View style={{ gap: t.space.x3 }}>
             <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Cancel this order?</Txt>
