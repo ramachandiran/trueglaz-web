@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, ApiError, dateOnly, useApi, type StaffUserRow } from '@trueglaz/core'
 import { PayoutReviewStrip } from '../components/PayoutCheckPanel'
 import { QueueScreen } from '../components/QueueScreen'
+import { useQueryState } from '../components/useQueryState'
 import './StaffUsersPage.css'
 
 const GROUPS: Array<{ key: string; label: string; states: string[] | null }> = [
@@ -31,8 +32,8 @@ const GROUPS: Array<{ key: string; label: string; states: string[] | null }> = [
  * that is not enough, and it is where a note gets written.
  */
 export function StaffUsersPage() {
-  const [view, setView] = useState('pending_review')
-  const [search, setSearch] = useState('')
+  const [view, setView] = useQueryState('view', 'pending_review')
+  const [search, setSearch] = useQueryState('q')
   const [page, setPage] = useState(1)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)

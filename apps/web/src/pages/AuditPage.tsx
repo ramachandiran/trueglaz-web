@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api, dateTime, useApi, type AuditEntry } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
 import './AuditPage.css'
+import { useConsoleTitle } from '../components/consoleTitle'
 
 const PAGE = 50
 
@@ -31,13 +32,11 @@ export function AuditPage() {
     return (v: string) => { set(v); setOffset(0) }
   }
 
+  useConsoleTitle('Audit log', 'Every action that changed something, newest first')
   return (
-    <section className="audit">
+    <section className="audit">{/* titled in the console top bar */}
       <header className="audit__head">
-        <div>
-          <h1 className="audit__title">Audit log</h1>
-          <p className="audit__lede">Every action that changed something, newest first. {total.toLocaleString()} recorded.</p>
-        </div>
+        <p className="audit__lede">Every action that changed something, newest first. {total.toLocaleString()} recorded.</p>
         <div className="audit__filters">
           <input className="tg-input" placeholder="Action, e.g. POST /api/v1/payouts or payout."
             value={action} onChange={(e) => reset(setAction)(e.target.value)} />

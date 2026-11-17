@@ -1,164 +1,70 @@
-.q {
-  display: flex;
-  flex-direction: column;
-  gap: var(--tg-space-4);
+/* The list screen (TG-126): one card holding a toolbar - search, counted tab
+   pills, the screen's action - then the table and a pager, as the admin
+   template lays out a list. */
+.q { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+
+.q__card {
+  background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--c-radius, 12px);
+  box-shadow: var(--c-shadow, none); padding: 22px 24px; min-width: 0; display: flex; flex-direction: column; gap: 16px;
 }
 
-.q__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: var(--tg-space-4);
-}
-
-.q__actions { flex: none; }
-
-.q__title {
-  font-size: var(--tg-text-xxl);
-  margin: 0;
-}
-
-.q__subtitle {
-  font-size: var(--tg-text-sm);
-  margin: var(--tg-space-1) 0 0;
-}
-
-/* -- tabs ------------------------------------------------------------------ */
-
-.q__filters {
-  display: flex;
-  gap: var(--tg-space-1);
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--tg-border);
-  padding-bottom: var(--tg-space-3);
-}
-
-.q__filter {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--tg-space-2);
-  padding: var(--tg-space-2) var(--tg-space-3);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  color: var(--tg-text-muted);
-  font-size: var(--tg-text-sm);
-  transition: color 200ms;
-  white-space: nowrap;
-}
-
-.q__filter:hover { color: var(--tg-text); }
-
-.q__filter--active {
-  color: var(--tg-accent);
-  border-bottom: 2px solid var(--tg-accent);
-  margin-bottom: -1px;
-  font-weight: var(--tg-weight-medium);
-}
-
-/* The count is the point of a tab on a work screen: an empty queue should read
-   as empty before it is opened, not after. */
-.q__filter-count {
-  font-size: var(--tg-text-xs);
-  font-variant-numeric: tabular-nums;
-  padding: 0 var(--tg-space-2);
-  border-radius: 999px;
-  background: var(--tg-bg-sunken);
-  color: var(--tg-text-muted);
-}
-
-.q__filter--active .q__filter-count {
-  background: var(--tg-accent-soft);
-  color: var(--tg-accent);
-}
-
-/* -- search ---------------------------------------------------------------- */
-
+.q__toolbar { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; }
 .q__search-box {
-  display: flex;
-  gap: var(--tg-space-3);
-  align-items: center;
-  flex-wrap: wrap;
-  padding: var(--tg-space-3);
-  background: var(--tg-bg-raised);
-  border-radius: var(--tg-radius-md);
+  flex: 0 1 290px; min-width: 200px; display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--tg-border); border-radius: 22px; padding: 0 14px; background: var(--tg-bg-raised);
 }
+.q__search-box:focus-within { border-color: var(--tg-accent); }
+.q__search-box svg { width: 17px; height: 17px; fill: none; stroke: var(--tg-text-muted); stroke-width: 1.8; stroke-linecap: round; flex: none; }
+.q__search { border: 0; background: transparent; padding: 9px 0; font-size: 13.5px; width: 100%; min-width: 0; outline: none; color: var(--tg-text); }
 
-.q__search {
-  flex: 1;
-  min-width: 240px;
+.q__filters { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.q__filter {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px;
+  background: transparent; border: 0; cursor: pointer; color: var(--tg-text-muted); font-size: 13px; white-space: nowrap;
+  transition: background 150ms, color 150ms;
 }
-
-.q__search-info {
-  font-size: var(--tg-text-sm);
-  white-space: nowrap;
-}
+.q__filter:hover { color: var(--tg-text); background: var(--tg-bg-hover); }
+.q__filter--active, .q__filter--active:hover { background: var(--tg-brand); color: var(--tg-on-brand); font-weight: 500; }
+.q__filter-count { font-size: 11.5px; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.q__filter--active .q__filter-count { opacity: 0.85; }
+.q__actions { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* -- table ----------------------------------------------------------------- */
-
-.q__table-container {
-  overflow-x: auto;
-  padding: 0;
-}
-
-.q__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--tg-text-sm);
-}
-
-.q__table thead {
-  background: var(--tg-bg-sunken);
-  border-bottom: 1px solid var(--tg-border);
-}
-
+.q__table-container { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+.q__table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .q__table th {
-  padding: var(--tg-space-3);
-  text-align: left;
-  white-space: nowrap;
-  font-weight: var(--tg-weight-medium);
-  color: var(--tg-text);
+  padding: 12px; text-align: left; white-space: nowrap; font-weight: 600; font-size: 13.5px;
+  color: var(--tg-text); border-bottom: 1px solid var(--tg-border);
 }
-
-.q__table tbody tr {
-  border-bottom: 1px solid var(--tg-border);
-  transition: background-color 150ms;
-}
-
-.q__table tbody tr:hover { background-color: var(--tg-bg-raised); }
-
-.q__table td {
-  padding: var(--tg-space-3);
-  vertical-align: middle;
-}
-
+.q__table tbody tr { border-bottom: 1px solid var(--c-line-soft, var(--tg-border)); transition: background-color 150ms; }
+.q__table tbody tr:last-child { border-bottom: 0; }
+.q__table tbody tr:hover { background-color: var(--tg-bg-hover); }
+.q__table td { padding: 11px 12px; vertical-align: middle; }
 /* The last column is where the action lives on every one of these screens. */
-.q__table th:last-child,
-.q__table td:last-child {
-  text-align: right;
-  padding-right: var(--tg-space-4);
-}
-
+.q__table th:last-child, .q__table td:last-child { text-align: right; padding-right: 12px; }
 /* Both selectors name the element: `.q__table th` sets text-align: left and is
-   more specific than a bare `.q__num`, so a right-aligned column's header sat
-   left of its own numbers on every screen that uses this table. */
-.q__table th.q__num,
-.q__table td.q__num { text-align: right; }
+   more specific than a bare `.q__num`. */
+.q__table th.q__num, .q__table td.q__num { text-align: right; font-variant-numeric: tabular-nums; }
 
-/* -- pagination ------------------------------------------------------------ */
-
-.q__pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--tg-space-3);
-  padding: var(--tg-space-4);
-  border-top: 1px solid var(--tg-border);
+/* -- pager ----------------------------------------------------------------- */
+.q__pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 4px; }
+.q__page-info { font-size: 13.5px; color: var(--tg-text-muted); }
+.q__page-info b { color: var(--tg-text); font-weight: 600; }
+.q__pages { display: flex; align-items: center; gap: 4px; }
+.q__page {
+  min-width: 32px; height: 32px; border-radius: 16px; border: 0; background: transparent; cursor: pointer;
+  font-size: 13.5px; color: var(--tg-text); display: grid; place-items: center; padding: 0 6px;
 }
+.q__page:hover:not(:disabled) { background: var(--tg-bg-hover); }
+.q__page--on, .q__page--on:hover:not(:disabled) { background: var(--tg-brand); color: var(--tg-on-brand); font-weight: 600; }
+.q__page--word { padding: 0 10px; }
+.q__page:disabled { color: var(--tg-text-muted); opacity: 0.6; cursor: default; }
+.q__page--gap { cursor: default; color: var(--tg-text-muted); }
 
-.q__page-info {
-  font-size: var(--tg-text-sm);
-  font-weight: var(--tg-weight-medium);
-  min-width: 120px;
-  text-align: center;
+@media (max-width: 760px) {
+  .q { gap: 14px; }
+  .q__card { padding: 16px; }
+  .q__search-box { flex: 1 1 100%; }
+  .q__filters { flex-wrap: nowrap; overflow-x: auto; flex: 1 1 100%; padding-bottom: 2px; }
+  .q__actions { margin-left: 0; }
 }

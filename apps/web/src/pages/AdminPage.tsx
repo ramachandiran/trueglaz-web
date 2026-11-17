@@ -4,6 +4,8 @@ import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, ty
 import { InventoryTable } from '../components/InventoryTable'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { KycDocuments } from '../components/KycDocuments'
+import { useConsoleTitle } from '../components/consoleTitle'
+import { useHashTarget } from '../components/useQueryState'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import './OpsPage.css'
 import '../components/dashboard.css'
@@ -53,14 +55,12 @@ export function AdminPage() {
   }
 
   const w = useBooks(inventory.data, recon.data)
+  useConsoleTitle('Money & oversight', 'Inventory, escrow and payouts — the whole platform in one place')
+  useHashTarget(!pending.loading && !onHold.loading && !approved.loading)
 
   return (
     <div className="ops dash">
       <header className="dash__head">
-        <div>
-          <h1 className="dash__title">Money &amp; oversight</h1>
-          <p className="dash__date">Inventory, escrow and payouts — the whole platform in one place</p>
-        </div>
         <p className={`dash__pill${w.attention > 0 ? '' : ' dash__pill--clear'}`}>
           {w.attention > 0 ? `${w.attention} need${w.attention === 1 ? 's' : ''} a decision` : 'Nothing needs a decision'}
         </p>
@@ -102,6 +102,7 @@ export function AdminPage() {
       </section>
 
       <PayoutSection
+        id="payouts-held"
         title="On hold"
         blurb="Held because the seller has no verified payout account."
         state={onHold}
@@ -114,6 +115,7 @@ export function AdminPage() {
       />
 
       <PayoutSection
+        id="payouts-pending"
         title="Waiting on approval"
         blurb="Above the auto-release threshold, so a human signs them off."
         state={pending}
@@ -126,6 +128,7 @@ export function AdminPage() {
       />
 
       <PayoutSection
+        id="payouts-approved"
         title="Approved — ready to transfer"
         blurb="Paying marks the transfer and clears the seller's balance."
         state={approved}
@@ -261,9 +264,9 @@ function payoutLabel(p: PayoutQueueRow): string {
 }
 
 function PayoutSection({
-  title, blurb, state, busy, render,
+  id, title, blurb, state, busy, render,
 }: {
-  title: string; blurb: string
+  id: string; title: string; blurb: string
   state: ReturnType<typeof useApi<PayoutQueueRow[]>>
   busy: string | null
   render: (p: PayoutQueueRow) => React.ReactNode
@@ -272,7 +275,7 @@ function PayoutSection({
   const rows = state.data ?? []
   if (rows.length === 0) return null
   return (
-    <section className="tg-card ops__card">
+    <section className="tg-card ops__card" id={id}>
       <h2 className="ops__subtitle">{title} ({rows.length})</h2>
       <p className="tg-muted ops__fineprint">{blurb}</p>
       {rows.map((p) => (
@@ -331,7 +334,7 @@ function RefundsDue({ onChanged }: { onChanged: () => void }) {
   }
 
   return (
-    <section className="tg-card ops__card">
+    <section className="tg-card ops__card" id="refunds">
       <h2 className="ops__subtitle">Refunds due ({rows.length})</h2>
       <p className="tg-muted ops__fineprint">
         {viaGateway
@@ -520,7 +523,7 @@ function KycQueue() {
   const rows = queue.data ?? []
 
   return (
-    <section className="tg-card ops__card">
+    <section className="tg-card ops__card" id="kyc">
       <h2 className="ops__subtitle">Identity checks ({rows.length})</h2>
       <p className="tg-muted ops__fineprint">
         A seller cannot consign anything until this passes. Open the documents and

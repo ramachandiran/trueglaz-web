@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import './Settings.css'
+import { useConsoleTitle } from '../../components/consoleTitle'
 
 /** Every settings page, in the order an admin would set a shop up. */
 export const SETTINGS_PAGES = [
@@ -21,10 +22,10 @@ export const SETTINGS_PAGES = [
  * its own changes and shows who changed what.
  */
 export function SettingsLayout() {
+  useConsoleTitle('Settings', 'Company, money, catalogue and team')
   return (
     <div className="st">
       <aside className="st__side" aria-label="Settings">
-        <h1 className="st__title">Settings</h1>
         <nav className="st__nav">
           {SETTINGS_PAGES.map((p) => (
             <NavLink key={p.to} to={p.to === '' ? '/admin/settings' : `/admin/settings/${p.to}`} end={p.end}

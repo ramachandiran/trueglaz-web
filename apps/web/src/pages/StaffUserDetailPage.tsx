@@ -52,7 +52,7 @@ export function StaffUserDetailPage() {
 
       <header className="people__head">
         <div>
-          <h1 className="people__title">{u.displayName}</h1>
+          <h2 className="people__title">{u.displayName}</h2>
           <p className="tg-muted people__sub">
             {u.email ?? '—'} · {u.phone ?? '—'} · joined {u.joinedAt ? dateOnly(u.joinedAt) : '—'}
           </p>

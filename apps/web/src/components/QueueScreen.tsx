@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { Empty, ErrorNote, Loading } from './ui'
+import { useConsoleTitle } from './consoleTitle'
 import './QueueScreen.css'
 
 export interface QueueTab {
@@ -19,6 +20,11 @@ export interface QueueTab {
  * clicked them. A staff member moving between the two had to relearn where
  * things were. Changing the shape here changes both.
  *
+ * In the console (TG-126) the title sits in the top bar; search, tabs and the
+ * screen's action share one toolbar inside the card, the way the admin template
+ * lays a list out, and a filter a widget sent you here with is shown, counted
+ * and clearable above the table.
+ *
  * It owns the layout and nothing else. What a row is, what it says and what it
  * does belong to the screen: a submission, an item and a buyer's request have
  * nothing in common but the frame around them.
@@ -29,7 +35,7 @@ export function QueueScreen({
   shown, total, unit = 'items',
   loading, error, onRetry, emptyTitle, emptyHint,
   page, pages, onPage,
-  actions, summary,
+  actions, summary, filter, perPage = 10,
   children,
 }: {
   title: string
@@ -51,83 +57,100 @@ export function QueueScreen({
   page: number
   pages: number
   onPage: (page: number) => void
-  /** Sits at the right of the title: the one thing to do with the whole screen, such as a download. */
+  /** Sits at the right of the toolbar: the one thing to do with the whole screen, such as a download. */
   actions?: ReactNode
-  /** Between the tabs and the search: figures for exactly what the tabs have selected. */
+  /** Above the list: figures for exactly what the tabs have selected. */
   summary?: ReactNode
+  /** A filter a Control room widget opened this screen with: named, and one click to clear. */
+  filter?: { label: string; onClear: () => void } | null
+  perPage?: number
   children: ReactNode
 }) {
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
-
-  useEffect(() => {
-    if (!loading && total > 0) setLastUpdated(new Date())
-  }, [loading, total, active])
+  useConsoleTitle(title, subtitle)
+  const from = shown === 0 ? 0 : (page - 1) * perPage + 1
+  const to = Math.min(shown, page * perPage)
 
   return (
     <div className="q">
-      <div className="q__header">
-        <div>
-          <h1 className="q__title">{title}</h1>
-          <p className="tg-muted q__subtitle">{subtitle}</p>
-        </div>
-        {actions && <div className="q__actions">{actions}</div>}
-      </div>
-
-      {/* The counts are the point of a tab row on a work screen: an empty queue
-          should read as empty before it is opened, not after. */}
-      <nav className="q__filters" aria-label={`${title} views`}>
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`q__filter${active === t.key ? ' q__filter--active' : ''}`}
-            onClick={() => onTab(t.key)}
-            aria-pressed={active === t.key}
-          >
-            {t.label}
-            <span className="q__filter-count">{t.count}</span>
-          </button>
-        ))}
-      </nav>
-
       {summary}
 
-      <div className="q__search-box">
-        <input
-          type="text"
-          className="tg-input q__search"
-          placeholder={searchPlaceholder}
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-          aria-label={`Search ${title.toLowerCase()}`}
-        />
-        <span className="q__search-info tg-muted">
-          {shown} of {total} {unit} • Last updated {lastUpdated.toLocaleTimeString()}
-        </span>
-      </div>
-
-      {loading && <Loading label={`Loading ${title.toLowerCase()}`} />}
-      {error && <ErrorNote error={error} onRetry={onRetry} />}
-
-      {!loading && !error && shown === 0 && (
-        <Empty title={search ? 'Nothing matches that' : emptyTitle} hint={search ? undefined : emptyHint} />
-      )}
-
-      {!loading && shown > 0 && (
-        <div className="tg-card q__table-container">
-          {children}
-
-          <div className="q__pagination">
-            <button className="tg-button" disabled={page === 1} onClick={() => onPage(page - 1)}>
-              ← Previous
-            </button>
-            <span className="q__page-info">Page {page} of {pages || 1}</span>
-            <button className="tg-button" disabled={page === pages} onClick={() => onPage(page + 1)}>
-              Next →
-            </button>
-          </div>
+      <section className="q__card" aria-label={title}>
+        <div className="q__toolbar">
+          <label className="q__search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5" /></svg>
+            <input
+              type="search"
+              className="q__search"
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={(e) => onSearch(e.target.value)}
+              aria-label={`Search ${title.toLowerCase()}`}
+            />
+          </label>
+          {/* The counts are the point of a tab row on a work screen: an empty
+              queue should read as empty before it is opened, not after. */}
+          <nav className="q__filters" aria-label={`${title} views`}>
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`q__filter${active === t.key ? ' q__filter--active' : ''}`}
+                onClick={() => onTab(t.key)}
+                aria-pressed={active === t.key}
+              >
+                {t.label}
+                <span className="q__filter-count">{t.count}</span>
+              </button>
+            ))}
+          </nav>
+          {actions && <div className="q__actions">{actions}</div>}
         </div>
-      )}
+
+        {filter && (
+          <div className="c-filter q__active" role="status">
+            <span>Showing <b>{filter.label}</b> · {total} {unit}</span>
+            <button type="button" onClick={filter.onClear}>Clear filter</button>
+          </div>
+        )}
+
+        {loading && <Loading label={`Loading ${title.toLowerCase()}`} />}
+        {error && <ErrorNote error={error} onRetry={onRetry} />}
+
+        {!loading && !error && shown === 0 && (
+          <Empty title={search ? 'Nothing matches that' : emptyTitle} hint={search ? undefined : emptyHint} />
+        )}
+
+        {!loading && shown > 0 && (
+          <>
+            <div className="q__table-container">{children}</div>
+            <div className="q__pagination">
+              <span className="q__page-info">
+                Showing <b>{from}</b> to <b>{to}</b> of <b>{shown}</b> {unit}
+                {shown !== total && <span className="tg-muted"> (of {total} in this view)</span>}
+              </span>
+              {pages > 1 && (
+                <div className="q__pages">
+                  <button type="button" className="q__page q__page--word" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button>
+                  {pageList(page, pages).map((n, i) => n === 0
+                    ? <span key={`gap${i}`} className="q__page q__page--gap">…</span>
+                    : <button key={n} type="button" className={`q__page${n === page ? ' q__page--on' : ''}`} aria-current={n === page ? 'page' : undefined} onClick={() => onPage(n)}>{n}</button>)}
+                  <button type="button" className="q__page q__page--word" disabled={page >= pages} onClick={() => onPage(page + 1)}>Next</button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   )
+}
+
+/** Page numbers with the ends and the neighbours; 0 marks a gap. */
+function pageList(page: number, pages: number): number[] {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1)
+  const keep = new Set([1, pages, page - 1, page, page + 1].filter((n) => n >= 1 && n <= pages))
+  const out: number[] = []
+  let last = 0
+  for (const n of [...keep].sort((a, b) => a - b)) { if (n - last > 1) out.push(0); out.push(n); last = n }
+  return out
 }

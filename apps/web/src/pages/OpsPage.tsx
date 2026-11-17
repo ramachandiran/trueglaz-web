@@ -1,15 +1,23 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, dateTime, isStaff, money, relative, useApi, useSession,
   type ConsignmentItem, type InboundClock, type ManagedListing, type ReviewRequest, type Submission, type Technician,
 } from '@trueglaz/core'
 import { StateBadge } from '../components/ui'
 import { QueueScreen } from '../components/QueueScreen'
+import { pageOf, useClearParams, useQueryState } from '../components/useQueryState'
 import { ModelPhoto } from '../components/ModelPhoto'
 import './OpsPage.css'
 
 type Queue = 'intake' | 'inbound' | 'inspect' | 'price' | 'listed' | 'wanted'
+
+/** How a widget's state filter reads in the "Showing …" line. */
+const STATE_NAMES: Record<string, string> = {
+  RECEIVED: 'Received, ready to inspect',
+  AWAITING_INSPECTION: 'Queued for a technician',
+  IN_INSPECTION: 'On the bench',
+}
 
 const REJECT_REASONS = [
   { code: 'too_vague', label: 'Too vague to act on' },
@@ -38,10 +46,16 @@ const INTAKE_REASONS = ['insufficient_detail', 'prohibited_item', 'price_unreali
 export function OpsPage() {
   const { session } = useSession()
   // ?tab= lets the control room open the exact queue a piece of work sits in.
-  const [params] = useSearchParams()
-  const [queue, setQueue] = useState<Queue>(() => (params.get('tab') as Queue | null) ?? 'intake')
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
+  const [tabParam, setTabParam] = useQueryState('tab', 'intake')
+  const queue = tabParam as Queue
+  const [search, setSearch] = useQueryState('q')
+  const [pageParam, setPageParam] = useQueryState('page', '1')
+  const page = pageOf(pageParam)
+  const setPage = (n: number) => setPageParam(String(n))
+  // Filters a Control room widget can open a queue with (TG-126).
+  const [stateParam] = useQueryState('state')
+  const [overdueParam] = useQueryState('overdue')
+  const clearParams = useClearParams()
   const perPage = 10
 
   // Intake and pricing are staff work. A technician asking for them gets a 403,
@@ -120,7 +134,15 @@ export function OpsPage() {
     wanted,
   }[active]
 
-  const rows: any[] = (source.data as any[]) ?? []
+  const lateFor = (r: any): number =>
+    r.items?.every((i: ConsignmentItem) => i.currentState === 'PRE_APPROVED') ? clock.get(r.id)?.daysOverdue ?? 0 : 0
+  const stateSet = stateParam ? new Set(stateParam.split(',')) : null
+  const widget = active === 'inspect' && stateSet
+    ? { label: STATE_NAMES[stateParam] ?? stateParam.replace(/_/g, ' ').toLowerCase(), test: (r: any) => stateSet.has(r.currentState) }
+    : active === 'inbound' && overdueParam
+      ? { label: 'Boxes past their ship-by date', test: (r: any) => lateFor(r) > 0 }
+      : null
+  const rows: any[] = ((source.data as any[]) ?? []).filter(widget?.test ?? (() => true))
 
   // One predicate per queue: the thing a person would actually type.
   const matches = (r: any) => {
@@ -144,18 +166,15 @@ export function OpsPage() {
   }
   // Only a box still at the seller's is late in a way anyone can act on; one a
   // courier has picked up is coming regardless, so it sorts by time as usual.
-  const lateness = (r: any): number =>
-    active === 'inbound' && r.items.every((i: ConsignmentItem) => i.currentState === 'PRE_APPROVED')
-      ? clock.get(r.id)?.daysOverdue ?? 0
-      : 0
+  const lateness = (r: any): number => (active === 'inbound' ? lateFor(r) : 0)
   const sorted = [...filtered].sort((a, b) => lateness(b) - lateness(a) || timeOf(b) - timeOf(a))
 
   const pages = Math.ceil(sorted.length / perPage)
   const validPage = Math.min(Math.max(1, page), pages || 1)
   const shown = sorted.slice((validPage - 1) * perPage, validPage * perPage)
 
-  const go = (next: string) => { setQueue(next as Queue); setPage(1); setSearch('') }
-  const onSearch = (v: string) => { setSearch(v); setPage(1) }
+  const go = (next: string) => { clearParams('state', 'overdue', 'q', 'page'); setTabParam(next) }
+  const onSearch = (v: string) => { setSearch(v); clearParams('page') }
 
   const unit = active === 'intake' || active === 'inbound' ? 'submissions'
     : active === 'wanted' ? 'requests' : active === 'listed' ? 'listings' : 'items'
@@ -178,6 +197,7 @@ export function OpsPage() {
       <QueueScreen
         title="Operations"
         subtitle="What is waiting, and what to do about it"
+        filter={widget ? { label: widget.label, onClear: () => clearParams('state', 'overdue', 'page') } : null}
         tabs={tabs}
         active={active}
         onTab={go}

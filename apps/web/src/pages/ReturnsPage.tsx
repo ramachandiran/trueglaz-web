@@ -6,6 +6,7 @@ import {
 } from '@trueglaz/core'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { QueueScreen } from '../components/QueueScreen'
+import { useQueryState } from '../components/useQueryState'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { LineHistory } from '../components/LineHistory'
 import { COURIER_CHOICES, courierName } from '../components/couriers'
@@ -41,8 +42,11 @@ export function ReturnsPage() {
   const all = useApi(() => api.returns(), [])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<Tab>('requested')
-  const [search, setSearch] = useState('')
+  // Tab and search in the address, so a Control room count opens its queue (TG-126).
+  const [tabParam, setTabParam] = useQueryState('tab', 'requested')
+  const tab = tabParam as Tab
+  const setTab = (t: Tab) => setTabParam(t)
+  const [search, setSearch] = useQueryState('q')
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState<string | null>(null)
   const [video, setVideo] = useState<ReturnCaseView | null>(null)

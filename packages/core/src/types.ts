@@ -1634,6 +1634,8 @@ export interface StaffOrderLine extends OrderLine {
   dispatchNote: string | null
   /** The buyer has asked to cancel and nobody has decided yet: dispatch is held. */
   cancelRequested?: boolean
+  /** The order's state; a line is packer work only once it is paid (TG-126). */
+  orderState?: string | null
 }
 
 export interface DispatchInput {
@@ -1667,7 +1669,7 @@ export interface ReturnCaseView {
 
 /** What staff see first: stage sizes, what is waiting on them, and what just moved. */
 export interface StaffHome {
-  pipeline: { key: string; label: string; count: number; tone: string }[]
+  pipeline: { key: string; label: string; count: number; tone: string; states?: string[] }[]
   totals: { units: number; onSaleCount: number; onSaleValueMinor: number; soldWeekCount: number; soldWeekValueMinor: number }
   today: { received: number; listed: number; sold: number; delivered: number; returns: number }
   last7: { day: string; received: number; listed: number; sold: number }[]
@@ -1677,6 +1679,9 @@ export interface StaffHome {
     actorRole: string | null; at: string | null; grade: string | null; priceMinor: number | null
     modelSlug?: string | null
   }[]
+  /** Units sold per month (India time), oldest first, twelve of them. */
+  months?: { month: string; units: number; valueMinor: number }[]
+  recentOrders?: { id: string; orderNumber: string; state: string; totalMinor: number; at: string | null; buyerName: string | null; lineStates: string[] }[]
 }
 
 /** A seller's day: where their gear is, what they are owed, what is waiting on them. */
