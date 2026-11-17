@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -19,6 +19,11 @@ function greeting(): string {
  * most worth acting on, a count of orders on the way (never their details,
  * those are in Orders), then rails of gear and a "For you" grid built from the
  * person's own vault. Signed out, the hero is the invitation to sell.
+ *
+ * The greeting bar stays fixed at the top while the rest scrolls under it
+ * (TG-135), so the bell and the way to Profile are always one tap away. It
+ * gets its divider and a soft shadow only once something has scrolled under
+ * it: on a page at rest a line there would cut the greeting off from nothing.
  */
 export function HomeScreen({ navigation }: { navigation: any }) {
   const t = useTheme()
@@ -32,6 +37,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   const orders = useApi(() => (session ? api.myOrders() : Promise.resolve(null)), [session?.userId])
   // Back on Home after paying, cancelling or reading an order: show where things stand now.
   useEffect(() => navigation.addListener('focus', () => { orders.reload(); notif.reload() }), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [scrolled, setScrolled] = useState(false)
   const firstName = session?.displayName?.split(' ')[0] ?? null
   const unread = notif.data?.unread ?? 0
 
@@ -57,13 +63,12 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   )
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.colors.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + t.space.x2, paddingBottom: t.space.x7, gap: t.space.x5 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* greeting */}
-      <View style={{ paddingHorizontal: t.space.x4, flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+    <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
+      {/* greeting: fixed above the scroll */}
+      <View accessibilityRole="header"
+        style={[{ paddingTop: insets.top + t.space.x2, paddingBottom: t.space.x3, paddingHorizontal: t.space.x4, flexDirection: 'row', alignItems: 'center', gap: t.space.x3,
+          backgroundColor: t.colors.bg, borderBottomWidth: 1, borderBottomColor: scrolled ? t.colors.border : 'transparent', zIndex: 2 },
+          scrolled ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 } : null]}>
         <Pressable onPress={() => navigation.navigate('Profile')} accessibilityRole="button" accessibilityLabel="Profile"
           style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.colors.brand, alignItems: 'center', justifyContent: 'center' }}>
           <Txt style={{ color: t.colors.onBrand, fontWeight: t.weight.bold as never }}>{(firstName ?? 'T').slice(0, 1).toUpperCase()}</Txt>
@@ -77,6 +82,14 @@ export function HomeScreen({ navigation }: { navigation: any }) {
           {unread > 0 && <View style={{ position: 'absolute', top: 9, right: 10, width: 9, height: 9, borderRadius: 5, backgroundColor: t.colors.cta, borderWidth: 2, borderColor: t.colors.bgRaised }} />}
         </View>
       </View>
+
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingTop: t.space.x2, paddingBottom: t.space.x7, gap: t.space.x5 }}
+      showsVerticalScrollIndicator={false}
+      scrollEventThrottle={32}
+      onScroll={(e) => { const y = e.nativeEvent.contentOffset.y > 2; if (y !== scrolled) setScrolled(y) }}
+    >
 
       <Hero t={t} b={b} signedIn={!!session} seller={isSeller(session)} navigation={navigation} />
 
@@ -98,6 +111,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
         </View>
       )}
     </ScrollView>
+    </View>
   )
 }
 
