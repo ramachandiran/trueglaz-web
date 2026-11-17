@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Linking, Pressable, View } from 'react-native'
+import { Alert, Animated, Linking, Pressable, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as DocumentPicker from 'expo-document-picker'
 import * as ImagePicker from 'expo-image-picker'
@@ -17,6 +17,7 @@ import { ErrorNote, Loading, Muted } from './ui'
 import { useTheme } from '../theme/ThemeContext'
 import { PushPrompt } from './PushPrompt'
 import { encField, isUnlocked } from '../state/vaultKey'
+import { FadeIn, Pop, PulseRing, useFill } from './motion'
 
 /**
  * Insurance on a vault card, as a quote referral: TrueGlaz is not the insurer
@@ -93,17 +94,9 @@ export function CoverRow({ item, onQuote, onAddPolicy, onClaimHelp, onChanged }:
         {!!r.reuploadReason && <Txt style={{ color: t.colors.text, fontSize: t.size.xs, marginTop: 8 }}>{r.reuploadReason}</Txt>}
         {r.source === 'quote' && (
           <View style={{ flexDirection: 'row', marginTop: 14 }} accessibilityLabel={`Step ${Math.min(step + 1, 4)} of 4: ${INSURANCE_STEPS[Math.min(step, 3)]}`}>
-            {INSURANCE_STEPS.map((label, i) => {
-              const done = i <= step
-              return (
-                <View key={label} style={{ flex: 1, alignItems: 'center' }}>
-                  {i > 0 && <View style={{ position: 'absolute', top: 6, right: '50%', width: '100%', height: 2, backgroundColor: done ? t.colors.cta : t.colors.bgSunken }} />}
-                  <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: done ? t.colors.cta : t.colors.bgSunken,
-                    borderWidth: i === step ? 3 : 0, borderColor: t.colors.accentSoft }} />
-                  <Txt style={{ fontSize: 10.5, marginTop: 5, textAlign: 'center', color: done ? t.colors.text : t.colors.textMuted, fontWeight: (done ? t.weight.bold : t.weight.normal) as never }}>{label}</Txt>
-                </View>
-              )
-            })}
+            {INSURANCE_STEPS.map((label, i) => (
+              <QuoteStep key={label} label={label} i={i} step={step} />
+            ))}
           </View>
         )}
         <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x3, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -131,7 +124,7 @@ export function CoverRow({ item, onQuote, onAddPolicy, onClaimHelp, onChanged }:
       <View>
         {divider}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Badge label="Insured" tone="good" icon="shield-checkmark" />
+          <Pop><Badge label="Insured" tone="good" icon="shield-checkmark" /></Pop>
           <Muted size={t.size.xs}>until {dateOnly(p.expiresOn)}</Muted>
         </View>
         <View style={{ flexDirection: 'row', gap: t.space.x4, marginTop: 10 }}>
@@ -212,11 +205,13 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
     return (
       <Sheet title="Quote requested" onClose={onDone}>
         <View style={{ alignItems: 'center', gap: 10, paddingVertical: t.space.x3 }}>
-          <Ionicons name="checkmark-circle" size={56} color={t.colors.good} />
-          <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, textAlign: 'center' }}>
-            A licensed agent will call you{done ? ` by ${done}` : ''} with a price.
-          </Txt>
-          <Muted size={t.size.sm} style={{ textAlign: 'center' }}>You pay them directly — TrueGlaz takes no payment. Once you buy, add the policy here.</Muted>
+          <SuccessMark />
+          <FadeIn delay={300} style={{ gap: 10 }}>
+            <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, textAlign: 'center' }}>
+              A licensed agent will call you{done ? ` by ${done}` : ''} with a price.
+            </Txt>
+            <Muted size={t.size.sm} style={{ textAlign: 'center' }}>You pay them directly — TrueGlaz takes no payment. Once you buy, add the policy here.</Muted>
+          </FadeIn>
         </View>
         <PushPrompt reason="We'll tell you when the agent has your quote." />
         <Pill label="Done" block onPress={onDone} />
@@ -241,7 +236,7 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
       )) : undefined}>
       <View style={{ flexDirection: 'row', gap: 6 }}>
         <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: t.colors.cta }} />
-        <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: step === 2 ? t.colors.cta : t.colors.bgSunken }} />
+        <StepBar on={step === 2} />
       </View>
       {start.loading && <Loading />}
       {start.error && <ErrorNote error={start.error} />}
@@ -340,7 +335,10 @@ export function PolicySheet({ item, onClose, onDone }: { item: VaultItem; onClos
   if (done) {
     return (
       <Sheet title="Policy sent for checking" onClose={onDone}>
-        <Muted size={t.size.sm}>We check it matches your {item.modelLabel} within a working day. Then it shows as insured, and we remind you 30 days before it ends.</Muted>
+        <View style={{ alignItems: 'center', paddingVertical: t.space.x2 }}><SuccessMark icon="document-text" /></View>
+        <FadeIn delay={300}>
+          <Muted size={t.size.sm} style={{ textAlign: 'center' }}>We check it matches your {item.modelLabel} within a working day. Then it shows as insured, and we remind you 30 days before it ends.</Muted>
+        </FadeIn>
         <Pill label="Done" block onPress={onDone} />
       </Sheet>
     )
@@ -519,5 +517,55 @@ export function Sheet({ title, kicker, onClose, footer, children }: {
       </View>
       {children}
     </BottomSheet>
+  )
+}
+
+/** One dot of the Requested > With agent > Quote > Insured line: pops in, fills the line to it, breathes if current (TG-121). */
+function QuoteStep({ label, i, step }: { label: string; i: number; step: number }) {
+  const t = useTheme()
+  const done = i <= step
+  const line = useFill(150 + i * 160, 260)
+  return (
+    <View style={{ flex: 1, alignItems: 'center' }}>
+      {i > 0 && (
+        <View style={{ position: 'absolute', top: 6, right: '50%', width: '100%', height: 2, backgroundColor: t.colors.bgSunken, overflow: 'hidden' }}>
+          {done && <Animated.View style={{ height: 2, backgroundColor: t.colors.cta, width: line.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />}
+        </View>
+      )}
+      <View style={{ width: 14, height: 14, alignItems: 'center', justifyContent: 'center' }}>
+        {i === step && <PulseRing size={14} color={t.colors.cta} delay={300 + i * 160} />}
+        <Pop delay={i * 160}>
+          <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: done ? t.colors.cta : t.colors.bgSunken,
+            borderWidth: i === step ? 3 : 0, borderColor: t.colors.accentSoft }} />
+        </Pop>
+      </View>
+      <Txt style={{ fontSize: 10.5, marginTop: 5, textAlign: 'center', color: done ? t.colors.text : t.colors.textMuted, fontWeight: (done ? t.weight.bold : t.weight.normal) as never }}>{label}</Txt>
+    </View>
+  )
+}
+
+/** The big tick on "Quote requested" and "Policy sent": springs in with a ring around it. */
+function SuccessMark({ icon = 'checkmark' }: { icon?: React.ComponentProps<typeof Ionicons>['name'] }) {
+  const t = useTheme()
+  return (
+    <View style={{ width: 64, height: 64, alignItems: 'center', justifyContent: 'center' }}>
+      <PulseRing size={64} color={t.colors.good} delay={350} spread={1.5} />
+      <Pop>
+        <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: t.colors.good, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name={icon} size={34} color="#ffffff" />
+        </View>
+      </Pop>
+    </View>
+  )
+}
+
+/** The quote sheet's second progress bar, filling as the buyer moves to step 2. */
+function StepBar({ on }: { on: boolean }) {
+  const t = useTheme()
+  const fill = useFill(0, 320, [on])
+  return (
+    <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: t.colors.bgSunken, overflow: 'hidden' }}>
+      {on && <Animated.View style={{ height: 4, borderRadius: 2, backgroundColor: t.colors.cta, width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />}
+    </View>
   )
 }

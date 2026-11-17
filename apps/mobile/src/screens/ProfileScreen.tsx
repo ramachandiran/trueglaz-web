@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, Switch, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, dateOnly, isSeller, money, useApi, useSession, type Theme } from '@trueglaz/core'
+import { api, dateOnly, isSeller, useApi, useSession, type Theme } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme, useThemeMode, type ThemeMode } from '../theme/ThemeContext'
 import { Muted } from '../components/ui'
@@ -16,7 +16,7 @@ type IconName = React.ComponentProps<typeof Ionicons>['name']
 const LIVE = ['pending_payment', 'paid', 'dispatched', 'delivered']
 
 /**
- * Profile (TG-112): who you are, your vault at a glance, three shortcuts, and
+ * Profile (TG-112): who you are, three shortcuts, and
  * one grouped list of settings — laid out like the reference the product owner
  * chose, in TrueGlaz's colours and with only things the app really has.
  */
@@ -28,7 +28,6 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   const seller = isSeller(session)
   const profile = useApi(() => api.profile(), [])
   const orders = useApi(() => api.myOrders(), [])
-  const vault = useApi(() => api.vault(), [])
   const wanted = useApi(() => api.myRequests(), [])
   const items = useApi(() => (seller ? api.myItems() : Promise.resolve(null)), [seller])
   const meta = useApi(() => api.meta(), [])
@@ -38,7 +37,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
 
   useEffect(() => {
     const refresh = () => {
-      profile.reload(); orders.reload(); vault.reload(); wanted.reload()
+      profile.reload(); orders.reload(); wanted.reload()
       pushIsOn().then(setPush).catch(() => setPush(false))
     }
     pushIsOn().then(setPush).catch(() => setPush(false))
@@ -49,9 +48,6 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   const name = p?.displayName ?? session?.displayName ?? 'You'
   const unread = p?.unreadNotifications ?? 0
   const activeOrders = (orders.data ?? []).filter((o) => LIVE.includes(o.state)).length
-  const gear = vault.data ?? []
-  const worth = gear.reduce((n, i) => n + (i.valuation?.midMinor ?? i.costMinor ?? 0), 0)
-  const insured = gear.filter((i) => i.policy).length
   const openAsks = wanted.data?.openCount ?? 0
   const listed = (items.data ?? []).filter((i) => i.currentState === 'LISTED').length
 
@@ -82,37 +78,6 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
             <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Edit</Txt>
           </Pressable>
         </View>
-
-        {/* the vault card, where the reference has its loyalty card */}
-        <Pressable onPress={() => navigation.navigate('Vault')} accessibilityRole="button"
-          accessibilityLabel={gear.length ? `Gear Vault, worth about ${money(worth)}, ${insured} of ${gear.length} insured` : 'Gear Vault, add your gear'}
-          style={[{ backgroundColor: t.colors.brand, borderRadius: 20, padding: 20, overflow: 'hidden', gap: 6 }, lift(t)]}>
-          <View style={{ position: 'absolute', right: -40, top: -40, width: 170, height: 170, borderRadius: 85, backgroundColor: t.colors.brandAlt, opacity: 0.6 }} />
-          <View style={{ position: 'absolute', right: 30, bottom: -60, width: 130, height: 130, borderRadius: 65, backgroundColor: t.colors.brandAlt, opacity: 0.4 }} />
-          <Txt style={{ color: t.colors.onBrand, fontSize: t.size.md, fontWeight: t.weight.bold as never, letterSpacing: 0.3 }}>TrueGlaz Vault</Txt>
-          {gear.length ? (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-                <Txt style={{ color: t.colors.onBrand, fontSize: 36, fontWeight: t.weight.bold as never, letterSpacing: -1 }}>~{money(worth)}</Txt>
-                <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm }}>{gear.length} {gear.length === 1 ? 'item' : 'items'}</Txt>
-              </View>
-              <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)', marginTop: 8, overflow: 'hidden' }}>
-                <View style={{ width: `${Math.round((insured / gear.length) * 100)}%`, height: 6, backgroundColor: t.colors.cta }} />
-              </View>
-              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs, marginTop: 4 }}>
-                {insured === gear.length ? 'Everything is insured' : `${insured} of ${gear.length} insured · insure the rest`}
-              </Txt>
-            </>
-          ) : (
-            <>
-              <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xl, fontWeight: t.weight.bold as never, marginTop: 6 }}>What is your kit worth?</Txt>
-              <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs }}>Add your gear: valued from real sales, free</Txt>
-            </>
-          )}
-        </Pressable>
-
-        {/* insurance, its own card so it reads as an offer, not a footnote (TG-118) */}
-        <InsureBanner t={t} gear={gear} onQuote={(id) => navigation.navigate('Vault', { quoteFor: id })} />
 
         {/* three shortcuts */}
         <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -197,68 +162,6 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
         </BottomSheet>
       )}
     </View>
-  )
-}
-
-/**
- * Gear insurance on Profile (TG-118): what is not covered, in rupees, and one
- * tap to a free quote for the most valuable uninsured item. Hidden once
- * everything is insured; the vault card says so.
- */
-function InsureBanner({ t, gear, onQuote }: {
-  t: Theme; gear: import('@trueglaz/core').VaultItem[]; onQuote: (id: string) => void
-}) {
-  const value = (i: (typeof gear)[number]) => i.valuation?.midMinor ?? i.costMinor ?? 0
-  const open = gear.filter((i) => !i.policy && !i.insuranceRequest)
-  const asked = gear.filter((i) => !i.policy && i.insuranceRequest)
-  if (!gear.length || (open.length === 0 && asked.length === 0)) return null
-
-  if (open.length === 0) {
-    return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.colors.bgRaised, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: t.colors.border }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.colors.warnSoft, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="call-outline" size={20} color={t.colors.warn} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>Insurance quote on its way</Txt>
-          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>A licensed agent will call you with a price.</Txt>
-        </View>
-      </View>
-    )
-  }
-
-  const atRisk = open.reduce((n, i) => n + value(i), 0)
-  const biggest = [...open].sort((a, b) => value(b) - value(a))[0]
-  return (
-    <Pressable onPress={() => onQuote(biggest.id)} accessibilityRole="button"
-      accessibilityLabel={`Insure your gear. About ${money(atRisk)} is not insured. Get a free quote.`}
-      style={[{ borderRadius: 18, padding: 16, backgroundColor: t.colors.bgRaised, borderWidth: 1.5, borderColor: t.colors.cta, gap: 12 }, lift(t)]}>
-      <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-        <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: t.colors.cta, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="shield-checkmark" size={28} color={t.colors.onCta} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1 }}>GEAR INSURANCE</Txt>
-          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, marginTop: 1 }}>Protect ~{money(atRisk)}</Txt>
-          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
-            {open.length === 1 ? '1 item is' : `${open.length} items are`} not insured
-          </Txt>
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {['Theft', 'Fire & flood', 'Accidental damage'].map((c) => (
-          <View key={c} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.colors.bgSunken, borderRadius: t.radius.pill, paddingVertical: 4, paddingHorizontal: 10 }}>
-            <Ionicons name="checkmark" size={13} color={t.colors.good} />
-            <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>{c}</Txt>
-          </View>
-        ))}
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: t.colors.cta, borderRadius: t.radius.pill, paddingVertical: 12, paddingHorizontal: 18 }}>
-        <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>Get a free quote</Txt>
-        <Ionicons name="arrow-forward" size={18} color={t.colors.onCta} />
-      </View>
-      <Txt style={{ color: t.colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: -4 }}>A licensed agent calls you with a price. Nothing to pay now.</Txt>
-    </Pressable>
   )
 }
 

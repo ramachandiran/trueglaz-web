@@ -61,7 +61,7 @@ export function Pop({ children, delay = 0, style }: { children: React.ReactNode;
 }
 
 /** A soft ring that breathes out from behind something "live" (the current step, a moving order). */
-export function PulseRing({ size, color, radius, delay = 0 }: { size: number; color: string; radius?: number; delay?: number }) {
+export function PulseRing({ size, color, radius, delay = 0, spread = 2.2 }: { size: number; color: string; radius?: number; delay?: number; spread?: number }) {
   const reduced = useReducedMotion()
   const v = useRef(new Animated.Value(0)).current
   useEffect(() => {
@@ -81,7 +81,7 @@ export function PulseRing({ size, color, radius, delay = 0 }: { size: number; co
     <Animated.View pointerEvents="none" style={{
       position: 'absolute', width: size, height: size, borderRadius: radius ?? size / 2, backgroundColor: color,
       opacity: v.interpolate({ inputRange: [0, 0.02, 1], outputRange: [0, 0.45, 0] }),
-      transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 2.2] }) }],
+      transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, spread] }) }],
     }} />
   )
 }
@@ -171,4 +171,24 @@ export function useStatusChange(id: string | undefined, key: string | undefined,
     return () => { live = false }
   }, [id, key, mode, tick])
   return state
+}
+
+/**
+ * A number that counts up to `target` (a value, a total) instead of appearing
+ * all at once. Starts from the last value shown, so a refresh glides rather
+ * than restarting from zero.
+ */
+export function useCountUp(target: number, duration: number = 700): number {
+  const reduced = useReducedMotion()
+  const [shown, setShown] = useState(reduced ? target : 0)
+  const from = useRef(0)
+  useEffect(() => {
+    if (reduced) { setShown(target); from.current = target; return }
+    const v = new Animated.Value(from.current)
+    const id = v.addListener(({ value }) => setShown(value))
+    const a = Animated.timing(v, { toValue: target, duration, easing: EASE_OUT, useNativeDriver: false })
+    a.start(() => { from.current = target })
+    return () => { a.stop(); v.removeListener(id) }
+  }, [target, reduced]) // eslint-disable-line react-hooks/exhaustive-deps
+  return shown
 }

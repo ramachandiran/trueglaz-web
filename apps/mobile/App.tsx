@@ -2,7 +2,7 @@ import 'react-native-get-random-values' // crypto.getRandomValues for the vault'
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import { AppState, View } from 'react-native'
-import { NavigationContainer, DefaultTheme, DarkTheme, useNavigation } from '@react-navigation/native'
+import { NavigationContainer, DefaultTheme, DarkTheme, createNavigationContainerRef, useNavigation } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -37,6 +37,9 @@ import { WishlistScreen } from './src/screens/WishlistScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen'
 import { onPushReceived, setBadge, usePushWhileSignedIn } from './src/push'
+import { InAppBanner, noteInbox, resetInbox } from './src/components/InAppBanner'
+
+const navRef = createNavigationContainerRef<any>()
 
 /** The React Native adapter for core's storage port (web uses localStorage). */
 const nativeStorage: Storage = {
@@ -76,7 +79,12 @@ function MainTabs() {
   const unread = notif.data?.unread || undefined
   // Pushes: register this phone if already allowed, and open what a tapped one is about.
   usePushWhileSignedIn(navigation)
-  useEffect(() => { if (notif.data) setBadge(notif.data.unread) }, [notif.data])
+  useEffect(() => {
+    if (!notif.data) return
+    setBadge(notif.data.unread)
+    // Anything new since the last look slides in as a banner (TG-123).
+    noteInbox(notif.data.items)
+  }, [notif.data])
   return (
     <>
     <Tabs.Navigator
@@ -153,11 +161,13 @@ function Routes() {
       border: t.colors.border, primary: t.colors.accent,
     },
   }
+  useEffect(() => { if (!session) resetInbox() }, [session])
   if (!ready) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} ref={navRef}>
       <StatusBar style={t.name === 'dark' ? 'light' : 'dark'} />
       {session ? <AppStack /> : <AuthStack />}
+      {session && <InAppBanner navRef={navRef as never} />}
     </NavigationContainer>
   )
 }

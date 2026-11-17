@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { VaultIntro } from './VaultIntro'
-import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native'
+import { Alert, Animated, FlatList, Pressable, RefreshControl, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -19,6 +19,8 @@ import {
   isE2eeOn, isUnlocked, lockVault, ensureLoaded, decField, encField,
   enableE2ee, unlockVault, changePin, recoverVault, disableE2ee,
 } from '../state/vaultKey'
+import { FadeIn, Pop, statusKey, useCountUp, useFill, useStatusChange } from '../components/motion'
+import { InsureBanner } from '../components/InsureBanner'
 
 /** The midpoint estimate, or the purchase cost when there is no valuation yet. */
 function estimate(it: VaultItem): number {
@@ -61,7 +63,7 @@ export function VaultScreen() {
 
   useEffect(() => { ensureLoaded().then(rePrivacy) }, [])
 
-  // Opened from Profile's "Get a free quote" (TG-118): straight into that item's quote.
+  // Opened with a quote to start (a link from elsewhere): straight into that item's quote.
   const route = useRoute<any>()
   const nav = useNavigation<any>()
   const quoteFor: string | undefined = route.params?.quoteFor
@@ -79,6 +81,9 @@ export function VaultScreen() {
   const insured = items.filter((i) => i.policy).length
   // Asked for a quote or sent a policy: say so, not "0 insured".
   const issuing = items.filter((i) => !i.policy && i.insuranceRequest).length
+  // TG-121: the value counts up and the insured share fills, rather than appearing.
+  const shownTotal = useCountUp(total)
+  const coverFill = useFill(350, 600, [insured, items.length])
 
   function afterPrivacy() { setPrivacy(null); rePrivacy(); reload() }
 
@@ -123,27 +128,40 @@ export function VaultScreen() {
           refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={t.colors.accent} />}
           contentContainerStyle={{ padding: t.space.x4, gap: t.space.x3, paddingBottom: insets.bottom + t.space.x6 }}
           ListHeaderComponent={items.length > 0 ? (
-            <View style={{ backgroundColor: t.colors.brand, borderRadius: 14, padding: t.space.x5, marginBottom: t.space.x3, overflow: 'hidden' }}>
+            <View style={{ gap: t.space.x3, marginBottom: t.space.x3 }}>
+            <FadeIn>
+            <View style={{ backgroundColor: t.colors.brand, borderRadius: 14, padding: t.space.x5, overflow: 'hidden' }}>
               <View style={{ position: 'absolute', right: -28, top: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: '#ffffff10' }} />
               <View style={{ position: 'absolute', right: t.space.x4, top: t.space.x4 }}>
                 <Ionicons name="shield-checkmark-outline" size={30} color="#ffffff33" />
               </View>
               <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>Estimated market value</Txt>
-              <Txt style={{ color: t.colors.onBrand, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -1, marginTop: 2 }}>~{money(total)}</Txt>
+              <Txt style={{ color: t.colors.onBrand, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -1, marginTop: 2 }}>~{money(Math.round(shownTotal / 100) * 100)}</Txt>
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)', marginTop: 10, overflow: 'hidden' }}>
+                <Animated.View style={{ height: 6, borderRadius: 3, backgroundColor: t.colors.good,
+                  width: coverFill.interpolate({ inputRange: [0, 1], outputRange: ['0%', `${Math.round((insured / items.length) * 100)}%`] }) }} />
+              </View>
               <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.xs, marginTop: 7 }}>
                 {items.length} item{items.length === 1 ? '' : 's'} · {coverNote(insured, issuing)} · indicative, final price set at a free inspection
               </Txt>
             </View>
+            </FadeIn>
+            <FadeIn delay={120}>
+              <InsureBanner t={t} gear={items} onQuote={(id) => { const it = items.find((i) => i.id === id); if (it) setInsuring({ item: it, what: 'quote' }) }} />
+            </FadeIn>
+            </View>
           ) : undefined}
           ListEmptyComponent={<Empty title="Your vault is empty" hint="Add gear you own to track its value, warranty and insurance." />}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const cost = shownCost(item)
             const serial = shownSerial(item)
             const locked = hasLockedFields(item)
             const estVal = item.valuation?.midMinor ?? cost ?? null
             const wt = warrantyTone(item.warrantyStatus)
             return (
+              <FadeIn index={index} delay={200}>
               <Surface style={{ padding: t.space.x4 }}>
+                <CoverChange id={item.id} item={item} />
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
                   <ModelThumb image={pictures.byId(item.productModelId)} size={72} />
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -177,6 +195,7 @@ export function VaultScreen() {
                   <RoundIcon icon="trash-outline" label={`Remove ${item.modelLabel}`} onPress={() => remove(item)} size={34} />
                 </View>
               </Surface>
+              </FadeIn>
             )
           }}
         />
@@ -410,4 +429,24 @@ function coverNote(insured: number, open: number): string {
   if (open === 0) return `${insured} insured`
   if (insured > 0) return `${insured} insured · ${open} in progress`
   return `${open} insurance ${open === 1 ? 'request' : 'requests'} in progress`
+}
+
+/**
+ * When an item's insurance moved on since this phone last showed it (quote in,
+ * policy checked, insured), a small "Updated" chip pops in on the card, once.
+ */
+function CoverChange({ id, item }: { id: string; item: VaultItem }) {
+  const t = useTheme()
+  const now = item.policy ? 'insured' : item.insuranceRequest?.status ?? 'none'
+  const moved = useStatusChange(`vault:${id}`, statusKey(now), 'commit')
+  if (!moved.changed) return null
+  const label = now === 'insured' ? 'Now insured' : now === 'quote_shared' ? 'Quote is in' : 'Insurance updated'
+  return (
+    <Pop delay={500} style={{ alignSelf: 'flex-start', marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: now === 'insured' ? t.colors.goodSoft : t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
+        <Ionicons name="sparkles" size={11} color={now === 'insured' ? t.colors.good : t.colors.accent} />
+        <Txt style={{ color: now === 'insured' ? t.colors.good : t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never }}>{label}</Txt>
+      </View>
+    </Pop>
+  )
 }
