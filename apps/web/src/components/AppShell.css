@@ -323,3 +323,11 @@
   .shell__ops { margin-left: var(--tg-space-2); }
   .shell__ops-link { padding: 6px 9px; }
 }
+
+/* On a phone the search takes its own full row under the brand and account.
+   This has to come after the base `.search { flex: 1 }`: written earlier, the
+   later shorthand reset the basis and the box was squeezed to a sliver beside
+   "Sell your gear" and the avatar. */
+@media (max-width: 720px) {
+  .search { order: 3; flex: 1 1 100%; }
+}

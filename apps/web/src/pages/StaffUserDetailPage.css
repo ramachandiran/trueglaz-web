@@ -48,3 +48,11 @@
 .person__tab--on { color: var(--tg-text); border-bottom-color: #FF6B35; font-weight: 600; }
 .person__empty { margin: 0; }
 .person__fact { display: contents; }
+
+/* Never wider than the screen: one long unbroken value (an id, an email, a
+   quoted note) used to stretch every panel past the edge on a phone. */
+.person { grid-template-columns: minmax(0, 1fr); }
+.person__panels { grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
+.person__panel { min-width: 0; overflow-wrap: anywhere; }
+.person .people__head { flex-wrap: wrap; }
+.person .people__head > div { min-width: 0; overflow-wrap: anywhere; }

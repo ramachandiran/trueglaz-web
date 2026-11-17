@@ -158,8 +158,8 @@ export function InventoryDashboard() {
   const startIndex = (validPage - 1) * itemsPerPage
   const paginatedItems = filtered.slice(startIndex, startIndex + itemsPerPage)
 
-  const handleSearchChange = (value: string) => { setSearch(value); clear('page') }
-  const handleViewChange = (next: string) => { setView(next); clear('page') }
+  const handleSearchChange = (value: string) => setSearch(value, ['page'])
+  const handleViewChange = (next: string) => setView(next, ['page'])
 
   /** The moves this person could make on this item, in rule order. */
   function movesFor(item: ConsignmentItem): Planned[] {

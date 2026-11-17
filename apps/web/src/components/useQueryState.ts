@@ -9,13 +9,18 @@ import { useSearchParams } from 'react-router-dom'
  *
  * Writes replace the history entry rather than adding one, so typing in a
  * search box does not leave a back-button trail of every letter.
+ *
+ * A change that also resets other parameters (a new tab drops the page and
+ * the filter) names them in `reset` so it is ONE write: two writes in the
+ * same click each start from the old address, and the second undoes the first.
  */
-export function useQueryState(name: string, fallback = ''): [string, (v: string) => void] {
+export function useQueryState(name: string, fallback = ''): [string, (v: string, reset?: string[]) => void] {
   const [params, setParams] = useSearchParams()
   const value = params.get(name) ?? fallback
-  const set = useCallback((v: string) => {
+  const set = useCallback((v: string, reset: string[] = []) => {
     setParams((prev) => {
       const next = new URLSearchParams(prev)
+      reset.forEach((n) => next.delete(n))
       if (!v || v === fallback) next.delete(name)
       else next.set(name, v)
       return next
@@ -53,9 +58,12 @@ export function useHashTarget(ready: boolean) {
     if (!ready || !hash) return
     const el = document.getElementById(decodeURIComponent(hash.slice(1)))
     if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Once now and once more after the page has settled: a table above that
+    // finishes drawing late would otherwise push the section back down.
+    el.scrollIntoView({ block: 'start' })
+    const again = setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 500)
     el.classList.add('c-target')
     const t = setTimeout(() => el.classList.remove('c-target'), 2400)
-    return () => clearTimeout(t)
+    return () => { clearTimeout(t); clearTimeout(again) }
   }, [ready, hash])
 }

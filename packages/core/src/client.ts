@@ -205,7 +205,7 @@ const put = <T,>(p: string, body?: unknown) =>
  * has to carry the bearer token, which is why this is not simply a link the
  * browser follows. The caller gets the bytes and the name the server chose.
  */
-async function download(endpoint: string): Promise<{ blob: Blob; filename: string }> {
+async function download(endpoint: string, fallbackName = 'download'): Promise<{ blob: Blob; filename: string }> {
   let res: Response
   try {
     res = await fetch(url(endpoint), {
@@ -222,7 +222,7 @@ async function download(endpoint: string): Promise<{ blob: Blob; filename: strin
   // filename*= is the encoded form; filename= the plain one. Either will do for
   // a name made of ASCII, which the server's is.
   const disposition = res.headers.get('Content-Disposition') ?? ''
-  const filename = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1] ?? 'statement.xlsx'
+  const filename = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1] ?? fallbackName
   return { blob: await res.blob(), filename: decodeURIComponent(filename) }
 }
 
@@ -543,7 +543,7 @@ export const api = {
     get<Statement>(`/admin/balance-sheet${dateRange(from, to)}`),
   balanceSheetMonths: () => get<MonthCount[]>('/admin/balance-sheet/months'),
   downloadStatement: (from?: string | null, to?: string | null) =>
-    download(`/admin/balance-sheet/export${dateRange(from, to)}`),
+    download(`/admin/balance-sheet/export${dateRange(from, to)}`, 'statement.xlsx'),
   addCourierCharge: (itemId: string, body: NewCourierCharge) =>
     post<CourierCharge>(`/admin/balance-sheet/items/${itemId}/courier-charges`, body),
   voidCourierCharge: (id: string) => del<void>(`/admin/balance-sheet/courier-charges/${id}`),
@@ -634,7 +634,7 @@ export const api = {
   /** Everything held about the account, as the JSON the server would attach. */
   myData: () => get<Record<string, unknown>>('/profile/export'),
   /** The same, as a file (website): bytes plus the server's file name. */
-  myDataFile: () => download('/profile/export'),
+  myDataFile: () => download('/profile/export', `trueglaz-my-data-${new Date().toISOString().slice(0, 10)}.json`),
   staffAccountDeletions: () => get<StaffAccountDeletion[]>('/staff/account-deletions'),
   savePayoutAccount: (body: {
     code: string
