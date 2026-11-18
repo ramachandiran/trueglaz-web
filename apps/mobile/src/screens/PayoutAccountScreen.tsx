@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Pressable, ScrollView, View } from 'react-native'
+import { FormScroll } from '../components/FormScroll'
+import { Pressable, View } from 'react-native'
 import { api, dateOnly, useApi } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { OtpBoxes } from '../components/OtpBoxes'
@@ -16,7 +17,7 @@ export function PayoutAccountScreen() {
   const [editing, setEditing] = useState(false)
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+    <FormScroll style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
       {acct.error && <ErrorNote error={acct.error} onRetry={acct.reload} />}
       {acct.loading && !acct.data && <Loading />}
 
@@ -71,7 +72,7 @@ export function PayoutAccountScreen() {
             </Muted>
           </>
         )}
-    </ScrollView>
+    </FormScroll>
   )
 }
 

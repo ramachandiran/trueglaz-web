@@ -1,10 +1,11 @@
 import { useRef } from 'react'
 import {
-  Animated, Keyboard, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, StyleSheet, View,
+  Animated, Keyboard, KeyboardAvoidingView, Modal, PanResponder, Pressable, StyleSheet, View,
   type DimensionValue,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext'
+import { FormScroll } from './FormScroll'
 
 /**
  * Every bottom sheet in the app, so they all close the same three ways:
@@ -78,12 +79,12 @@ export function BottomSheet({
           </View>
           {header}
           {scroll ? (
-            <ScrollView
-              keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" scrollEventThrottle={16}
+            <FormScroll
+              keyboardDismissMode="on-drag"
               onScroll={(e) => { scrollTop.current = e.nativeEvent.contentOffset.y }}
               contentContainerStyle={{ gap: gap ?? t.space.x3, paddingBottom: t.space.x2 }}>
               {children}
-            </ScrollView>
+            </FormScroll>
           ) : children}
           {footer && <View style={{ gap: 10, paddingTop: t.space.x3 }}>{footer}</View>}
         </Animated.View>

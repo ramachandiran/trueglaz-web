@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useEscape } from '../components/useEscape'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, useApi, HAPPY_PATH, STATE_LABELS,
@@ -316,6 +317,7 @@ function MyItems() {
         </div>
       )}
 
+      {discardTarget && <EscapeCloses onClose={() => !discardingId && setDiscardTarget(null)} />}
       {discardTarget && (
         <div className="sell__scrim" onMouseDown={() => !discardingId && setDiscardTarget(null)}>
           <div
@@ -544,3 +546,9 @@ function Payouts() {
   )
 }
 
+
+/** Escape cancels the discard question, like tapping outside it (TG-144). */
+function EscapeCloses({ onClose }: { onClose: () => void }) {
+  useEscape(onClose)
+  return null
+}

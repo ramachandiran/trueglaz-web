@@ -1,6 +1,7 @@
 import { uploadPhoto } from '../media/uploadPhoto'
+import { FormScroll } from '../components/FormScroll'
 import { useState } from 'react'
-import { Image, ScrollView, View } from 'react-native'
+import { Image, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { api, useApi, useSession } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -95,7 +96,7 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
   ]
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+    <FormScroll style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
       {/* status hero */}
       {verified && !canSell && (
         <StatusHero
@@ -164,6 +165,6 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
       )}
 
       <Muted size={t.size.xs}>Tip: on the demo server, seller@trueglaz.demo is already an approved seller if you want to try consigning right away.</Muted>
-    </ScrollView>
+    </FormScroll>
   )
 }

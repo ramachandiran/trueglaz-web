@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useEscape } from './useEscape'
 import type { KycDocumentView } from '@trueglaz/core'
 import './KycDocuments.css'
 
@@ -56,6 +57,7 @@ export function KycDocuments({ docs }: { docs: KycDocumentView[] }) {
         </p>
       )}
 
+      {open && <EscapeCloses onClose={() => setOpen(null)} />}
       {open && (
         <div className="kdocs__lightbox" role="dialog" aria-modal="true" onClick={() => setOpen(null)}>
           <img src={open.media.sizes[1200] ?? open.media.url} alt={LABELS[open.docType] ?? open.docType} />
@@ -64,4 +66,10 @@ export function KycDocuments({ docs }: { docs: KycDocumentView[] }) {
       )}
     </div>
   )
+}
+
+/** Escape closes the enlarged photo (TG-144). */
+function EscapeCloses({ onClose }: { onClose: () => void }) {
+  useEscape(onClose)
+  return null
 }

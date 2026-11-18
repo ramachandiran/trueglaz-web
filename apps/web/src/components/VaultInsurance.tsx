@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useEscape } from './useEscape'
 import {
   api, ApiError, money, dateOnly, useApi, dayName, coverBasisText, insuranceOwnerStatus, insuranceStep,
   INSURANCE_STEPS, CALL_TIMES,
@@ -395,6 +396,7 @@ function FilePick({ itemId, kind, doc, onDoc }: {
 export function Modal({ title, kicker, wide = false, onClose, children }: {
   title: string; kicker?: string; wide?: boolean; onClose: () => void; children: React.ReactNode
 }) {
+  useEscape(onClose)
   return (
     <div className="vault__overlay" onClick={onClose}>
       <div className={`vault__modal${wide ? ' vault__modal--wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>

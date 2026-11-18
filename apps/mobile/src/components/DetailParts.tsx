@@ -1,4 +1,5 @@
-import { Pressable, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { Keyboard, Platform, Pressable, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Txt } from './Txt'
@@ -123,9 +124,20 @@ export function SummaryCard({ label, things, rows, total, footer, children }: {
   )
 }
 
-/** The one action that belongs to the whole screen, pinned above the system bar. */
+/**
+ * The one action that belongs to the whole screen, pinned above the system bar.
+ * It steps aside while the keyboard is up (TG-141): a form on the same screen
+ * (the ship-it form) needs that height more than a Withdraw button does.
+ */
 export function StickyFooter({ children }: { children: React.ReactNode }) {
   const t = useTheme()
+  const [typing, setTyping] = useState(false)
+  useEffect(() => {
+    const on = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setTyping(true))
+    const off = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setTyping(false))
+    return () => { on.remove(); off.remove() }
+  }, [])
+  if (typing) return null
   return (
     <View style={{ flexDirection: 'row', gap: t.space.x2, paddingHorizontal: t.space.x4, paddingTop: t.space.x3, paddingBottom: t.space.x3,
       backgroundColor: t.colors.bgRaised, borderTopWidth: 1, borderTopColor: t.colors.border }}>

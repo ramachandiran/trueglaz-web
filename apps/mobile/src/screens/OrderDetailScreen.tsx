@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Pressable, ScrollView, View } from 'react-native'
+import { FormScroll } from '../components/FormScroll'
+import { Pressable, View } from 'react-native'
 import { BottomSheet } from '../components/BottomSheet'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as ImagePicker from 'expo-image-picker'
@@ -195,7 +196,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <DetailHeader title="Order" onBack={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
+      <FormScroll contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
         <DetailRef code={order.orderNumber} when={`Placed ${dateTime(order.createdAt)}`} />
 
         <FadeIn>
@@ -291,7 +292,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
         </SummaryCard>
 
         {actionError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{actionError}</Txt>}
-      </ScrollView>
+      </FormScroll>
 
       {/* The only button at the bottom: calling the order off, while it can be. */}
       {!unpaid && lines.map((l) => (

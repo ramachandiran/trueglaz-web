@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { FormScroll } from '../components/FormScroll'
 import { confirm, notify } from '../components/Confirm'
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native'
+import { ActivityIndicator, Pressable, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -49,7 +50,7 @@ export function WishlistScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: t.space.x7, gap: t.space.x4 }}>
+      <FormScroll contentContainerStyle={{ paddingBottom: t.space.x7, gap: t.space.x4 }}>
         <PageTitle title="Wishlist" sub="Gear you're waiting for. We tell you the moment it's in."
           back={navigation.canGoBack() ? () => navigation.goBack() : undefined} />
 
@@ -79,7 +80,7 @@ export function WishlistScreen() {
             ))}
 
         </View>
-      </ScrollView>
+      </FormScroll>
 
       {adding && data && (
         <AddSheet t={t} days={data.expiryDays} onClose={() => setAdding(false)} onDone={() => { setAdding(false); reload() }} />

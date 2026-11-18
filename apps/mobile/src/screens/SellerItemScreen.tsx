@@ -1,4 +1,5 @@
 import { uploadPhoto } from '../media/uploadPhoto'
+import { FormScroll } from '../components/FormScroll'
 import { useEffect, useMemo, useState } from 'react'
 import { Image, Pressable, ScrollView, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
@@ -142,7 +143,7 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <DetailHeader title={isDraft ? 'Review & submit' : 'My item'} onBack={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
+      <FormScroll contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
         <DetailRef code={it.internalSku} when={`Added ${dateOnly(it.createdAt)}`} />
 
         {isDraft ? (
@@ -219,7 +220,7 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
           </>
         )}
         {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
-      </ScrollView>
+      </FormScroll>
 
       {isDraft ? (
         <StickyFooter>

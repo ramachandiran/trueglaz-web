@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { FormScroll } from '../components/FormScroll'
 import { confirm, notify } from '../components/Confirm'
-import { ScrollView, Switch, View } from 'react-native'
+import { Switch, View } from 'react-native'
 import { api, useApi, type Address } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -29,7 +30,7 @@ export function AddressesScreen() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+    <FormScroll style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
       {addrs.error && <ErrorNote error={addrs.error} onRetry={addrs.reload} />}
       {addrs.loading && !addrs.data && <Loading />}
       {addrs.data && addrs.data.length === 0 && !adding && (
@@ -60,7 +61,7 @@ export function AddressesScreen() {
       {adding
         ? <AddressForm firstOne={(addrs.data ?? []).length === 0} onDone={() => { setAdding(false); addrs.reload() }} onCancel={() => setAdding(false)} />
         : <Button label="Add an address" onPress={() => setAdding(true)} />}
-    </ScrollView>
+    </FormScroll>
   )
 }
 

@@ -1,4 +1,6 @@
+import { useRef, type ElementRef } from 'react'
 import { ActivityIndicator, Pressable, TextInput, View, type TextInputProps } from 'react-native'
+import { useRevealOnFocus } from './FormScroll'
 import { MAX_FONT_SCALE, Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { mobileFontFamily } from '../theme/fonts'
@@ -38,14 +40,19 @@ export function Button({
 }
 
 /** A labelled text input that honours the theme. */
-export function Field({ label, hint, style, ...rest }: TextInputProps & { label?: string; hint?: string }) {
+export function Field({ label, hint, style, onFocus, ...rest }: TextInputProps & { label?: string; hint?: string }) {
   const t = useTheme()
+  // Inside a FormScroll, a focused field is kept above the keyboard (TG-141).
+  const input = useRef<ElementRef<typeof TextInput>>(null)
+  const reveal = useRevealOnFocus()
   return (
     <View style={{ gap: t.space.x1 }}>
       {label && (
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>{label}</Txt>
       )}
       <TextInput
+        ref={input}
+        onFocus={(e) => { reveal?.(input.current as never); onFocus?.(e) }}
         placeholderTextColor={t.colors.textMuted}
         maxFontSizeMultiplier={MAX_FONT_SCALE}
         style={[
