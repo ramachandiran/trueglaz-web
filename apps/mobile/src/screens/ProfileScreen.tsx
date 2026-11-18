@@ -10,7 +10,7 @@ import { Button, Field } from '../components/form'
 import { BottomSheet } from '../components/BottomSheet'
 import { API_ORIGIN } from '../config'
 import { disablePush, enablePush, pushIsOn, pushSupported } from '../push'
-import { Chip, lift } from '../components/kit'
+import { Chip, lift, PageTitle } from '../components/kit'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 const LIVE = ['pending_payment', 'paid', 'dispatched', 'delivered']
@@ -35,6 +35,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   const [sheet, setSheet] = useState<'edit' | 'appearance' | 'help' | null>(null)
   const [push, setPush] = useState<boolean | null>(null)
   const [pushBusy, setPushBusy] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
     const refresh = () => {
@@ -61,9 +62,11 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + t.space.x2, paddingBottom: t.space.x7, paddingHorizontal: t.space.x4, gap: t.space.x4 }}>
-        <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -0.8 }}>Profile</Txt>
+    <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
+      {/* The title stays fixed while the page scrolls under it, like every other tab. */}
+      <PageTitle title="Profile" scrolled={scrolled} />
+      <ScrollView onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 4)} scrollEventThrottle={32}
+        contentContainerStyle={{ paddingTop: t.space.x2, paddingBottom: t.space.x7, paddingHorizontal: t.space.x4, gap: t.space.x4 }}>
 
         {/* who you are */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>

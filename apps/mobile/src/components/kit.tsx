@@ -25,13 +25,20 @@ export function lift(t: Theme, strong = false): ViewStyle {
   }
 }
 
-/** The big headline every tab screen opens with, and an optional row of round actions above it. */
-export function PageTitle({ title, sub, actions, back }: {
-  title: string; sub?: string; actions?: React.ReactNode; back?: () => void
+/**
+ * The big headline every tab screen opens with, and an optional row of round
+ * actions above it. It sits fixed above the screen's scroll. Pass `scrolled`
+ * (true once the content has moved under it) for the divider and soft shadow,
+ * the same as Home's greeting bar; at rest there is no line.
+ */
+export function PageTitle({ title, sub, actions, back, scrolled }: {
+  title: string; sub?: string; actions?: React.ReactNode; back?: () => void; scrolled?: boolean
 }) {
   const t = useTheme()
   return (
-    <View style={{ paddingHorizontal: t.space.x4 }}>
+    <View style={[{ paddingHorizontal: t.space.x4, paddingBottom: t.space.x3, backgroundColor: t.colors.bg, zIndex: 2,
+      borderBottomWidth: 1, borderBottomColor: scrolled ? t.colors.border : 'transparent' },
+      scrolled ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 } : null]}>
       {(back || actions) ? (
         <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           {back ? <RoundIcon icon="chevron-back" label="Back" onPress={back} /> : <View />}

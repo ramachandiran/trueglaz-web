@@ -35,6 +35,7 @@ export function VaultScreen() {
   const insets = useSafeAreaInsets()
   const { data, error, loading, reload } = useApi(() => api.vault(), [])
   const [adding, setAdding] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const [insuring, setInsuring] = useState<{ item: VaultItem; what: 'quote' | 'policy' | 'claim' } | null>(null)
   // Opened with a quote to start (a link from elsewhere): straight into that item's quote.
   const route = useRoute<any>()
@@ -69,7 +70,7 @@ export function VaultScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." />
+      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." scrolled={scrolled} />
       <View style={{ height: t.space.x3 }} />
 
 
@@ -80,6 +81,7 @@ export function VaultScreen() {
         <FlatList
           data={items}
           keyExtractor={(i) => i.id}
+          onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 4)} scrollEventThrottle={32}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={t.colors.accent} />}
           contentContainerStyle={{ padding: t.space.x4, gap: t.space.x3, paddingBottom: insets.bottom + t.space.x6 }}
           ListHeaderComponent={items.length > 0 ? (

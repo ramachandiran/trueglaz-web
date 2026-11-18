@@ -4,6 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, isSeller, money, STATE_LABELS, useApi, useSession, type Theme } from '@trueglaz/core'
+import { PageTitle } from '../components/kit'
 import { Txt, useLargeText } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button } from '../components/form'
@@ -20,6 +21,7 @@ export function SellScreen({ navigation }: { navigation: any }) {
 
 function SellerGate({ navigation, insets }: { navigation: any; insets: { top: number } }) {
   const t = useTheme()
+  const [scrolled, setScrolled] = useState(false)
   const kyc = useApi(() => api.myKyc(), [])
   const { refresh } = useSession()
 
@@ -29,8 +31,10 @@ function SellerGate({ navigation, insets }: { navigation: any; insets: { top: nu
   const rejected = kyc.data?.status === 'rejected'
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ paddingTop: insets.top + t.space.x3, padding: t.space.x4, gap: t.space.x4 }}>
-      <Txt style={{ color: t.colors.text, fontSize: t.size.xxl, fontWeight: t.weight.bold as never, letterSpacing: -0.6 }}>Sell your gear</Txt>
+    <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
+    <PageTitle title="Sell your gear" scrolled={scrolled} />
+    <ScrollView style={{ flex: 1 }} onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 4)} scrollEventThrottle={32}
+      contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4 }}>
 
       {verified ? (
         <StatusHero
@@ -73,11 +77,13 @@ function SellerGate({ navigation, insets }: { navigation: any; insets: { top: nu
 
       {kyc.loading && !kyc.data && <Loading />}
     </ScrollView>
+    </View>
   )
 }
 
 function SellerDashboard({ navigation, insets }: { navigation: any; insets: { top: number } }) {
   const t = useTheme()
+  const [scrolled, setScrolled] = useState(false)
   const large = useLargeText()
   const home = useApi(() => api.sellerHome(), [])
   const items = useApi(() => api.myItems(), [])
@@ -118,8 +124,10 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   if (home.loading && !home.data) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ paddingTop: insets.top + t.space.x3, padding: t.space.x4, gap: t.space.x5, paddingBottom: t.space.x7 }}>
-      <Txt style={{ color: t.colors.text, fontSize: t.size.xxl, fontWeight: t.weight.bold as never, letterSpacing: -0.6 }}>Selling</Txt>
+    <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
+    <PageTitle title="Selling" scrolled={scrolled} />
+    <ScrollView style={{ flex: 1 }} onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 4)} scrollEventThrottle={32}
+      contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x5, paddingBottom: t.space.x7 }}>
 
       {home.error && <ErrorNote error={home.error} onRetry={home.reload} />}
 
@@ -195,6 +203,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
         })}
       </View>
     </ScrollView>
+    </View>
   )
 }
 
