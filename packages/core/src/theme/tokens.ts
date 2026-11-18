@@ -156,14 +156,16 @@ export const light: Theme = {
     ctaHover: '#FF6B35',
     onCta: '#101c24',
 
-    good: '#2e7d53',
+    // #2a744c, not the brighter #2e7d53: green words on the soft green badge
+    // need 4.5:1 (this is 4.7; the old one was 4.2).
+    good: '#2a744c',
     goodSoft: '#ddefe3',
     warn: '#8a5a12',
     warnSoft: '#f7ebd3',
     bad: '#a8342a',
     badSoft: '#f7dfdb',
 
-    stepDone: '#2e7d53',
+    stepDone: '#2a744c',
     stepCurrent: '#233e50',
     stepUpcoming: '#bfbba4',
     stepDetour: '#8a5a12',

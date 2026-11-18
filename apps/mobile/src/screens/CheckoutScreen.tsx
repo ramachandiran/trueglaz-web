@@ -139,7 +139,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <SectionTitle>Deliver to</SectionTitle>
             {(addresses.data?.length ?? 0) > 0 && (
-              <Pressable onPress={() => setAdding((v) => !v)}>
+              <Pressable accessibilityRole="button" hitSlop={12} onPress={() => setAdding((v) => !v)}>
                 <Txt style={{ color: t.colors.accent }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
               </Pressable>
             )}
@@ -208,7 +208,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
 function AddressRow({ a, selected, onPress }: { a: Address; selected: boolean; onPress: () => void }) {
   const t = useTheme()
   return (
-    <Pressable onPress={onPress}
+    <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!selected }} onPress={onPress}
       style={{ borderWidth: 1, borderRadius: t.radius.md, padding: t.space.x3, gap: 2, borderColor: selected ? t.colors.accent : t.colors.border, backgroundColor: selected ? t.colors.accentSoft : t.colors.bg }}>
       <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>{a.recipientName}{a.isDefault ? '  · default' : ''}</Txt>
       <Muted size={t.size.xs}>{[a.line1, a.line2, a.city, a.state, a.pincode].filter(Boolean).join(', ')}</Muted>

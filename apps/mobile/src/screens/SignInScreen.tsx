@@ -235,7 +235,7 @@ export function SignInScreen() {
                       {genreOptions.map((g) => {
                         const on = genres.includes(g.code)
                         return (
-                          <Pressable key={g.code} onPress={() => toggleGenre(g.code)}
+                          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!on }} key={g.code} onPress={() => toggleGenre(g.code)}
                             style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
                             <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{g.label}</Txt>
                           </Pressable>

@@ -95,7 +95,7 @@ export function InventoryTable({ rows }: { rows: InventoryRow[] }) {
                       ))}
                     </select>
                   ) : (
-                    <span className="stock__nofilter" aria-hidden="true">—</span>
+                    <><span className="stock__nofilter" aria-hidden="true">—</span><span className="tg-visually-hidden">No filter</span></>
                   )}
                 </th>
               ))}

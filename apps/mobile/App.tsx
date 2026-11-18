@@ -113,7 +113,9 @@ function MainTabs() {
       <Tabs.Screen name="Shop" component={CatalogScreen} options={{ tabBarIcon: tabIcon('search-outline', 'search') }} />
       <Tabs.Screen name="Sell" component={SellScreen} options={{ tabBarIcon: tabIcon('cube-outline', 'cube') }} />
       <Tabs.Screen name="Vault" component={VaultScreen} options={{ tabBarIcon: tabIcon('shield-checkmark-outline', 'shield-checkmark') }} />
-      <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread }} />
+      <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread,
+        // The brand orange with dark navy on it (6.1:1), not the stock red with white (3.6:1).
+        tabBarBadgeStyle: { backgroundColor: t.colors.cta, color: t.colors.onCta } }} />
     </Tabs.Navigator>
     </>
   )

@@ -139,7 +139,7 @@ a.c-row:hover .c-row__title { color: var(--tg-accent); }
 .c-task__body span { color: var(--tg-text-muted); font-size: 13px; }
 .c-task__go { color: var(--tg-text-muted); flex: none; }
 .c-task__go svg { width: 18px; height: 18px; display: block; }
-.c-group { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8193a0; margin: 14px 0 4px; }
+.c-group { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tg-text-muted); margin: 14px 0 4px; }
 .c-group:first-child { margin-top: 0; }
 
 /* -- tables ---------------------------------------------------------------- */

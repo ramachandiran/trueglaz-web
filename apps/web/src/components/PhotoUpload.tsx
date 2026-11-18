@@ -79,6 +79,7 @@ export function PhotoUpload({
         ref={input}
         type="file"
         className="shots__input"
+        aria-label="Add photos"
         /* JPEG and PNG only, and stated rather than left to `image/*`: on iOS
            an unrestricted picker hands over HEIC, which we cannot read, while
            naming the types here makes the phone convert on the way out. */

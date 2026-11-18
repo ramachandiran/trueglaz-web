@@ -302,7 +302,7 @@
   flex-direction: column;
   gap: 5px;
   font-size: var(--tg-text-xs);
-  color: var(--tg-step-upcoming);
+  color: var(--tg-text-muted);
   position: relative;
 }
 

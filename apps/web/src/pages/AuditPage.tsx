@@ -38,9 +38,9 @@ export function AuditPage() {
       <header className="audit__head">
         <p className="audit__lede">Every action that changed something, newest first. {total.toLocaleString()} recorded.</p>
         <div className="audit__filters">
-          <input className="tg-input" placeholder="Action, e.g. POST /api/v1/payouts or payout."
+          <input className="tg-input" aria-label="Filter by action" placeholder="Action, e.g. POST /api/v1/payouts or payout."
             value={action} onChange={(e) => reset(setAction)(e.target.value)} />
-          <select className="tg-input" value={source} onChange={(e) => reset(setSource)(e.target.value)}>
+          <select className="tg-input" aria-label="Source" value={source} onChange={(e) => reset(setSource)(e.target.value)}>
             <option value="">All sources</option>
             <option value="request">Requests</option>
             <option value="domain">Events</option>
@@ -54,7 +54,7 @@ export function AuditPage() {
       {page.data && entries.length === 0 && <p className="audit__empty">Nothing matches that.</p>}
 
       {entries.length > 0 && (
-        <div className="audit__tablewrap">
+        <div className="audit__tablewrap" tabIndex={0} role="region" aria-label="Audit entries">
           <table className="audit__table">
             <thead>
               <tr><th>When</th><th>Who</th><th>Action</th><th>Outcome</th><th>Target</th><th>Detail</th></tr>

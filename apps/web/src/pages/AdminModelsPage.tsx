@@ -56,7 +56,7 @@ export function AdminModelsPage() {
 
       {counts && (
         <section className="am__progress" aria-label="Progress">
-          <div className="am__bar" role="progressbar" aria-valuenow={counts.photo} aria-valuemin={0} aria-valuemax={counts.total}>
+          <div className="am__bar" role="progressbar" aria-label="Models with a photo" aria-valuenow={counts.photo} aria-valuemin={0} aria-valuemax={counts.total}>
             <span style={{ width: `${pct}%` }} />
           </div>
           <p>

@@ -67,6 +67,8 @@ export function BottomSheet({
         <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,18,26,0.5)' }]} onPress={onClose}
           accessibilityRole="button" accessibilityLabel="Close" />
         <Animated.View
+          // VoiceOver stays inside the sheet instead of wandering onto the screen behind it.
+          accessibilityViewIsModal
           {...pan.panHandlers}
           // An empty part of the sheet was tapped (nothing deeper wanted it): put the keyboard away.
           onStartShouldSetResponder={() => { Keyboard.dismiss(); return false }}

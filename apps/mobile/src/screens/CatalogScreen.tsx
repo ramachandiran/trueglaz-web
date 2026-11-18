@@ -139,11 +139,11 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
 
       {/* Filters · sort · how many, as one quiet row. */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: t.space.x4, paddingVertical: t.space.x3 }}>
-        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={12} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Ionicons name="filter" size={18} color={t.colors.text} />
           <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>Filters{active ? ` · ${active}` : ''}</Txt>
         </Pressable>
-        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={12} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Ionicons name="swap-vertical" size={16} color={t.colors.text} />
           <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>{sortLabel[filters.sort]}</Txt>
         </Pressable>
@@ -212,11 +212,11 @@ function FilterSheet({
             <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Filters</Txt>
             <View style={{ flexDirection: 'row', gap: t.space.x3 }}>
               {active > 0 && (
-                <Pressable onPress={() => setFilters({ ...EMPTY_FILTERS, sort: filters.sort })}>
+                <Pressable accessibilityRole="button" hitSlop={12} onPress={() => setFilters({ ...EMPTY_FILTERS, sort: filters.sort })}>
                   <Txt style={{ color: t.colors.accent }}>Clear {active}</Txt>
                 </Pressable>
               )}
-              <Pressable onPress={onClose}><Txt style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Show {total}</Txt></Pressable>
+              <Pressable accessibilityRole="button" hitSlop={12} onPress={onClose}><Txt style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Show {total}</Txt></Pressable>
             </View>
           </View>
     )}>
@@ -285,7 +285,7 @@ function Wrap({ children }: { children: React.ReactNode }) {
 function Chip({ label, selected, disabled, onPress }: { label: string; selected: boolean; disabled?: boolean; onPress: () => void }) {
   const t = useTheme()
   return (
-    <Pressable onPress={disabled ? undefined : onPress}
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: !!selected, disabled: !!disabled }} onPress={disabled ? undefined : onPress}
       style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, opacity: disabled ? 0.4 : 1, backgroundColor: selected ? t.colors.accentSoft : t.colors.bg, borderColor: selected ? t.colors.accent : t.colors.border }}>
       <Txt style={{ color: selected ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{label}</Txt>
     </Pressable>

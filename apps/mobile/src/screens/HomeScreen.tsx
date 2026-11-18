@@ -151,7 +151,11 @@ function ForYou({ t, vault, seller, navigation }: { t: Theme; vault: VaultItem[]
     <Pressable onPress={go} accessibilityRole="button" style={[{ flex: 1, backgroundColor: t.colors.bgRaised, borderRadius: 14, padding: 14, minHeight: 150 }, lift(t)]}>
       <Txt style={{ color: t.colors.cta, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{kicker}</Txt>
       <Txt style={{ color: t.colors.text, fontSize: t.size.md + 1, fontWeight: t.weight.bold as never, marginTop: 8, marginRight: 8 }}>{title}</Txt>
-      <View style={{ position: 'absolute', right: 10, bottom: 10 }}><RoundIcon icon="arrow-forward" label={title} onPress={go} size={34} /></View>
+      {/* The arrow only shows that the tile opens; the tile itself is the button, so
+          the arrow is hidden from screen readers and lets taps through to it. */}
+      <View style={{ position: 'absolute', right: 10, bottom: 10 }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <RoundIcon icon="arrow-forward" label={title} size={34} />
+      </View>
     </Pressable>
   )
   return (
@@ -172,7 +176,9 @@ function ForYou({ t, vault, seller, navigation }: { t: Theme; vault: VaultItem[]
               <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xl, fontWeight: t.weight.bold as never, marginTop: 12 }}>What is your kit worth today?</Txt>
             )}
           </View>
-          <Pill label={items.length ? 'Open vault' : 'Add your gear'} small onPress={() => navigation.navigate('Vault')} />
+          <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Pill label={items.length ? 'Open vault' : 'Add your gear'} small />
+          </View>
         </Pressable>
         <View style={{ flex: 1, gap: 12 }}>
           {best

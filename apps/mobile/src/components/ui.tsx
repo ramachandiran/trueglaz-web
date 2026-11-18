@@ -94,7 +94,7 @@ export function ErrorNote({ error, onRetry }: { error: Error; onRetry?: () => vo
       </Txt>
       <Muted>{error.message}</Muted>
       {onRetry && (
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={onRetry}
           style={{
             alignSelf: 'flex-start',

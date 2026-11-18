@@ -291,7 +291,7 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
         {([['third_party', 'Courier by third party'], ['trueglaz', 'Courier by TG']] as [Arranged, string][]).map(([v, label]) => {
           const on = arrangedBy === v
           return (
-            <Pressable key={v} onPress={() => { setArrangedBy(v); setError(null) }}
+            <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!on }} key={v} onPress={() => { setArrangedBy(v); setError(null) }}
               style={{ flex: 1, alignItems: 'center', paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
               <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm, textAlign: 'center' }}>{label}</Txt>
             </Pressable>

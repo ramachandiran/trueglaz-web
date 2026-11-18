@@ -58,7 +58,7 @@ export function OrderTracker({ t, orders, imageBySlug, onOpen, onAll }: {
         <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
           {live.length === 1 ? 'Your order' : `Your orders · ${live.length}`}
         </Txt>
-        <Pressable onPress={onAll} hitSlop={8} accessibilityRole="link">
+        <Pressable onPress={onAll} hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }} accessibilityRole="link">
           <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>All orders</Txt>
         </Pressable>
       </View>

@@ -151,7 +151,7 @@ function Pick({ l }: { l: HomeListing }) {
   return (
     <li>
       <Link to={`/listings/${l.id}`} className="pick">
-        <Cover cover={l.cover} categorySlug={l.categorySlug} alt={name} modelSlug={l.modelSlug} />
+        <Cover cover={l.cover} categorySlug={l.categorySlug} alt="" modelSlug={l.modelSlug} />
         <span className="pick__name">{name}</span>
         <span className="pick__meta">{l.gradeCode} · {money(l.priceMinor)}</span>
       </Link>
@@ -368,7 +368,7 @@ function GearCard({ listing, showSaving }: { listing: HomeListing; showSaving?: 
   return (
     <li className="card">
       <Link to={`/listings/${listing.id}`} className="card__link">
-        <Cover cover={listing.cover} categorySlug={listing.categorySlug} alt={name} modelSlug={listing.modelSlug} />
+        <Cover cover={listing.cover} categorySlug={listing.categorySlug} alt="" modelSlug={listing.modelSlug} />
         {showSaving && listing.savedPct != null && <span className="card__flag">−{listing.savedPct}%</span>}
         <span className="card__name">{name}</span>
       </Link>
@@ -392,7 +392,7 @@ function SoldCard({ sale }: { sale: HomeSale }) {
   return (
     <li className="card card--sold">
       <Link to={`/listings/${sale.id}`} className="card__link">
-        <Cover cover={sale.cover} categorySlug={sale.categorySlug} alt={name} modelSlug={sale.modelSlug} />
+        <Cover cover={sale.cover} categorySlug={sale.categorySlug} alt="" modelSlug={sale.modelSlug} />
         <span className="card__flag card__flag--sold">Sold</span>
         <span className="card__name">{name}</span>
       </Link>
@@ -412,6 +412,9 @@ function SoldCard({ sale }: { sale: HomeSale }) {
  * A rail is the one place a missing photograph is least forgivable — a row of
  * identical grey placeholders reads as a broken page rather than as a shop that
  * has not finished its photography.
+ *
+ * Callers pass alt="" when the item's name is printed in the same link: the
+ * picture is then decoration, and a screen reader would read the name twice.
  */
 function Cover({ cover, categorySlug, alt, modelSlug }: {
   cover: MediaView | null

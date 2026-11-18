@@ -139,7 +139,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
         {(['upi', 'bank'] as Method[]).map((m) => {
           const on = method === m
           return (
-            <Pressable key={m} onPress={() => { setMethod(m); setError(null) }}
+            <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!on }} key={m} onPress={() => { setMethod(m); setError(null) }}
               style={{ flex: 1, alignItems: 'center', paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
               <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{m === 'upi' ? 'UPI' : 'Bank account'}</Txt>
             </Pressable>

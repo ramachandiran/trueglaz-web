@@ -66,7 +66,7 @@ export function DialogHost() {
 
   return (
     <Modal visible={!!d} transparent animationType="fade" onRequestClose={() => close(false)} statusBarTranslucent>
-      <Pressable onPress={() => close(false)} accessibilityLabel="Close"
+      <Pressable accessibilityRole="button" onPress={() => close(false)} accessibilityLabel="Close"
         style={{ flex: 1, backgroundColor: 'rgba(8, 14, 20, 0.55)', alignItems: 'center', justifyContent: 'center', padding: t.space.x5 }}>
         {d && (
           <Pressable onPress={() => {}} accessibilityRole="alert"

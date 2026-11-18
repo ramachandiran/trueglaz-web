@@ -97,7 +97,7 @@ export function FeesSettingsPage() {
         <h3 className="st__card-title">Commission bands</h3>
         <p className="st__muted">Chosen by the sale price. Each band runs from its start up to, but not including, its end.</p>
         <table className="st__bands">
-          <thead><tr><th>From</th><th>Up to</th><th>Commission</th><th /></tr></thead>
+          <thead><tr><th>From</th><th>Up to</th><th>Commission</th><th><span className="tg-visually-hidden">Actions</span></th></tr></thead>
           <tbody>
             {draft.map((b, i) => {
               const last = i === draft.length - 1

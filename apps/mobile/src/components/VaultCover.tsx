@@ -513,7 +513,7 @@ export function Sheet({ title, kicker, onClose, footer, children }: {
           {kicker && <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{kicker}</Txt>}
           <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: kicker ? 24 : t.size.lg, fontWeight: t.weight.bold as never }}>{title}</Txt>
         </View>
-        <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Txt style={{ color: t.colors.textMuted, fontSize: t.size.xl }}>×</Txt></Pressable>
+        <Pressable accessibilityRole="button" onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Txt style={{ color: t.colors.textMuted, fontSize: t.size.xl }}>×</Txt></Pressable>
       </View>
       {children}
     </BottomSheet>

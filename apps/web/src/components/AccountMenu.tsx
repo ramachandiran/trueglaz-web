@@ -57,6 +57,7 @@ export function AccountMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={`Account menu, ${session.displayName}`}
       >
         <span className="account__avatar" aria-hidden="true">
           {initials(session.displayName)}

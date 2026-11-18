@@ -220,7 +220,7 @@ function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => vo
       {!model && results.length > 0 && (
         <View style={{ borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.md, overflow: 'hidden' }}>
           {results.map((m) => (
-            <Pressable key={m.id} onPress={() => { setModel(m); setResults([]) }}
+            <Pressable accessibilityRole="button" key={m.id} onPress={() => { setModel(m); setResults([]) }}
               style={{ paddingVertical: t.space.x3, paddingHorizontal: t.space.x3, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
               <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>{m.name}</Txt>
             </Pressable>

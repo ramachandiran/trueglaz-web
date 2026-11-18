@@ -46,7 +46,7 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: t.space.x4, paddingTop: t.space.x3, paddingBottom: t.space.x1, minHeight: 36 }}>
         <Muted size={t.size.sm}>{anyUnread ? `${data?.unread} new` : items.length ? 'All read' : ''}</Muted>
         {anyUnread && (
-          <Pressable onPress={markAll}>
+          <Pressable accessibilityRole="button" hitSlop={12} onPress={markAll}>
             <Txt style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Mark all read</Txt>
           </Pressable>
         )}

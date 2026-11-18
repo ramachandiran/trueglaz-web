@@ -137,7 +137,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
           {pending.map((a) => {
             const it = (items.data ?? []).find((i) => i.id === a.approval.consignmentItemId)
             return (
-              <Pressable key={a.approval.id} onPress={() => navigation.navigate('SellerItem', { id: a.approval.consignmentItemId })}
+              <Pressable accessibilityRole="button" key={a.approval.id} onPress={() => navigation.navigate('SellerItem', { id: a.approval.consignmentItemId })}
                 style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1.5, borderColor: t.colors.warn, borderRadius: 16, padding: t.space.x4, gap: t.space.x2 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.space.x2 }}>
                   <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.md, flex: 1 }}>{it ? nameOf(it) : 'Price to approve'}</Txt>
@@ -161,7 +161,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
         <Txt style={{ color: t.colors.onBrand, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>Consign an item</Txt>
         <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm, marginTop: 4, maxWidth: 220 }}>Add your gear and ship it to us. One form, start to finish.</Txt>
         {createError && <Txt style={{ color: t.colors.badSoft, fontSize: t.size.sm, marginTop: t.space.x2 }}>{createError}</Txt>}
-        <Pressable onPress={startSubmission} disabled={creating}
+        <Pressable accessibilityRole="button" onPress={startSubmission} disabled={creating}
           style={{ alignSelf: 'flex-start', marginTop: t.space.x3, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: t.colors.cta, borderRadius: 13, paddingVertical: t.space.x3, paddingHorizontal: t.space.x5, opacity: creating ? 0.6 : 1 }}>
           <Ionicons name="add" size={17} color={t.colors.onCta} />
           <Txt style={{ color: t.colors.onCta, fontWeight: t.weight.bold as never }}>{creating ? 'Starting…' : 'List an item'}</Txt>
@@ -176,7 +176,7 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
           const action = actionOf(i)
           const tone = action ? 'warn' : i.currentState === 'LISTED' || i.currentState === 'SOLD' ? 'good' : 'neutral'
           return (
-            <Pressable key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}
+            <Pressable accessibilityRole="button" key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}
               style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: action ? t.colors.warn : t.colors.border, borderRadius: 16, padding: 13 }}>
               <ModelThumb image={pictures.byId(i.productModelId)} size={48} />
               <View style={{ flex: 1, minWidth: 0 }}>

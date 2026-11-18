@@ -63,7 +63,7 @@ export function RoundIcon({ icon, label, onPress, size = 40, tone = 'raised' }: 
 export function Chip({ label, on, onPress, icon }: { label: string; on?: boolean; onPress?: () => void; icon?: IconName }) {
   const t = useTheme()
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!on }}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!on }} hitSlop={{ top: 5, bottom: 5, left: 2, right: 2 }}
       style={[{ height: 34, paddingHorizontal: 16, borderRadius: t.radius.pill, flexDirection: 'row', alignItems: 'center', gap: 6,
         backgroundColor: on ? t.colors.cta : t.colors.bgRaised }, !on && lift(t)]}>
       {icon && <Ionicons name={icon} size={14} color={on ? t.colors.onCta : t.colors.text} />}
@@ -121,7 +121,7 @@ export function SectionHead({ title, sub, onAll }: { title: string; sub?: string
         {sub && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, marginTop: 2 }}>{sub}</Txt>}
       </View>
       {onAll && (
-        <Pressable onPress={onAll} hitSlop={8} accessibilityRole="link">
+        <Pressable onPress={onAll} hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }} accessibilityRole="link">
           <Txt style={{ color: t.colors.text, fontSize: t.size.xs, opacity: 0.85 }}>View all</Txt>
         </Pressable>
       )}
@@ -180,14 +180,15 @@ export function ProductCard({ g, img, width, height = 176, onPress, onAction, ac
   const t = useTheme()
   const name = g.title.split('·')[0].trim()
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${name}, ${g.gradeCode}, ${money(g.priceMinor)}`} style={[{ width }, style]}>
+    // The round Buy button is a sibling of the card's button, laid over the picture, not
+    // inside it: a button inside a button is one element to VoiceOver and TalkBack, and
+    // Buy could not be reached on its own.
+    <View style={[{ width }, style]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${name}, ${g.gradeCode}, ${money(g.priceMinor)}`}>
       <View>
         <GearArt uri={img} lens={isLens(g)} brand={g.brandName} width={width} height={height} />
         <PhotoBadge label={g.gradeCode} />
         {g.savedPct != null && g.savedPct > 0 && <PhotoBadge label={`-${g.savedPct}%`} tone="cta" right />}
-        <View style={{ position: 'absolute', right: -4, bottom: -14 }}>
-          <RoundIcon icon={actionIcon} label={actionLabel ?? `Buy ${name}`} onPress={onAction ?? onPress} size={36} tone="cta" />
-        </View>
       </View>
       <View style={{ marginTop: 18, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -204,6 +205,10 @@ export function ProductCard({ g, img, width, height = 176, onPress, onAction, ac
         </View>
       </View>
     </Pressable>
+      <View style={{ position: 'absolute', right: -4, top: height - 22 }}>
+        <RoundIcon icon={actionIcon} label={actionLabel ?? `Buy ${name}`} onPress={onAction ?? onPress} size={36} tone="cta" />
+      </View>
+    </View>
   )
 }
 

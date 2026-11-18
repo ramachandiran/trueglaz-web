@@ -22,7 +22,7 @@ export function Button({
   }[variant]
   const off = disabled || loading
   return (
-    <Pressable
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!off, busy: !!loading }}
       onPress={off ? undefined : onPress}
       style={[
         {
