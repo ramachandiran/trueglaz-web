@@ -140,7 +140,7 @@ export function DeleteAccountScreen() {
               <Muted size={t.size.xs}>We sent a code to {sent.to}.</Muted>
               {sent.devCode && (
                 <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3 }}>
-                  <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo code: {sent.devCode}</Txt>
+                  <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo code: {sent.devCode}</Txt>
                 </View>
               )}
               <OtpBoxes value={code} onChange={(v: string) => { setCode(v); setError(null) }} label="Verification code" editable={!expired} />

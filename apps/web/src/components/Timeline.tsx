@@ -39,7 +39,7 @@ export function Timeline({ steps, orientation = 'horizontal', reasons = {} }: Pr
   if (!steps.length) return null
 
   return (
-    <div ref={scroller} className={`tl tl--${orientation}`} role="group" aria-label="Item lifecycle">
+    <div ref={scroller} className={`tl tl--${orientation}`} role="group" aria-label="Item lifecycle" tabIndex={0}>
       <ol className="tl__steps" aria-label="Item lifecycle">
         {steps.map((step) => (
           <li

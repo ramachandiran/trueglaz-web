@@ -59,7 +59,7 @@ function Row({ index, step, last, still, delay }: { index: number; step: TrackSt
   const meta = tone === 'ok'
     ? { bg: t.colors.goodSoft, fg: t.colors.good }
     : tone === 'now'
-      ? { bg: t.colors.accentSoft, fg: t.colors.accent }
+      ? { bg: t.colors.accentSoft, fg: t.colors.accentText }
       : tone === 'bad'
         ? { bg: t.colors.badSoft, fg: t.colors.bad }
         : { bg: t.colors.bgSunken, fg: t.colors.textMuted }

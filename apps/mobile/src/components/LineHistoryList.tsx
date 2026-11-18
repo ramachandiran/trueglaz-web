@@ -47,7 +47,7 @@ export function LineReturnAndHistory({ lineId, state, acceptedBy }: { lineId: st
       )}
       {(
         <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)} hitSlop={12}>
-          <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{open ? 'Hide history' : 'History'}</Txt>
+          <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{open ? 'Hide history' : 'History'}</Txt>
         </Pressable>
       )}
       {open && (history.loading && !history.data ? <Muted size={t.size.xs}>Loading…</Muted> : (

@@ -14,7 +14,7 @@
 .ship__opt--on {
   background: var(--tg-accent-soft);
   border-color: var(--tg-accent);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   font-weight: var(--tg-weight-medium);
 }
 

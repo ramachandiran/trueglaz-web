@@ -140,7 +140,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
             <SectionTitle>Deliver to</SectionTitle>
             {(addresses.data?.length ?? 0) > 0 && (
               <Pressable accessibilityRole="button" hitSlop={12} onPress={() => setAdding((v) => !v)}>
-                <Txt style={{ color: t.colors.accent }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
+                <Txt style={{ color: t.colors.accentText }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
               </Pressable>
             )}
           </View>

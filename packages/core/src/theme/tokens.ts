@@ -29,6 +29,13 @@ export interface ColorTokens {
   accentHover: string
   accentSoft: string
   onAccent: string
+  /**
+   * The orange's job as WORDS: links, text buttons, kickers, words on a soft
+   * orange badge. On a light page that is the brand navy, because #FF6B35 as
+   * text is 2.8:1 on cream and WCAG AA needs 4.5:1 (TG-149); the orange stays
+   * as the underline, the fill, the icon. On the dark page it is the orange.
+   */
+  accentText: string
 
   /**
    * The brand colour used as a surface — the header and footer that frame every
@@ -132,16 +139,17 @@ export const light: Theme = {
     border: '#e2ddc4',
     borderStrong: '#c7c2a9',
 
-    // One orange, the brand's #FF6B35, for every orange thing: text, links,
-    // marks, fills (brand decision, TG-145; replaces the deeper #B4400F text
-    // orange of TG-44). Anything written ON an orange fill is dark navy, which
-    // reads at 6.1:1; soft orange backgrounds are the same orange at 18%.
+    // One orange, the brand's #FF6B35, for every orange thing (TG-145): fills,
+    // buttons, icons, marks, underlines. Never as words on a light page: those
+    // use accentText, the brand navy (TG-149, WCAG contrast). Anything written
+    // ON an orange fill is dark navy (6.1:1); soft orange is the orange at 18%.
     // Buttons (cta, below) are the same orange as a
     // fill, with dark navy on it (6.1:1), the same as the header buttons.
     accent: '#FF6B35',
     accentHover: '#FF6B35',
     accentSoft: '#ffe4d1',
     onAccent: '#101c24',
+    accentText: '#233e50',
 
     brand: '#233e50',
     onBrand: '#fffef3',
@@ -199,6 +207,7 @@ export const dark: Theme = {
     accentHover: '#FF6B35',
     accentSoft: '#3b2a27',
     onAccent: '#101c24',
+    accentText: '#FF6B35',
 
     brand: '#1b3243',
     onBrand: '#f3f1e4',
@@ -251,16 +260,17 @@ export const midnight: Theme = {
     border: '#ddd6c1',
     borderStrong: '#bfb599',
 
-    // One orange, the brand's #FF6B35, for every orange thing: text, links,
-    // marks, fills (brand decision, TG-145; replaces the deeper #B4400F text
-    // orange of TG-44). Anything written ON an orange fill is dark navy, which
-    // reads at 6.1:1; soft orange backgrounds are the same orange at 18%.
+    // One orange, the brand's #FF6B35, for every orange thing (TG-145): fills,
+    // buttons, icons, marks, underlines. Never as words on a light page: those
+    // use accentText, the brand navy (TG-149, WCAG contrast). Anything written
+    // ON an orange fill is dark navy (6.1:1); soft orange is the orange at 18%.
     // Buttons (cta, below) are the same orange as a
     // fill, with dark navy on it (6.1:1), the same as the header buttons.
     accent: '#FF6B35',
     accentHover: '#FF6B35',
     accentSoft: '#f8dac5',
     onAccent: '#101c24',
+    accentText: '#233e50',
 
     brand: '#233e50',
     onBrand: '#fffef3',

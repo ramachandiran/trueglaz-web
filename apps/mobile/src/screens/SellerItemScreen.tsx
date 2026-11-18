@@ -206,7 +206,7 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
 
             <View style={{ gap: t.space.x2 }}>
               <Pressable onPress={() => setHistoryOpen(!historyOpen)} hitSlop={6} accessibilityRole="button">
-                <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{historyOpen ? 'Hide history' : 'History'}</Txt>
+                <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{historyOpen ? 'Hide history' : 'History'}</Txt>
               </Pressable>
               {historyOpen && [...item.data.history].reverse().map((h) => (
                 <View key={h.id} style={{ borderBottomWidth: 1, borderBottomColor: t.colors.border, paddingVertical: t.space.x2 }}>
@@ -293,7 +293,7 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
           return (
             <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!on }} key={v} onPress={() => { setArrangedBy(v); setError(null) }}
               style={{ flex: 1, alignItems: 'center', paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
-              <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm, textAlign: 'center' }}>{label}</Txt>
+              <Txt style={{ color: on ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (on ? t.weight.bold : t.weight.normal) as never, textAlign: 'center' }}>{label}</Txt>
             </Pressable>
           )
         })}

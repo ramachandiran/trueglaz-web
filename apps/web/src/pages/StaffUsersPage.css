@@ -4,7 +4,7 @@
 .ppl__name {
   display: block;
   font-weight: var(--tg-weight-medium);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: none;
 }
 
@@ -24,7 +24,7 @@
   padding: 0 var(--tg-space-2);
   border-radius: var(--tg-radius-pill);
   background: var(--tg-accent-soft);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   font-size: var(--tg-text-xs);
 }
 
@@ -48,7 +48,7 @@
 }
 
 .ppl__open {
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: none;
   font-size: var(--tg-text-sm);
   white-space: nowrap;
@@ -113,7 +113,7 @@
 
 .people__name { font-weight: var(--tg-weight-medium); text-decoration: none; color: var(--tg-text); }
 
-.people__name:hover { color: var(--tg-accent); text-decoration: underline; }
+.people__name:hover { color: var(--tg-accent-text); text-decoration: underline; }
 
 /* Payout accounts waiting on a person: above the queue, one line each. */
 .people__payouts {

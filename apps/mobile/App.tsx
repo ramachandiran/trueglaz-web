@@ -92,7 +92,7 @@ function MainTabs() {
     <Tabs.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: t.colors.accent,
+        tabBarActiveTintColor: t.colors.accentText,
         tabBarInactiveTintColor: t.colors.textMuted,
         // A fixed shape: room for icon and label above the phone's own bar,
         // and labels that do not grow with the font setting (TG-124).
@@ -182,7 +182,7 @@ function Routes() {
     colors: {
       ...(t.name === 'dark' ? DarkTheme : DefaultTheme).colors,
       background: t.colors.bg, card: t.colors.bgRaised, text: t.colors.text,
-      border: t.colors.border, primary: t.colors.accent,
+      border: t.colors.border, primary: t.colors.accentText,
     },
   }
   useEffect(() => { if (!session) resetInbox() }, [session])

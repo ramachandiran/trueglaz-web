@@ -3,7 +3,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, Switch, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, dateOnly, isSeller, useApi, useSession, type Theme } from '@trueglaz/core'
-import { Txt } from '../components/Txt'
+import { Txt, useLargeText } from '../components/Txt'
 import { useTheme, useThemeMode, type ThemeMode } from '../theme/ThemeContext'
 import { Muted } from '../components/ui'
 import { Button, Field } from '../components/form'
@@ -22,6 +22,7 @@ const LIVE = ['pending_payment', 'paid', 'dispatched', 'delivered']
  */
 export function ProfileScreen({ navigation }: { navigation: any }) {
   const t = useTheme()
+  const large = useLargeText()
   const insets = useSafeAreaInsets()
   const { session, signOut } = useSession()
   const { mode, setMode } = useThemeMode()
@@ -75,15 +76,15 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
           </View>
           <Pressable onPress={() => setSheet('edit')} accessibilityRole="button" accessibilityLabel="Edit profile"
             style={[{ backgroundColor: t.colors.bgRaised, borderRadius: t.radius.pill, paddingVertical: 9, paddingHorizontal: 18 }, lift(t)]}>
-            <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Edit</Txt>
+            <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Edit</Txt>
           </Pressable>
         </View>
 
         {/* three shortcuts */}
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Tile t={t} icon="receipt-outline" title="Orders" sub={activeOrders ? `${activeOrders} active` : 'None active'} onPress={() => navigation.navigate('Orders')} />
-          <Tile t={t} icon="heart-outline" title="Wishlist" sub={openAsks ? `${openAsks} ${openAsks === 1 ? 'item' : 'items'}` : 'Ask for gear'} onPress={() => navigation.navigate('Wishlist')} />
-          <Tile t={t} icon="cube-outline" title="Selling" sub={seller ? (listed ? `${listed} listed` : 'Nothing listed') : 'Start selling'} onPress={() => navigation.navigate('Sell')} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+          <Tile t={t} full={large} icon="receipt-outline" title="Orders" sub={activeOrders ? `${activeOrders} active` : 'None active'} onPress={() => navigation.navigate('Orders')} />
+          <Tile t={t} full={large} icon="heart-outline" title="Wishlist" sub={openAsks ? `${openAsks} ${openAsks === 1 ? 'item' : 'items'}` : 'Ask for gear'} onPress={() => navigation.navigate('Wishlist')} />
+          <Tile t={t} full={large} icon="cube-outline" title="Selling" sub={seller ? (listed ? `${listed} listed` : 'Nothing listed') : 'Start selling'} onPress={() => navigation.navigate('Sell')} />
         </View>
 
         {/* settings */}
@@ -166,10 +167,10 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   )
 }
 
-function Tile({ t, icon, title, sub, onPress }: { t: Theme; icon: IconName; title: string; sub: string; onPress: () => void }) {
+function Tile({ t, icon, title, sub, onPress, full }: { t: Theme; icon: IconName; title: string; sub: string; onPress: () => void; full?: boolean }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}, ${sub}`}
-      style={[{ flex: 1, backgroundColor: t.colors.bgRaised, borderRadius: 16, padding: 14, gap: 10, minHeight: 104 }, lift(t)]}>
+      style={[{ flex: 1, flexBasis: full ? '100%' : 0, backgroundColor: t.colors.bgRaised, borderRadius: 16, padding: 14, gap: 10, minHeight: 104 }, lift(t)]}>
       <Ionicons name={icon} size={22} color={t.colors.accent} />
       <View>
         <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{title}</Txt>

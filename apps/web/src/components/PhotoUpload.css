@@ -65,7 +65,7 @@
 }
 
 .shots__empty:hover:not(:disabled) {
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   border-color: var(--tg-accent);
 }
 
@@ -132,7 +132,7 @@
 .shots__busy {
   margin: 0;
   font-size: var(--tg-text-sm);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
 }
 
 /* Per file, because that is how they failed: a seller who picked eight photos

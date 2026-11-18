@@ -180,12 +180,12 @@ export function SignInScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <Muted>Sent to <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{contact.trim()}</Txt></Muted>
                   <Pressable onPress={changeEmail} accessibilityRole="button" hitSlop={8}>
-                    <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Change</Txt>
+                    <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Change</Txt>
                   </Pressable>
                 </View>
                 {devCode && (
                   <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3, alignItems: 'center' }}>
-                    <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
+                    <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
                     <Muted size={t.size.xs}>Shown because this demo server sends no email.</Muted>
                   </View>
                 )}
@@ -237,7 +237,7 @@ export function SignInScreen() {
                         return (
                           <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!on }} key={g.code} onPress={() => toggleGenre(g.code)}
                             style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
-                            <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{g.label}</Txt>
+                            <Txt style={{ color: on ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (on ? t.weight.bold : t.weight.normal) as never }}>{g.label}</Txt>
                           </Pressable>
                         )
                       })}

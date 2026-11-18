@@ -116,7 +116,7 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
 
       {/* Search, as a pill on a shadow rather than a sunken box. */}
       <View style={[{ marginHorizontal: t.space.x4, marginTop: t.space.x3, flexDirection: 'row', alignItems: 'center', gap: t.space.x2,
-        backgroundColor: t.colors.bgRaised, borderRadius: t.radius.pill, paddingHorizontal: t.space.x4, height: 48 }, lift(t)]}>
+        backgroundColor: t.colors.bgRaised, borderRadius: t.radius.pill, paddingHorizontal: t.space.x4, minHeight: 48 }, lift(t)]}>
         <Ionicons name="search" size={18} color={t.colors.textMuted} />
         <TextInput
           value={typed}
@@ -138,7 +138,8 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
       </View>
 
       {/* Filters · sort · how many, as one quiet row. */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: t.space.x4, paddingVertical: t.space.x3 }}>
+      {/* Wraps onto two lines when the phone's text is large (TG-148). */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: t.space.x4, rowGap: t.space.x2, paddingHorizontal: t.space.x4, paddingVertical: t.space.x3 }}>
         <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={12} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Ionicons name="filter" size={18} color={t.colors.text} />
           <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>Filters{active ? ` · ${active}` : ''}</Txt>
@@ -213,10 +214,10 @@ function FilterSheet({
             <View style={{ flexDirection: 'row', gap: t.space.x3 }}>
               {active > 0 && (
                 <Pressable accessibilityRole="button" hitSlop={12} onPress={() => setFilters({ ...EMPTY_FILTERS, sort: filters.sort })}>
-                  <Txt style={{ color: t.colors.accent }}>Clear {active}</Txt>
+                  <Txt style={{ color: t.colors.accentText }}>Clear {active}</Txt>
                 </Pressable>
               )}
-              <Pressable accessibilityRole="button" hitSlop={12} onPress={onClose}><Txt style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Show {total}</Txt></Pressable>
+              <Pressable accessibilityRole="button" hitSlop={12} onPress={onClose}><Txt style={{ color: t.colors.accentText, fontWeight: t.weight.medium as never }}>Show {total}</Txt></Pressable>
             </View>
           </View>
     )}>
@@ -264,7 +265,7 @@ function PriceField({ t, value, placeholder, onChange }: { t: ReturnType<typeof 
       <TextInput
         value={value} onChangeText={onChange} placeholder={placeholder} keyboardType="number-pad"
         placeholderTextColor={t.colors.textMuted}
-        style={{ width: '100%', height: 44, borderWidth: 1, borderColor: t.colors.border, borderRadius: 11, paddingHorizontal: t.space.x3, color: t.colors.text, fontFamily: mobileFontFamily.regular }}
+        style={{ width: '100%', minHeight: 44, borderWidth: 1, borderColor: t.colors.border, borderRadius: 11, paddingHorizontal: t.space.x3, color: t.colors.text, fontFamily: mobileFontFamily.regular }}
       />
     </View>
   )
@@ -287,7 +288,7 @@ function Chip({ label, selected, disabled, onPress }: { label: string; selected:
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected: !!selected, disabled: !!disabled }} onPress={disabled ? undefined : onPress}
       style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, opacity: disabled ? 0.4 : 1, backgroundColor: selected ? t.colors.accentSoft : t.colors.bg, borderColor: selected ? t.colors.accent : t.colors.border }}>
-      <Txt style={{ color: selected ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{label}</Txt>
+      <Txt style={{ color: selected ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (selected ? t.weight.bold : t.weight.normal) as never }}>{label}</Txt>
     </Pressable>
   )
 }

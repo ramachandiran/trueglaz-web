@@ -263,7 +263,7 @@ function CoverChange({ id, item }: { id: string; item: VaultItem }) {
     <Pop delay={500} style={{ alignSelf: 'flex-start', marginBottom: 10 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: now === 'insured' ? t.colors.goodSoft : t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
         <Ionicons name="sparkles" size={11} color={now === 'insured' ? t.colors.good : t.colors.accent} />
-        <Txt style={{ color: now === 'insured' ? t.colors.good : t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never }}>{label}</Txt>
+        <Txt style={{ color: now === 'insured' ? t.colors.good : t.colors.accentText, fontSize: 11, fontWeight: t.weight.bold as never }}>{label}</Txt>
       </View>
     </Pop>
   )

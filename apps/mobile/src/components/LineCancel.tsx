@@ -70,7 +70,7 @@ export function LineCancel({ lineId, state, totalMinor, onChanged, part }: {
         </Txt>
         {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.xs }}>{error}</Txt>}
         <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!busy }} onPress={() => run(() => api.withdrawCancel(lineId))} disabled={busy} hitSlop={12}>
-          <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{busy ? 'Withdrawing…' : 'Withdraw the request'}</Txt>
+          <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{busy ? 'Withdrawing…' : 'Withdraw the request'}</Txt>
         </Pressable>
       </>,
     )
@@ -102,7 +102,7 @@ export function LineCancel({ lineId, state, totalMinor, onChanged, part }: {
                 return (
                   <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!on }} key={x.code} onPress={() => setReason(x.code)}
                     style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
-                    <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{x.label}</Txt>
+                    <Txt style={{ color: on ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (on ? t.weight.bold : t.weight.normal) as never }}>{x.label}</Txt>
                   </Pressable>
                 )
               })}

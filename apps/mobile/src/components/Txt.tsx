@@ -17,14 +17,28 @@ import { resolveMobileBodyFont, resolveMobileFont } from '../theme/fonts'
  * - Display sizes (24 and up) shrink on narrow screens, down to 84% at 330 dp
  *   wide, so a big title never wraps into three lines on a small Android or
  *   at a larger "Display size" setting.
- * - The phone's font-size setting is honoured up to 1.3x. Past that the
- *   layout breaks (pills, rows and the tab bar have fixed shapes), and 1.3x
- *   is what the platform guidelines treat as large text.
+ * - The phone's font-size setting is honoured up to 2x for reading text, the
+ *   200% WCAG 1.4.4 asks for (TG-148; it was capped at 1.3x). Display sizes
+ *   are already large and stop at 1.5x so a title does not take the screen.
+ *   Things with a fixed shape that sit on a picture or in a tight spot (the
+ *   badges on a photo, a count bubble) pass TIGHT_FONT_SCALE themselves;
+ *   everything else grows: chips, rows and fields use minHeight, not height.
  */
-export const MAX_FONT_SCALE = 1.3
+export const MAX_FONT_SCALE = 2
+export const DISPLAY_FONT_SCALE = 1.5
+export const TIGHT_FONT_SCALE = 1.3
+
+/**
+ * True when the phone's text is set large (150% and up). Rows of three tiles
+ * become one tile per line then: at 200% a word like "Orders" or an amount
+ * like ₹48,070 no longer fits a third of the screen and breaks mid-word.
+ */
+export function useLargeText(): boolean {
+  return useWindowDimensions().fontScale >= 1.5
+}
 const DESIGN_WIDTH = 390
 
-export function Txt({ style, maxFontSizeMultiplier = MAX_FONT_SCALE, ...rest }: TextProps) {
+export function Txt({ style, maxFontSizeMultiplier, ...rest }: TextProps) {
   const t = useTheme()
   const { width } = useWindowDimensions()
   const raw = StyleSheet.flatten(style)
@@ -35,9 +49,10 @@ export function Txt({ style, maxFontSizeMultiplier = MAX_FONT_SCALE, ...rest }: 
   const usesThemeBodyFont = !flat?.fontFamily || flat.fontFamily === t.font.body
   const resolvedFamily = usesThemeBodyFont ? resolveMobileFont(flat?.fontWeight, flat?.fontSize) : flat.fontFamily
 
+  const display = typeof raw?.fontSize === 'number' && raw.fontSize >= 24
   return (
     <Text
-      maxFontSizeMultiplier={maxFontSizeMultiplier}
+      maxFontSizeMultiplier={maxFontSizeMultiplier ?? (display ? DISPLAY_FONT_SCALE : MAX_FONT_SCALE)}
       {...rest}
       style={[
         { fontFamily: resolveMobileBodyFont(undefined), color: t.colors.text },

@@ -17,6 +17,7 @@
   --tg-accent-hover: #FF6B35;
   --tg-accent-soft: #ffe4d1;
   --tg-on-accent: #101c24;
+  --tg-accent-text: #233e50;
   --tg-brand: #233e50;
   --tg-on-brand: #fffef3;
   --tg-on-brand-muted: #a9bdcb;
@@ -84,6 +85,7 @@
     --tg-accent-hover: #FF6B35;
     --tg-accent-soft: #3b2a27;
     --tg-on-accent: #101c24;
+    --tg-accent-text: #FF6B35;
     --tg-brand: #1b3243;
     --tg-on-brand: #f3f1e4;
     --tg-on-brand-muted: #93a8b8;
@@ -125,6 +127,7 @@
   --tg-accent-hover: #FF6B35;
   --tg-accent-soft: #3b2a27;
   --tg-on-accent: #101c24;
+  --tg-accent-text: #FF6B35;
   --tg-brand: #1b3243;
   --tg-on-brand: #f3f1e4;
   --tg-on-brand-muted: #93a8b8;
@@ -166,6 +169,7 @@
   --tg-accent-hover: #FF6B35;
   --tg-accent-soft: #f8dac5;
   --tg-on-accent: #101c24;
+  --tg-accent-text: #233e50;
   --tg-brand: #233e50;
   --tg-on-brand: #fffef3;
   --tg-on-brand-muted: #a9bdcb;

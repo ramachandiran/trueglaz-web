@@ -141,7 +141,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
           return (
             <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!on }} key={m} onPress={() => { setMethod(m); setError(null) }}
               style={{ flex: 1, alignItems: 'center', paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
-              <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{m === 'upi' ? 'UPI' : 'Bank account'}</Txt>
+              <Txt style={{ color: on ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (on ? t.weight.bold : t.weight.normal) as never }}>{m === 'upi' ? 'UPI' : 'Bank account'}</Txt>
             </Pressable>
           )
         })}
@@ -160,7 +160,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
           {sentTo && <Muted size={t.size.xs}>We sent a code to {sentTo}.</Muted>}
           {devCode && (
             <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3 }}>
-              <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
+              <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
             </View>
           )}
           <OtpBoxes value={code} onChange={setCode} label="Verification code" editable={!expired} />

@@ -31,7 +31,7 @@
   text-decoration: none;
   padding: 4px 0;
 }
-.profile__jump a:hover { color: var(--tg-accent); text-decoration: underline; }
+.profile__jump a:hover { color: var(--tg-accent-text); text-decoration: underline; }
 
 .profile__section {
   scroll-margin-top: var(--tg-space-5);

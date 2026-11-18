@@ -157,7 +157,7 @@
 
 .notif__go {
   font-size: var(--tg-text-xs);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   margin-left: auto;
 }
 

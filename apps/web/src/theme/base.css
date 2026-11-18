@@ -106,12 +106,29 @@ h1, h2,
  * off in its own rule, so only running text is affected.
  */
 a {
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: underline;
-  text-underline-offset: 0.16em;
-  text-decoration-thickness: 1px;
+  text-decoration-color: var(--tg-accent);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 2px;
 }
-a:hover { text-decoration-thickness: 2px; }
+a:hover { text-decoration-thickness: 3px; }
+
+/*
+ * Action links that stand on their own ("See all", "Open", "History",
+ * "Edit"). Their words are navy like the page now (TG-149: orange words on
+ * cream are 2.8:1), so the brand orange underline is what marks them as
+ * links; colour alone would not (WCAG 1.4.1). `html` lifts this above each
+ * component's own `text-decoration: none`.
+ */
+html :is(.home__all, .home__ask, .notif__go, .c-link, .dash__more, .ops__skulink, .ppl__open,
+  .order__link, .co__link, .fs__clear, .ins-link, .bs__courier--empty, .detail__back) {
+  text-decoration: underline;
+  text-decoration-color: var(--tg-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+html .order__link:disabled { text-decoration: none; }
 
 button,
 input,
@@ -163,7 +180,7 @@ input[type='checkbox'] { accent-color: var(--tg-cta); }
 .tg-badge--good { background: var(--tg-good-soft); color: var(--tg-good); }
 .tg-badge--warn { background: var(--tg-warn-soft); color: var(--tg-warn); }
 .tg-badge--bad  { background: var(--tg-bad-soft);  color: var(--tg-bad); }
-.tg-badge--accent { background: var(--tg-accent-soft); color: var(--tg-accent); }
+.tg-badge--accent { background: var(--tg-accent-soft); color: var(--tg-accent-text); }
 
 .tg-button {
   display: inline-flex;

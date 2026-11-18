@@ -56,7 +56,7 @@ function LinkText({ label, onPress }: { label: string; onPress: () => void }) {
   const t = useTheme()
   return (
     <Pressable onPress={onPress} accessibilityRole="button" hitSlop={8}>
-      <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never, textDecorationLine: 'underline' }}>{label}</Txt>
+      <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never, textDecorationLine: 'underline' }}>{label}</Txt>
     </Pressable>
   )
 }
@@ -247,7 +247,7 @@ export function QuoteSheet({ item, onClose, onDone }: { item: VaultItem; onClose
           {s.terms.howItWorks.map((h, i) => (
             <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center' }}>
-                <Txt style={{ color: t.colors.accent, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{i + 1}</Txt>
+                <Txt style={{ color: t.colors.accentText, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{i + 1}</Txt>
               </View>
               <Txt style={{ color: t.colors.text, fontSize: t.size.sm, flex: 1 }}>{i === 1 ? h.replace('within 3 working days', `by ${dayName(s.replyBy)}`) : h}</Txt>
             </View>
@@ -378,7 +378,7 @@ export function ClaimSheet({ onClose }: { onClose: () => void }) {
       {terms.loading && <Loading />}
       {terms.data?.claimSteps.map((c, i) => (
         <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
-          <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never, width: 18 }}>{i + 1}.</Txt>
+          <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never, width: 18 }}>{i + 1}.</Txt>
           <Txt style={{ color: t.colors.text, fontSize: t.size.sm, flex: 1 }}>{c}</Txt>
         </View>
       ))}
@@ -410,7 +410,7 @@ function Section({ title, required }: { title: string; required?: boolean }) {
   const t = useTheme()
   return (
     <Txt style={{ color: t.colors.text, fontSize: t.size.sm, fontWeight: t.weight.bold as never, marginTop: 4 }}>
-      {title}{required ? <Txt style={{ color: t.colors.accent, fontSize: t.size.xs }}>  Required</Txt> : null}
+      {title}{required ? <Txt style={{ color: t.colors.accentText, fontSize: t.size.xs }}>  Required</Txt> : null}
     </Txt>
   )
 }
@@ -510,7 +510,7 @@ export function Sheet({ title, kicker, onClose, footer, children }: {
     <BottomSheet onClose={onClose} background={t.colors.bg} maxHeight="92%" footer={footer} scroll>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: t.space.x1 }}>
         <View style={{ flex: 1 }}>
-          {kicker && <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{kicker}</Txt>}
+          {kicker && <Txt style={{ color: t.colors.accentText, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{kicker}</Txt>}
           <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: kicker ? 24 : t.size.lg, fontWeight: t.weight.bold as never }}>{title}</Txt>
         </View>
         <Pressable accessibilityRole="button" onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Txt style={{ color: t.colors.textMuted, fontSize: t.size.xl }}>×</Txt></Pressable>

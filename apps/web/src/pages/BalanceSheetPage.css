@@ -48,7 +48,7 @@
 .bs__sku {
   display: block;
   font-weight: var(--tg-weight-medium);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: none;
 }
 
@@ -108,7 +108,7 @@
 
 .bs__courier--empty {
   border-style: dashed;
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
 }
 
 .bs__count {
@@ -268,7 +268,7 @@
 .bs__preset:hover { color: var(--tg-text); border-color: var(--tg-text-muted); }
 
 .bs__preset--on {
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   border-color: var(--tg-accent);
   background: var(--tg-accent-soft);
 }

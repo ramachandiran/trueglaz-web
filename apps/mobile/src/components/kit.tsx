@@ -8,7 +8,7 @@
 import { Image, Pressable, ScrollView, View, type StyleProp, type ViewStyle } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { money, PHOTO_BG, type Theme } from '@trueglaz/core'
-import { Txt } from './Txt'
+import { TIGHT_FONT_SCALE, Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
@@ -33,7 +33,7 @@ export function PageTitle({ title, sub, actions, back }: {
   return (
     <View style={{ paddingHorizontal: t.space.x4 }}>
       {(back || actions) ? (
-        <View style={{ height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           {back ? <RoundIcon icon="chevron-back" label="Back" onPress={back} /> : <View />}
           <View style={{ flexDirection: 'row', gap: t.space.x2 }}>{actions}</View>
         </View>
@@ -53,10 +53,18 @@ export function RoundIcon({ icon, label, onPress, size = 40, tone = 'raised' }: 
   const bg = tone === 'cta' ? t.colors.cta : tone === 'glass' ? 'rgba(16,28,36,0.55)' : t.colors.bgRaised
   const fg = tone === 'cta' ? t.colors.onCta : tone === 'glass' ? '#f3f1e4' : t.colors.text
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={6}
-      style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }, tone !== 'glass' && lift(t)]}>
-      <Ionicons name={icon} size={Math.round(size * 0.48)} color={fg} />
-    </Pressable>
+    // Without an action it is only a picture of a button (inside a tile that is
+    // the button), so it is a plain view: nothing to focus, nothing to announce.
+    onPress ? (
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={6}
+        style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }, tone !== 'glass' && lift(t)]}>
+        <Ionicons name={icon} size={Math.round(size * 0.48)} color={fg} />
+      </Pressable>
+    ) : (
+      <View style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }, tone !== 'glass' && lift(t)]}>
+        <Ionicons name={icon} size={Math.round(size * 0.48)} color={fg} />
+      </View>
+    )
   )
 }
 
@@ -64,7 +72,7 @@ export function Chip({ label, on, onPress, icon }: { label: string; on?: boolean
   const t = useTheme()
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!on }} hitSlop={{ top: 5, bottom: 5, left: 2, right: 2 }}
-      style={[{ height: 34, paddingHorizontal: 16, borderRadius: t.radius.pill, flexDirection: 'row', alignItems: 'center', gap: 6,
+      style={[{ minHeight: 34, paddingVertical: 6, paddingHorizontal: 16, borderRadius: t.radius.pill, flexDirection: 'row', alignItems: 'center', gap: 6,
         backgroundColor: on ? t.colors.cta : t.colors.bgRaised }, !on && lift(t)]}>
       {icon && <Ionicons name={icon} size={14} color={on ? t.colors.onCta : t.colors.text} />}
       <Txt style={{ fontSize: t.size.sm, color: on ? t.colors.onCta : t.colors.text, fontWeight: (on ? t.weight.bold : t.weight.medium) as never }}>{label}</Txt>
@@ -93,10 +101,14 @@ export function Pill({ label, onPress, variant = 'primary', block, small, disabl
 }) {
   const t = useTheme()
   const primary = variant === 'primary'
+  // A pill with no action is a label shaped like a button (inside a tile that
+  // is the button): a plain view, so it is not a second button to focus.
+  const Box = (onPress ? Pressable : View) as typeof Pressable
   return (
-    <Pressable onPress={disabled ? undefined : onPress} accessibilityRole="button" accessibilityState={{ disabled: !!disabled }}
+    <Box onPress={disabled ? undefined : onPress} accessibilityRole={onPress ? 'button' : undefined} accessibilityState={onPress ? { disabled: !!disabled } : undefined}
       style={[{
-        height: small ? 38 : 52, paddingHorizontal: small ? 20 : 26, borderRadius: t.radius.pill,
+        // minHeight, not height: with the phone's text at 200% (TG-148) the label wraps and the pill grows.
+        minHeight: small ? 38 : 52, paddingVertical: 8, paddingHorizontal: small ? 20 : 26, borderRadius: t.radius.pill,
         alignSelf: block ? 'stretch' : 'flex-start', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
         backgroundColor: primary ? t.colors.cta : 'transparent', borderWidth: primary ? 0 : 1.5, borderColor: t.colors.cta,
         opacity: disabled ? 0.5 : 1,
@@ -105,9 +117,9 @@ export function Pill({ label, onPress, variant = 'primary', block, small, disabl
       <Txt style={{
         color: primary ? t.colors.onCta : t.colors.text, fontWeight: t.weight.bold as never,
         fontSize: small ? t.size.sm : t.size.md, letterSpacing: block && primary && !small ? 0.6 : 0,
-        textTransform: block && primary && !small ? 'uppercase' : 'none',
+        textTransform: block && primary && !small ? 'uppercase' : 'none', textAlign: 'center', flexShrink: 1,
       }}>{label}</Txt>
-    </Pressable>
+    </Box>
   )
 }
 
@@ -154,7 +166,7 @@ export function PhotoBadge({ label, tone = 'dark', right }: { label: string; ton
   return (
     <View style={{ position: 'absolute', top: 8, [right ? 'right' : 'left']: 8, height: 22, paddingHorizontal: 9, borderRadius: t.radius.pill,
       justifyContent: 'center', backgroundColor: tone === 'cta' ? t.colors.cta : t.colors.text }}>
-      <Txt style={{ fontSize: 11, fontWeight: t.weight.bold as never, color: tone === 'cta' ? t.colors.onCta : t.colors.bg }}>{label}</Txt>
+      <Txt maxFontSizeMultiplier={TIGHT_FONT_SCALE} style={{ fontSize: 11, fontWeight: t.weight.bold as never, color: tone === 'cta' ? t.colors.onCta : t.colors.bg }}>{label}</Txt>
     </View>
   )
 }
@@ -225,11 +237,11 @@ export function ListRow({ title, sub, onPress, right, last, badge }: {
       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: last ? 0 : 1, borderBottomColor: t.colors.border, gap: t.space.x3 }}>
       <View style={{ flex: 1 }}>
         <Txt style={{ color: t.colors.text, fontSize: t.size.md + 1, fontWeight: t.weight.bold as never }}>{title}</Txt>
-        {sub && <Txt style={{ color: hot ? t.colors.accent : t.colors.textMuted, fontSize: t.size.xs, marginTop: 2, fontWeight: (hot ? t.weight.bold : t.weight.normal) as never }}>{sub}</Txt>}
+        {sub && <Txt style={{ color: hot ? t.colors.accentText : t.colors.textMuted, fontSize: t.size.xs, marginTop: 2, fontWeight: (hot ? t.weight.bold : t.weight.normal) as never }}>{sub}</Txt>}
       </View>
       {hot && (
         <View style={{ minWidth: 24, height: 24, paddingHorizontal: 7, borderRadius: 12, backgroundColor: t.colors.cta, alignItems: 'center', justifyContent: 'center' }}>
-          <Txt style={{ color: t.colors.onCta, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{badge! > 99 ? '99+' : badge}</Txt>
+          <Txt maxFontSizeMultiplier={TIGHT_FONT_SCALE} style={{ color: t.colors.onCta, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{badge! > 99 ? '99+' : badge}</Txt>
         </View>
       )}
       {right}

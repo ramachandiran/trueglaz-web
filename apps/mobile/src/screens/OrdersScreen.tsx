@@ -129,7 +129,8 @@ function OrderCard({ t, o, img, onOpen }: { t: Theme; o: OrderSummary; img?: str
           )}
         </View>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: t.space.x4, gap: t.space.x2 }}>
+      {/* Wraps when the phone's text is large (TG-148) instead of pushing the status off the card. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginTop: t.space.x4, gap: t.space.x2 }}>
         <Pill label="Details" variant="ghost" small onPress={onOpen} />
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm }}>
           Total: <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{money(o.totalMinor)}</Txt>

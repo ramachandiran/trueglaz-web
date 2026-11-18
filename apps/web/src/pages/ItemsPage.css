@@ -44,10 +44,10 @@
 }
 .items__stage:hover:not(:disabled) { background: var(--tg-bg-hover); }
 .items__stage:disabled { opacity: 0.4; cursor: not-allowed; }
-.items__stage--active { background: var(--tg-accent-soft); color: var(--tg-accent); font-weight: var(--tg-weight-medium); }
+.items__stage--active { background: var(--tg-accent-soft); color: var(--tg-accent-text); font-weight: var(--tg-weight-medium); }
 
 .items__stage-count { font-size: var(--tg-text-xs); font-variant-numeric: tabular-nums; color: var(--tg-text-muted); }
-.items__stage--active .items__stage-count { color: var(--tg-accent); }
+.items__stage--active .items__stage-count { color: var(--tg-accent-text); }
 
 .items__list { display: flex; flex-direction: column; gap: var(--tg-space-3); }
 

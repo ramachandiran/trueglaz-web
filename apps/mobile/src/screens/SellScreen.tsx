@@ -4,7 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, isSeller, money, STATE_LABELS, useApi, useSession, type Theme } from '@trueglaz/core'
-import { Txt } from '../components/Txt'
+import { Txt, useLargeText } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button } from '../components/form'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
@@ -61,7 +61,7 @@ function SellerGate({ navigation, insets }: { navigation: any; insets: { top: nu
             {['Verify your identity (one-time KYC)', 'TrueGlaz reviews and enables your selling account', 'Submit your item and ship it to us', 'We inspect and grade it, then propose a price', 'You approve, we list it, and you get paid when it sells'].map((s, i) => (
               <View key={i} style={{ flexDirection: 'row', gap: t.space.x3, alignItems: 'flex-start' }}>
                 <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: t.colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-                  <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never, fontSize: t.size.xs }}>{i + 1}</Txt>
+                  <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never, fontSize: t.size.xs }}>{i + 1}</Txt>
                 </View>
                 <Txt style={{ color: t.colors.text, flex: 1, fontSize: t.size.sm, lineHeight: 20 }}>{s}</Txt>
               </View>
@@ -78,6 +78,7 @@ function SellerGate({ navigation, insets }: { navigation: any; insets: { top: nu
 
 function SellerDashboard({ navigation, insets }: { navigation: any; insets: { top: number } }) {
   const t = useTheme()
+  const large = useLargeText()
   const home = useApi(() => api.sellerHome(), [])
   const items = useApi(() => api.myItems(), [])
   const approvals = useApi(() => api.myApprovals(), [])
@@ -123,11 +124,11 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
       {home.error && <ErrorNote error={home.error} onRetry={home.reload} />}
 
       {home.data && (
-        <View style={{ flexDirection: 'row', gap: t.space.x3 }}>
-          <Tile t={t} label="Owed to you" value={money(home.data.money.owedMinor)} highlight />
-          <Tile t={t} label="Paid out" value={money(home.data.money.paidOutMinor)} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x3 }}>
+          <Tile t={t} full={large} label="Owed to you" value={money(home.data.money.owedMinor)} highlight />
+          <Tile t={t} full={large} label="Paid out" value={money(home.data.money.paidOutMinor)} />
           {/* Live in the shop now, not every item ever consigned (money.itemCount counts all states). */}
-          <Tile t={t} label="Listed · Sold" value={`${items.data ? items.data.filter((i) => i.currentState === 'LISTED').length : '–'} · ${home.data.money.soldCount}`} />
+          <Tile t={t} full={large} label="Listed · Sold" value={`${items.data ? items.data.filter((i) => i.currentState === 'LISTED').length : '–'} · ${home.data.money.soldCount}`} />
         </View>
       )}
 
@@ -197,9 +198,9 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
   )
 }
 
-function Tile({ t, label, value, highlight }: { t: Theme; label: string; value: string; highlight?: boolean }) {
+function Tile({ t, label, value, highlight, full }: { t: Theme; label: string; value: string; highlight?: boolean; full?: boolean }) {
   return (
-    <View style={{ flex: 1, backgroundColor: highlight ? t.colors.brand : t.colors.bgRaised, borderWidth: 1, borderColor: highlight ? 'transparent' : t.colors.border, borderRadius: 15, padding: 13, gap: 3 }}>
+    <View style={{ flex: 1, flexBasis: full ? '100%' : 0, backgroundColor: highlight ? t.colors.brand : t.colors.bgRaised, borderWidth: 1, borderColor: highlight ? 'transparent' : t.colors.border, borderRadius: 15, padding: 13, gap: 3 }}>
       <Txt style={{ color: highlight ? t.colors.onBrandMuted : t.colors.textMuted, fontSize: 10.5, fontWeight: t.weight.medium as never }}>{label}</Txt>
       <Txt style={{ color: highlight ? t.colors.onBrand : t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, letterSpacing: -0.4 }}>{value}</Txt>
     </View>

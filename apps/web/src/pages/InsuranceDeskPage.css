@@ -14,7 +14,7 @@
 .desk__table tbody tr:hover td { background: var(--tg-bg-sunken); }
 .desk__table tr.sel td { background: var(--tg-accent-soft, #fff5ec); }
 .desk__table tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--tg-cta); }
-.desk__doc { color: var(--tg-accent); font-weight: var(--tg-weight-bold); }
+.desk__doc { color: var(--tg-accent-text); font-weight: var(--tg-weight-bold); }
 .desk__late { color: var(--tg-bad); font-weight: var(--tg-weight-bold); }
 
 .desk__panel { background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); padding: 18px; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
@@ -32,7 +32,7 @@
 .desk__kv dd { margin: 0; overflow-wrap: anywhere; }
 .desk__kv a { color: inherit; }
 .desk__lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--tg-text-muted); font-weight: var(--tg-weight-bold); margin: 16px 0 8px; }
-.desk__link { background: none; border: 0; padding: 0 0 0 6px; color: var(--tg-accent); font: inherit; font-weight: var(--tg-weight-bold); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.desk__link { background: none; border: 0; padding: 0 0 0 6px; color: var(--tg-accent-text); font: inherit; font-weight: var(--tg-weight-bold); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .desk__kv dd > .desk__link:first-child, .desk__acts .desk__link { padding-left: 0; }
 .desk__link:disabled { opacity: .5; }
 

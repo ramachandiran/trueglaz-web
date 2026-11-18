@@ -45,7 +45,7 @@
 .ops__stat--highlight { background: var(--tg-accent-soft); }
 .ops__stat-label { font-size: var(--tg-text-xs); color: var(--tg-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .ops__stat-value { font-size: var(--tg-text-lg); font-weight: var(--tg-weight-bold); font-variant-numeric: tabular-nums; }
-.ops__stat--highlight .ops__stat-value { color: var(--tg-accent); }
+.ops__stat--highlight .ops__stat-value { color: var(--tg-accent-text); }
 
 .ops__txns { display: flex; flex-direction: column; gap: var(--tg-space-2); }
 .ops__txn { border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); padding: var(--tg-space-2) var(--tg-space-3); }
@@ -64,7 +64,7 @@
 }
 .ops__numeric { display: flex; align-items: center; gap: var(--tg-space-2); }
 .ops__unit { font-size: var(--tg-text-xs); white-space: nowrap; }
-.ops__affects { font-size: var(--tg-text-xs); color: var(--tg-accent); }
+.ops__affects { font-size: var(--tg-text-xs); color: var(--tg-accent-text); }
 
 /* Several buttons, or a reason picker, sitting on the right of a queue row. */
 .ops__inbound-actions {
@@ -84,7 +84,7 @@
 .ops__id {
   display: block;
   font-weight: var(--tg-weight-medium);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: none;
 }
 
@@ -113,7 +113,7 @@
 
 /* A SKU inside the muted gear line, still clearly a link into the item. */
 .ops__skulink {
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: none;
   font-family: var(--tg-font-mono, monospace);
 }
@@ -154,7 +154,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--tg-space-2);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: none;
 }
 

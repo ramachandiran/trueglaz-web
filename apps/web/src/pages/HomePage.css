@@ -101,7 +101,7 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-weight: var(--tg-weight-bold);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
 }
 .door--buy .door__kicker { color: var(--tg-brand-accent); }
 
@@ -306,7 +306,7 @@
   padding: var(--tg-space-5) var(--tg-space-5) var(--tg-space-5) 0;
 }
 .promise + .promise { padding-left: var(--tg-space-5); border-left: 1px solid var(--tg-border); }
-.promise__n { font-family: var(--tg-font-mono); font-size: var(--tg-text-xs); color: var(--tg-accent); margin-bottom: var(--tg-space-1); }
+.promise__n { font-family: var(--tg-font-mono); font-size: var(--tg-text-xs); color: var(--tg-accent-text); margin-bottom: var(--tg-space-1); }
 .promise__title { font-size: var(--tg-text-md); }
 .promise__body { font-size: var(--tg-text-sm); color: var(--tg-text-muted); line-height: 1.5; }
 
@@ -346,7 +346,7 @@
 .tile--navy .tile__t { color: var(--tg-on-brand); }
 .tile--navy .tile__sub { color: var(--tg-on-brand-muted); }
 .tile--cream { background: var(--tg-bg-sunken); color: var(--tg-text); }
-.tile--cream .tile__k { color: var(--tg-accent); }
+.tile--cream .tile__k { color: var(--tg-accent-text); }
 .tile--cream .tile__sub { color: var(--tg-text-muted); }
 
 /* One of the units that answers their request: grade, name, price. */
@@ -472,7 +472,7 @@
    allowed to use the accent colour. */
 .card__saving {
   font-size: var(--tg-text-xs);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   font-weight: var(--tg-weight-medium);
 }
 

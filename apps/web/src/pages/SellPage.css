@@ -83,7 +83,7 @@
   border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .sell__tab:hover { color: var(--tg-text); }
-.sell__tab--active { color: var(--tg-accent); border-bottom-color: var(--tg-accent); font-weight: var(--tg-weight-medium); }
+.sell__tab--active { color: var(--tg-accent-text); border-bottom-color: var(--tg-accent); font-weight: var(--tg-weight-medium); }
 .sell__tab-badge { font-size: var(--tg-text-xs); }
 
 .sell__list { display: flex; flex-direction: column; gap: var(--tg-space-3); }
@@ -302,7 +302,7 @@
 .sell__figure-value--strong { font-weight: var(--tg-weight-bold); }
 
 .sell__fineprint { font-size: var(--tg-text-xs); margin: 0; }
-.sell__quote { font-size: var(--tg-text-sm); margin: 0; padding: var(--tg-space-3) var(--tg-space-4); background: var(--tg-accent-soft); color: var(--tg-accent); border-radius: var(--tg-radius-md); }
+.sell__quote { font-size: var(--tg-text-sm); margin: 0; padding: var(--tg-space-3) var(--tg-space-4); background: var(--tg-accent-soft); color: var(--tg-accent-text); border-radius: var(--tg-radius-md); }
 
 .sell__decide { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; align-items: center; }
 .sell__counter { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; }
