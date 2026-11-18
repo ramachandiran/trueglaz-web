@@ -1,4 +1,6 @@
 import { getStorage } from './storage'
+import { isOnline, OFFLINE_MESSAGE } from './connectivity'
+import { forgetAnswers, noteSavedShown, rememberAnswer, savedAnswer } from './offlineCache'
 import { searchQuery, type Filters } from './filters'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
@@ -97,6 +99,11 @@ export const apiAbsolute = (u: string) => (u.startsWith('/') ? `${origin}${u}` :
  * at a port the API was never on.
  */
 function unreachable(endpoint: string): string {
+  // People using the app see a plain sentence; the technical detail is for a
+  // developer running everything on this machine.
+  if (origin && !/\/\/(localhost|127\.|10\.|192\.168\.)/.test(origin)) {
+    return "Couldn't reach TrueGlaz just now. Check your connection and try again."
+  }
   if (origin) return `Could not reach the API at ${origin}. Is it running?`
   if (typeof location === 'undefined') return `No answer for ${url(endpoint)}.`
   return `No answer from ${location.origin}, the server this page came from. ` +
@@ -118,6 +125,10 @@ export class ApiError extends Error {
 }
 
 async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? 'GET').toUpperCase()
+  // Anything that changes something needs the server there and then. Nothing
+  // is queued to send later, so a payment or an order cannot go twice (TG-156).
+  if (method !== 'GET' && !isOnline()) throw new ApiError(0, OFFLINE_MESSAGE, 'offline')
   let res: Response
   try {
     res = await fetch(url(endpoint), {
@@ -136,7 +147,19 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
     // the old message read "Could not reach the API at http://localhost:5174/…"
     // when the API was on 8080 and the thing that had gone away was the dev
     // server the page itself came from.
-    throw new ApiError(0, unreachable(endpoint))
+    //
+    // No answer at all. In the app, show what this page said last time, so
+    // orders, the wishlist and the vault are still there with no connection.
+    if (method === 'GET' && session) {
+      const saved = await savedAnswer(session.userId, endpoint)
+      if (saved) {
+        noteSavedShown(saved.at)
+        return (saved.text ? JSON.parse(saved.text) : undefined) as T
+      }
+    }
+    throw isOnline()
+      ? new ApiError(0, unreachable(endpoint), 'unreachable')
+      : new ApiError(0, OFFLINE_MESSAGE, 'offline')
   }
 
   if (!res.ok) {
@@ -154,6 +177,7 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
     // one-time code you just typed was wrong. Signing someone out for a typo
     // loses whatever they were in the middle of, so only the first clears it.
     if (res.status === 401 && session && code !== 'code_invalid') {
+      void forgetAnswers(session.userId)
       void saveSession(null)
       onExpired?.()
     }
@@ -163,6 +187,7 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
 
   if (res.status === 204) return undefined as T
   const text = await res.text()
+  if (method === 'GET' && session) void rememberAnswer(session.userId, endpoint, text)
   return (text ? JSON.parse(text) : undefined) as T
 }
 
@@ -212,7 +237,7 @@ async function download(endpoint: string, fallbackName = 'download'): Promise<{ 
       headers: session ? { Authorization: `Bearer ${session.token}` } : {},
     })
   } catch {
-    throw new ApiError(0, unreachable(endpoint))
+    throw isOnline() ? new ApiError(0, unreachable(endpoint), 'unreachable') : new ApiError(0, OFFLINE_MESSAGE, 'offline')
   }
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`
@@ -642,6 +667,10 @@ export const api = {
   /** The same, as a file (website): bytes plus the server's file name. */
   myDataFile: () => download('/profile/export', `trueglaz-my-data-${new Date().toISOString().slice(0, 10)}.json`),
   staffAccountDeletions: () => get<StaffAccountDeletion[]>('/staff/account-deletions'),
+  /**
+   * For a bank account already on file, leave accountNumber blank to keep the
+   * saved number (only its last four digits are ever sent back to us).
+   */
   savePayoutAccount: (body: {
     code: string
     method: string
@@ -650,6 +679,8 @@ export const api = {
     ifsc?: string | null
     upiVpa?: string | null
   }) => post<PayoutAccountView>('/profile/payout-account', body),
+  /** Payouts wait until a new account is added; refused (409) while one is being sent to it. */
+  removePayoutAccount: () => del<void>('/profile/payout-account'),
 
   myAddresses: () => get<Address[]>('/profile/addresses'),
   addAddress: (body: {

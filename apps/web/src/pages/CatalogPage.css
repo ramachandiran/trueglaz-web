@@ -60,7 +60,7 @@
 .result__title {
   font-size: var(--tg-text-lg);
   font-weight: var(--tg-weight-medium);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: none;
 }
 .result__title:hover { text-decoration: underline; }

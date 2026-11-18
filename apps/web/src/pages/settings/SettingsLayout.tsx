@@ -34,9 +34,9 @@ export function SettingsLayout() {
           ))}
         </nav>
       </aside>
-      <main className="st__main">
+      <div className="st__main">
         <Outlet />
-      </main>
+      </div>
     </div>
   )
 }

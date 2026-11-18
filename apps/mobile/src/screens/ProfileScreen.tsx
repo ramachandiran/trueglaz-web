@@ -3,14 +3,16 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, Switch, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, dateOnly, isSeller, useApi, useSession, type Theme } from '@trueglaz/core'
-import { Txt } from '../components/Txt'
+import { Txt, useLargeText } from '../components/Txt'
 import { useTheme, useThemeMode, type ThemeMode } from '../theme/ThemeContext'
 import { Muted } from '../components/ui'
 import { Button, Field } from '../components/form'
 import { BottomSheet } from '../components/BottomSheet'
+import { OtpBoxes } from '../components/OtpBoxes'
+import { CodeTimer } from '../components/CodeTimer'
 import { API_ORIGIN } from '../config'
 import { disablePush, enablePush, pushIsOn, pushSupported } from '../push'
-import { Chip, lift } from '../components/kit'
+import { Chip, lift, PageTitle } from '../components/kit'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 const LIVE = ['pending_payment', 'paid', 'dispatched', 'delivered']
@@ -22,6 +24,7 @@ const LIVE = ['pending_payment', 'paid', 'dispatched', 'delivered']
  */
 export function ProfileScreen({ navigation }: { navigation: any }) {
   const t = useTheme()
+  const large = useLargeText()
   const insets = useSafeAreaInsets()
   const { session, signOut } = useSession()
   const { mode, setMode } = useThemeMode()
@@ -34,6 +37,7 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   const [sheet, setSheet] = useState<'edit' | 'appearance' | 'help' | null>(null)
   const [push, setPush] = useState<boolean | null>(null)
   const [pushBusy, setPushBusy] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
     const refresh = () => {
@@ -60,9 +64,11 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + t.space.x2, paddingBottom: t.space.x7, paddingHorizontal: t.space.x4, gap: t.space.x4 }}>
-        <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -0.8 }}>Profile</Txt>
+    <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
+      {/* The title stays fixed while the page scrolls under it, like every other tab. */}
+      <PageTitle title="Profile" scrolled={scrolled} />
+      <ScrollView onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 4)} scrollEventThrottle={32}
+        contentContainerStyle={{ paddingTop: t.space.x2, paddingBottom: t.space.x7, paddingHorizontal: t.space.x4, gap: t.space.x4 }}>
 
         {/* who you are */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
@@ -75,15 +81,15 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
           </View>
           <Pressable onPress={() => setSheet('edit')} accessibilityRole="button" accessibilityLabel="Edit profile"
             style={[{ backgroundColor: t.colors.bgRaised, borderRadius: t.radius.pill, paddingVertical: 9, paddingHorizontal: 18 }, lift(t)]}>
-            <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Edit</Txt>
+            <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Edit</Txt>
           </Pressable>
         </View>
 
         {/* three shortcuts */}
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Tile t={t} icon="receipt-outline" title="Orders" sub={activeOrders ? `${activeOrders} active` : 'None active'} onPress={() => navigation.navigate('Orders')} />
-          <Tile t={t} icon="heart-outline" title="Wishlist" sub={openAsks ? `${openAsks} ${openAsks === 1 ? 'item' : 'items'}` : 'Ask for gear'} onPress={() => navigation.navigate('Wishlist')} />
-          <Tile t={t} icon="cube-outline" title="Selling" sub={seller ? (listed ? `${listed} listed` : 'Nothing listed') : 'Start selling'} onPress={() => navigation.navigate('Sell')} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+          <Tile t={t} full={large} icon="receipt-outline" title="Orders" sub={activeOrders ? `${activeOrders} active` : 'None active'} onPress={() => navigation.navigate('Orders')} />
+          <Tile t={t} full={large} icon="heart-outline" title="Wishlist" sub={openAsks ? `${openAsks} ${openAsks === 1 ? 'item' : 'items'}` : 'Ask for gear'} onPress={() => navigation.navigate('Wishlist')} />
+          <Tile t={t} full={large} icon="cube-outline" title="Selling" sub={seller ? (listed ? `${listed} listed` : 'Nothing listed') : 'Start selling'} onPress={() => navigation.navigate('Sell')} />
         </View>
 
         {/* settings */}
@@ -124,10 +130,10 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
       </ScrollView>
 
       {sheet === 'edit' && p && (
-        <EditSheet t={t} name={p.displayName} onClose={() => setSheet(null)}
+        <EditSheet t={t} name={p.displayName} email={p.email} phone={p.phone} onClose={() => setSheet(null)}
           onSaved={() => { setSheet(null); profile.reload() }}
+          onContactChanged={() => profile.reload()}
           facts={[
-            ['Email', p.email ?? '—'], ['Phone', p.phone ?? '—'],
             ['Member since', dateOnly(p.memberSince)], ['Identity', p.kycStatus.replace(/_/g, ' ')],
           ]} />
       )}
@@ -166,10 +172,10 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
   )
 }
 
-function Tile({ t, icon, title, sub, onPress }: { t: Theme; icon: IconName; title: string; sub: string; onPress: () => void }) {
+function Tile({ t, icon, title, sub, onPress, full }: { t: Theme; icon: IconName; title: string; sub: string; onPress: () => void; full?: boolean }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}, ${sub}`}
-      style={[{ flex: 1, backgroundColor: t.colors.bgRaised, borderRadius: 16, padding: 14, gap: 10, minHeight: 104 }, lift(t)]}>
+      style={[{ flex: 1, flexBasis: full ? '100%' : 0, backgroundColor: t.colors.bgRaised, borderRadius: 16, padding: 14, gap: 10, minHeight: 104 }, lift(t)]}>
       <Ionicons name={icon} size={22} color={t.colors.accent} />
       <View>
         <Txt style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{title}</Txt>
@@ -195,17 +201,38 @@ function Row({ t, icon, title, value, right, onPress, last }: {
   )
 }
 
-function EditSheet({ t, name, facts, onClose, onSaved }: {
-  t: Theme; name: string; facts: [string, string][]; onClose: () => void; onSaved: () => void
+function EditSheet({ t, name, email, phone, facts, onClose, onSaved, onContactChanged }: {
+  t: Theme; name: string; email: string | null; phone: string | null; facts: [string, string][]
+  onClose: () => void; onSaved: () => void; onContactChanged: () => void
 }) {
   const [value, setValue] = useState(name)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [changing, setChanging] = useState<'email' | 'phone' | null>(null)
   const save = async () => {
     if (!value.trim()) { setErr('Enter your name.'); return }
     setBusy(true); setErr(null)
     try { await api.updateProfile(value.trim()); onSaved() }
     catch (e) { setErr((e as Error).message) } finally { setBusy(false) }
+  }
+  const contactRow = (kind: 'email' | 'phone', current: string | null) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Muted size={t.size.xs}>{kind === 'email' ? 'Email' : 'Phone'}</Muted>
+        <Txt style={{ color: current ? t.colors.text : t.colors.textMuted }}>{current ?? 'Not added'}</Txt>
+      </View>
+      <Pressable onPress={() => setChanging(kind)} accessibilityRole="button" hitSlop={10}
+        accessibilityLabel={`${current ? 'Change' : 'Add'} ${kind === 'email' ? 'email' : 'phone number'}`}
+        style={{ paddingVertical: 6, paddingHorizontal: 12, borderRadius: t.radius.pill, borderWidth: 1, borderColor: t.colors.border }}>
+        <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never, fontSize: t.size.sm }}>{current ? 'Change' : 'Add'}</Txt>
+      </Pressable>
+    </View>
+  )
+  if (changing) {
+    return (
+      <ContactChange t={t} kind={changing} current={changing === 'email' ? email : phone}
+        onClose={() => setChanging(null)} onDone={() => { setChanging(null); onContactChanged() }} />
+    )
   }
   return (
     <BottomSheet onClose={onClose} scroll footer={<>
@@ -216,6 +243,8 @@ function EditSheet({ t, name, facts, onClose, onSaved }: {
       <Field label="Name" value={value} onChangeText={setValue} autoCapitalize="words" returnKeyType="done" onSubmitEditing={save} />
       {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
       <View style={{ gap: 2 }}>
+        {contactRow('phone', phone)}
+        {contactRow('email', email)}
         {facts.map(([k, v]) => (
           <View key={k} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
             <Muted>{k}</Muted>
@@ -223,7 +252,96 @@ function EditSheet({ t, name, facts, onClose, onSaved }: {
           </View>
         ))}
       </View>
-      <Muted size={t.size.xs}>To change your sign-in email or phone, use Profile on the website: it needs a code sent to the new one.</Muted>
+      <Muted size={t.size.xs}>Your email and phone both sign you in. Changing one sends a code to the new one first.</Muted>
+    </BottomSheet>
+  )
+}
+
+/**
+ * Change the phone number or email that signs you in (TG-154). A code goes to
+ * the NEW contact and must come back, which is what proves it is theirs; the
+ * old contact is told once it has changed. Indian mobiles can be typed as ten
+ * digits; anything else needs its +country code.
+ */
+function ContactChange({ t, kind, current, onClose, onDone }: {
+  t: Theme; kind: 'email' | 'phone'; current: string | null; onClose: () => void; onDone: () => void
+}) {
+  const [input, setInput] = useState('')
+  const [sentTo, setSentTo] = useState<string | null>(null)
+  const [devCode, setDevCode] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [deadline, setDeadline] = useState(0)
+  const [resendAt, setResendAt] = useState(0)
+  const [expired, setExpired] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const contact = (): string | null => {
+    const v = input.trim()
+    if (kind === 'email') return /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v) ? v.toLowerCase() : null
+    const digits = v.replace(/[^\d+]/g, '')
+    if (/^\+[1-9]\d{7,14}$/.test(digits)) return digits
+    const local = digits.replace(/^0+/, '')
+    return /^[6-9]\d{9}$/.test(local) ? `+91${local}` : null
+  }
+  const send = async () => {
+    const c = contact()
+    if (!c) { setErr(kind === 'email' ? 'Enter a valid email address.' : 'Enter a 10-digit mobile number.'); return }
+    setBusy(true); setErr(null)
+    try {
+      const res = await api.requestContactCode(c)
+      setSentTo(c); setDevCode(res.devCode ?? null); setCode(res.devCode ?? '')
+      setDeadline(Date.now() + (res.expiresInSeconds ?? 300) * 1000)
+      setResendAt(Date.now() + (res.resendInSeconds ?? 60) * 1000)
+      setExpired(false)
+    } catch (e) { setErr((e as Error).message) } finally { setBusy(false) }
+  }
+  const confirmCode = async () => {
+    if (code.replace(/\D/g, '').length < 4) { setErr('Enter the code we sent.'); return }
+    setBusy(true); setErr(null)
+    try { await api.confirmContact(sentTo!, code.replace(/\D/g, '')); onDone() }
+    catch (e) { setErr((e as Error).message) } finally { setBusy(false) }
+  }
+  const noun = kind === 'email' ? 'email' : 'phone number'
+  return (
+    <BottomSheet onClose={onClose} scroll footer={<>
+      {sentTo && !expired
+        ? <Button label={`Confirm new ${noun}`} variant="cta" onPress={confirmCode} loading={busy} />
+        : !sentTo && <Button label="Send code" variant="cta" onPress={send} loading={busy} />}
+      <Button label="Cancel" variant="ghost" onPress={onClose} />
+    </>}>
+      <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
+        {current ? `Change ${noun}` : `Add ${noun}`}
+      </Txt>
+      {current && <Muted size={t.size.sm}>Now: {current}</Muted>}
+      {kind === 'phone' ? (
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: t.space.x2 }}>
+          <View style={{ paddingVertical: t.space.x3, paddingHorizontal: t.space.x3, borderRadius: t.radius.md, borderWidth: 1, borderColor: t.colors.border, backgroundColor: t.colors.bgSunken }}>
+            <Txt style={{ color: t.colors.text }}>+91</Txt>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field label="New mobile number" value={input} onChangeText={(v) => { setInput(v); setSentTo(null) }} editable={!sentTo || expired}
+              keyboardType="phone-pad" textContentType="telephoneNumber" autoComplete="tel" placeholder="98765 43210" maxLength={16} />
+          </View>
+        </View>
+      ) : (
+        <Field label="New email" value={input} onChangeText={(v) => { setInput(v); setSentTo(null) }} editable={!sentTo || expired}
+          keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" placeholder="you@example.com" />
+      )}
+      {sentTo && (
+        <View style={{ gap: t.space.x3 }}>
+          <Muted size={t.size.xs}>We sent a code to {sentTo}. Enter it to confirm it is yours.</Muted>
+          {devCode && (
+            <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3 }}>
+              <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
+            </View>
+          )}
+          <OtpBoxes value={code} onChange={setCode} label="Verification code" editable={!expired} />
+          <CodeTimer key={deadline} deadline={deadline} resendAt={resendAt} onResend={send} resending={busy} align="flex-start"
+            onExpire={() => { setExpired(true); setCode('') }} />
+        </View>
+      )}
+      {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
     </BottomSheet>
   )
 }

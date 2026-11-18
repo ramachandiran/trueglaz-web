@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { FormScroll } from '../components/FormScroll'
 import { Pressable, View } from 'react-native'
-import { api, dateOnly, useApi } from '@trueglaz/core'
+import { api, dateOnly, useApi, type PayoutAccountView } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { OtpBoxes } from '../components/OtpBoxes'
 import { CodeTimer } from '../components/CodeTimer'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle } from '../components/ui'
+import { confirm, notify } from '../components/Confirm'
 
 type Method = 'upi' | 'bank'
 
@@ -15,6 +16,23 @@ export function PayoutAccountScreen() {
   const t = useTheme()
   const acct = useApi(() => api.myPayoutAccount(), [])
   const [editing, setEditing] = useState(false)
+  const [removing, setRemoving] = useState(false)
+
+  const remove = async () => {
+    const ok = await confirm({
+      title: 'Remove payout account?',
+      message: 'Payouts will wait until you add a new account. You can add one again at any time.',
+      confirmLabel: 'Remove', destructive: true,
+    })
+    if (!ok) return
+    setRemoving(true)
+    try {
+      await api.removePayoutAccount()
+      acct.reload()
+    } catch (e) {
+      notify("Couldn't remove it", (e as Error).message)
+    } finally { setRemoving(false) }
+  }
 
   return (
     <FormScroll style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
@@ -57,7 +75,7 @@ export function PayoutAccountScreen() {
       )}
 
       {editing
-        ? <PayoutForm onDone={() => { setEditing(false); acct.reload() }} onCancel={() => setEditing(false)} />
+        ? <PayoutForm current={acct.data ?? null} onDone={() => { setEditing(false); acct.reload() }} onCancel={() => setEditing(false)} />
         : (
           <>
             {!acct.data && (
@@ -67,6 +85,7 @@ export function PayoutAccountScreen() {
               </Card>
             )}
             <Button label={acct.data ? 'Change payout account' : 'Add payout account'} onPress={() => setEditing(true)} />
+            {acct.data && <Button label="Remove payout account" variant="danger" loading={removing} onPress={remove} />}
             <Muted size={t.size.xs}>
               For your security, saving a payout account needs a one-time code we send to the email or phone already on your account.
             </Muted>
@@ -76,13 +95,17 @@ export function PayoutAccountScreen() {
   )
 }
 
-function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+function PayoutForm({ current, onDone, onCancel }: { current: PayoutAccountView | null; onDone: () => void; onCancel: () => void }) {
   const t = useTheme()
-  const [method, setMethod] = useState<Method>('upi')
-  const [accountHolderName, setAccountHolderName] = useState('')
-  const [upiVpa, setUpiVpa] = useState('')
+  // Starts from what is on file: a change is usually one field (TG-151). The
+  // account number is the exception: we keep only its last four digits, so it
+  // is left blank and a blank number keeps the saved one.
+  const [method, setMethod] = useState<Method>(current?.method === 'bank' ? 'bank' : 'upi')
+  const [accountHolderName, setAccountHolderName] = useState(current?.accountHolderName ?? '')
+  const [upiVpa, setUpiVpa] = useState(current?.upiVpa ?? '')
   const [accountNumber, setAccountNumber] = useState('')
-  const [ifsc, setIfsc] = useState('')
+  const [ifsc, setIfsc] = useState(current?.ifsc ?? '')
+  const savedLast4 = current?.method === 'bank' ? current.accountLast4 : null
 
   const [codeSent, setCodeSent] = useState(false)
   const [devCode, setDevCode] = useState<string | null>(null)
@@ -98,7 +121,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
   const detailsOk = () => {
     if (!accountHolderName.trim()) { setError("The account holder's name is required."); return false }
     if (method === 'upi' && !upiVpa.trim()) { setError('Enter your UPI id (looks like name@bank).'); return false }
-    if (method === 'bank' && (!accountNumber.trim() || !ifsc.trim())) { setError('Enter the account number and IFSC.'); return false }
+    if (method === 'bank' && ((!accountNumber.trim() && !savedLast4) || !ifsc.trim())) { setError('Enter the account number and IFSC.'); return false }
     return true
   }
 
@@ -133,15 +156,15 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
 
   return (
     <Card style={{ gap: t.space.x3 }}>
-      <SectionTitle>Payout account</SectionTitle>
+      <SectionTitle>{current ? 'Change payout account' : 'Add payout account'}</SectionTitle>
 
       <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
         {(['upi', 'bank'] as Method[]).map((m) => {
           const on = method === m
           return (
-            <Pressable key={m} onPress={() => { setMethod(m); setError(null) }}
+            <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!on }} key={m} onPress={() => { setMethod(m); setError(null) }}
               style={{ flex: 1, alignItems: 'center', paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
-              <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{m === 'upi' ? 'UPI' : 'Bank account'}</Txt>
+              <Txt style={{ color: on ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (on ? t.weight.bold : t.weight.normal) as never }}>{m === 'upi' ? 'UPI' : 'Bank account'}</Txt>
             </Pressable>
           )
         })}
@@ -151,7 +174,9 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
       {method === 'upi'
         ? <Field label="UPI id" value={upiVpa} onChangeText={setUpiVpa} autoCapitalize="none" placeholder="name@bank" />
         : <>
-            <Field label="Account number" value={accountNumber} onChangeText={setAccountNumber} keyboardType="number-pad" />
+            <Field label="Account number" value={accountNumber} onChangeText={setAccountNumber} keyboardType="number-pad"
+              placeholder={savedLast4 ? `•••• ${savedLast4}` : undefined}
+              hint={savedLast4 ? `Leave blank to keep the account ending ${savedLast4}.` : undefined} />
             <Field label="IFSC" value={ifsc} onChangeText={setIfsc} autoCapitalize="characters" placeholder="e.g. HDFC0001234" />
           </>}
 
@@ -160,7 +185,7 @@ function PayoutForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
           {sentTo && <Muted size={t.size.xs}>We sent a code to {sentTo}.</Muted>}
           {devCode && (
             <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3 }}>
-              <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
+              <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
             </View>
           )}
           <OtpBoxes value={code} onChange={setCode} label="Verification code" editable={!expired} />

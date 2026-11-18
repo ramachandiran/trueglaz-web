@@ -10,7 +10,7 @@
 .dash__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--tg-space-4); flex-wrap: wrap; }
 .dash__title { font-size: 28px; font-weight: var(--tg-weight-bold); letter-spacing: -0.5px; color: var(--tg-text); }
 .dash__date { color: var(--tg-text-muted); font-size: var(--tg-text-sm); margin-top: 2px; }
-.dash__pill { background: var(--tg-accent-soft); color: var(--tg-accent); font-weight: var(--tg-weight-bold); border-radius: var(--tg-radius-pill); padding: 8px 16px; font-size: var(--tg-text-sm); white-space: nowrap; }
+.dash__pill { background: var(--tg-accent-soft); color: var(--tg-accent-text); font-weight: var(--tg-weight-bold); border-radius: var(--tg-radius-pill); padding: 8px 16px; font-size: var(--tg-text-sm); white-space: nowrap; }
 .dash__pill--clear { background: var(--tg-good-soft); color: var(--tg-good); }
 .dash__eyebrow { font-size: var(--tg-text-xs); font-weight: var(--tg-weight-bold); letter-spacing: 0.7px; text-transform: uppercase; color: var(--tg-text-muted); }
 .dash__sec { font-size: var(--tg-text-lg); font-weight: var(--tg-weight-bold); color: var(--tg-text); margin-bottom: var(--tg-space-3); }
@@ -94,8 +94,8 @@
 .dash__feed-title { font-size: var(--tg-text-sm); font-weight: var(--tg-weight-medium); display: flex; align-items: center; gap: 6px; }
 .dash__feed-meta { font-size: var(--tg-text-xs); color: var(--tg-text-muted); }
 .dash__feed-time { margin-left: auto; font-size: var(--tg-text-xs); color: var(--tg-text-muted); white-space: nowrap; }
-.dash__grade { background: var(--tg-accent-soft); color: var(--tg-accent); font-size: 10px; font-weight: var(--tg-weight-bold); border-radius: 4px; padding: 1px 5px; }
-.dash__more { display: inline-block; margin-top: 10px; color: var(--tg-accent); text-decoration: none; font-size: var(--tg-text-sm); }
+.dash__grade { background: var(--tg-accent-soft); color: var(--tg-accent-text); font-size: 10px; font-weight: var(--tg-weight-bold); border-radius: 4px; padding: 1px 5px; }
+.dash__more { display: inline-block; margin-top: 10px; color: var(--tg-accent-text); text-decoration: none; font-size: var(--tg-text-sm); }
 
 /* mini list (This week / small stat rows) */
 .dash__mini { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }

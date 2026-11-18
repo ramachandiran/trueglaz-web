@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, relative, useApi, useSession,
-  isSeller, type MyRequest, type WantedMatch, type WantedRequest,
+  isSeller, type BuyerAsk, type MyRequest, type WantedMatch, type WantedRequest,
 } from '@trueglaz/core'
+import { useConfirm } from '../components/ConfirmDialog'
 import { Empty, ErrorNote, GradeBadge, Loading } from '../components/ui'
 import './WantedPage.css'
 import { ModelPhoto } from '../components/ModelPhoto'
@@ -155,6 +156,10 @@ const EMPTY_ASK = { modelFreeText: '', minGradeCode: '', maxPrice: '', note: '' 
 
 function MySlots({ mine, signal }: { mine: ReturnType<typeof useApi<import('@trueglaz/core').MyRequests | null>>; signal: number }) {
   const grades = useApi(() => api.grades(), [])
+  // The buyer home carries each live wish's model and what in stock fits it (TG-155).
+  const home = useApi(() => api.buyerHome(), [])
+  const asks = new Map<string, BuyerAsk>((home.data?.asks ?? []).map((a) => [a.id, a]))
+  const { ask, dialog } = useConfirm()
   const [form, setForm] = useState(EMPTY_ASK)
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -207,10 +212,16 @@ function MySlots({ mine, signal }: { mine: ReturnType<typeof useApi<import('@tru
   }
 
   async function withdraw(id: string) {
+    const r = data?.requests.find((x) => x.id === id)
+    const ok = await ask({
+      title: 'Remove this wish?', body: r?.wanted ?? 'It comes off the board and the slot is free again.',
+      confirmLabel: 'Remove', cancelLabel: 'Keep it', destructive: true,
+    })
+    if (!ok) return
     setBusy(true); setError(null)
     try {
       await api.withdrawRequest(id)
-      mine.reload()
+      mine.reload(); home.reload()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not withdraw that')
     } finally { setBusy(false) }
@@ -218,6 +229,7 @@ function MySlots({ mine, signal }: { mine: ReturnType<typeof useApi<import('@tru
 
   return (
     <section ref={box} className="tg-card wanted__mine" aria-label="Your requests">
+      {dialog}
       <div className="wanted__mine-head">
         <h2 className="wanted__section-title">Your requests</h2>
         <span className="wanted__slots tg-muted">
@@ -237,7 +249,7 @@ function MySlots({ mine, signal }: { mine: ReturnType<typeof useApi<import('@tru
       {live.length > 0 && (
         <ul className="wanted__list">
           {live.map((r) => (
-            <MyRow key={r.id} request={r} busy={busy} onWithdraw={() => withdraw(r.id)} />
+            <WishRow key={r.id} request={r} ask={asks.get(r.id)} matchesKnown={!!home.data} busy={busy} onWithdraw={() => withdraw(r.id)} />
           ))}
         </ul>
       )}
@@ -332,6 +344,77 @@ function MySlots({ mine, signal }: { mine: ReturnType<typeof useApi<import('@tru
         </div>
       )}
     </section>
+  )
+}
+
+/**
+ * A live wish (TG-155): the model's picture, the price and the details that
+ * were asked for, the note, and, once something fits, the matching listings as
+ * small shop cards that open the listing.
+ */
+function WishRow({ request: r, ask, matchesKnown, busy, onWithdraw }: {
+  request: MyRequest
+  ask?: BuyerAsk
+  /** False until the matches have loaded: "not in stock" must not flash first. */
+  matchesKnown: boolean
+  busy: boolean
+  onWithdraw: () => void
+}) {
+  const kind = /\d+mm\b|f\/\d/i.test(r.wanted) ? 'lens' : 'camera'
+  const found = (ask?.matchCount ?? 0) > 0
+  return (
+    <li className="wish">
+      <div className="wish__main">
+        <span className="wish__pic">
+          <ModelPhoto slug={ask?.modelSlug ?? undefined} kind={kind} size="thumb" alt="" badge={false} />
+        </span>
+        <div className="wish__body">
+          <div className="wish__head">
+            <strong className="wish__title">{r.wanted}</strong>
+            <span className={`tg-badge ${badgeFor(r.state)}`}>{label(r.state)}</span>
+          </div>
+          <p className="wish__price">{r.maxPriceMinor != null ? `Up to ${money(r.maxPriceMinor)}` : 'Any price'}</p>
+          <dl className="wish__facts">
+            <div><dt>Condition</dt><dd>{r.minGradeLabel ? `${r.minGradeLabel} or better` : 'Any condition'}</dd></div>
+            <div><dt>Added</dt><dd>{dateOnly(r.createdAt)}</dd></div>
+            {r.expiresAt && <div><dt>Watching</dt><dd><Expiry at={r.expiresAt} /></dd></div>}
+          </dl>
+          {r.note && <p className="wish__note">“{r.note}”</p>}
+        </div>
+        <button type="button" className="tg-button tg-button--small wish__remove" disabled={busy} onClick={onWithdraw}
+          aria-label={`Remove ${r.wanted}`}>
+          Remove
+        </button>
+      </div>
+
+      {found ? (
+        <div className="wish__matches">
+          <p className="wish__found">
+            {ask!.matchCount === 1 ? 'One in stock fits your wish' : `${ask!.matchCount} in stock fit your wish`}
+            {ask!.matchCount > ask!.matches.length && <> · <Link to={`/catalog?q=${encodeURIComponent(r.wanted)}`}>See all</Link></>}
+          </p>
+          <ul className="wish__cards">
+            {ask!.matches.map((m) => (
+              <li key={m.listingId}>
+                <Link to={`/listings/${m.listingId}`} className="wish__card">
+                  <ModelPhoto slug={m.modelSlug ?? ask?.modelSlug ?? undefined} kind={/lens/i.test(m.categorySlug ?? '') ? 'lens' : kind} size="thumb" alt="" badge={false} />
+                  <span className="wish__card-body">
+                    <span className="wish__card-title">{m.title}</span>
+                    <span className="wish__card-meta"><GradeBadge code={m.gradeCode} /> <strong>{money(m.priceMinor)}</strong></span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (ask?.nearCount ?? 0) > 0 ? (
+        <p className="wish__status">
+          {ask!.nearCount} in stock above your price or below your condition · <Link to={`/catalog?q=${encodeURIComponent(r.wanted)}`}>Have a look</Link>
+        </p>
+      ) : r.state === 'published' && matchesKnown ? (
+        <p className="wish__status">Not in stock yet. We'll tell you the moment it is.</p>
+      ) : null}
+    </li>
   )
 }
 

@@ -1,3 +1,4 @@
+import { OfflineNotice } from './components/OfflineNotice'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
@@ -74,6 +75,7 @@ export function App() {
   return (
     <BrowserRouter>
       <RouteTitle />
+      <OfflineNotice />
       <Routes>
         <Route element={<AppShell />}>
           {/* Smart home: redirects ops/staff to inventory dashboard */}

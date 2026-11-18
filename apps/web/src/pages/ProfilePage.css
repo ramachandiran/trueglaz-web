@@ -31,7 +31,7 @@
   text-decoration: none;
   padding: 4px 0;
 }
-.profile__jump a:hover { color: var(--tg-accent); text-decoration: underline; }
+.profile__jump a:hover { color: var(--tg-accent-text); text-decoration: underline; }
 
 .profile__section {
   scroll-margin-top: var(--tg-space-5);
@@ -179,3 +179,13 @@
 /* What the bank said about the holder: a full-width line under the account row. */
 .profile__bank-note { flex-basis: 100%; margin: 0; font-size: var(--tg-text-sm); line-height: 1.5; }
 .profile__bank-note--bad { color: var(--tg-bad); }
+
+/* Removing the payout account is the quiet option beside "send a code" (TG-151). */
+.profile__remove { color: var(--tg-bad); }
+
+/* A sign-in contact with its own Change beside it (TG-154). */
+.profile__contact { display: flex; align-items: center; justify-content: space-between; gap: var(--tg-space-2); }
+.profile__contact-edit { display: flex; flex-direction: column; gap: var(--tg-space-2); }
+.profile__contact-input { display: flex; align-items: stretch; gap: var(--tg-space-2); }
+.profile__contact-input .tg-input { flex: 1; min-width: 0; }
+.profile__prefix { display: grid; place-items: center; padding: 0 var(--tg-space-3); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); background: var(--tg-bg-sunken); }

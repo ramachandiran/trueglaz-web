@@ -19,7 +19,7 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone 
     good: { bg: t.colors.goodSoft, fg: t.colors.good },
     warn: { bg: t.colors.warnSoft, fg: t.colors.warn },
     bad: { bg: t.colors.badSoft, fg: t.colors.bad },
-    accent: { bg: t.colors.accentSoft, fg: t.colors.accent },
+    accent: { bg: t.colors.accentSoft, fg: t.colors.accentText },
   }
   const c = map[tone]
   return (
@@ -94,7 +94,7 @@ export function ErrorNote({ error, onRetry }: { error: Error; onRetry?: () => vo
       </Txt>
       <Muted>{error.message}</Muted>
       {onRetry && (
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={onRetry}
           style={{
             alignSelf: 'flex-start',

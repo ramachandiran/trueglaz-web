@@ -100,7 +100,6 @@
   margin-left: var(--tg-space-1);
   font-size: 0.66rem;
   color: var(--tg-text-muted);
-  opacity: 0.75;
   white-space: nowrap;
 }
 

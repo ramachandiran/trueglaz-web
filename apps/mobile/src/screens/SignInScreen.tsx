@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { FormScroll } from '../components/FormScroll'
 import { Animated, Image, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, indianMobile, localMobile, useSession, type AuthResult, type Session } from '@trueglaz/core'
+import { api, indianMobile, localMobile, useSession, type AuthResult, type Session, ApiError, onConnectivity } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { Button, Field } from '../components/form'
 import { OtpBoxes } from '../components/OtpBoxes'
@@ -65,6 +65,7 @@ export function SignInScreen() {
     return () => { if (clearTimer.current) clearTimeout(clearTimer.current) }
   }, [])
 
+  const [waitingForNet, setWaitingForNet] = useState(false)
   const startCode = (res: { devCode: string | null; expiresAt: string; expiresInSeconds?: number; resendInSeconds?: number }) => {
     const secs = res.expiresInSeconds
       ?? Math.max(1, Math.round((Date.parse(res.expiresAt) - Date.now()) / 1000) || FALLBACK_CODE_SECONDS)
@@ -81,9 +82,20 @@ export function SignInScreen() {
     setError(null); setBusy(true)
     try {
       const res = await api.requestCode(value)
-      startCode(res); setEmail(value); setStep('code')
-    } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+      startCode(res); setEmail(value); setStep('code'); setWaitingForNet(false)
+    } catch (e) {
+      // Offline: say it plainly, and send the code by itself the moment the
+      // connection is back, rather than leaving them to keep pressing (TG-156).
+      if (e instanceof ApiError && e.code === 'offline') {
+        setError('No internet. Connect to get your sign-in code; we will send it as soon as you are back online.')
+        setWaitingForNet(true)
+      } else setError((e as Error).message)
+    } finally { setBusy(false) }
   }
+  useEffect(() => {
+    if (!waitingForNet) return
+    return onConnectivity((on) => { if (on) { setWaitingForNet(false); void sendCode() } })
+  }, [waitingForNet]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const resend = async () => {
     setResending(true)
@@ -180,12 +192,12 @@ export function SignInScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <Muted>Sent to <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{contact.trim()}</Txt></Muted>
                   <Pressable onPress={changeEmail} accessibilityRole="button" hitSlop={8}>
-                    <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Change</Txt>
+                    <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Change</Txt>
                   </Pressable>
                 </View>
                 {devCode && (
                   <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3, alignItems: 'center' }}>
-                    <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
+                    <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
                     <Muted size={t.size.xs}>Shown because this demo server sends no email.</Muted>
                   </View>
                 )}
@@ -235,9 +247,9 @@ export function SignInScreen() {
                       {genreOptions.map((g) => {
                         const on = genres.includes(g.code)
                         return (
-                          <Pressable key={g.code} onPress={() => toggleGenre(g.code)}
+                          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!on }} key={g.code} onPress={() => toggleGenre(g.code)}
                             style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
-                            <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{g.label}</Txt>
+                            <Txt style={{ color: on ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (on ? t.weight.bold : t.weight.normal) as never }}>{g.label}</Txt>
                           </Pressable>
                         )
                       })}

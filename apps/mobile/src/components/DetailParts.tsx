@@ -61,7 +61,7 @@ export function SummaryCard({ label, things, rows, total, footer, children }: {
   const t = useTheme()
   const chipTone = (tone: NonNullable<SummaryThing['chips']>[number]['tone']) => ({
     good: { fg: t.colors.good, bg: t.colors.goodSoft },
-    accent: { fg: t.colors.accent, bg: t.colors.accentSoft },
+    accent: { fg: t.colors.accentText, bg: t.colors.accentSoft },
     warn: { fg: t.colors.warn, bg: t.colors.warnSoft },
     bad: { fg: t.colors.bad, bg: t.colors.badSoft },
     neutral: { fg: t.colors.textMuted, bg: t.colors.bgSunken },

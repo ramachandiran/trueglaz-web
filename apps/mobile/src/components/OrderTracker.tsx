@@ -58,8 +58,8 @@ export function OrderTracker({ t, orders, imageBySlug, onOpen, onAll }: {
         <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
           {live.length === 1 ? 'Your order' : `Your orders · ${live.length}`}
         </Txt>
-        <Pressable onPress={onAll} hitSlop={8} accessibilityRole="link">
-          <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>All orders</Txt>
+        <Pressable onPress={onAll} hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }} accessibilityRole="link">
+          <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>All orders</Txt>
         </Pressable>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={cardWidth + 12} decelerationRate="fast"
@@ -142,7 +142,7 @@ export function UpdatedChip({ t }: { t: Theme }) {
     <Pop delay={500}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
         <Ionicons name="sparkles" size={11} color={t.colors.accent} />
-        <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never }}>Updated</Txt>
+        <Txt style={{ color: t.colors.accentText, fontSize: 11, fontWeight: t.weight.bold as never }}>Updated</Txt>
       </View>
     </Pop>
   )

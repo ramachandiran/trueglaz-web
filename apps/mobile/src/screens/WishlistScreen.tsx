@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FormScroll } from '../components/FormScroll'
 import { confirm, notify } from '../components/Confirm'
-import { ActivityIndicator, Pressable, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -10,7 +10,7 @@ import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Field } from '../components/form'
 import { ErrorNote, Loading } from '../components/ui'
-import { Chip, GearArt, PageTitle, Pill, lift } from '../components/kit'
+import { Chip, GearArt, PageTitle, Pill, ProductCard, lift } from '../components/kit'
 import { BottomSheet } from '../components/BottomSheet'
 import { ModelThumb, sizedUri, useModelImages } from '../components/ModelImage'
 
@@ -64,9 +64,10 @@ export function WishlistScreen() {
             const a = asks.get(r.id)
             const slug = a?.modelSlug ?? guessSlug(r.wanted, img)
             return (
-              <WishCard key={r.id} t={t} r={r} ask={a} uri={slug ? img.get(slug) ?? null : null} busy={busy === r.id}
+              <WishCard key={r.id} t={t} r={r} ask={a} uri={slug ? img.get(slug) ?? null : null} img={img} busy={busy === r.id}
                 onRemove={() => remove(r)}
-                onShop={(q) => navigation.navigate('Shop', { q, at: Date.now() })} />
+                onShop={(q) => navigation.navigate('Shop', { q, at: Date.now() })}
+                onOpen={(id) => navigation.navigate('Listing', { id })} />
             )
           })}
 
@@ -103,74 +104,123 @@ function guessSlug(wanted: string, img: Map<string, unknown>): string | null {
   return best
 }
 
-/** One wish: picture, what and at what price, where it stands, and the way to it. */
-function WishCard({ t, r, ask, uri, busy, onRemove, onShop }: {
-  t: Theme; r: MyRequest; ask?: BuyerAsk; uri: string | null; busy: boolean
-  onRemove: () => void; onShop: (q: string) => void
+/**
+ * One wish (TG-155), laid out like the shop: the model's picture, what and at
+ * what price, the details that were asked for, and, once something fits, the
+ * matching listings as the same cards as the shop, so one tap opens one.
+ */
+function WishCard({ t, r, ask, uri, img, busy, onRemove, onShop, onOpen }: {
+  t: Theme; r: MyRequest; ask?: BuyerAsk; uri: string | null; img: Map<string, string | null>; busy: boolean
+  onRemove: () => void; onShop: (q: string) => void; onOpen: (listingId: string) => void
 }) {
   const checking = r.state === 'submitted'
   const found = (ask?.matchCount ?? 0) > 0
   const near = (ask?.nearCount ?? 0) > 0
-  const from = ask && ask.matches.length ? Math.min(...ask.matches.map((m) => m.priceMinor)) : 0
   const lens = /\d+mm\b|f\/\d/i.test(r.wanted)
+  const daysLeft = r.expiresAt ? Math.max(0, Math.ceil((new Date(r.expiresAt).getTime() - Date.now()) / 86_400_000)) : null
+  const status = checking
+    ? { dot: t.colors.warn, text: 'Being checked · usually within a day' }
+    : found
+      ? { dot: t.colors.good, text: `${ask!.matchCount} in stock now` }
+      : { dot: t.colors.good, text: daysLeft != null ? `Watching · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left` : 'Watching' }
 
   return (
     <View style={[{ backgroundColor: t.colors.bgRaised, borderRadius: 20, overflow: 'hidden' }, lift(t)]}>
-      <View style={{ flexDirection: 'row', gap: 14, padding: 14 }}>
-        <GearArt uri={uri} width={84} height={84} radius={14} icon={30} lens={lens} />
+      <View style={{ flexDirection: 'row', gap: 14, padding: 14, paddingBottom: 10 }}>
+        <View>
+          <GearArt uri={uri} width={104} height={104} radius={14} icon={34} lens={lens} />
+          {r.minGradeCode && (
+            <View style={{ position: 'absolute', top: 6, left: 6, backgroundColor: t.colors.text, borderRadius: t.radius.pill, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Txt style={{ color: t.colors.bg, fontSize: 10, fontWeight: t.weight.bold as never }}>{r.minGradeCode}+</Txt>
+            </View>
+          )}
+        </View>
         <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
-            <Txt numberOfLines={2} style={{ flex: 1, color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never, lineHeight: 21 }}>{r.wanted}</Txt>
-            <Pressable onPress={onRemove} disabled={busy} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${r.wanted}`}
-              style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: t.colors.bgSunken, alignItems: 'center', justifyContent: 'center', marginTop: -2 }}>
-              {busy ? <ActivityIndicator size="small" color={t.colors.textMuted} /> : <Ionicons name="close" size={16} color={t.colors.textMuted} />}
-            </Pressable>
-          </View>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            <Tag t={t} icon="pricetag-outline" label={r.maxPriceMinor ? `Up to ${money(r.maxPriceMinor)}` : 'Any price'} />
-            <Tag t={t} icon="ribbon-outline" label={r.minGradeLabel ? `${r.minGradeLabel}+` : 'Any condition'} />
-          </View>
+          <Txt numberOfLines={3} style={{ color: t.colors.text, fontSize: t.size.md + 1, fontWeight: t.weight.bold as never, lineHeight: 22 }}>{r.wanted}</Txt>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: checking ? t.colors.warn : t.colors.good }} />
-            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
-              {checking ? 'Being checked · usually within a day' : `Watching${r.expiresAt ? ` till ${dateOnly(r.expiresAt)}` : ''}`}
-            </Txt>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: status.dot }} />
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, flexShrink: 1 }}>{status.text}</Txt>
           </View>
+          <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
+            {r.maxPriceMinor ? `Up to ${money(r.maxPriceMinor)}` : 'Any price'}
+          </Txt>
         </View>
       </View>
 
+      {/* What was asked for, at a glance. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: 14, borderTopWidth: 1, borderTopColor: t.colors.border, paddingTop: 10, rowGap: 10 }}>
+        <Detail t={t} icon="ribbon-outline" label="Condition" value={r.minGradeLabel ? `${r.minGradeLabel} or better` : 'Any condition'} />
+        <Detail t={t} icon="pricetag-outline" label="Your top price" value={r.maxPriceMinor ? money(r.maxPriceMinor) : 'Any price'} />
+        <Detail t={t} icon="calendar-outline" label="Added" value={r.createdAt ? dateOnly(r.createdAt) : '—'} />
+        <Detail t={t} icon="time-outline" label="Watching until" value={r.expiresAt ? dateOnly(r.expiresAt) : '—'} />
+      </View>
+      {!!r.note && (
+        <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: 14, marginTop: 10, backgroundColor: t.colors.bgSunken, borderRadius: 12, padding: 10 }}>
+          <Ionicons name="chatbox-ellipses-outline" size={16} color={t.colors.textMuted} />
+          <Txt style={{ flex: 1, color: t.colors.text, fontSize: t.size.sm, fontStyle: 'italic' }}>{r.note}</Txt>
+        </View>
+      )}
+
       {found ? (
-        <Pressable onPress={() => onShop(ask!.matches[0]?.title ?? r.wanted)} accessibilityRole="button"
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.colors.good, paddingVertical: 12, paddingHorizontal: 14 }}>
-          <Ionicons name="sparkles" size={18} color={t.colors.bg} />
-          <Txt style={{ flex: 1, color: t.colors.bg, fontWeight: t.weight.bold as never }}>
-            {ask!.matchCount} in stock{from ? ` · from ${money(from)}` : ''}
-          </Txt>
-          <Txt style={{ color: t.colors.bg, fontWeight: t.weight.bold as never }}>View</Txt>
-          <Ionicons name="arrow-forward" size={16} color={t.colors.bg} />
-        </Pressable>
+        <View style={{ marginTop: 14, gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14 }}>
+            <Ionicons name="sparkles" size={16} color={t.colors.good} />
+            <Txt style={{ flex: 1, color: t.colors.good, fontWeight: t.weight.bold as never }}>
+              {ask!.matchCount === 1 ? 'One fits your wish' : `${ask!.matchCount} fit your wish`}
+            </Txt>
+            {ask!.matchCount > ask!.matches.length && (
+              <Pressable onPress={() => onShop(r.wanted)} accessibilityRole="link" hitSlop={12}>
+                <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never, textDecorationLine: 'underline', textDecorationColor: t.colors.accent }}>See all</Txt>
+              </Pressable>
+            )}
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, gap: 12, paddingBottom: 18 }}>
+            {ask!.matches.map((m) => (
+              <ProductCard key={m.listingId} width={148} height={120}
+                g={{ title: m.title, gradeCode: m.gradeCode, priceMinor: m.priceMinor, brandName: m.brandName ?? null, categorySlug: m.categorySlug ?? null }}
+                img={m.modelSlug ? img.get(m.modelSlug) ?? null : uri}
+                onPress={() => onOpen(m.listingId)} />
+            ))}
+          </ScrollView>
+        </View>
       ) : near ? (
         <Pressable onPress={() => onShop(r.wanted)} accessibilityRole="button"
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.colors.bgSunken, paddingVertical: 11, paddingHorizontal: 14 }}>
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.colors.bgSunken, marginTop: 12, paddingVertical: 11, paddingHorizontal: 14 }}>
           <Ionicons name="eye-outline" size={17} color={t.colors.text} />
           <Txt style={{ flex: 1, color: t.colors.text, fontSize: t.size.sm }}>{ask!.nearCount} in stock above your price or below your condition</Txt>
           <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
         </Pressable>
       ) : !checking ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.colors.bgSunken, paddingVertical: 11, paddingHorizontal: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.colors.bgSunken, marginTop: 12, paddingVertical: 11, paddingHorizontal: 14 }}>
           <Ionicons name="notifications-outline" size={17} color={t.colors.textMuted} />
-          <Txt style={{ flex: 1, color: t.colors.textMuted, fontSize: t.size.sm }}>Not in stock yet. We'll notify you.</Txt>
+          <Txt style={{ flex: 1, color: t.colors.textMuted, fontSize: t.size.sm }}>Not in stock yet. We'll tell you the moment it is.</Txt>
         </View>
-      ) : null}
+      ) : <View style={{ height: 12 }} />}
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: t.colors.border, paddingHorizontal: 14, paddingVertical: 10 }}>
+        <Pressable onPress={onRemove} disabled={busy} accessibilityRole="button" accessibilityLabel={`Remove ${r.wanted}`} hitSlop={12}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 32 }}>
+          {busy ? <ActivityIndicator size="small" color={t.colors.bad} /> : <Ionicons name="trash-outline" size={16} color={t.colors.bad} />}
+          <Txt style={{ color: t.colors.bad, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Remove</Txt>
+        </Pressable>
+        <Pressable onPress={() => onShop(r.wanted)} accessibilityRole="button" hitSlop={12}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 }}>
+          <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Search the shop</Txt>
+          <Ionicons name="arrow-forward" size={15} color={t.colors.accentText} />
+        </Pressable>
+      </View>
     </View>
   )
 }
 
-function Tag({ t, icon, label }: { t: Theme; icon: React.ComponentProps<typeof Ionicons>['name']; label: string }) {
+function Detail({ t, icon, label, value }: { t: Theme; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.colors.bgSunken, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
-      <Ionicons name={icon} size={12} color={t.colors.textMuted} />
-      <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>{label}</Txt>
+    <View style={{ width: '50%', flexDirection: 'row', gap: 8, paddingRight: 8 }}>
+      <Ionicons name={icon} size={16} color={t.colors.textMuted} style={{ marginTop: 2 }} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Txt style={{ color: t.colors.textMuted, fontSize: 11 }}>{label}</Txt>
+        <Txt style={{ color: t.colors.text, fontSize: t.size.sm, fontWeight: t.weight.medium as never }}>{value}</Txt>
+      </View>
     </View>
   )
 }

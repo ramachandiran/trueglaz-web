@@ -108,6 +108,7 @@ export function PhotoPicker({ files, onChange }: {
         ref={input}
         type="file"
         className="shots__input"
+        aria-label="Add photos"
         /* Named rather than `image/*`: on iOS an unrestricted picker hands over
            HEIC, which the server cannot read, while asking for these makes the
            phone convert on the way out. */

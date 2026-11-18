@@ -8,7 +8,7 @@
 .inv__sku {
   display: block;
   font-weight: var(--tg-weight-medium);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   text-decoration: none;
 }
 
@@ -27,7 +27,7 @@
   display: block;
   margin-top: 2px;
   font-size: var(--tg-text-xs);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
 }
 
 .inv__price {

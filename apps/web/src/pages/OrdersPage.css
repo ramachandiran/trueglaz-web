@@ -174,7 +174,7 @@
 .order__link {
   font: inherit;
   font-size: var(--tg-text-sm);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   background: none;
   border: 0;
   padding: 0;
@@ -237,7 +237,7 @@
   font-weight: var(--tg-weight-medium);
   line-height: 1.35;
   text-decoration: none;
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
 }
 .line__title:hover { text-decoration: underline; }
 
@@ -302,7 +302,7 @@
   flex-direction: column;
   gap: 5px;
   font-size: var(--tg-text-xs);
-  color: var(--tg-step-upcoming);
+  color: var(--tg-text-muted);
   position: relative;
 }
 

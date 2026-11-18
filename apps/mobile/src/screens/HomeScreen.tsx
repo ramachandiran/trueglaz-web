@@ -130,7 +130,12 @@ function Hero({ t, b, signedIn, seller, navigation }: { t: Theme; b: BuyerHome |
         <Ionicons name="camera" size={176} color={t.colors.brandAlt} />
         <View style={{ position: 'absolute', left: 74, top: 72, width: 38, height: 38, borderRadius: 19, backgroundColor: t.colors.cta }} />
       </View>
-      <Txt style={{ color: t.colors.brandAccent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.4, textTransform: 'uppercase' }}>{content.kicker}</Txt>
+      {/* Small orange words on navy are 3.95:1 (TG-149): the words are cream and the
+          orange is the mark beside them. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ width: 18, height: 3, borderRadius: 2, backgroundColor: t.colors.brandAccent }} />
+        <Txt style={{ color: t.colors.onBrand, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.4, textTransform: 'uppercase' }}>{content.kicker}</Txt>
+      </View>
       <Txt accessibilityRole="header" style={{ color: t.colors.onBrand, fontSize: 34, fontWeight: t.weight.bold as never, letterSpacing: -0.8, lineHeight: 36, marginTop: 10, maxWidth: 240 }}>{content.title}</Txt>
       <Txt style={{ color: t.colors.onBrandMuted, fontSize: t.size.sm, marginTop: 8, maxWidth: 250 }}>{content.sub}</Txt>
       <View style={{ marginTop: 16 }}><Pill label={content.cta} small onPress={content.go} /></View>
@@ -149,9 +154,13 @@ function ForYou({ t, vault, seller, navigation }: { t: Theme; vault: VaultItem[]
   const best = [...items].filter((i) => i.valuation).sort((x, y) => y.valuation!.midMinor - x.valuation!.midMinor)[0] ?? null
   const small = (kicker: string, title: string, go: () => void) => (
     <Pressable onPress={go} accessibilityRole="button" style={[{ flex: 1, backgroundColor: t.colors.bgRaised, borderRadius: 14, padding: 14, minHeight: 150 }, lift(t)]}>
-      <Txt style={{ color: t.colors.cta, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{kicker}</Txt>
+      <Txt style={{ color: t.colors.accentText, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{kicker}</Txt>
       <Txt style={{ color: t.colors.text, fontSize: t.size.md + 1, fontWeight: t.weight.bold as never, marginTop: 8, marginRight: 8 }}>{title}</Txt>
-      <View style={{ position: 'absolute', right: 10, bottom: 10 }}><RoundIcon icon="arrow-forward" label={title} onPress={go} size={34} /></View>
+      {/* The arrow only shows that the tile opens; the tile itself is the button, so
+          the arrow is hidden from screen readers and lets taps through to it. */}
+      <View style={{ position: 'absolute', right: 10, bottom: 10 }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <RoundIcon icon="arrow-forward" label={title} size={34} />
+      </View>
     </Pressable>
   )
   return (
@@ -162,7 +171,10 @@ function ForYou({ t, vault, seller, navigation }: { t: Theme; vault: VaultItem[]
           style={{ flex: 1, backgroundColor: t.colors.brand, borderRadius: 14, padding: 16, overflow: 'hidden', justifyContent: 'space-between', minHeight: 312 }}>
           <View style={{ position: 'absolute', right: -26, bottom: 46, opacity: 0.22 }}><Ionicons name="shield-checkmark" size={140} color={t.colors.onBrand} /></View>
           <View>
-            <Txt style={{ color: t.colors.brandAccent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{items.length ? 'Your Gear Vault' : 'Gear Vault · free'}</Txt>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ width: 18, height: 3, borderRadius: 2, backgroundColor: t.colors.brandAccent }} />
+              <Txt style={{ color: t.colors.onBrand, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1.2, textTransform: 'uppercase' }}>{items.length ? 'Your Gear Vault' : 'Gear Vault · free'}</Txt>
+            </View>
             {items.length ? (
               <>
                 <Txt style={{ color: t.colors.onBrand, fontSize: 24, fontWeight: t.weight.bold as never, letterSpacing: -0.6, marginTop: 12 }}>~{money(worth)}</Txt>
@@ -172,7 +184,9 @@ function ForYou({ t, vault, seller, navigation }: { t: Theme; vault: VaultItem[]
               <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xl, fontWeight: t.weight.bold as never, marginTop: 12 }}>What is your kit worth today?</Txt>
             )}
           </View>
-          <Pill label={items.length ? 'Open vault' : 'Add your gear'} small onPress={() => navigation.navigate('Vault')} />
+          <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Pill label={items.length ? 'Open vault' : 'Add your gear'} small />
+          </View>
         </Pressable>
         <View style={{ flex: 1, gap: 12 }}>
           {best

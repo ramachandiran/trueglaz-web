@@ -24,7 +24,7 @@
 .home__q .home__qtile { width: 40px; height: 40px; }
 .home__q .c-pill { flex: none; }
 .home__order { font-weight: 600; color: var(--tg-text); text-decoration: none; }
-.home__order:hover { color: var(--tg-accent); }
+.home__order:hover { color: var(--tg-accent-text); }
 .c-tile--navy { background: var(--c-navy-soft); color: var(--tg-brand); }
 
 /* Six stages read better as one column than as wrapped pairs. */

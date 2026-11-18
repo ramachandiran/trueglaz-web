@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/ConfirmDialog'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
@@ -98,6 +99,7 @@ function GearCard({ item, focused, onInsure, onChanged }: {
   item: VaultItem; focused?: boolean; onInsure: (what: 'quote' | 'policy' | 'claim') => void; onChanged: () => void
 }) {
   const [busy, setBusy] = useState(false)
+  const { ask, dialog } = useConfirm()
   // Opened from a notification about this item: bring it into view.
   const ref = useFocusScroll(focused)
   const v = item.valuation
@@ -105,13 +107,18 @@ function GearCard({ item, focused, onInsure, onChanged }: {
   const serial = item.serial
 
   async function remove() {
-    if (!window.confirm(`Remove ${item.modelLabel} from your vault?`)) return
+    const ok = await ask({
+      title: 'Remove from your vault?', body: `${item.modelLabel} and its details are removed from your Gear Vault.`,
+      confirmLabel: 'Remove', destructive: true,
+    })
+    if (!ok) return
     setBusy(true)
     try { await api.removeGear(item.id); onChanged() } finally { setBusy(false) }
   }
 
   return (
     <li ref={ref} className={`gear${focused ? ' gear--focused' : ''}`}>
+      {dialog}
       <div className="gear__row">
       {/* The admin-set model picture; the drawn placeholder for free-text gear. */}
       <span className="gear__thumb" aria-hidden="true">

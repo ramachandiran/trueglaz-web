@@ -180,7 +180,7 @@ export function ItemDetailPage() {
         <p className="tg-muted detail__blurb">
           Append-only, newest first. The current state is only a cache of this.
         </p>
-        <ul className="detail__history">
+        <ul className="detail__history" tabIndex={0} aria-label="Item history">
           {[...history].reverse().map((h) => (
             <li key={h.id} className="detail__history-row">
               <span className="detail__history-move">

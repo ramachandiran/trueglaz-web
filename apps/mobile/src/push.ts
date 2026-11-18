@@ -10,11 +10,14 @@ import { openLink } from './linking'
 /**
  * Push notifications on this phone, through Firebase.
  *
- * The API sends a push for the same events as the bell in the app; this side
- * asks permission at a moment it makes sense (after an order, after asking for
- * an insurance quote, or from Notification settings — never on first launch),
- * hands the phone's token to the API, and opens the right screen when a push is
- * tapped. Signing out takes the token back, so a shared phone stops getting the
+ * The API sends a push for the same events as the bell in the app. Push is on
+ * by default (TG-153): once someone is signed in, the app asks the phone for
+ * permission (the system prompt on Android 13+ and iOS; older Android allows it
+ * outright) and registers, unless they switched push off in this app before.
+ * Saying "Don't allow" is respected; the softer prompts after an order or a
+ * quote request, and Notification settings, can still turn it on later. This
+ * side hands the phone's token to the API and opens the right screen when a
+ * push is tapped. Signing out takes the token back, so a shared phone stops getting the
  * last person's pushes.
  */
 
@@ -123,14 +126,16 @@ export function setBadge(count: number) {
 }
 
 /**
- * While signed in: register silently if already allowed, follow token changes,
- * and open the right screen when a push is tapped (also when it launched the app).
+ * While signed in: turn push on (asking the phone the first time, unless the
+ * person switched it off here), follow token changes, and open the right
+ * screen when a push is tapped (also when it launched the app).
  */
 export function usePushWhileSignedIn(navigation: any) {
   useEffect(() => {
     if (!pushSupported) return
     configure()
-    enablePush(false)
+    // On by default: ask unless they turned it off in this app before.
+    AsyncStorage.getItem(OFF_KEY).catch(() => null).then((off) => enablePush(!off)).catch(() => {})
     const tokenSub = Notifications.addPushTokenListener((t) => { register(String(t.data)).catch(() => {}) })
     const open = (r: Notifications.NotificationResponse | null) => {
       const link = r?.notification.request.content.data?.link

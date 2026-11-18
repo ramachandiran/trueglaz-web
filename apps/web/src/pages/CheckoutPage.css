@@ -127,7 +127,7 @@
   border: 0;
   background: none;
   padding: 4px 0;
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   font: inherit;
   font-size: var(--tg-text-sm);
   font-weight: var(--tg-weight-medium);

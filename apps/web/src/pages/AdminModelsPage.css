@@ -76,7 +76,7 @@
 .am__actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
 .am__actions .tg-button { padding: 6px 12px; font-size: var(--tg-text-sm); }
 .am__danger { color: var(--tg-bad); }
-.am__link { border: 0; background: none; padding: 4px; color: var(--tg-accent); font: inherit; font-size: var(--tg-text-sm); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.am__link { border: 0; background: none; padding: 4px; color: var(--tg-accent-text); font: inherit; font-size: var(--tg-text-sm); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .am__error { margin: 0; color: var(--tg-bad); font-size: var(--tg-text-sm); }
 
 .am__preview { display: grid; gap: 6px; }

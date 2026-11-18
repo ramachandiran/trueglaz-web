@@ -129,3 +129,33 @@
 .wanted__titlebar .wanted__title { flex-basis: auto; }
 .wanted__top-actions { display: flex; gap: var(--tg-space-2); flex-wrap: wrap; }
 .want__consign { margin-top: var(--tg-space-2); text-decoration: none; align-self: flex-start; }
+
+/* -- a live wish (TG-155) ------------------------------------------------- */
+.wish { background: var(--tg-bg-sunken); border-radius: var(--tg-radius-lg); padding: var(--tg-space-4); display: flex; flex-direction: column; gap: var(--tg-space-3); }
+.wish__main { display: grid; grid-template-columns: auto 1fr auto; gap: var(--tg-space-4); align-items: start; }
+.wish__pic { width: 96px; height: 96px; border-radius: var(--tg-radius-md); overflow: hidden; background: var(--tg-bg-raised); display: grid; place-items: center; }
+.wish__pic > * { width: 100%; height: 100%; }
+.wish__body { min-width: 0; display: flex; flex-direction: column; gap: var(--tg-space-1); }
+.wish__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tg-space-2); }
+.wish__title { font-size: var(--tg-text-md); }
+.wish__price { margin: 0; font-family: var(--tg-font-heading); font-size: var(--tg-text-lg); font-weight: var(--tg-weight-bold); }
+.wish__facts { margin: var(--tg-space-1) 0 0; display: flex; flex-wrap: wrap; gap: var(--tg-space-1) var(--tg-space-5); font-size: var(--tg-text-sm); }
+.wish__facts dt { color: var(--tg-text-muted); font-size: var(--tg-text-xs); }
+.wish__facts dd { margin: 0; font-weight: var(--tg-weight-medium); }
+.wish__note { margin: var(--tg-space-1) 0 0; font-size: var(--tg-text-sm); font-style: italic; color: var(--tg-text-muted); }
+.wish__remove { color: var(--tg-bad); }
+.wish__matches { border-top: 1px solid var(--tg-border); padding-top: var(--tg-space-3); display: flex; flex-direction: column; gap: var(--tg-space-2); }
+.wish__found { margin: 0; color: var(--tg-good); font-weight: var(--tg-weight-bold); font-size: var(--tg-text-sm); }
+.wish__cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--tg-space-2); }
+.wish__card { display: flex; gap: var(--tg-space-3); align-items: center; padding: var(--tg-space-2); background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); color: var(--tg-text); text-decoration: none; }
+.wish__card:hover { border-color: var(--tg-accent); }
+.wish__card > :first-child { width: 56px; height: 56px; flex: none; border-radius: var(--tg-radius-sm); overflow: hidden; }
+.wish__card-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wish__card-title { font-weight: var(--tg-weight-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wish__card-meta { display: flex; align-items: center; gap: var(--tg-space-2); font-size: var(--tg-text-sm); }
+.wish__status { margin: 0; border-top: 1px solid var(--tg-border); padding-top: var(--tg-space-3); font-size: var(--tg-text-sm); color: var(--tg-text-muted); }
+@media (max-width: 560px) {
+  .wish__main { grid-template-columns: auto 1fr; }
+  .wish__pic { width: 72px; height: 72px; }
+  .wish__remove { grid-column: 1 / -1; justify-self: start; }
+}

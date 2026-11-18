@@ -29,6 +29,13 @@ export interface ColorTokens {
   accentHover: string
   accentSoft: string
   onAccent: string
+  /**
+   * The orange's job as WORDS: links, text buttons, kickers, words on a soft
+   * orange badge. On a light page that is the brand navy, because #FF6B35 as
+   * text is 2.8:1 on cream and WCAG AA needs 4.5:1 (TG-149); the orange stays
+   * as the underline, the fill, the icon. On the dark page it is the orange.
+   */
+  accentText: string
 
   /**
    * The brand colour used as a surface — the header and footer that frame every
@@ -43,17 +50,14 @@ export interface ColorTokens {
   brandAlt: string
   /**
    * The brand orange as TEXT or a mark on the brand surfaces (header, hero,
-   * footer). Kept apart from `accent` because the orange that is legible on
-   * the cream page (deep #B4400F) is illegible on navy, and the bright brand
-   * orange (#FF6B35) is illegible on cream. Each is checked against its own
-   * background: 4.5:1 or better for text.
+   * footer). Today the same #FF6B35 as `accent` (one brand orange, TG-145);
+   * kept as its own token so the bar can differ again without touching pages.
    */
   brandAccent: string
   /**
    * An action button sitting ON the brand bar: the header search button and
-   * "Sell your gear". The deep cream-page orange (#B4400F) turns muddy on the
-   * navy and only just separates from it, so the bar keeps the bright brand
-   * orange with dark navy on it (6.1:1) rather than cream (2.8:1).
+   * "Sell your gear": the brand orange with dark navy on it (6.1:1) rather
+   * than cream (2.8:1).
    */
   brandCta: string
   brandCtaHover: string
@@ -76,6 +80,8 @@ export interface ColorTokens {
   warnSoft: string
   bad: string
   badSoft: string
+  /** Words on a solid `bad` fill (a Delete button): cream on the light themes, navy on the dark one. */
+  onBad: string
 
   /** Timeline roles, so the lifecycle graph can be recoloured on its own. */
   stepDone: string
@@ -135,37 +141,42 @@ export const light: Theme = {
     border: '#e2ddc4',
     borderStrong: '#c7c2a9',
 
-    // Action orange. #FF6B35 on this cream is 2.8:1, so text, links, focus
-    // rings and small marks use the deeper #B4400F: 5.6:1 on bg, 4.9:1 on
-    // bgSunken, 4.6:1 on accentSoft, and cream on it is 5.6:1 (TG-44).
-    // Buttons are the exception (cta, below): the bright brand orange as a
+    // One orange, the brand's #FF6B35, for every orange thing (TG-145): fills,
+    // buttons, icons, marks, underlines. Never as words on a light page: those
+    // use accentText, the brand navy (TG-149, WCAG contrast). Anything written
+    // ON an orange fill is dark navy (6.1:1); soft orange is the orange at 18%.
+    // Buttons (cta, below) are the same orange as a
     // fill, with dark navy on it (6.1:1), the same as the header buttons.
-    accent: '#B4400F',
-    accentHover: '#9A3412',
-    accentSoft: '#ffe1d4',
-    onAccent: '#fffef3',
+    accent: '#FF6B35',
+    accentHover: '#FF6B35',
+    accentSoft: '#ffe4d1',
+    onAccent: '#101c24',
+    accentText: '#233e50',
 
     brand: '#233e50',
     onBrand: '#fffef3',
     onBrandMuted: '#a9bdcb',
     brandAlt: '#2e5168',
-    brandAccent: '#ff8a5c',
+    brandAccent: '#FF6B35',
     brandCta: '#FF6B35',
-    brandCtaHover: '#ff8a5c',
+    brandCtaHover: '#FF6B35',
     onBrandCta: '#101c24',
 
     cta: '#FF6B35',
-    ctaHover: '#ff8a5c',
+    ctaHover: '#FF6B35',
     onCta: '#101c24',
 
-    good: '#2e7d53',
+    // #2a744c, not the brighter #2e7d53: green words on the soft green badge
+    // need 4.5:1 (this is 4.7; the old one was 4.2).
+    good: '#2a744c',
     goodSoft: '#ddefe3',
     warn: '#8a5a12',
     warnSoft: '#f7ebd3',
     bad: '#a8342a',
     badSoft: '#f7dfdb',
+    onBad: '#fffef3',
 
-    stepDone: '#2e7d53',
+    stepDone: '#2a744c',
     stepCurrent: '#233e50',
     stepUpcoming: '#bfbba4',
     stepDetour: '#8a5a12',
@@ -196,21 +207,22 @@ export const dark: Theme = {
     // The bright orange reads well on the dark page (6.1:1); it is the text
     // ON an orange fill that has to be dark, not cream (cream is 2.8:1).
     accent: '#FF6B35',
-    accentHover: '#ff8a5c',
-    accentSoft: '#40251a',
+    accentHover: '#FF6B35',
+    accentSoft: '#3b2a27',
     onAccent: '#101c24',
+    accentText: '#FF6B35',
 
     brand: '#1b3243',
     onBrand: '#f3f1e4',
     onBrandMuted: '#93a8b8',
     brandAlt: '#233c4f',
-    brandAccent: '#ff8a5c',
+    brandAccent: '#FF6B35',
     brandCta: '#FF6B35',
-    brandCtaHover: '#ff8a5c',
+    brandCtaHover: '#FF6B35',
     onBrandCta: '#101c24',
 
     cta: '#FF6B35',
-    ctaHover: '#ff8a5c',
+    ctaHover: '#FF6B35',
     onCta: '#101c24',
 
     good: '#52b583',
@@ -219,6 +231,7 @@ export const dark: Theme = {
     warnSoft: '#3a2b10',
     bad: '#e8685c',
     badSoft: '#40191a',
+    onBad: '#101c24',
 
     stepDone: '#52b583',
     stepCurrent: '#7fb0ce',
@@ -251,27 +264,29 @@ export const midnight: Theme = {
     border: '#ddd6c1',
     borderStrong: '#bfb599',
 
-    // Action orange. #FF6B35 on this cream is 2.8:1, so text, links, focus
-    // rings and small marks use the deeper #B4400F: 5.6:1 on bg, 4.9:1 on
-    // bgSunken, 4.6:1 on accentSoft, and cream on it is 5.6:1 (TG-44).
-    // Buttons are the exception (cta, below): the bright brand orange as a
+    // One orange, the brand's #FF6B35, for every orange thing (TG-145): fills,
+    // buttons, icons, marks, underlines. Never as words on a light page: those
+    // use accentText, the brand navy (TG-149, WCAG contrast). Anything written
+    // ON an orange fill is dark navy (6.1:1); soft orange is the orange at 18%.
+    // Buttons (cta, below) are the same orange as a
     // fill, with dark navy on it (6.1:1), the same as the header buttons.
-    accent: '#B4400F',
-    accentHover: '#9A3412',
-    accentSoft: '#ffe1d4',
-    onAccent: '#fffef3',
+    accent: '#FF6B35',
+    accentHover: '#FF6B35',
+    accentSoft: '#f8dac5',
+    onAccent: '#101c24',
+    accentText: '#233e50',
 
     brand: '#233e50',
     onBrand: '#fffef3',
     onBrandMuted: '#a9bdcb',
     brandAlt: '#2e5168',
-    brandAccent: '#ff8a5c',
+    brandAccent: '#FF6B35',
     brandCta: '#FF6B35',
-    brandCtaHover: '#ff8a5c',
+    brandCtaHover: '#FF6B35',
     onBrandCta: '#101c24',
 
     cta: '#FF6B35',
-    ctaHover: '#ff8a5c',
+    ctaHover: '#FF6B35',
     onCta: '#101c24',
 
     good: '#2b7449',
@@ -280,6 +295,7 @@ export const midnight: Theme = {
     warnSoft: '#f7ebd3',
     bad: '#a8342a',
     badSoft: '#f7dfdb',
+    onBad: '#fffef3',
 
     stepDone: '#2b7449',
     stepCurrent: '#233e50',

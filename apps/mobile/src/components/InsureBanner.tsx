@@ -46,7 +46,7 @@ export function InsureBanner({ t, gear, onQuote }: {
           </View>
         </View>
         <View style={{ flex: 1 }}>
-          <Txt style={{ color: t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1 }}>GEAR INSURANCE</Txt>
+          <Txt style={{ color: t.colors.accentText, fontSize: 11, fontWeight: t.weight.bold as never, letterSpacing: 1 }}>GEAR INSURANCE</Txt>
           <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never, marginTop: 1 }}>Protect ~{money(atRisk)}</Txt>
           <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>
             {open.length === 1 ? '1 item is' : `${open.length} items are`} not insured

@@ -82,7 +82,7 @@
   font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
 }
 
 .account__links { display: flex; flex-direction: column; padding: var(--tg-space-2) 0; }

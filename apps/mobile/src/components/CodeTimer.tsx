@@ -33,7 +33,7 @@ export function CodeTimer({
     <Pressable onPress={resending ? undefined : onResend} accessibilityRole="button" hitSlop={10}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       {resending && <ActivityIndicator size="small" color={t.colors.accent} />}
-      <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>
+      <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>
         {resending ? 'Sending…' : 'Resend code'}
       </Txt>
     </Pressable>

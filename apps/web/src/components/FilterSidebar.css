@@ -27,7 +27,7 @@
 .fs__clear {
   font-size: var(--tg-text-xs);
   padding: var(--tg-space-1) var(--tg-space-2);
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
 }
 
 .fs__count {

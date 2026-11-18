@@ -1,3 +1,4 @@
+import { notify } from '../components/Confirm'
 import { useEffect, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -36,7 +37,8 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
     setShown(n)
   }
   const goTo = (n: Notification) => { setShown(null); openLink(navigation, n.link) }
-  const markAll = () => { api.markAllNotificationsRead().then(reload).catch(() => {}) }
+  // Pressed on purpose, so a failure is said out loud (offline, TG-156), not swallowed.
+  const markAll = () => { api.markAllNotificationsRead().then(reload).catch((e) => notify("Couldn't mark them read", (e as Error).message)) }
 
   const items = data?.items ?? []
   const anyUnread = (data?.unread ?? 0) > 0
@@ -46,8 +48,8 @@ export function NotificationsScreen({ navigation }: { navigation: any }) {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: t.space.x4, paddingTop: t.space.x3, paddingBottom: t.space.x1, minHeight: 36 }}>
         <Muted size={t.size.sm}>{anyUnread ? `${data?.unread} new` : items.length ? 'All read' : ''}</Muted>
         {anyUnread && (
-          <Pressable onPress={markAll}>
-            <Txt style={{ color: t.colors.accent, fontWeight: t.weight.medium as never }}>Mark all read</Txt>
+          <Pressable accessibilityRole="button" hitSlop={12} onPress={markAll}>
+            <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.medium as never }}>Mark all read</Txt>
           </Pressable>
         )}
       </View>

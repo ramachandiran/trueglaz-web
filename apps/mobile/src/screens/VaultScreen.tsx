@@ -35,6 +35,7 @@ export function VaultScreen() {
   const insets = useSafeAreaInsets()
   const { data, error, loading, reload } = useApi(() => api.vault(), [])
   const [adding, setAdding] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const [insuring, setInsuring] = useState<{ item: VaultItem; what: 'quote' | 'policy' | 'claim' } | null>(null)
   // Opened with a quote to start (a link from elsewhere): straight into that item's quote.
   const route = useRoute<any>()
@@ -69,7 +70,7 @@ export function VaultScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." />
+      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." scrolled={scrolled} />
       <View style={{ height: t.space.x3 }} />
 
 
@@ -80,6 +81,7 @@ export function VaultScreen() {
         <FlatList
           data={items}
           keyExtractor={(i) => i.id}
+          onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 4)} scrollEventThrottle={32}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={t.colors.accent} />}
           contentContainerStyle={{ padding: t.space.x4, gap: t.space.x3, paddingBottom: insets.bottom + t.space.x6 }}
           ListHeaderComponent={items.length > 0 ? (
@@ -220,7 +222,7 @@ function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => vo
       {!model && results.length > 0 && (
         <View style={{ borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.md, overflow: 'hidden' }}>
           {results.map((m) => (
-            <Pressable key={m.id} onPress={() => { setModel(m); setResults([]) }}
+            <Pressable accessibilityRole="button" key={m.id} onPress={() => { setModel(m); setResults([]) }}
               style={{ paddingVertical: t.space.x3, paddingHorizontal: t.space.x3, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
               <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>{m.name}</Txt>
             </Pressable>
@@ -263,7 +265,7 @@ function CoverChange({ id, item }: { id: string; item: VaultItem }) {
     <Pop delay={500} style={{ alignSelf: 'flex-start', marginBottom: 10 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: now === 'insured' ? t.colors.goodSoft : t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
         <Ionicons name="sparkles" size={11} color={now === 'insured' ? t.colors.good : t.colors.accent} />
-        <Txt style={{ color: now === 'insured' ? t.colors.good : t.colors.accent, fontSize: 11, fontWeight: t.weight.bold as never }}>{label}</Txt>
+        <Txt style={{ color: now === 'insured' ? t.colors.good : t.colors.accentText, fontSize: 11, fontWeight: t.weight.bold as never }}>{label}</Txt>
       </View>
     </Pop>
   )

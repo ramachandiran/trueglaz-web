@@ -7,7 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
-  api, setApiOrigin, setStorage, SessionProvider, useApi, useSession, type Storage,
+  api, enableOfflineCache, setApiOrigin, setOnline, setStorage, SessionProvider, useApi, useSession, type Storage,
 } from '@trueglaz/core'
 import { API_ORIGIN } from './src/config'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -39,6 +39,8 @@ import { NotificationSettingsScreen } from './src/screens/NotificationSettingsSc
 import { onPushReceived, setBadge, usePushWhileSignedIn } from './src/push'
 import { InAppBanner, noteInbox, resetInbox } from './src/components/InAppBanner'
 import { DialogHost } from './src/components/Confirm'
+import { OfflineBar } from './src/components/OfflineBar'
+import * as Network from 'expo-network'
 
 const navRef = createNavigationContainerRef<any>()
 
@@ -49,6 +51,20 @@ const nativeStorage: Storage = {
   async remove(key) { try { await AsyncStorage.removeItem(key) } catch { /* ignore */ } },
 }
 setStorage(nativeStorage)
+// The last answer to each page is kept on the phone, so orders, the wishlist
+// and the vault still open with no connection (TG-156).
+enableOfflineCache()
+
+/** Follow the phone's connection: "no network" or "network but no internet" both count as offline. */
+function useConnectivity() {
+  useEffect(() => {
+    const apply = (s: { isConnected?: boolean | null; isInternetReachable?: boolean | null }) =>
+      setOnline(s.isConnected !== false && s.isInternetReachable !== false)
+    Network.getNetworkStateAsync().then(apply).catch(() => {})
+    const sub = Network.addNetworkStateListener(apply)
+    return () => sub.remove()
+  }, [])
+}
 setApiOrigin(API_ORIGIN)
 
 const Tabs = createBottomTabNavigator()
@@ -92,7 +108,7 @@ function MainTabs() {
     <Tabs.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: t.colors.accent,
+        tabBarActiveTintColor: t.colors.accentText,
         tabBarInactiveTintColor: t.colors.textMuted,
         // A fixed shape: room for icon and label above the phone's own bar,
         // and labels that do not grow with the font setting (TG-124).
@@ -113,7 +129,9 @@ function MainTabs() {
       <Tabs.Screen name="Shop" component={CatalogScreen} options={{ tabBarIcon: tabIcon('search-outline', 'search') }} />
       <Tabs.Screen name="Sell" component={SellScreen} options={{ tabBarIcon: tabIcon('cube-outline', 'cube') }} />
       <Tabs.Screen name="Vault" component={VaultScreen} options={{ tabBarIcon: tabIcon('shield-checkmark-outline', 'shield-checkmark') }} />
-      <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread }} />
+      <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline', 'person'), tabBarBadge: unread,
+        // The brand orange with dark navy on it (6.1:1), not the stock red with white (3.6:1).
+        tabBarBadgeStyle: { backgroundColor: t.colors.cta, color: t.colors.onCta } }} />
     </Tabs.Navigator>
     </>
   )
@@ -180,16 +198,18 @@ function Routes() {
     colors: {
       ...(t.name === 'dark' ? DarkTheme : DefaultTheme).colors,
       background: t.colors.bg, card: t.colors.bgRaised, text: t.colors.text,
-      border: t.colors.border, primary: t.colors.accent,
+      border: t.colors.border, primary: t.colors.accentText,
     },
   }
   useEffect(() => { if (!session) resetInbox() }, [session])
+  useConnectivity()
   if (!ready) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
   return (
     <NavigationContainer theme={navTheme} ref={navRef}>
       <StatusBar style={t.name === 'dark' ? 'light' : 'dark'} />
       {session ? <AppStack /> : <AuthStack />}
       {session && <InAppBanner navRef={navRef as never} />}
+      <OfflineBar />
       <DialogHost />
     </NavigationContainer>
   )

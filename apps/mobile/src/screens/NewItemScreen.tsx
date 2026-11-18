@@ -194,7 +194,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
             {photos.map((p, i) => (
               <View key={p.uri + i} style={{ position: 'relative' }}>
                 <Image source={{ uri: p.uri }} style={{ width: 88, height: 88, borderRadius: t.radius.md }} resizeMode="cover" />
-                <Pressable onPress={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} hitSlop={6}
+                <Pressable accessibilityRole="button" accessibilityLabel={`Remove photo ${i + 1}`} onPress={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} hitSlop={11}
                   style={{ position: 'absolute', top: -6, right: -6, backgroundColor: t.colors.bad, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }}>
                   <Txt style={{ color: '#fff', fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>✕</Txt>
                 </Pressable>
@@ -270,12 +270,12 @@ function ModelAutocomplete({
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: t.space.x3, paddingVertical: 6, backgroundColor: t.colors.bgSunken }}>
             <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{matches.length} MATCH{matches.length === 1 ? '' : 'ES'}</Txt>
             <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close suggestions">
-              <Txt style={{ color: t.colors.accent, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Close</Txt>
+              <Txt style={{ color: t.colors.accentText, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Close</Txt>
             </Pressable>
           </View>
           <ScrollView style={{ maxHeight: 4 * 56 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             {[...matches].reverse().map((m) => (
-              <Pressable key={m.id} onPress={() => { onPick(m); setOpen(false) }}
+              <Pressable accessibilityRole="button" key={m.id} onPress={() => { onPick(m); setOpen(false) }}
                 style={({ pressed }) => ({ paddingHorizontal: t.space.x3, paddingVertical: 10, minHeight: 56, justifyContent: 'center',
                   borderTopWidth: 1, borderTopColor: t.colors.border, backgroundColor: pressed ? t.colors.accentSoft : 'transparent' })}>
                 <Txt style={{ color: t.colors.text }}>{m.name}</Txt>
@@ -299,9 +299,9 @@ function ChipRow({ options, selected, onSelect }: { options: { value: string; la
       {options.map((o) => {
         const on = selected === o.value
         return (
-          <Pressable key={o.value} onPress={() => onSelect(o.value)}
+          <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!on }} key={o.value} onPress={() => onSelect(o.value)}
             style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
-            <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{o.label}</Txt>
+            <Txt style={{ color: on ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (on ? t.weight.bold : t.weight.normal) as never }}>{o.label}</Txt>
           </Pressable>
         )
       })}

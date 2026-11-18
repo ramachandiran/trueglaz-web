@@ -147,7 +147,7 @@ export function StartSellingScreen({ navigation }: { navigation: any }) {
           {mobileHint && <Muted size={t.size.xs}>Sent to {mobileHint}.</Muted>}
           {devCode && (
             <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3 }}>
-              <Txt style={{ color: t.colors.accent, fontWeight: t.weight.bold as never }}>Demo OTP: {devCode}</Txt>
+              <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo OTP: {devCode}</Txt>
             </View>
           )}
           <OtpBoxes value={otp} onChange={setOtp} label="OTP" />

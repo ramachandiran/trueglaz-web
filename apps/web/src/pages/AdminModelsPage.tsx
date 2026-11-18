@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/ConfirmDialog'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api, ApiError, dateOnly, useApi, type AdminModelRow, type MediaView, type ModelImageHistory } from '@trueglaz/core'
 import { GearPhoto } from '../components/GearPhoto'
@@ -56,7 +57,7 @@ export function AdminModelsPage() {
 
       {counts && (
         <section className="am__progress" aria-label="Progress">
-          <div className="am__bar" role="progressbar" aria-valuenow={counts.photo} aria-valuemin={0} aria-valuemax={counts.total}>
+          <div className="am__bar" role="progressbar" aria-label="Models with a photo" aria-valuenow={counts.photo} aria-valuemin={0} aria-valuemax={counts.total}>
             <span style={{ width: `${pct}%` }} />
           </div>
           <p>
@@ -107,6 +108,7 @@ function Seg({ value, onChange, options, label }: { value: string; onChange: (v:
 // ---------------------------------------------------------------- one model --
 
 function ModelCard({ m, onChanged }: { m: AdminModelRow; onChanged: () => void }) {
+  const { ask, dialog } = useConfirm()
   const input = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<{ file: File; url: string; w: number; h: number } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -140,6 +142,7 @@ function ModelCard({ m, onChanged }: { m: AdminModelRow; onChanged: () => void }
 
   return (
     <li className={`am__card am__card--${state}`}>
+      {dialog}
       <div className="am__frame">
         {preview ? <img src={preview.url} alt={`New picture for ${m.name}`} />
           : m.image ? <img src={pick(m.image)} alt={m.name} loading="lazy" />
@@ -184,7 +187,11 @@ function ModelCard({ m, onChanged }: { m: AdminModelRow; onChanged: () => void }
             )}
             {m.image && (
               <button className="tg-button am__danger" disabled={busy}
-                onClick={() => { if (window.confirm(`Remove the picture of ${m.name}? It can be restored later.`)) void run(() => api.removeModelImage(m.id)) }}>
+                onClick={async () => {
+                  if (await ask({ title: `Remove the picture of ${m.name}?`, body: 'It can be restored later.', confirmLabel: 'Remove', destructive: true })) {
+                    void run(() => api.removeModelImage(m.id))
+                  }
+                }}>
                 Remove
               </button>
             )}

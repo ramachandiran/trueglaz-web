@@ -14,7 +14,7 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  color: var(--tg-accent);
+  color: var(--tg-accent-text);
   font-size: var(--tg-text-sm);
   font-weight: var(--tg-weight-medium);
   text-decoration: none;

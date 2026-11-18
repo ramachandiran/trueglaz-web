@@ -67,7 +67,7 @@
 .staff-side__group { display: flex; flex-direction: column; gap: 2px; }
 .staff-side__grouplabel {
   font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-  color: #8193a0; padding: 16px 12px 8px; white-space: nowrap;
+  color: var(--tg-text-muted); padding: 16px 12px 8px; white-space: nowrap;
 }
 .staff-side__link {
   display: flex; align-items: center; gap: 14px;

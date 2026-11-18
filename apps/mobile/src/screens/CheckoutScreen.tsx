@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FormScroll } from '../components/FormScroll'
 import { Pressable, View } from 'react-native'
-import { api, gstinProblem, money, useApi, type Address, type Reservation } from '@trueglaz/core'
+import { api, gstinProblem, money, useApi, type Address, type Reservation, useOnline } from '@trueglaz/core'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -80,6 +80,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
   const [gstin, setGstin] = useState('')
   const gstinErr = forBusiness && gstin.length >= 15 ? gstinProblem(gstin) : null
 
+  const online = useOnline()
   const placeOrder = async () => {
     if (!reservation) return
     const address = buildAddress()
@@ -139,8 +140,8 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <SectionTitle>Deliver to</SectionTitle>
             {(addresses.data?.length ?? 0) > 0 && (
-              <Pressable onPress={() => setAdding((v) => !v)}>
-                <Txt style={{ color: t.colors.accent }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
+              <Pressable accessibilityRole="button" hitSlop={12} onPress={() => setAdding((v) => !v)}>
+                <Txt style={{ color: t.colors.accentText }}>{adding ? 'Pick saved' : '+ New address'}</Txt>
               </Pressable>
             )}
           </View>
@@ -196,9 +197,10 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
       </FormScroll>
 
       <View style={{ padding: t.space.x4, borderTopWidth: 1, borderTopColor: t.colors.border, backgroundColor: t.colors.bgRaised }}>
+        {!online && <Muted size={t.size.xs} style={{ textAlign: 'center', marginBottom: 8 }}>You're offline. Connect to the internet to pay.</Muted>}
         <Button
           label={placing ? 'Placing…' : `Pay ${money(priceMinor + (meta.data?.shippingMinor ?? 0), currency)}`}
-          variant="cta" loading={placing} onPress={placeOrder}
+          variant="cta" loading={placing} onPress={placeOrder} disabled={!online}
         />
       </View>
     </View>
@@ -208,7 +210,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
 function AddressRow({ a, selected, onPress }: { a: Address; selected: boolean; onPress: () => void }) {
   const t = useTheme()
   return (
-    <Pressable onPress={onPress}
+    <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!selected }} onPress={onPress}
       style={{ borderWidth: 1, borderRadius: t.radius.md, padding: t.space.x3, gap: 2, borderColor: selected ? t.colors.accent : t.colors.border, backgroundColor: selected ? t.colors.accentSoft : t.colors.bg }}>
       <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>{a.recipientName}{a.isDefault ? '  · default' : ''}</Txt>
       <Muted size={t.size.xs}>{[a.line1, a.line2, a.city, a.state, a.pincode].filter(Boolean).join(', ')}</Muted>

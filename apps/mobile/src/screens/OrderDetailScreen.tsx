@@ -36,10 +36,10 @@ function VaultAdd({ lineId, state }: { lineId: string; state: string }) {
     try { await api.addGearFromOrderLine(lineId); setStatus('added') } catch { setStatus('error') }
   }
   return (
-    <Pressable onPress={add} disabled={status === 'adding'}
+    <Pressable accessibilityRole="button" accessibilityState={{ disabled: status === 'adding' }} onPress={add} disabled={status === 'adding'}
       style={{ marginTop: t.space.x2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.colors.accent, borderRadius: 12, paddingVertical: 10, opacity: status === 'adding' ? 0.6 : 1 }}>
       <Ionicons name={status === 'error' ? 'refresh' : 'shield-outline'} size={16} color={t.colors.accent} />
-      <Txt style={{ color: t.colors.accent, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>
+      <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>
         {status === 'adding' ? 'Adding…' : status === 'error' ? 'Try again' : 'Add to my Gear Vault'}
       </Txt>
     </Pressable>
@@ -258,7 +258,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
                 <Pop delay={250}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 4, paddingHorizontal: 10 }}>
                     <Ionicons name="sparkles" size={12} color={t.colors.accent} />
-                    <Txt style={{ color: t.colors.accent, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Updated · {label}</Txt>
+                    <Txt style={{ color: t.colors.accentText, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Updated · {label}</Txt>
                   </View>
                 </Pop>
               ) : undefined} />
@@ -306,9 +306,9 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
               {(reasons.data ?? []).map((r) => {
                 const on = reasonCode === r.code
                 return (
-                  <Pressable key={r.code} onPress={() => setReasonCode(r.code)}
+                  <Pressable accessibilityRole="radio" accessibilityState={{ checked: !!on }} key={r.code} onPress={() => setReasonCode(r.code)}
                     style={{ paddingHorizontal: t.space.x3, paddingVertical: t.space.x2, borderRadius: t.radius.pill, borderWidth: 1, backgroundColor: on ? t.colors.accentSoft : t.colors.bg, borderColor: on ? t.colors.accent : t.colors.border }}>
-                    <Txt style={{ color: on ? t.colors.accent : t.colors.text, fontSize: t.size.sm }}>{r.label}</Txt>
+                    <Txt style={{ color: on ? t.colors.accentText : t.colors.text, fontSize: t.size.sm, fontWeight: (on ? t.weight.bold : t.weight.normal) as never }}>{r.label}</Txt>
                   </Pressable>
                 )
               })}
@@ -322,7 +322,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Ionicons name="checkmark-circle" size={18} color={t.colors.good} />
                   <Txt style={{ color: t.colors.good, fontSize: t.size.sm, fontWeight: t.weight.bold as never, flex: 1 }}>Video uploaded</Txt>
-                  <Pressable onPress={() => setVideo(null)}><Txt style={{ color: t.colors.accent, fontSize: t.size.sm }}>Replace</Txt></Pressable>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Replace video" hitSlop={12} onPress={() => setVideo(null)}><Txt style={{ color: t.colors.accentText, fontSize: t.size.sm }}>Replace</Txt></Pressable>
                 </View>
               ) : progress !== null ? (
                 <View style={{ height: 24, borderRadius: 12, backgroundColor: t.colors.border, overflow: 'hidden', justifyContent: 'center' }}>

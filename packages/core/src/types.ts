@@ -1744,6 +1744,10 @@ export interface BuyerAskMatch {
   title: string
   gradeCode: string
   priceMinor: number
+  /** For the model's picture and a shop-style card (TG-155). */
+  modelSlug?: string | null
+  brandName?: string | null
+  categorySlug?: string | null
 }
 
 export interface BuyerAsk {

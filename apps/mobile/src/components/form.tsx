@@ -5,7 +5,11 @@ import { MAX_FONT_SCALE, Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { mobileFontFamily } from '../theme/fonts'
 
-type Variant = 'primary' | 'cta' | 'ghost' | 'danger'
+/**
+ * danger: red outline, for a red action on a page (Withdraw item).
+ * destructive: solid red, for the confirming button in a dialog (Delete, Remove).
+ */
+type Variant = 'primary' | 'cta' | 'ghost' | 'danger' | 'destructive'
 
 /** The one button, in four tones. `cta` is the warm buy button; keep it scarce. */
 export function Button({
@@ -19,10 +23,11 @@ export function Button({
     cta: { bg: t.colors.cta, fg: t.colors.onCta, border: t.colors.cta },
     ghost: { bg: 'transparent', fg: t.colors.text, border: t.colors.border },
     danger: { bg: 'transparent', fg: t.colors.bad, border: t.colors.bad },
+    destructive: { bg: t.colors.bad, fg: t.colors.onBad, border: t.colors.bad },
   }[variant]
   const off = disabled || loading
   return (
-    <Pressable
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!off, busy: !!loading }}
       onPress={off ? undefined : onPress}
       style={[
         {
