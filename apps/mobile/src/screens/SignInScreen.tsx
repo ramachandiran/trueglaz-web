@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { FormScroll } from '../components/FormScroll'
 import { Animated, Image, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, indianMobile, localMobile, useSession, type AuthResult, type Session } from '@trueglaz/core'
+import { api, indianMobile, localMobile, useSession, type AuthResult, type Session, ApiError, onConnectivity } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { Button, Field } from '../components/form'
 import { OtpBoxes } from '../components/OtpBoxes'
@@ -65,6 +65,7 @@ export function SignInScreen() {
     return () => { if (clearTimer.current) clearTimeout(clearTimer.current) }
   }, [])
 
+  const [waitingForNet, setWaitingForNet] = useState(false)
   const startCode = (res: { devCode: string | null; expiresAt: string; expiresInSeconds?: number; resendInSeconds?: number }) => {
     const secs = res.expiresInSeconds
       ?? Math.max(1, Math.round((Date.parse(res.expiresAt) - Date.now()) / 1000) || FALLBACK_CODE_SECONDS)
@@ -81,9 +82,20 @@ export function SignInScreen() {
     setError(null); setBusy(true)
     try {
       const res = await api.requestCode(value)
-      startCode(res); setEmail(value); setStep('code')
-    } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+      startCode(res); setEmail(value); setStep('code'); setWaitingForNet(false)
+    } catch (e) {
+      // Offline: say it plainly, and send the code by itself the moment the
+      // connection is back, rather than leaving them to keep pressing (TG-156).
+      if (e instanceof ApiError && e.code === 'offline') {
+        setError('No internet. Connect to get your sign-in code; we will send it as soon as you are back online.')
+        setWaitingForNet(true)
+      } else setError((e as Error).message)
+    } finally { setBusy(false) }
   }
+  useEffect(() => {
+    if (!waitingForNet) return
+    return onConnectivity((on) => { if (on) { setWaitingForNet(false); void sendCode() } })
+  }, [waitingForNet]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const resend = async () => {
     setResending(true)

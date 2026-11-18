@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSession } from './SessionContext'
+import { onConnectivity } from './connectivity'
 
 interface State<T> {
   data: T | null
@@ -40,6 +41,10 @@ export function useApi<T>(
       cancelled = true
     }
   }, [run, session?.userId, nonce])
+
+  // Back online: fetch again, so what was shown from the phone's copy (or an
+  // error from while it was offline) is replaced by the live answer (TG-156).
+  useEffect(() => onConnectivity((online) => { if (online) setNonce((n) => n + 1) }), [])
 
   return { ...state, reload: () => setNonce((n) => n + 1) }
 }

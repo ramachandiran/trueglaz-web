@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FormScroll } from '../components/FormScroll'
 import { Pressable, View } from 'react-native'
-import { api, gstinProblem, money, useApi, type Address, type Reservation } from '@trueglaz/core'
+import { api, gstinProblem, money, useApi, type Address, type Reservation, useOnline } from '@trueglaz/core'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -80,6 +80,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
   const [gstin, setGstin] = useState('')
   const gstinErr = forBusiness && gstin.length >= 15 ? gstinProblem(gstin) : null
 
+  const online = useOnline()
   const placeOrder = async () => {
     if (!reservation) return
     const address = buildAddress()
@@ -196,9 +197,10 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
       </FormScroll>
 
       <View style={{ padding: t.space.x4, borderTopWidth: 1, borderTopColor: t.colors.border, backgroundColor: t.colors.bgRaised }}>
+        {!online && <Muted size={t.size.xs} style={{ textAlign: 'center', marginBottom: 8 }}>You're offline. Connect to the internet to pay.</Muted>}
         <Button
           label={placing ? 'Placing…' : `Pay ${money(priceMinor + (meta.data?.shippingMinor ?? 0), currency)}`}
-          variant="cta" loading={placing} onPress={placeOrder}
+          variant="cta" loading={placing} onPress={placeOrder} disabled={!online}
         />
       </View>
     </View>

@@ -1,7 +1,9 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode,
 } from 'react'
-import { api, loadSession, onSessionExpired, saveSession } from './client'
+import { api, ApiError, currentSession, loadSession, onSessionExpired, saveSession } from './client'
+import { onConnectivity } from './connectivity'
+import { forgetAnswers } from './offlineCache'
 import type { Session } from './types'
 
 interface Ctx {
@@ -48,9 +50,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const refreshed: Session = { ...stored, ...me }
         await saveSession(refreshed)
         if (!cancelled) setSession(refreshed)
-      } catch {
-        await saveSession(null)
-        if (!cancelled) setSession(null)
+      } catch (e) {
+        // Only the server saying "this session has ended" signs someone out.
+        // No connection, a timeout or the API being down keeps them signed in
+        // with what was saved, and it is checked again once the connection is
+        // back (TG-156). Clearing here signed out everyone who opened the app
+        // on a train.
+        if (e instanceof ApiError && e.status === 401) {
+          await forgetAnswers(stored.userId)
+          await saveSession(null)
+          if (!cancelled) setSession(null)
+        } else if (!cancelled) setSession(stored)
       } finally {
         if (!cancelled) setReady(true)
       }
@@ -69,8 +79,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    // Best effort: revoke server-side, but always clear locally.
-    try { await api.logout() } catch { /* already gone */ }
+    // Best effort: revoke server-side, but always clear locally, including the
+    // pages kept for offline use, so the next person on the phone sees none.
+    const was = currentSession()
+    try { await api.logout() } catch { /* already gone, or offline */ }
+    if (was) await forgetAnswers(was.userId)
     await saveSession(null)
     setSession(null)
   }, [])
@@ -86,6 +99,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       })
     } catch { /* a dead session is handled by the 401 path above */ }
   }, [])
+
+  // Back online: confirm the session is still good and pick up any role change.
+  useEffect(() => onConnectivity((online) => { if (online && currentSession()) void refresh() }), [refresh])
 
   const value = useMemo<Ctx>(
     () => ({ session, ready, signIn, signOut, refresh }),

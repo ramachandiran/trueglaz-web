@@ -1,0 +1,8 @@
+.offline {
+  position: fixed; left: 50%; bottom: var(--tg-space-5); transform: translateX(-50%); z-index: 1000;
+  max-width: min(560px, calc(100vw - 2 * var(--tg-space-4)));
+  padding: var(--tg-space-2) var(--tg-space-4); border-radius: var(--tg-radius-pill);
+  background: var(--tg-brand); color: var(--tg-on-brand); font-size: var(--tg-text-sm);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); text-align: center; pointer-events: none;
+}
+.offline--back { background: var(--tg-good); color: var(--tg-text-inverted); }
