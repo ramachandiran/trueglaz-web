@@ -182,3 +182,10 @@
 
 /* Removing the payout account is the quiet option beside "send a code" (TG-151). */
 .profile__remove { color: var(--tg-bad); }
+
+/* A sign-in contact with its own Change beside it (TG-154). */
+.profile__contact { display: flex; align-items: center; justify-content: space-between; gap: var(--tg-space-2); }
+.profile__contact-edit { display: flex; flex-direction: column; gap: var(--tg-space-2); }
+.profile__contact-input { display: flex; align-items: stretch; gap: var(--tg-space-2); }
+.profile__contact-input .tg-input { flex: 1; min-width: 0; }
+.profile__prefix { display: grid; place-items: center; padding: 0 var(--tg-space-3); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); background: var(--tg-bg-sunken); }

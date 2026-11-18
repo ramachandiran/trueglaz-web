@@ -8,6 +8,8 @@ import { useTheme, useThemeMode, type ThemeMode } from '../theme/ThemeContext'
 import { Muted } from '../components/ui'
 import { Button, Field } from '../components/form'
 import { BottomSheet } from '../components/BottomSheet'
+import { OtpBoxes } from '../components/OtpBoxes'
+import { CodeTimer } from '../components/CodeTimer'
 import { API_ORIGIN } from '../config'
 import { disablePush, enablePush, pushIsOn, pushSupported } from '../push'
 import { Chip, lift, PageTitle } from '../components/kit'
@@ -128,10 +130,10 @@ export function ProfileScreen({ navigation }: { navigation: any }) {
       </ScrollView>
 
       {sheet === 'edit' && p && (
-        <EditSheet t={t} name={p.displayName} onClose={() => setSheet(null)}
+        <EditSheet t={t} name={p.displayName} email={p.email} phone={p.phone} onClose={() => setSheet(null)}
           onSaved={() => { setSheet(null); profile.reload() }}
+          onContactChanged={() => profile.reload()}
           facts={[
-            ['Email', p.email ?? '—'], ['Phone', p.phone ?? '—'],
             ['Member since', dateOnly(p.memberSince)], ['Identity', p.kycStatus.replace(/_/g, ' ')],
           ]} />
       )}
@@ -199,17 +201,38 @@ function Row({ t, icon, title, value, right, onPress, last }: {
   )
 }
 
-function EditSheet({ t, name, facts, onClose, onSaved }: {
-  t: Theme; name: string; facts: [string, string][]; onClose: () => void; onSaved: () => void
+function EditSheet({ t, name, email, phone, facts, onClose, onSaved, onContactChanged }: {
+  t: Theme; name: string; email: string | null; phone: string | null; facts: [string, string][]
+  onClose: () => void; onSaved: () => void; onContactChanged: () => void
 }) {
   const [value, setValue] = useState(name)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [changing, setChanging] = useState<'email' | 'phone' | null>(null)
   const save = async () => {
     if (!value.trim()) { setErr('Enter your name.'); return }
     setBusy(true); setErr(null)
     try { await api.updateProfile(value.trim()); onSaved() }
     catch (e) { setErr((e as Error).message) } finally { setBusy(false) }
+  }
+  const contactRow = (kind: 'email' | 'phone', current: string | null) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Muted size={t.size.xs}>{kind === 'email' ? 'Email' : 'Phone'}</Muted>
+        <Txt style={{ color: current ? t.colors.text : t.colors.textMuted }}>{current ?? 'Not added'}</Txt>
+      </View>
+      <Pressable onPress={() => setChanging(kind)} accessibilityRole="button" hitSlop={10}
+        accessibilityLabel={`${current ? 'Change' : 'Add'} ${kind === 'email' ? 'email' : 'phone number'}`}
+        style={{ paddingVertical: 6, paddingHorizontal: 12, borderRadius: t.radius.pill, borderWidth: 1, borderColor: t.colors.border }}>
+        <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never, fontSize: t.size.sm }}>{current ? 'Change' : 'Add'}</Txt>
+      </Pressable>
+    </View>
+  )
+  if (changing) {
+    return (
+      <ContactChange t={t} kind={changing} current={changing === 'email' ? email : phone}
+        onClose={() => setChanging(null)} onDone={() => { setChanging(null); onContactChanged() }} />
+    )
   }
   return (
     <BottomSheet onClose={onClose} scroll footer={<>
@@ -220,6 +243,8 @@ function EditSheet({ t, name, facts, onClose, onSaved }: {
       <Field label="Name" value={value} onChangeText={setValue} autoCapitalize="words" returnKeyType="done" onSubmitEditing={save} />
       {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
       <View style={{ gap: 2 }}>
+        {contactRow('phone', phone)}
+        {contactRow('email', email)}
         {facts.map(([k, v]) => (
           <View key={k} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
             <Muted>{k}</Muted>
@@ -227,7 +252,96 @@ function EditSheet({ t, name, facts, onClose, onSaved }: {
           </View>
         ))}
       </View>
-      <Muted size={t.size.xs}>To change your sign-in email or phone, use Profile on the website: it needs a code sent to the new one.</Muted>
+      <Muted size={t.size.xs}>Your email and phone both sign you in. Changing one sends a code to the new one first.</Muted>
+    </BottomSheet>
+  )
+}
+
+/**
+ * Change the phone number or email that signs you in (TG-154). A code goes to
+ * the NEW contact and must come back, which is what proves it is theirs; the
+ * old contact is told once it has changed. Indian mobiles can be typed as ten
+ * digits; anything else needs its +country code.
+ */
+function ContactChange({ t, kind, current, onClose, onDone }: {
+  t: Theme; kind: 'email' | 'phone'; current: string | null; onClose: () => void; onDone: () => void
+}) {
+  const [input, setInput] = useState('')
+  const [sentTo, setSentTo] = useState<string | null>(null)
+  const [devCode, setDevCode] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [deadline, setDeadline] = useState(0)
+  const [resendAt, setResendAt] = useState(0)
+  const [expired, setExpired] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const contact = (): string | null => {
+    const v = input.trim()
+    if (kind === 'email') return /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v) ? v.toLowerCase() : null
+    const digits = v.replace(/[^\d+]/g, '')
+    if (/^\+[1-9]\d{7,14}$/.test(digits)) return digits
+    const local = digits.replace(/^0+/, '')
+    return /^[6-9]\d{9}$/.test(local) ? `+91${local}` : null
+  }
+  const send = async () => {
+    const c = contact()
+    if (!c) { setErr(kind === 'email' ? 'Enter a valid email address.' : 'Enter a 10-digit mobile number.'); return }
+    setBusy(true); setErr(null)
+    try {
+      const res = await api.requestContactCode(c)
+      setSentTo(c); setDevCode(res.devCode ?? null); setCode(res.devCode ?? '')
+      setDeadline(Date.now() + (res.expiresInSeconds ?? 300) * 1000)
+      setResendAt(Date.now() + (res.resendInSeconds ?? 60) * 1000)
+      setExpired(false)
+    } catch (e) { setErr((e as Error).message) } finally { setBusy(false) }
+  }
+  const confirmCode = async () => {
+    if (code.replace(/\D/g, '').length < 4) { setErr('Enter the code we sent.'); return }
+    setBusy(true); setErr(null)
+    try { await api.confirmContact(sentTo!, code.replace(/\D/g, '')); onDone() }
+    catch (e) { setErr((e as Error).message) } finally { setBusy(false) }
+  }
+  const noun = kind === 'email' ? 'email' : 'phone number'
+  return (
+    <BottomSheet onClose={onClose} scroll footer={<>
+      {sentTo && !expired
+        ? <Button label={`Confirm new ${noun}`} variant="cta" onPress={confirmCode} loading={busy} />
+        : !sentTo && <Button label="Send code" variant="cta" onPress={send} loading={busy} />}
+      <Button label="Cancel" variant="ghost" onPress={onClose} />
+    </>}>
+      <Txt style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>
+        {current ? `Change ${noun}` : `Add ${noun}`}
+      </Txt>
+      {current && <Muted size={t.size.sm}>Now: {current}</Muted>}
+      {kind === 'phone' ? (
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: t.space.x2 }}>
+          <View style={{ paddingVertical: t.space.x3, paddingHorizontal: t.space.x3, borderRadius: t.radius.md, borderWidth: 1, borderColor: t.colors.border, backgroundColor: t.colors.bgSunken }}>
+            <Txt style={{ color: t.colors.text }}>+91</Txt>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field label="New mobile number" value={input} onChangeText={(v) => { setInput(v); setSentTo(null) }} editable={!sentTo || expired}
+              keyboardType="phone-pad" textContentType="telephoneNumber" autoComplete="tel" placeholder="98765 43210" maxLength={16} />
+          </View>
+        </View>
+      ) : (
+        <Field label="New email" value={input} onChangeText={(v) => { setInput(v); setSentTo(null) }} editable={!sentTo || expired}
+          keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" placeholder="you@example.com" />
+      )}
+      {sentTo && (
+        <View style={{ gap: t.space.x3 }}>
+          <Muted size={t.size.xs}>We sent a code to {sentTo}. Enter it to confirm it is yours.</Muted>
+          {devCode && (
+            <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3 }}>
+              <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
+            </View>
+          )}
+          <OtpBoxes value={code} onChange={setCode} label="Verification code" editable={!expired} />
+          <CodeTimer key={deadline} deadline={deadline} resendAt={resendAt} onResend={send} resending={busy} align="flex-start"
+            onExpire={() => { setExpired(true); setCode('') }} />
+        </View>
+      )}
+      {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
     </BottomSheet>
   )
 }

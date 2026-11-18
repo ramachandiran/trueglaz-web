@@ -80,6 +80,8 @@ export interface ColorTokens {
   warnSoft: string
   bad: string
   badSoft: string
+  /** Words on a solid `bad` fill (a Delete button): cream on the light themes, navy on the dark one. */
+  onBad: string
 
   /** Timeline roles, so the lifecycle graph can be recoloured on its own. */
   stepDone: string
@@ -172,6 +174,7 @@ export const light: Theme = {
     warnSoft: '#f7ebd3',
     bad: '#a8342a',
     badSoft: '#f7dfdb',
+    onBad: '#fffef3',
 
     stepDone: '#2a744c',
     stepCurrent: '#233e50',
@@ -228,6 +231,7 @@ export const dark: Theme = {
     warnSoft: '#3a2b10',
     bad: '#e8685c',
     badSoft: '#40191a',
+    onBad: '#101c24',
 
     stepDone: '#52b583',
     stepCurrent: '#7fb0ce',
@@ -291,6 +295,7 @@ export const midnight: Theme = {
     warnSoft: '#f7ebd3',
     bad: '#a8342a',
     badSoft: '#f7dfdb',
+    onBad: '#fffef3',
 
     stepDone: '#2b7449',
     stepCurrent: '#233e50',

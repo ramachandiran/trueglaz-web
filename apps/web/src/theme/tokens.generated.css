@@ -35,6 +35,7 @@
   --tg-warn-soft: #f7ebd3;
   --tg-bad: #a8342a;
   --tg-bad-soft: #f7dfdb;
+  --tg-on-bad: #fffef3;
   --tg-step-done: #2a744c;
   --tg-step-current: #233e50;
   --tg-step-upcoming: #bfbba4;
@@ -103,6 +104,7 @@
     --tg-warn-soft: #3a2b10;
     --tg-bad: #e8685c;
     --tg-bad-soft: #40191a;
+    --tg-on-bad: #101c24;
     --tg-step-done: #52b583;
     --tg-step-current: #7fb0ce;
     --tg-step-upcoming: #547082;
@@ -145,6 +147,7 @@
   --tg-warn-soft: #3a2b10;
   --tg-bad: #e8685c;
   --tg-bad-soft: #40191a;
+  --tg-on-bad: #101c24;
   --tg-step-done: #52b583;
   --tg-step-current: #7fb0ce;
   --tg-step-upcoming: #547082;
@@ -187,6 +190,7 @@
   --tg-warn-soft: #f7ebd3;
   --tg-bad: #a8342a;
   --tg-bad-soft: #f7dfdb;
+  --tg-on-bad: #fffef3;
   --tg-step-done: #2b7449;
   --tg-step-current: #233e50;
   --tg-step-upcoming: #bfb599;

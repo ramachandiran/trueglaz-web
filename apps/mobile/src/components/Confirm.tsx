@@ -82,8 +82,10 @@ export function DialogHost() {
             {!!d.message && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, lineHeight: 20 }}>{d.message}</Txt>}
             <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x2 }}>
               {!d.notice && <Button label={d.cancelLabel ?? 'Cancel'} variant="ghost" onPress={() => close(false)} style={{ flex: 1 }} />}
-              <Button label={d.confirmLabel ?? 'OK'} variant={d.destructive ? 'danger' : 'cta'} onPress={() => close(true)}
-                style={{ flex: 1, ...(d.destructive ? { backgroundColor: t.colors.bad } : {}) }} />
+              {/* Solid red with cream words (TG-152): the outline style's red words on a
+                  red fill made "Delete" and "Remove" invisible. */}
+              <Button label={d.confirmLabel ?? 'OK'} variant={d.destructive ? 'destructive' : 'cta'} onPress={() => close(true)}
+                style={{ flex: 1 }} />
             </View>
           </Pressable>
         )}

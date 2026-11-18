@@ -6,7 +6,7 @@ import { Empty, ErrorNote, Loading } from '../components/ui'
 import { KycDocuments } from '../components/KycDocuments'
 import { useConsoleTitle } from '../components/consoleTitle'
 import { useHashTarget } from '../components/useQueryState'
-import { ConfirmDialog } from '../components/ConfirmDialog'
+import { ConfirmDialog, useConfirm } from '../components/ConfirmDialog'
 import './OpsPage.css'
 import '../components/dashboard.css'
 
@@ -301,6 +301,7 @@ function PayoutSection({
  * it here, with the gateway's reference, is what clears the escrow.
  */
 function RefundsDue({ onChanged }: { onChanged: () => void }) {
+  const { ask, dialog } = useConfirm()
   const due = useApi(() => api.refundsDue(), [])
   const meta = useApi(() => api.meta(), [])
   const viaGateway = meta.data?.gatewayRefunds === true
@@ -313,7 +314,12 @@ function RefundsDue({ onChanged }: { onChanged: () => void }) {
   if (due.loading || rows.length === 0) return null
 
   async function refundThroughGateway(orderId: string, orderNumber: string, amount: number) {
-    if (!window.confirm(`Refund ${money(amount)} for ${orderNumber} through ${gatewayName}? The money goes back to the buyer's original payment method.`)) return
+    const ok = await ask({
+      title: `Refund ${money(amount)} for ${orderNumber}?`,
+      body: `It goes through ${gatewayName}, back to the buyer's original payment method.`,
+      confirmLabel: 'Refund',
+    })
+    if (!ok) return
     setBusy(orderId); setError(null)
     try {
       await api.refundViaGateway(orderId)
@@ -335,6 +341,7 @@ function RefundsDue({ onChanged }: { onChanged: () => void }) {
 
   return (
     <section className="tg-card ops__card" id="refunds">
+      {dialog}
       <h2 className="ops__subtitle">Refunds due ({rows.length})</h2>
       <p className="tg-muted ops__fineprint">
         {viaGateway

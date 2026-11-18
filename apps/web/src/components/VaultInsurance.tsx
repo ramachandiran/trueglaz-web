@@ -1,3 +1,4 @@
+import { useConfirm } from './ConfirmDialog'
 import { useRef, useState } from 'react'
 import { useEscape } from './useEscape'
 import {
@@ -37,12 +38,19 @@ export function CoverStrip({ item, onQuote, onAddPolicy, onClaimHelp, onChanged 
   const r = item.insuranceRequest
   const p = item.policy
   const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState<string | null>(null)
+  const { ask, dialog } = useConfirm()
 
   async function withdraw() {
-    if (!window.confirm('Withdraw your insurance quote request?')) return
-    setBusy(true)
+    const ok = await ask({
+      title: 'Withdraw your quote request?',
+      body: 'The agent stops working on it. You can ask for a new quote at any time.',
+      confirmLabel: 'Withdraw', cancelLabel: 'Keep it', destructive: true,
+    })
+    if (!ok) return
+    setBusy(true); setFailed(null)
     try { await api.withdrawInsurance(item.id); onChanged() }
-    catch (e) { window.alert(e instanceof ApiError ? e.message : 'Could not withdraw') }
+    catch (e) { setFailed(e instanceof ApiError ? e.message : 'Could not withdraw') }
     finally { setBusy(false) }
   }
 
@@ -82,6 +90,8 @@ export function CoverStrip({ item, onQuote, onAddPolicy, onClaimHelp, onChanged 
             <button className="tg-button tg-button--small" disabled>Policy sent for checking</button>
           )}
         </div>
+        {failed && <p className="cover__hint" role="alert">{failed}</p>}
+        {dialog}
       </div>
     )
   }
