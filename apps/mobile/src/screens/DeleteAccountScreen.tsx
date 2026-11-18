@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Platform, ScrollView, Share, View } from 'react-native'
+import { FormScroll } from '../components/FormScroll'
+import { Platform, Share, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, useApi, useSession, type Theme } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -99,7 +100,7 @@ export function DeleteAccountScreen() {
   const blocked = s.blockers.length > 0
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}
+    <FormScroll style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}
       keyboardShouldPersistTaps="handled">
       <FadeIn>
         <Card style={{ gap: t.space.x3 }}>
@@ -155,7 +156,7 @@ export function DeleteAccountScreen() {
             : !expired && <Button label="Delete my account" variant="danger" loading={busy} onPress={confirm} />}
         </Card>
       </FadeIn>
-    </ScrollView>
+    </FormScroll>
   )
 }
 

@@ -98,6 +98,8 @@ function MainTabs() {
         // and labels that do not grow with the font setting (TG-124).
         tabBarLabelStyle: { fontFamily: mobileFontFamily.medium, fontSize: 11, lineHeight: 14, marginBottom: 2 },
         tabBarAllowFontScaling: false,
+        // The tab bar would otherwise ride up on the keyboard and cover the field (TG-141).
+        tabBarHideOnKeyboard: true,
         // Rounded on top and lifted on a soft shadow instead of a hard top border.
         tabBarStyle: {
           backgroundColor: t.colors.bgRaised, borderTopWidth: 0,
@@ -133,13 +135,15 @@ function AppStack() {
           keyboardVerticalOffset={options.headerShown === false ? 0 : insets.top + 56}>{children}</KeyboardAvoidingView>
       )}
       screenOptions={{
+        // Just the arrow: the screen behind is the tab bar, called "Tabs" (TG-143).
+        headerBackButtonDisplayMode: 'minimal',
         headerStyle: { backgroundColor: t.colors.bgRaised },
         headerTintColor: t.colors.text,
         headerTitleStyle: { fontFamily: mobileFontFamily.bold },
         contentStyle: { backgroundColor: t.colors.bg, paddingBottom: insets.bottom },
       }}
     >
-      <Root.Screen name="Tabs" component={MainTabs} options={{ headerShown: false, ...ownBottom }} />
+      <Root.Screen name="Tabs" component={MainTabs} options={{ headerShown: false, title: 'Back', ...ownBottom }} />
       <Root.Screen name="Listing" component={ListingDetailScreen} options={{ headerShown: false, ...ownBottom }} />
       <Root.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />

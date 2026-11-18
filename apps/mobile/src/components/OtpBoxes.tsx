@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ElementRef } from 'react'
 import { Animated, Platform, Pressable, TextInput, View } from 'react-native'
+import { useRevealOnFocus } from './FormScroll'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -35,6 +36,7 @@ export function OtpBoxes({
 }) {
   const t = useTheme()
   const input = useRef<ElementRef<typeof TextInput>>(null)
+  const reveal = useRevealOnFocus()
   const [focused, setFocused] = useState(autoFocus)
   const digits = value.replace(/\D/g, '').slice(0, length)
   const active = Math.min(digits.length, length - 1)
@@ -89,7 +91,7 @@ export function OtpBoxes({
           maxLength={length}
           editable={editable}
           autoFocus={autoFocus}
-          onFocus={() => setFocused(true)}
+          onFocus={() => { setFocused(true); reveal?.(input.current as never) }}
           onBlur={() => setFocused(false)}
           accessibilityLabel={label}
           caretHidden

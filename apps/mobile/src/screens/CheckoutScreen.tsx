@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Pressable, ScrollView, View } from 'react-native'
+import { FormScroll } from '../components/FormScroll'
+import { Pressable, View } from 'react-native'
 import { api, gstinProblem, money, useApi, type Address, type Reservation } from '@trueglaz/core'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Txt } from '../components/Txt'
@@ -122,7 +123,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
+      <FormScroll contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }}>
         <Card style={{ gap: t.space.x2 }}>
           <SectionTitle>Your item</SectionTitle>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
@@ -192,7 +193,7 @@ export function CheckoutScreen({ route, navigation }: { route: any; navigation: 
         {meta.data?.paymentsAreReal === false && (
           <Muted size={t.size.xs}>Demo gateway — no real money moves. Payment is approved instantly.</Muted>
         )}
-      </ScrollView>
+      </FormScroll>
 
       <View style={{ padding: t.space.x4, borderTopWidth: 1, borderTopColor: t.colors.border, backgroundColor: t.colors.bgRaised }}>
         <Button

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useEscape } from './useEscape'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api, getStorage, isOps, money, useSession, type ProductModel, type VaultItem } from '@trueglaz/core'
 import '../pages/VaultPage.css'
@@ -47,7 +48,9 @@ export function VaultIntro() {
     try { await getStorage().set(SEEN_KEY, '1') } catch { /* fine */ }
   }
 
-  if (!eligible || !HOME_PATHS.includes(pathname)) return null
+  const showing = eligible && HOME_PATHS.includes(pathname)
+  useEscape(dismiss, showing)
+  if (!showing) return null
 
   return (
     <div className="vault__overlay" onClick={dismiss}>

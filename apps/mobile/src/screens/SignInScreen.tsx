@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Animated, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native'
+import { FormScroll } from '../components/FormScroll'
+import { Animated, Image, KeyboardAvoidingView, Platform, Pressable, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { api, indianMobile, localMobile, useSession, type AuthResult, type Session } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -147,7 +148,7 @@ export function SignInScreen() {
 
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: t.colors.brand }}>
-      <ScrollView keyboardShouldPersistTaps="handled"
+      <FormScroll keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: t.space.x5, gap: t.space.x6 }}>
         <Entrance reduced={reduced}>
           <Image source={require('../../assets/logo-lockup.png')} accessibilityLabel="TrueGlaz" accessibilityRole="image"
@@ -252,7 +253,7 @@ export function SignInScreen() {
             )}
           </Card>
         </View>
-      </ScrollView>
+      </FormScroll>
       {welcome && <SuccessOverlay title={welcome} reduced={reduced} />}
     </KeyboardAvoidingView>
   )

@@ -1,4 +1,5 @@
 import { uploadPhoto } from '../media/uploadPhoto'
+import { FormScroll } from '../components/FormScroll'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, Pressable, ScrollView, Switch, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
@@ -140,7 +141,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   }
 
   return (
-    <ScrollView ref={scroller as never} style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }} keyboardShouldPersistTaps="handled">
+    <FormScroll ref={scroller as never} style={{ flex: 1, backgroundColor: t.colors.bg }} contentContainerStyle={{ padding: t.space.x4, gap: t.space.x4, paddingBottom: t.space.x7 }} keyboardShouldPersistTaps="handled">
       <Card style={{ gap: t.space.x3 }}>
         <SectionTitle>Type</SectionTitle>
         <ChipRow options={(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))} selected={categoryId} onSelect={(v) => { setCategoryId(v); setProductModelId(null) }} />
@@ -164,7 +165,6 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
             categoryId={categoryId}
             onChangeText={(text) => { setModelFreeText(text); setProductModelId(null) }}
             onPick={(m) => { setModelFreeText(m.name); setProductModelId(m.id); if (m.brandId) setBrandId(m.brandId) }}
-            onFocus={() => scroller.current?.scrollTo({ y: Math.max(0, cardY.current + modelY.current - 260), animated: true })}
           />
         </View>
         <Field label="Description" value={description} onChangeText={setDescription} multiline placeholder="Condition, shutter count, anything a buyer should know" />
@@ -224,7 +224,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
       {progress && <Muted size={t.size.xs}>{progress}</Muted>}
       <Button label={created.current ? 'Finish uploading photos' : editItemId ? 'Save and review' : 'Review'} variant="cta" loading={busy} onPress={save} />
-    </ScrollView>
+    </FormScroll>
   )
 }
 
