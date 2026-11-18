@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
@@ -407,7 +408,8 @@ function BankSays({ account }: { account: NonNullable<Profile['payoutAccount']> 
 function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
   // Prefilled from what is already on file: a change is usually one field, and
   // retyping your own name to correct an IFSC is busywork. The account number
-  // is never prefilled — we only keep its last four digits, by design.
+  // is never prefilled — we only keep its last four digits, by design — so a
+  // blank number keeps the saved one (TG-151).
   const [form, setForm] = useState({
     method: me.payoutAccount?.method ?? 'upi',
     accountHolderName: me.payoutAccount?.accountHolderName ?? '',
@@ -422,6 +424,20 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
   const [error, setError] = useState<string | null>(null)
 
   const account = me.payoutAccount
+  const savedLast4 = account?.method === 'bank' ? account.accountLast4 : null
+  const [askRemove, setAskRemove] = useState(false)
+
+  async function remove() {
+    setBusy(true); setError(null)
+    try {
+      await api.removePayoutAccount()
+      setAskRemove(false); setDone(false)
+      onSaved()
+    } catch (e) {
+      setAskRemove(false)
+      setError(e instanceof ApiError ? e.message : 'Could not remove it')
+    } finally { setBusy(false) }
+  }
 
   async function requestCode() {
     setBusy(true); setError(null)
@@ -510,7 +526,12 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
           <Field label="UPI id" value={form.upiVpa} onChange={(v) => setForm({ ...form, upiVpa: v })} />
         ) : (
           <>
-            <Field label="Account number" value={form.accountNumber} onChange={(v) => setForm({ ...form, accountNumber: v })} />
+            <Field
+              label="Account number"
+              hint={savedLast4 && form.method === account?.method ? `Leave blank to keep the account ending ${savedLast4}.` : undefined}
+              value={form.accountNumber}
+              onChange={(v) => setForm({ ...form, accountNumber: v })}
+            />
             <Field label="IFSC" value={form.ifsc} onChange={(v) => setForm({ ...form, ifsc: v })} />
           </>
         )}
@@ -520,11 +541,16 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
         <div className="profile__actions">
           <button
             className="tg-button tg-button--primary"
-            disabled={busy || !form.accountHolderName.trim() || (form.method === 'upi' ? !form.upiVpa.trim() : !form.accountNumber.trim() || !form.ifsc.trim())}
+            disabled={busy || !form.accountHolderName.trim() || (form.method === 'upi' ? !form.upiVpa.trim() : (!form.accountNumber.trim() && !savedLast4) || !form.ifsc.trim())}
             onClick={requestCode}
           >
             {busy ? 'Sending…' : account ? 'Send a code to change this' : 'Send a code to save this'}
           </button>
+          {account && (
+            <button className="tg-button tg-button--subtle profile__remove" disabled={busy} onClick={() => setAskRemove(true)}>
+              Remove payout account
+            </button>
+          )}
         </div>
       ) : (
         <div className="profile__confirm">
@@ -550,6 +576,17 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
       )}
 
       {error && <p className="profile__error" role="alert">{error}</p>}
+
+      <ConfirmDialog
+        open={askRemove}
+        title="Remove payout account?"
+        confirmLabel={busy ? 'Removing…' : 'Remove'}
+        busy={busy}
+        onConfirm={remove}
+        onCancel={() => setAskRemove(false)}
+      >
+        Payouts will wait until you add a new account. You can add one again at any time.
+      </ConfirmDialog>
     </section>
   )
 }

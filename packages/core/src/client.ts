@@ -642,6 +642,10 @@ export const api = {
   /** The same, as a file (website): bytes plus the server's file name. */
   myDataFile: () => download('/profile/export', `trueglaz-my-data-${new Date().toISOString().slice(0, 10)}.json`),
   staffAccountDeletions: () => get<StaffAccountDeletion[]>('/staff/account-deletions'),
+  /**
+   * For a bank account already on file, leave accountNumber blank to keep the
+   * saved number (only its last four digits are ever sent back to us).
+   */
   savePayoutAccount: (body: {
     code: string
     method: string
@@ -650,6 +654,8 @@ export const api = {
     ifsc?: string | null
     upiVpa?: string | null
   }) => post<PayoutAccountView>('/profile/payout-account', body),
+  /** Payouts wait until a new account is added; refused (409) while one is being sent to it. */
+  removePayoutAccount: () => del<void>('/profile/payout-account'),
 
   myAddresses: () => get<Address[]>('/profile/addresses'),
   addAddress: (body: {
