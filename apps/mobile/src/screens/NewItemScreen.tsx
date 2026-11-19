@@ -1,7 +1,7 @@
 import { uploadPhoto } from '../media/uploadPhoto'
 import { FormScroll } from '../components/FormScroll'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Image, Pressable, ScrollView, Switch, View } from 'react-native'
+import { useEffect, useMemo, useRef, useState, type ElementRef } from 'react'
+import { Image, Pressable, ScrollView, Switch, TextInput, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { api, useApi, type ProductModel } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
@@ -11,6 +11,8 @@ import { Card, Loading, Muted, SectionTitle } from '../components/ui'
 
 export function NewItemScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
+  const reasonRef = useRef<ElementRef<typeof TextInput> | null>(null)
+  const serialRef = useRef<ElementRef<typeof TextInput> | null>(null)
   // Created on the first save rather than on opening the form (TG-9).
   const submissionId = useRef<string | null>(route.params?.submissionId ?? null)
   // Once the item exists, a retry must not create it again: it only finishes
@@ -60,7 +62,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
     setCategoryId(it.categoryId); setBrandId(it.brandId)
     setProductModelId(it.productModelId)
     setModelFreeText(it.modelFreeText ?? models.data?.content.find((m) => m.id === it.productModelId)?.name ?? '')
-    setDescription(it.description ?? ''); setReasonToSell(it.reasonToSell ?? ''); setSerialNumber(it.serialNumber ?? '')
+    setDescription((it.description ?? '').replace(/[ \t]*[\r\n]+[ \t]*/g, ' ')); setReasonToSell(it.reasonToSell ?? ''); setSerialNumber(it.serialNumber ?? '')
     setDeclaredGradeCode(it.declaredGradeCode)
     setAsking(String(Math.round(it.askingAmountMinor / 100)))
     setFloor(it.floorAmountMinor != null ? String(Math.round(it.floorAmountMinor / 100)) : '')
@@ -98,7 +100,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
     setError(null); setBusy(true)
     const body = {
       productModelId, modelFreeText: modelFreeText.trim(), categoryId, brandId,
-      description: description.trim(), reasonToSell: reasonToSell.trim(),
+      description: description.replace(/\s+/g, ' ').trim(), reasonToSell: reasonToSell.replace(/\s+/g, ' ').trim(),
       underWarranty, hasBill, hasBox, hasAccessories,
       serialNumber: serialNumber.trim(), declaredGradeCode,
       askingAmountMinor: askingMinor, floorAmountMinor: floorMinor,
@@ -167,9 +169,12 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
             onPick={(m) => { setModelFreeText(m.name); setProductModelId(m.id); if (m.brandId) setBrandId(m.brandId) }}
           />
         </View>
-        <Field label="Description" value={description} onChangeText={setDescription} multiline placeholder="Condition, shutter count, anything a buyer should know" />
-        <Field label="Reason for selling" value={reasonToSell} onChangeText={setReasonToSell} multiline />
-        <Field label="Serial number" value={serialNumber} onChangeText={setSerialNumber} autoCapitalize="characters" />
+        {/* One paragraph each: Enter moves on to the next field instead of adding a line (TG-159). */}
+        <Field label="Description" value={description} onChangeText={setDescription} oneParagraph
+          onSubmitEditing={() => reasonRef.current?.focus()} placeholder="Condition, shutter count, anything a buyer should know" />
+        <Field label="Reason for selling" value={reasonToSell} onChangeText={setReasonToSell} oneParagraph fieldRef={reasonRef}
+          onSubmitEditing={() => serialRef.current?.focus()} />
+        <Field label="Serial number" value={serialNumber} onChangeText={setSerialNumber} autoCapitalize="characters" fieldRef={serialRef} />
       </Card>
       </View>
 

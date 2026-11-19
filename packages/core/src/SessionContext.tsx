@@ -3,7 +3,7 @@ import {
 } from 'react'
 import { api, ApiError, currentSession, loadSession, onSessionExpired, saveSession } from './client'
 import { onConnectivity } from './connectivity'
-import { forgetAnswers } from './offlineCache'
+import { forgetOfflineCopies } from './offlineCache'
 import type { Session } from './types'
 
 interface Ctx {
@@ -44,6 +44,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setReady(true)
         return
       }
+      // Copies an earlier build kept for offline viewing (TG-157).
+      void forgetOfflineCopies(stored.userId)
       try {
         const me = await api.me()
         // Roles can change between visits; take the server's word for them.
@@ -57,7 +59,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         // back (TG-156). Clearing here signed out everyone who opened the app
         // on a train.
         if (e instanceof ApiError && e.status === 401) {
-          await forgetAnswers(stored.userId)
           await saveSession(null)
           if (!cancelled) setSession(null)
         } else if (!cancelled) setSession(stored)
@@ -79,11 +80,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    // Best effort: revoke server-side, but always clear locally, including the
-    // pages kept for offline use, so the next person on the phone sees none.
+    // Best effort: revoke server-side, but always clear locally.
     const was = currentSession()
     try { await api.logout() } catch { /* already gone, or offline */ }
-    if (was) await forgetAnswers(was.userId)
+    if (was) await forgetOfflineCopies(was.userId)
     await saveSession(null)
     setSession(null)
   }, [])

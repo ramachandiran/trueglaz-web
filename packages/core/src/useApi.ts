@@ -42,8 +42,8 @@ export function useApi<T>(
     }
   }, [run, session?.userId, nonce])
 
-  // Back online: fetch again, so what was shown from the phone's copy (or an
-  // error from while it was offline) is replaced by the live answer (TG-156).
+  // Back online: fetch again, so an error from while it was offline is
+  // replaced by the live answer (TG-156, TG-157).
   useEffect(() => onConnectivity((online) => { if (online) setNonce((n) => n + 1) }), [])
 
   return { ...state, reload: () => setNonce((n) => n + 1) }

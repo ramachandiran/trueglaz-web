@@ -1,6 +1,5 @@
 import { getStorage } from './storage'
 import { isOnline, OFFLINE_MESSAGE } from './connectivity'
-import { forgetAnswers, noteSavedShown, rememberAnswer, savedAnswer } from './offlineCache'
 import { searchQuery, type Filters } from './filters'
 import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
@@ -147,16 +146,6 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
     // the old message read "Could not reach the API at http://localhost:5174/…"
     // when the API was on 8080 and the thing that had gone away was the dev
     // server the page itself came from.
-    //
-    // No answer at all. In the app, show what this page said last time, so
-    // orders, the wishlist and the vault are still there with no connection.
-    if (method === 'GET' && session) {
-      const saved = await savedAnswer(session.userId, endpoint)
-      if (saved) {
-        noteSavedShown(saved.at)
-        return (saved.text ? JSON.parse(saved.text) : undefined) as T
-      }
-    }
     throw isOnline()
       ? new ApiError(0, unreachable(endpoint), 'unreachable')
       : new ApiError(0, OFFLINE_MESSAGE, 'offline')
@@ -177,7 +166,6 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
     // one-time code you just typed was wrong. Signing someone out for a typo
     // loses whatever they were in the middle of, so only the first clears it.
     if (res.status === 401 && session && code !== 'code_invalid') {
-      void forgetAnswers(session.userId)
       void saveSession(null)
       onExpired?.()
     }
@@ -187,7 +175,6 @@ async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
 
   if (res.status === 204) return undefined as T
   const text = await res.text()
-  if (method === 'GET' && session) void rememberAnswer(session.userId, endpoint, text)
   return (text ? JSON.parse(text) : undefined) as T
 }
 
@@ -869,6 +856,19 @@ export const api = {
     })
     if (!res.ok) throw new ApiError(res.status, `Could not fetch that invoice (${res.status})`)
     return res.blob()
+  },
+  /** The same printable copy as text, for the phone app to show and turn into a PDF (TG-158). */
+  invoiceHtml: async (id: string): Promise<string> => {
+    let res: Response
+    try {
+      res = await fetch(url(`/invoices/${id}/download`), {
+        headers: session ? { Authorization: `Bearer ${session.token}` } : {},
+      })
+    } catch {
+      throw isOnline() ? new ApiError(0, unreachable(`/invoices/${id}/download`), 'unreachable') : new ApiError(0, OFFLINE_MESSAGE, 'offline')
+    }
+    if (!res.ok) throw new ApiError(res.status, `Could not fetch that invoice (${res.status})`)
+    return res.text()
   },
   itemShipments: (itemId: string) => get<ShipmentLeg[]>(`/items/${itemId}/shipments`),
   shipToSeller: (itemId: string, body: { courierCode: string; trackingNumber?: string | null; notes?: string | null }) =>
