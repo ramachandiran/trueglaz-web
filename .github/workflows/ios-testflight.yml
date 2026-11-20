@@ -114,9 +114,17 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
-          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
-          chmod 600 "$KEY"
-          grep -q "BEGIN PRIVATE KEY" "$KEY" || { echo "::error::ASC_KEY_P8 is not a .p8 private key"; exit 1; }
+          # Accepted three ways, since all three are easy to paste: the .p8 file
+          # as is, the file base64 encoded (as the APNs key is for Parameter
+          # Store), or just the key text without the BEGIN/END lines.
+          body() { sed -e 's/-----BEGIN PRIVATE KEY-----//' -e 's/-----END PRIVATE KEY-----//' | tr -d ' \r\n\t'; }
+          B=$(printf '%s' "$ASC_KEY_P8" | body)
+          D=$(printf '%s' "$B" | base64 --decode 2>/dev/null | tr -d '\0' || true)
+          case "$D" in *"BEGIN PRIVATE KEY"*) B=$(printf '%s' "$D" | body) ;; esac
+          umask 077
+          { echo "-----BEGIN PRIVATE KEY-----"; printf '%s\n' "$B" | fold -w 64; echo "-----END PRIVATE KEY-----"; } > "$KEY"
+          openssl pkey -in "$KEY" -noout 2>/dev/null || {
+            echo "::error::ASC_KEY_P8 is not a usable .p8 key. Paste the whole AuthKey_<id>.p8 file, BEGIN and END lines included."; exit 1; }
           echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
 
       - name: Archive (signed automatically)
