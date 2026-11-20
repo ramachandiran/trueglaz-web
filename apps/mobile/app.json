@@ -12,8 +12,12 @@
       "backgroundColor": "#233e50"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.trueglaz.app"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.trueglaz.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.trueglaz.app",
@@ -36,7 +40,8 @@
         "expo-image-picker",
         {
           "photosPermission": "TrueGlaz uses your photos so you can add pictures of the gear you are selling.",
-          "cameraPermission": "TrueGlaz uses the camera for your identity check and to photograph gear you are selling."
+          "cameraPermission": "TrueGlaz uses the camera for your identity check and to photograph gear you are selling.",
+          "microphonePermission": "TrueGlaz uses the microphone for the sound on your unboxing video, if you record one for a return."
         }
       ]
     ]
