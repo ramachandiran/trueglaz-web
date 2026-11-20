@@ -24,6 +24,8 @@ export interface ColorTokens {
 
   border: string
   borderStrong: string
+  /** The edge of a text field or select: at least 3:1 on every surface (WCAG 1.4.11, TG-162). */
+  borderInput: string
 
   accent: string
   accentHover: string
@@ -140,6 +142,7 @@ export const light: Theme = {
 
     border: '#e2ddc4',
     borderStrong: '#c7c2a9',
+    borderInput: '#77848d',
 
     // One orange, the brand's #FF6B35, for every orange thing (TG-145): fills,
     // buttons, icons, marks, underlines. Never as words on a light page: those
@@ -203,6 +206,7 @@ export const dark: Theme = {
 
     border: '#2b4252',
     borderStrong: '#547082',
+    borderInput: '#6b8596',
 
     // The bright orange reads well on the dark page (6.1:1); it is the text
     // ON an orange fill that has to be dark, not cream (cream is 2.8:1).
@@ -263,6 +267,7 @@ export const midnight: Theme = {
 
     border: '#ddd6c1',
     borderStrong: '#bfb599',
+    borderInput: '#77848d',
 
     // One orange, the brand's #FF6B35, for every orange thing (TG-145): fills,
     // buttons, icons, marks, underlines. Never as words on a light page: those

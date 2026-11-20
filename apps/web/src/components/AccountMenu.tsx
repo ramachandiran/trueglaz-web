@@ -57,13 +57,16 @@ export function AccountMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={`Account menu, ${session.displayName}`}
       >
-        <span className="account__avatar" aria-hidden="true">
-          {initials(session.displayName)}
+        {/* The initials are drawn by CSS from data-initials, so the button's
+            visible text is just the name, and its name starts with it (TG-163,
+            WCAG 2.5.3). The unread count below now reaches screen readers too:
+            an aria-label used to replace it. */}
+        <span className="account__avatar" aria-hidden="true" data-initials={initials(session.displayName)}>
           {unread > 0 && <span className="account__pip" aria-hidden="true" />}
         </span>
         <span className="account__name">{session.displayName}</span>
+        <span className="tg-visually-hidden">, account menu</span>
         <span className="account__caret" aria-hidden="true">▾</span>
         {unread > 0 && (
           <span className="tg-visually-hidden">{unread} unread notifications</span>

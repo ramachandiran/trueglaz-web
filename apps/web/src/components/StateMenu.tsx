@@ -172,10 +172,11 @@ export function StateMenu({
         className="sm__trigger"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Status ${STATE_LABELS[currentState] ?? currentState}. Change it.`}
         onClick={() => (open ? setOpen(false) : show())}
       >
+        {/* Named by the badge it shows, then what it does (TG-163, WCAG 2.5.3). */}
         <StateBadge state={currentState} />
+        <span className="tg-visually-hidden">: change status</span>
         <span className="sm__caret" aria-hidden="true">▾</span>
       </button>
 

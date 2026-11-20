@@ -35,7 +35,7 @@ export function QueueScreen({
   shown, total, unit = 'items',
   loading, error, onRetry, emptyTitle, emptyHint,
   page, pages, onPage,
-  actions, summary, filter, perPage = 10,
+  actions, summary, filter, perPage = 25,
   children,
 }: {
   title: string

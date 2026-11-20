@@ -78,7 +78,7 @@ export function Field({ label, hint, style, onFocus, oneParagraph, fieldRef, onC
         style={[
           {
             color: t.colors.text, fontFamily: mobileFontFamily.regular, fontSize: t.size.md,
-            backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border,
+            backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.borderInput,
             borderRadius: t.radius.md, paddingHorizontal: t.space.x3, paddingVertical: t.space.x3,
           },
           style as object,

@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
-import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, type PayoutDestination, type PayoutQueueRow } from '@trueglaz/core'
-import { InventoryTable } from '../components/InventoryTable'
+import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, type PayoutDestination, type PayoutQueueRow, type RefundDue, type KycReview } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { KycDocuments } from '../components/KycDocuments'
 import { useConsoleTitle } from '../components/consoleTitle'
-import { useHashTarget } from '../components/useQueryState'
+import { useHashTarget, useQueryState } from '../components/useQueryState'
 import { ConfirmDialog, useConfirm } from '../components/ConfirmDialog'
 import './OpsPage.css'
 import '../components/dashboard.css'
@@ -24,11 +23,11 @@ const REJECT_REASONS = [
  * inspect, what to price, what to pack. This answers the one nobody else is
  * asked: what does the platform have, all of it, and what is each unit doing.
  *
- * Two halves. The inventory is the whole shelf, filterable by any column and
- * openable to the entire record of a unit. The books are underneath it, because
- * reconciliation is the number that says whether any of the rest can be
- * believed — escrow should hold exactly what has been paid for and not yet
- * accepted, and nothing else.
+ * Tabs, payouts first (TG-165): paying sellers and refunding buyers is the
+ * work; reconciliation is the number that says whether the rest can be
+ * believed (escrow holds exactly what has been paid for and not yet accepted);
+ * identity checks and the money activity follow. The whole shelf of units is
+ * the Inventory page — it used to be repeated here, above everything else.
  */
 export function AdminPage() {
   const inventory = useApi(() => api.inventory(), [])
@@ -54,9 +53,26 @@ export function AdminPage() {
     } finally { setBusy(null) }
   }
 
+  const kyc = useApi(() => api.kycQueue(), [])
+  const refunds = useApi(() => api.refundsDue(), [])
+
+  // Payouts first (TG-165): paying sellers is the job here, and it used to sit
+  // ~4,000 px down under a copy of the inventory. A link from the Control room
+  // that names a section (#kyc, #payouts-approved, #refunds) opens its tab.
+  const hash = typeof window !== 'undefined' ? window.location.hash : ''
+  const [tab, setTab] = useQueryState('tab', hash === '#kyc' ? 'identity' : 'payouts')
+  const waiting = (onHold.data?.length ?? 0) + (pending.data?.length ?? 0) + (approved.data?.length ?? 0) + (refunds.data?.length ?? 0)
+  const tabs: { key: string; label: string; count?: number }[] = [
+    { key: 'payouts', label: 'Payouts & refunds', count: waiting },
+    { key: 'reconciliation', label: 'Reconciliation' },
+    { key: 'identity', label: 'Identity checks', count: kyc.data?.length ?? 0 },
+    { key: 'activity', label: 'Activity' },
+  ]
+
   const w = useBooks(inventory.data, recon.data)
-  useConsoleTitle('Money & oversight', 'Inventory, escrow and payouts — the whole platform in one place')
-  useHashTarget(!pending.loading && !onHold.loading && !approved.loading && !inventory.loading && !recon.loading && !accounts.loading)
+  useConsoleTitle('Money & oversight', 'Payouts, refunds and the books')
+  useHashTarget(!pending.loading && !onHold.loading && !approved.loading && !refunds.loading && !kyc.loading)
+  const payoutsLoading = pending.loading || onHold.loading || approved.loading || refunds.loading
 
   return (
     <div className="ops dash">
@@ -64,77 +80,100 @@ export function AdminPage() {
         <p className={`dash__pill${w.attention > 0 ? '' : ' dash__pill--clear'}`}>
           {w.attention > 0 ? `${w.attention} need${w.attention === 1 ? 's' : ''} a decision` : 'Nothing needs a decision'}
         </p>
+        <Link to="/admin/inventory" className="c-link money__inv-link">Every unit is in Inventory →</Link>
       </header>
       {error && <p className="ops__error" role="alert">{error}</p>}
 
       <Widgets w={w} recon={recon.data} />
 
-      <section className="tg-card ops__card">
-        <h2 className="ops__subtitle">Inventory</h2>
-        <p className="tg-muted ops__fineprint">
-          Every unit the platform has ever taken in. Filter on any column, or open a row
-          for everything known about that one.
-        </p>
-        {inventory.loading && <Loading label="Loading inventory" />}
-        {inventory.error && <ErrorNote error={inventory.error} onRetry={inventory.reload} />}
-        {inventory.data && <InventoryTable rows={inventory.data} />}
-      </section>
-
-      <section className="tg-card ops__card">
-        <h2 className="ops__subtitle">Escrow reconciliation</h2>
-        <p className="tg-muted ops__fineprint">
-          Balances are summed from the ledger at read time — there is no balance
-          column anywhere, which is what makes this answerable at all.
-        </p>
-        {recon.loading && <Loading label="Loading" />}
-        {recon.error && <ErrorNote error={recon.error} onRetry={recon.reload} />}
-        {recon.data && (
-          <div className="ops__recon">
-            <Stat label="Held in escrow" value={money(recon.data.escrow_liability_held)} highlight />
-            <Stat label="Owed to sellers" value={money(recon.data.seller_payable_total)} />
-            <Stat label="Bank" value={money(recon.data.bank)} />
-            <Stat label="Gateway clearing" value={money(recon.data.gateway_clearing)} />
-            <Stat label="Commission" value={money(recon.data.commission_revenue)} />
-            <Stat label="Shipping" value={money(recon.data.shipping_revenue)} />
-            <Stat label="Processing cost" value={money(recon.data.payment_processing_expense)} />
-          </div>
-        )}
-      </section>
-
-      <PayoutSection
-        id="payouts-held"
-        title="On hold"
-        blurb="Held because the seller has no verified payout account."
-        state={onHold}
-        busy={busy}
-        render={(p) => (
-          <button className="tg-button" disabled={busy === p.id} onClick={() => setConfirming({ payout: p, held: true })}>
-            Approve anyway
+      <div className="people-tabs money__tabs" role="tablist" aria-label="Money">
+        {tabs.map((t) => (
+          <button key={t.key} type="button" role="tab" id={`money-tab-${t.key}`} aria-controls="money-panel"
+            aria-selected={tab === t.key}
+            className={`people-tabs__tab${tab === t.key ? ' people-tabs__tab--on' : ''}`}
+            onClick={() => setTab(t.key)}>
+            {t.label}{t.count ? <span className="money__tab-count"> · {t.count}</span> : null}
           </button>
-        )}
-      />
+        ))}
+      </div>
 
-      <PayoutSection
-        id="payouts-pending"
-        title="Waiting on approval"
-        blurb="Above the auto-release threshold, so a human signs them off."
-        state={pending}
-        busy={busy}
-        render={(p) => (
-          <button className="tg-button tg-button--primary" disabled={busy === p.id} onClick={() => setConfirming({ payout: p, held: false })}>
-            Approve
-          </button>
-        )}
-      />
+      <div id="money-panel" role="tabpanel" aria-labelledby={`money-tab-${tab}`} className="money__panel">
+        {tab === 'payouts' && (
+          <>
+            {payoutsLoading && <Loading label="Loading payouts" />}
+            {!payoutsLoading && waiting === 0 && (
+              <Empty title="Nothing to pay or refund" hint="A seller's payout appears here once the buyer accepts the item; a refund once a paid order is cancelled." />
+            )}
+            <PayoutSection
+              id="payouts-approved"
+              title="Approved — ready to transfer"
+              blurb="Paying marks the transfer and clears the seller's balance."
+              state={approved}
+              busy={busy}
+              render={(p) => <TransferRow payout={p} busy={busy === p.id} onPay={(ref) => act(p.id, () => api.payPayout(p.id, ref))} />}
+            />
 
-      <PayoutSection
-        id="payouts-approved"
-        title="Approved — ready to transfer"
-        blurb="Paying marks the transfer and clears the seller's balance."
-        state={approved}
-        busy={busy}
-        render={(p) => <TransferRow payout={p} busy={busy === p.id} onPay={(ref) => act(p.id, () => api.payPayout(p.id, ref))} />}
-      />
+            <PayoutSection
+              id="payouts-pending"
+              title="Waiting on approval"
+              blurb="Above the auto-release threshold, so a human signs them off."
+              state={pending}
+              busy={busy}
+              render={(p) => (
+                <button className="tg-button tg-button--primary" disabled={busy === p.id} onClick={() => setConfirming({ payout: p, held: false })}>
+                  Approve
+                </button>
+              )}
+            />
+
+            <PayoutSection
+              id="payouts-held"
+              title="On hold"
+              blurb="Held because the seller has no verified payout account."
+              state={onHold}
+              busy={busy}
+              render={(p) => (
+                <button className="tg-button" disabled={busy === p.id} onClick={() => setConfirming({ payout: p, held: true })}>
+                  Approve anyway
+                </button>
+              )}
+            />
+
+            <RefundsDue due={refunds} onChanged={() => { refunds.reload(); recon.reload(); accounts.reload() }} />
+          </>
+        )}
+
+        {tab === 'reconciliation' && (
+          <section className="tg-card ops__card">
+            <h2 className="ops__subtitle">Escrow reconciliation</h2>
+            <p className="tg-muted ops__fineprint">
+              Balances are summed from the ledger at read time — there is no balance
+              column anywhere, which is what makes this answerable at all.
+            </p>
+            {recon.loading && <Loading label="Loading" />}
+            {recon.error && <ErrorNote error={recon.error} onRetry={recon.reload} />}
+            {recon.data && (
+              <div className="ops__recon">
+                <Stat label="Held in escrow" value={money(recon.data.escrow_liability_held)} highlight />
+                <Stat label="Owed to sellers" value={money(recon.data.seller_payable_total)} />
+                <Stat label="Bank" value={money(recon.data.bank)} />
+                <Stat label="Gateway clearing" value={money(recon.data.gateway_clearing)} />
+                <Stat label="Commission" value={money(recon.data.commission_revenue)} />
+                <Stat label="Shipping" value={money(recon.data.shipping_revenue)} />
+                <Stat label="Processing cost" value={money(recon.data.payment_processing_expense)} />
+              </div>
+            )}
+            <p className="tg-muted ops__fineprint">
+              Profit per sold item is in the <Link to="/admin/balance-sheet">Balance sheet</Link>; fees and the
+              company on invoices are in <Link to="/admin/settings">Settings</Link>.
+            </p>
+          </section>
+        )}
+
+        {tab === 'identity' && <KycQueue queue={kyc} />}
+
+        {tab === 'activity' && <LedgerFeed />}
+      </div>
 
       <ConfirmDialog
         open={confirming !== null}
@@ -163,20 +202,6 @@ export function AdminPage() {
           </>
         )}
       </ConfirmDialog>
-
-      <RefundsDue onChanged={() => { recon.reload(); accounts.reload() }} />
-
-      <KycQueue />
-
-      <section className="tg-card ops__card">
-        <h2 className="ops__subtitle">Settings</h2>
-        <p className="tg-muted ops__fineprint">
-          Platform settings, commission bands, the delivery charge and the company on invoices now live under{' '}
-          <Link to="/admin/settings">Settings</Link>.
-        </p>
-      </section>
-
-      <LedgerFeed />
     </div>
   )
 }
@@ -300,9 +325,8 @@ function PayoutSection({
  * it was paid. The transfer back is made in the gateway's own dashboard; recording
  * it here, with the gateway's reference, is what clears the escrow.
  */
-function RefundsDue({ onChanged }: { onChanged: () => void }) {
+function RefundsDue({ due, onChanged }: { due: ReturnType<typeof useApi<RefundDue[]>>; onChanged: () => void }) {
   const { ask, dialog } = useConfirm()
-  const due = useApi(() => api.refundsDue(), [])
   const meta = useApi(() => api.meta(), [])
   const viaGateway = meta.data?.gatewayRefunds === true
   const gatewayName = meta.data?.paymentGateway === 'razorpay' ? 'Razorpay' : 'the gateway'
@@ -507,8 +531,7 @@ function KycDocsFor({ userId }: { userId: string }) {
   return <KycDocuments docs={docs.data ?? []} />
 }
 
-function KycQueue() {
-  const queue = useApi(() => api.kycQueue(), [])
+function KycQueue({ queue }: { queue: ReturnType<typeof useApi<KycReview[]>> }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [rejecting, setRejecting] = useState<string | null>(null)
   const [reason, setReason] = useState('')
