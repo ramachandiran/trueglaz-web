@@ -43,7 +43,9 @@ jobs:
       CI: '1'
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      # A variable, as documented; a secret of the same name is accepted too,
+      # since the two tabs sit side by side and are easy to swap.
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID || secrets.APPLE_TEAM_ID }}
       HAS_P8: ${{ secrets.ASC_KEY_P8 != '' }}
     defaults:
       run:
@@ -71,12 +73,17 @@ jobs:
       - name: Upload switched on?
         id: mode
         run: |
-          if [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ "$HAS_P8" = "true" ]; then
+          MISSING=""
+          [ -n "$ASC_ISSUER_ID" ] || MISSING="$MISSING ASC_ISSUER_ID(secret)"
+          [ -n "$ASC_KEY_ID" ] || MISSING="$MISSING ASC_KEY_ID(secret)"
+          [ "$HAS_P8" = "true" ] || MISSING="$MISSING ASC_KEY_P8(secret)"
+          [ -n "$APPLE_TEAM_ID" ] || MISSING="$MISSING APPLE_TEAM_ID(variable)"
+          if [ -z "$MISSING" ]; then
             echo "upload=true" >> "$GITHUB_OUTPUT"
             echo "App Store Connect key found: this build will be signed and uploaded to TestFlight (build $IOS_BUILD_NUMBER)."
           else
             echo "upload=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No App Store Connect key yet (ASC_ISSUER_ID, ASC_KEY_ID, ASC_KEY_P8 secrets and APPLE_TEAM_ID variable). Compiling for the simulator only; nothing will be uploaded."
+            echo "::notice::Not uploading: missing$MISSING. Compiling for the simulator only."
           fi
 
       - run: npm ci
