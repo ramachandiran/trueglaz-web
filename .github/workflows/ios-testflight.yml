@@ -4,9 +4,9 @@
 # then the platform's build tool, with no Expo build service. Here that is a
 # macOS runner and Xcode.
 #
-# Signing is automatic: Xcode uses the App Store Connect API key to create (or
-# reuse) the distribution certificate and provisioning profile, so no
-# certificate or profile is kept anywhere. Three secrets and one variable on
+# Signing is automatic at export: Xcode uses the App Store Connect API key to
+# create (or reuse) the distribution certificate and App Store profile, so no
+# certificate or profile is kept anywhere, and no iPhone must be registered. Three secrets and one variable on
 # this repository switch the upload on:
 #   secrets   ASC_ISSUER_ID, ASC_KEY_ID, ASC_KEY_P8 (the whole .p8 file)
 #   variable  APPLE_TEAM_ID
@@ -127,37 +127,69 @@ jobs:
             echo "::error::ASC_KEY_P8 is not a usable .p8 key. Paste the whole AuthKey_<id>.p8 file, BEGIN and END lines included."; exit 1; }
           echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
 
-      - name: Archive (signed automatically)
+      # The archive is built unsigned, then given its entitlements (push) with a
+      # local ad-hoc signature. Xcode's automatic signing would otherwise sign
+      # the archive for development first, and Apple will not make a
+      # development profile until an iPhone is registered to the team. App
+      # Store signing needs no devices, and happens at export below.
+      - name: Archive
         if: steps.mode.outputs.upload == 'true'
         working-directory: apps/mobile/ios
         run: |
           set -o pipefail
+          ARCHIVE="$RUNNER_TEMP/TrueGlaz.xcarchive"
           xcodebuild -workspace TrueGlaz.xcworkspace -scheme TrueGlaz -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/TrueGlaz.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
-            -quiet archive
+            -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGNING_ALLOWED=NO -quiet archive
+          APP="$ARCHIVE/Products/Applications/TrueGlaz.app"
+          test -d "$APP" || { echo "::error::No app in the archive"; exit 1; }
+          ENT=$(ls TrueGlaz/*.entitlements | head -1)
+          grep -q aps-environment "$ENT" || { echo "::error::$ENT has no push entitlement"; exit 1; }
+          # Inner code first, the app last, as codesign requires.
+          find "$APP" -depth \( -name '*.framework' -o -name '*.dylib' -o -name '*.appex' \) -print0 \
+            | xargs -0 -n1 codesign --force --sign - --timestamp=none
+          codesign --force --sign - --timestamp=none --entitlements "$ENT" "$APP"
+          echo "Archive entitlements:"; codesign -d --entitlements - --xml "$APP" 2>/dev/null | plutil -p - || true
 
-      - name: Upload to TestFlight
+      - name: Sign for the App Store and check it
         if: steps.mode.outputs.upload == 'true'
-        working-directory: apps/mobile/ios
         run: |
           set -o pipefail
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          opts() {
+            cat <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
+            <key>destination</key><string>$1</string>
             <key>teamID</key><string>${APPLE_TEAM_ID}</string>
             <key>signingStyle</key><string>automatic</string>
             <key>uploadSymbols</key><true/>
             <key>manageAppVersionAndBuildNumber</key><false/>
           </dict></plist>
           PLIST
+          }
+          opts export > "$RUNNER_TEMP/ExportLocal.plist"
+          opts upload > "$RUNNER_TEMP/ExportUpload.plist"
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/TrueGlaz.xcarchive" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportLocal.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          # Prove what is about to go to Apple: an App Store signature, and push.
+          cd "$RUNNER_TEMP" && rm -rf check && mkdir check && cd check && unzip -q ../export/*.ipa
+          codesign -dvv Payload/TrueGlaz.app 2>&1 | grep -E "^Authority=" | head -1
+          codesign -d --entitlements - --xml Payload/TrueGlaz.app 2>/dev/null > ent.plist
+          plutil -p ent.plist
+          grep -q "<key>aps-environment</key>" ent.plist || { echo "::error::The signed app has no push entitlement"; exit 1; }
+          codesign -dvv Payload/TrueGlaz.app 2>&1 | grep -q "Authority=Apple Distribution" \
+            || { echo "::error::The app is not signed for the App Store"; exit 1; }
+
+      - name: Upload to TestFlight
+        if: steps.mode.outputs.upload == 'true'
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/TrueGlaz.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportUpload.plist" -exportPath "$RUNNER_TEMP/upload" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
           echo "### Uploaded build $IOS_BUILD_NUMBER to TestFlight" >> "$GITHUB_STEP_SUMMARY"
