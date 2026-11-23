@@ -636,6 +636,8 @@ export const api = {
     post<Notifications>(`/profile/notifications/${id}/read`),
   markAllNotificationsRead: () => post<Notifications>('/profile/notifications/read-all'),
   updateProfile: (displayName: string) => patch<Profile>('/profile', { displayName }),
+  /** Saved unverified, no code (TG-178): SMS updates go there; it does not sign anyone in. */
+  updatePhone: (phone: string) => put<Profile>('/profile/phone', { phone }),
 
   /** Sends a code to the NEW contact: what needs proving is that you can read mail there. */
   requestContactCode: (contact: string) => post<CodeSent>('/profile/contact/request-code', { contact }),

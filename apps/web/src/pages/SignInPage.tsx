@@ -336,10 +336,10 @@ export function SignInPage() {
               )}
               <button
                 type="button"
-                className="tg-button tg-button--subtle"
+                className="tg-button signin__submit"
                 onClick={() => { setStep('contact'); setCode(''); setError(null) }}
               >
-                Use a different address
+                Use a different email
               </button>
             </form>
           ) : (

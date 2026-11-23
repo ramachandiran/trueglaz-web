@@ -189,3 +189,6 @@
 .profile__contact-input { display: flex; align-items: stretch; gap: var(--tg-space-2); }
 .profile__contact-input .tg-input { flex: 1; min-width: 0; }
 .profile__prefix { display: grid; place-items: center; padding: 0 var(--tg-space-3); border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); background: var(--tg-bg-sunken); }
+
+/* The sign-in email, shown but not editable (TG-179). */
+.profile__locked { padding: var(--tg-space-2) var(--tg-space-3); border: 1px dashed var(--tg-border-strong); border-radius: var(--tg-radius-md); background: var(--tg-bg-sunken); overflow-wrap: anywhere; }

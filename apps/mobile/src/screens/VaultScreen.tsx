@@ -13,6 +13,8 @@ import { Txt } from '../components/Txt'
 import { PageTitle, Pill, RoundIcon, Surface } from '../components/kit'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
+import { DateField } from '../components/DateField'
+import { todayIso } from '../components/dateField.shared'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
 import { ClaimSheet, CoverRow, PolicySheet, QuoteSheet, Sheet } from '../components/VaultCover'
 import { ModelThumb, useModelImages } from '../components/ModelImage'
@@ -231,7 +233,7 @@ function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => vo
       )}
       <Field label="Serial number" placeholder="Kept private & sealed" value={serial} onChangeText={setSerial} />
       <Field label="What you paid (₹)" placeholder="e.g. 130000" keyboardType="numeric" value={cost} onChangeText={setCost} />
-      <Field label="Purchase date (YYYY-MM-DD)" placeholder="2024-06-15" value={date} onChangeText={setDate} />
+      <DateField label="Purchase date" value={date} onChange={setDate} maximumDate={todayIso()} optional />
       <Muted size={t.size.xs}>We’ll estimate its value from our market and work out the warranty from the purchase date.</Muted>
       {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
       <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x2 }}>
