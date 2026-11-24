@@ -2,7 +2,7 @@
    components/console.css; this is what only the dashboard has. */
 .home__chart svg { display: block; margin-top: 4px; }
 .home__grid { stroke: var(--c-line-soft); }
-.home__axis { font-size: 11px; fill: var(--tg-text-muted); font-family: var(--tg-font-body); }
+.home__axis { font-size: 11px; fill: var(--tg-text-muted); font-family: var(--tg-font); }
 .home__bar { cursor: pointer; outline: none; }
 .home__bar-old { fill: var(--c-navy-soft); }
 .home__bar-recent { fill: var(--tg-brand); }
@@ -31,3 +31,62 @@
 
 /* Six stages read better as one column than as wrapped pairs. */
 .home .c-legend { grid-template-columns: 1fr; gap: 2px; }
+
+/* ---- TG-197: the template's Control room ---------------------------------- */
+.home__period { appearance: auto; padding-right: 10px; }
+.home__row2 { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; }
+@media (max-width: 1180px) { .home__row2 { grid-template-columns: minmax(0, 1fr); } }
+
+.home__seg { display: flex; gap: 6px; flex: none; }
+.home__seg button {
+  height: 36px; padding: 0 16px; border-radius: 18px; border: 1px solid var(--tg-border-strong); background: var(--tg-bg-raised);
+  color: var(--tg-text); font: 500 13.5px var(--tg-font); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.home__seg button[aria-pressed='true'] { background: var(--tg-brand); border-color: var(--tg-brand); color: var(--tg-on-brand); }
+.home__seg button[aria-pressed='true']::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--tg-cta); }
+.home__seg button:focus-visible { outline: 2px solid var(--tg-accent); outline-offset: 2px; }
+
+.home__big { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -4px 0 4px; }
+.home__bignum { font: 700 34px/1.15 var(--tg-font); letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.home__bigsub { color: var(--tg-text-muted); font-size: 13px; }
+.home__legend { margin-left: auto; display: flex; gap: 18px; list-style: none; padding: 0; font-size: 13px; }
+.home__legend li { display: flex; align-items: center; gap: 6px; }
+.home__key { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.home__key--sales { background: var(--tg-cta); }
+.home__key--comm { background: var(--tg-brand); }
+.home__key--ref { background: var(--tg-border-strong); }
+
+.home__svg { display: block; margin-top: 6px; overflow: visible; }
+.home__stripe-bg { fill: var(--tg-bg-hover); }
+.home__stripe { stroke: var(--tg-border-strong); opacity: 0.55; }
+.home__bar-empty { fill: none; stroke: var(--tg-border-strong); stroke-dasharray: 3 3; }
+.home__refund { fill: var(--tg-border-strong); }
+.home__comm { stroke: var(--tg-brand); stroke-width: 2; stroke-linejoin: round; }
+.home__comm-dot { fill: var(--tg-bg-raised); stroke: var(--tg-brand); stroke-width: 2; }
+.home__tip { fill: var(--tg-brand); }
+.home__tip-t { fill: var(--tg-on-brand); font: 600 13px var(--tg-font); }
+.home__tip-dot { fill: var(--tg-bg-raised); stroke: var(--tg-brand); stroke-width: 3; }
+.home__grid { stroke: var(--tg-border); stroke-dasharray: 4 5; }
+.home__axis { font-size: 12px; fill: var(--tg-text-muted); font-family: var(--tg-font); }
+.home__axis--on { fill: var(--tg-text); font-weight: 600; }
+.home__bar:focus-visible rect[fill='transparent'] { stroke: var(--tg-brand); stroke-width: 2; rx: 8px; }
+
+.home__sla { display: flex; flex-direction: column; }
+.home__gauge { display: block; width: 100%; max-width: 300px; margin: 6px auto 0; }
+.home__seg-on { fill: var(--tg-cta); stroke: var(--tg-cta); stroke-width: 6; stroke-linejoin: round; }
+.home__seg-mid { fill: #ffa77f; stroke: #ffa77f; stroke-width: 6; stroke-linejoin: round; }
+.home__seg-soft { fill: #ffd3bb; stroke: #ffd3bb; stroke-width: 6; stroke-linejoin: round; }
+.home__seg-off { fill: var(--tg-bg-hover); stroke: var(--tg-bg-hover); stroke-width: 6; stroke-linejoin: round; }
+.home__gauge-n { font: 600 36px var(--tg-font); letter-spacing: -1px; fill: var(--tg-text); }
+.home__gauge-l { font: 400 12.5px var(--tg-font); fill: var(--tg-text-muted); }
+.home__sla-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 12px; }
+.home__sla-row small { display: block; color: var(--tg-text-muted); font-size: 12px; }
+.home__sla-row b { font: 600 20px var(--tg-font); letter-spacing: -0.02em; }
+.home__sla-target { font-size: 13px; color: var(--tg-text-muted); }
+.home__sla-target b { font-size: 17px; color: var(--tg-text); }
+.home__meter { position: relative; height: 8px; border-radius: 4px; background: var(--tg-bg-sunken); margin-top: 10px; }
+.home__meter span { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--tg-cta); }
+.home__meter i { position: absolute; top: -4px; width: 2px; height: 16px; background: var(--tg-brand); border-radius: 1px; }
+.home__sla-now { margin: 12px 0 0; font-size: 13px; color: var(--tg-text-muted); }
+.home__sla-now b { color: var(--tg-text); }
+.home__down svg { transform: rotate(180deg); }

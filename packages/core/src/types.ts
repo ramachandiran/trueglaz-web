@@ -72,7 +72,7 @@ export interface ConsignmentItem {
   underWarranty: boolean | null
   hasBill: boolean
   hasBox: boolean
-  /** The original box still has its accessories in it. Implies hasBox. */
+  /** Accessories come with it (strap, caps, charger…), with or without the original box (TG-189). */
   hasAccessories: boolean
   serialNumber: string | null
   internalSku: string
@@ -90,6 +90,8 @@ export interface ConsignmentItem {
   returnedAt: string | null
   createdAt: string
   updatedAt: string
+  /** Only in the seller's own list (/items/mine): their last move was withdrawing it (TG-191). */
+  withdrawnBySeller?: boolean
 }
 
 /** A name on the bench roster, for the picker. Not a directory entry. */
@@ -1692,6 +1694,42 @@ export interface StaffHome {
   /** Units sold per month (India time), oldest first, twelve of them. */
   months?: { month: string; units: number; valueMinor: number }[]
   recentOrders?: { id: string; orderNumber: string; state: string; totalMinor: number; at: string | null; buyerName: string | null; lineStates: string[] }[]
+}
+
+/** One period of sales (TG-196). Commission and refunds are null for anyone but an administrator. */
+export interface SalesPoint {
+  /** `YYYY-MM` for a month, `YYYY-MM-DD` (its Monday) for a week. */
+  period: string
+  units: number
+  salesMinor: number
+  commissionMinor: number | null
+  refundsMinor: number | null
+}
+
+/** Inspection against the 48-hour promise (TG-196). */
+export interface InspectionSla {
+  windowHours: number
+  targetPct: number
+  doneThisMonth: number
+  withinThisMonth: number
+  /** Null when nothing finished this month. */
+  withinPct: number | null
+  onBench: number
+  pastWindow: number
+  oldestHours: number | null
+  avgHoursLast7: number | null
+  avgHoursPrev7: number | null
+  passedLast7: number
+  failedLast7: number
+}
+
+/** The Control room's charts. */
+export interface StaffInsights {
+  months: SalesPoint[]
+  weeks: SalesPoint[]
+  inspection: InspectionSla
+  /** Each unit on the bench and when it arrived at the hub (null when there is no record). */
+  bench?: { itemId: string; receivedAt: string | null }[]
 }
 
 /** A seller's day: where their gear is, what they are owed, what is waiting on them. */

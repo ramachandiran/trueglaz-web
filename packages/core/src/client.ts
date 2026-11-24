@@ -5,7 +5,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail, ManagedListing, NewModel,
-  AccountDeletionStatus, StaffAccountDeletion, PublicInvite, Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutQueueRow, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, ReturnCase, ReturnCaseView, ReturnForBuyer,
+  AccountDeletionStatus, StaffAccountDeletion, PublicInvite, Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutQueueRow, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, StaffInsights, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, InboundClock, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -386,10 +386,18 @@ export const api = {
    * reasonably sized JPEG. That preparation stays in each app, so this package
    * needs nothing platform-specific.
    */
-  uploadMedia: async (body: Blob, contentType: string, target: UploadTarget): Promise<MediaView> => {
+  uploadMedia: async (body: Blob, contentType: string, target: UploadTarget, onProgress?: (f: number) => void): Promise<MediaView> => {
     const intent = await post<UploadIntent>('/media/intent', { ...target, contentType, bytes: body.size })
-    const put = await fetch(intent.url, { method: intent.method, headers: intent.headers, body })
-    if (!put.ok) throw new ApiError(put.status, 'The upload did not go through — please try again')
+    // A relative target (the local media store) must go to the API's origin,
+    // not the page's: from the app there is no page origin at all.
+    const putUrl = apiAbsolute(intent.url)
+    if (onProgress) {
+      // With progress (the app's photo tiles fill as the bytes go, TG-192).
+      await putWithProgress(putUrl, intent.method, intent.headers, body, onProgress)
+    } else {
+      const put = await fetch(putUrl, { method: intent.method, headers: intent.headers, body })
+      if (!put.ok) throw new ApiError(put.status, 'The upload did not go through — please try again')
+    }
     return post<MediaView>('/media/seal', { ticket: intent.ticket })
   },
   recentlySold: (limit = 6) => get<SoldListing[]>(`/listings/recently-sold?limit=${limit}`),
@@ -493,6 +501,7 @@ export const api = {
   /** Everything that happened to a line: the buyer's part of it, or all of it for staff. */
   lineHistory: (lineId: string) => get<OrderLineEvent[]>(`/order-lines/${lineId}/history`),
   staffHome: () => get<StaffHome>('/staff/home'),
+  staffInsights: () => get<StaffInsights>('/staff/insights'),
   sellerHome: () => get<SellerHome>('/seller/home'),
   buyerHome: () => get<BuyerHome>('/buyer/home'),
 

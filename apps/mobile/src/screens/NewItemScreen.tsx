@@ -2,12 +2,20 @@ import { uploadPhoto } from '../media/uploadPhoto'
 import { FormScroll } from '../components/FormScroll'
 import { useEffect, useMemo, useRef, useState, type ElementRef } from 'react'
 import { Image, Pressable, ScrollView, Switch, TextInput, View } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import type * as ImagePicker from 'expo-image-picker'
+import { openSettings, pickPhotos, type PhotoSource } from '../media/pickPhotos'
+import { SelectField } from '../components/SelectField'
+import { PhotoTile, UploadProgress, type UploadStatus } from '../components/PhotoUpload'
+import { useReducedMotion } from '../components/motion'
 import { api, useApi, type ProductModel } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Card, Loading, Muted, SectionTitle } from '../components/ui'
+
+/** How many photos one item can carry. */
+const MAX_PHOTOS = 12
 
 export function NewItemScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
@@ -46,8 +54,12 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   const [hasAccessories, setHasAccessories] = useState(false)
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([])
   const [busy, setBusy] = useState(false)
-  const [progress, setProgress] = useState<string | null>(null)
+  // TG-192: how each photo's upload is going, and the batch as a whole.
+  const [uploads, setUploads] = useState<Record<number, UploadStatus>>({})
+  const [batch, setBatch] = useState<{ done: number; total: number; current: number } | null>(null)
+  const reducedMotion = useReducedMotion()
   const [error, setError] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<{ text: string; settings?: boolean } | null>(null)
   const scroller = useRef<{ scrollTo: (o: { y: number; animated?: boolean }) => void } | null>(null)
   const cardY = useRef(0)
   const modelY = useRef(0)
@@ -77,11 +89,14 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
     if (cam) setCategoryId(cam.id)
   }, [categories.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addPhotos = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!perm.granted) { setError('Allow photo access to add photos.'); return }
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, selectionLimit: 12, quality: 0.7 })
-    if (!res.canceled) setPhotos((prev) => [...prev, ...res.assets].slice(0, 12))
+  // Camera or library (TG-187): the iPhone library picker has no camera in it.
+  const addPhotos = async (source: PhotoSource) => {
+    setPhotoError(null)
+    const room = MAX_PHOTOS - photos.length
+    if (room <= 0) return
+    const got = await pickPhotos(source, { multiple: true, limit: room })
+    if (got.error) { setPhotoError({ text: got.error, settings: got.needsSettings }); return }
+    if (got.assets.length) setPhotos((prev) => [...prev, ...got.assets].slice(0, MAX_PHOTOS))
   }
 
   const save = async () => {
@@ -121,12 +136,36 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       // Upload any photos onto the new item before leaving, so it never reaches
       // the queue without the pictures the seller meant to send. Resumes where a
       // failed attempt stopped.
-      for (let i = c.uploaded; i < photos.length; i++) {
-        setProgress(`Uploading photo ${i + 1} of ${photos.length}…`)
-        await uploadPhoto(photos[i], { ownerType: 'item', ownerId: c.id, role: 'seller_submission' })
-        c.uploaded = i + 1
+      if (c.uploaded < photos.length) {
+        const total = photos.length
+        setUploads((u) => {
+          const next = { ...u }
+          for (let i = c.uploaded; i < total; i++) next[i] = { phase: 'waiting', progress: 0 }
+          return next
+        })
+        setBatch({ done: c.uploaded, total, current: 0 })
+        for (let i = c.uploaded; i < total; i++) {
+          setUploads((u) => ({ ...u, [i]: { phase: 'uploading', progress: 0 } }))
+          let shown = 0
+          try {
+            await uploadPhoto(photos[i], { ownerType: 'item', ownerId: c.id, role: 'seller_submission' }, (f) => {
+              // A step every 2% is smooth enough and spares the screen hundreds of redraws.
+              if (f < 1 && f - shown < 0.02) return
+              shown = f
+              setUploads((u) => ({ ...u, [i]: { phase: 'uploading', progress: f } }))
+              setBatch({ done: i, total, current: f })
+            })
+          } catch (e) {
+            setUploads((u) => ({ ...u, [i]: { phase: 'failed', progress: shown } }))
+            throw e
+          }
+          c.uploaded = i + 1
+          setUploads((u) => ({ ...u, [i]: { phase: 'done', progress: 1 } }))
+          setBatch({ done: i + 1, total, current: 0 })
+        }
+        // A beat to see them all ticked before the screen moves on.
+        if (!reducedMotion) await new Promise((r) => setTimeout(r, 900))
       }
-      setProgress(null)
       // TG-138: the next page is the review — check it, edit it, or submit it.
       if (editItemId) navigation.goBack()
       else navigation.replace('SellerItem', { id: c.id })
@@ -135,7 +174,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       setError(created.current
         ? `Your item is saved, but a photo didn't upload (${msg}). Tap the button again to finish uploading.`
         : msg)
-    } finally { setBusy(false); setProgress(null) }
+    } finally { setBusy(false) }
   }
 
   if (categories.loading || brands.loading || grades.loading || (editItemId && !editing.data)) {
@@ -150,8 +189,10 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       </Card>
 
       <Card style={{ gap: t.space.x3 }}>
-        <SectionTitle>Brand</SectionTitle>
-        <ChipRow options={(brands.data ?? []).map((b) => ({ value: b.id, label: b.name }))} selected={brandId} onSelect={(v) => { setBrandId(v); setProductModelId(null) }} />
+        {/* A drop-down with search, not a wall of chips (TG-186). */}
+        <SelectField label="Brand" title="Choose a brand" placeholder="Choose a brand" value={brandId}
+          options={[...(brands.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)).map((b) => ({ value: b.id, label: b.name }))}
+          onChange={(v) => { if (v !== brandId) { setBrandId(v); setProductModelId(null) } }} />
       </Card>
 
       {/* zIndex: the suggestions open upwards over the cards above (TG-138). */}
@@ -189,7 +230,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
         {(editPhotos.data?.length ?? 0) > 0 && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
             {editPhotos.data!.map((m) => (
-              <Image key={m.id} source={{ uri: m.sizes[200] ?? m.url }} style={{ width: 88, height: 88, borderRadius: t.radius.md }} resizeMode="cover" />
+              <PhotoTile key={m.id} uri={m.sizes[200] ?? m.url} />
             ))}
           </View>
         )}
@@ -197,17 +238,28 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
         {photos.length > 0 && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
             {photos.map((p, i) => (
-              <View key={p.uri + i} style={{ position: 'relative' }}>
-                <Image source={{ uri: p.uri }} style={{ width: 88, height: 88, borderRadius: t.radius.md }} resizeMode="cover" />
-                <Pressable accessibilityRole="button" accessibilityLabel={`Remove photo ${i + 1}`} onPress={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} hitSlop={11}
-                  style={{ position: 'absolute', top: -6, right: -6, backgroundColor: t.colors.bad, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }}>
-                  <Txt style={{ color: '#fff', fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>✕</Txt>
-                </Pressable>
-              </View>
+              <PhotoTile key={p.uri + i} uri={p.uri} status={uploads[i]} removeLabel={`Remove photo ${i + 1}`}
+                onRemove={busy ? undefined : () => { setPhotos((prev) => prev.filter((_, j) => j !== i)); setUploads({}) }} />
             ))}
           </View>
         )}
-        <Button label={photos.length ? 'Add more photos' : 'Add photos'} variant="ghost" onPress={addPhotos} />
+        {photos.length < MAX_PHOTOS ? (
+          <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
+            <PhotoButton icon="camera-outline" label="Take photo" onPress={() => addPhotos('camera')} />
+            <PhotoButton icon="images-outline" label="From library" onPress={() => addPhotos('library')} />
+          </View>
+        ) : <Muted size={t.size.xs}>That's the maximum of {MAX_PHOTOS} photos.</Muted>}
+        {photos.length > 0 && <Muted size={t.size.xs}>{photos.length} of {MAX_PHOTOS} photos added</Muted>}
+        {photoError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
+            <Txt style={{ color: t.colors.bad, fontSize: t.size.sm, flexShrink: 1 }}>{photoError.text}</Txt>
+            {photoError.settings && (
+              <Pressable onPress={openSettings} accessibilityRole="button" hitSlop={8}>
+                <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never, textDecorationLine: 'underline' }}>Open Settings</Txt>
+              </Pressable>
+            )}
+          </View>
+        )}
       </Card>
 
       <Card style={{ gap: t.space.x3 }}>
@@ -220,15 +272,19 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
 
       <Card style={{ gap: t.space.x1 }}>
         <SectionTitle>What's included</SectionTitle>
-        <Toggle label="Under warranty" value={underWarranty} onChange={setUnderWarranty} />
-        <Toggle label="Original bill" value={hasBill} onChange={setHasBill} />
-        <Toggle label="Original box" value={hasBox} onChange={setHasBox} />
-        <Toggle label="Box accessories" value={hasAccessories} onChange={setHasAccessories} />
+        <Muted size={t.size.xs}>Switch on everything that comes with it. Complete kits sell faster.</Muted>
+        <Toggle icon="shield-checkmark-outline" label="Under warranty" hint="The maker's warranty is still running" value={underWarranty} onChange={setUnderWarranty} />
+        <Toggle icon="receipt-outline" label="Original bill" hint="The purchase invoice" value={hasBill} onChange={setHasBill} />
+        <Toggle icon="cube-outline" label="Original box" hint="The box it came in" value={hasBox} onChange={setHasBox} />
+        {/* Not tied to the box any more (TG-189). */}
+        <Toggle icon="bag-handle-outline" label="Accessories" hint="Strap, caps, charger and the like, with or without the box" value={hasAccessories} onChange={setHasAccessories} last />
       </Card>
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
-      {progress && <Muted size={t.size.xs}>{progress}</Muted>}
-      <Button label={created.current ? 'Finish uploading photos' : editItemId ? 'Save and review' : 'Review'} variant="cta" loading={busy} onPress={save} />
+      {batch && <UploadProgress done={batch.done} total={batch.total} current={batch.current}
+        photos={photos.map((p, i) => ({ uri: p.uri, status: uploads[i] }))} />}
+      <Button label={batch && busy ? (batch.done >= batch.total ? 'All uploaded' : `Uploading ${batch.done + 1} of ${batch.total}…`) : created.current ? 'Finish uploading photos' : editItemId ? 'Save and review' : 'Review'}
+        variant="cta" loading={busy} onPress={save} />
     </FormScroll>
   )
 }
@@ -314,12 +370,42 @@ function ChipRow({ options, selected, onSelect }: { options: { value: string; la
   )
 }
 
-function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+/**
+ * One "what's included" choice (TG-188). The switch is drawn so both states
+ * show on the cream card: a dark track when off (the old pale one all but
+ * disappeared), orange when on, a white knob either way, and iOS's own
+ * off colour set to match.
+ */
+function Toggle({ icon, label, hint, value, onChange, last }: {
+  icon: React.ComponentProps<typeof Ionicons>['name']; label: string; hint?: string; value: boolean; onChange: (v: boolean) => void; last?: boolean
+}) {
   const t = useTheme()
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: t.space.x2 }}>
-      <Txt style={{ color: t.colors.text }}>{label}</Txt>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: t.colors.accent, false: t.colors.border }} thumbColor={t.colors.bgRaised} />
-    </View>
+    <Pressable onPress={() => onChange(!value)} accessibilityRole="switch" accessibilityState={{ checked: value }} accessibilityLabel={label} accessibilityHint={hint}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3, paddingVertical: t.space.x3, borderBottomWidth: last ? 0 : 1, borderBottomColor: t.colors.border }}>
+      <View style={{ width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: value ? t.colors.accentSoft : t.colors.bgSunken }}>
+        <Ionicons name={icon} size={18} color={value ? t.colors.accent : t.colors.textMuted} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>{label}</Txt>
+        {hint && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{hint}</Txt>}
+      </View>
+      <Switch value={value} onValueChange={onChange} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
+        trackColor={{ true: t.colors.cta, false: t.colors.borderInput }} ios_backgroundColor={t.colors.borderInput} thumbColor="#ffffff"
+        {...({ activeThumbColor: '#ffffff' } as object) /* the browser build's name for it */} />
+    </Pressable>
+  )
+}
+
+function PhotoButton({ icon, label, onPress }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void }) {
+  const t = useTheme()
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
+      style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48,
+        borderRadius: t.radius.md, borderWidth: 1.5, borderColor: t.colors.accent, borderStyle: 'dashed',
+        backgroundColor: pressed ? t.colors.accentSoft : 'transparent' })}>
+      <Ionicons name={icon} size={18} color={t.colors.accent} />
+      <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{label}</Txt>
+    </Pressable>
   )
 }
