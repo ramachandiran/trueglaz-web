@@ -1,5 +1,5 @@
 import { OfflineNotice } from './components/OfflineNotice'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import { isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
 import { StaffShell } from './components/StaffShell'
@@ -30,7 +30,6 @@ import { StaffHomePage } from './pages/StaffHomePage'
 import { InspectPage } from './pages/InspectPage'
 import { InventoryDashboard } from './pages/InventoryDashboard'
 import { ItemDetailPage } from './pages/ItemDetailPage'
-import { ItemsPage } from './pages/ItemsPage'
 import { ListingDetailPage } from './pages/ListingDetailPage'
 import { NewSubmissionPage } from './pages/NewSubmissionPage'
 import { SubmissionLinkPage } from './pages/SubmissionLinkPage'
@@ -120,7 +119,8 @@ export function App() {
           <Route path="/admin/inventory" element={<Guard need="staff"><InventoryDashboard /></Guard>} />
           <Route path="/admin/operations" element={<Guard need="ops"><OpsPage /></Guard>} />
           <Route path="/admin/operations/inspect/:itemId" element={<Guard need="ops"><InspectPage /></Guard>} />
-          <Route path="/admin/operations/items" element={<Guard need="ops"><ItemsPage /></Guard>} />
+          {/* One inventory (TG-203): the old Items view lands on Inventory with its stage, or a technician's bench. */}
+          <Route path="/admin/operations/items" element={<Guard need="ops"><ItemsRedirect /></Guard>} />
           {/* Ops, not staff: the bench check on a returned unit is a technician's. */}
           <Route path="/admin/returns" element={<Guard need="ops"><ReturnsPage /></Guard>} />
           <Route path="/admin/fulfilment" element={<Guard need="staff"><FulfilmentPage /></Guard>} />
@@ -160,4 +160,13 @@ export function App() {
       </Routes>
     </BrowserRouter>
   )
+}
+
+/** Operations › Items was a second inventory (UX-02): send people to the one list. */
+function ItemsRedirect() {
+  const { session } = useSession()
+  const [params] = useSearchParams()
+  if (!isStaff(session)) return <Navigate to="/admin/operations?tab=inspect" replace />
+  const state = params.get('state')
+  return <Navigate to={state ? `/admin/inventory?state=${encodeURIComponent(state)}` : '/admin/inventory'} replace />
 }
