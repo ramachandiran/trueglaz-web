@@ -1696,6 +1696,40 @@ export interface StaffHome {
   recentOrders?: { id: string; orderNumber: string; state: string; totalMinor: number; at: string | null; buyerName: string | null; lineStates: string[] }[]
 }
 
+/** One period of sales (TG-196). Commission and refunds are null for anyone but an administrator. */
+export interface SalesPoint {
+  /** `YYYY-MM` for a month, `YYYY-MM-DD` (its Monday) for a week. */
+  period: string
+  units: number
+  salesMinor: number
+  commissionMinor: number | null
+  refundsMinor: number | null
+}
+
+/** Inspection against the 48-hour promise (TG-196). */
+export interface InspectionSla {
+  windowHours: number
+  targetPct: number
+  doneThisMonth: number
+  withinThisMonth: number
+  /** Null when nothing finished this month. */
+  withinPct: number | null
+  onBench: number
+  pastWindow: number
+  oldestHours: number | null
+  avgHoursLast7: number | null
+  avgHoursPrev7: number | null
+  passedLast7: number
+  failedLast7: number
+}
+
+/** The Control room's charts. */
+export interface StaffInsights {
+  months: SalesPoint[]
+  weeks: SalesPoint[]
+  inspection: InspectionSla
+}
+
 /** A seller's day: where their gear is, what they are owed, what is waiting on them. */
 export interface SellerHome {
   status: { canSell: boolean; kycStatus: string; sellingState: string; hasPayoutAccount: boolean }
