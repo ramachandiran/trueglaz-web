@@ -3,6 +3,7 @@ import { api, ApiError, dateTime, money, useApi, type CommissionBand } from '@tr
 import { ErrorNote, Loading } from '../../components/ui'
 import { fromPaise, toPaise } from './SettingRow'
 import { StagedSettings } from './SettingsGroupPage'
+import { SectionHead } from './SettingsLayout'
 
 type Draft = { from: string; to: string; percent: string }
 
@@ -87,12 +88,11 @@ export function FeesSettingsPage() {
   const calc = salePaise && bands && !('error' in bands) ? quote(Number(salePaise), bands.ok, gst) : null
 
   return (
-    <section>
-      <h2 className="st__h">Fees & commission</h2>
-      <p className="st__lede">
+    <section className="st__page">
+      <SectionHead page="fees">
         What TrueGlaz keeps from each sale, and what a buyer pays for delivery. A change applies to prices proposed
         from now on; every item already priced keeps the fee its seller agreed to.
-      </p>
+      </SectionHead>
 
       <div className="st__card">
         <h3 className="st__card-title">Commission bands</h3>

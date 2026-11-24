@@ -4,6 +4,8 @@ import { api, ApiError, dateTime, useApi, type PlatformSetting } from '@trueglaz
 import { ErrorNote, Loading } from '../../components/ui'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { readable, SettingRow, shownValue, storedValue } from './SettingRow'
+import { SectionHead } from './SettingsLayout'
+import { Icon, ICONS } from '../../components/StaffShell'
 
 const COPY: Record<string, { title: string; lede: string }> = {
   selling: {
@@ -33,24 +35,37 @@ export function SettingsGroupPage({ group }: { group: 'selling' | 'payouts' | 's
   const recent = (changes.data ?? []).filter((c) => byKey.has(c.key)).slice(0, 8)
   const copy = COPY[group]
 
+  const lastAt = mine.map((x) => x.updatedAt).filter(Boolean).sort().pop()
   return (
-    <section>
-      <h2 className="st__h">{copy.title}</h2>
-      <p className="st__lede">{copy.lede}</p>
+    <section className="st__page">
+      <SectionHead page={group} aside={<span className="c-chip2 c-chip2--navy">{mine.length} setting{mine.length === 1 ? '' : 's'}</span>}>
+        {copy.lede}
+      </SectionHead>
       {rows.loading && !rows.data && <Loading label="Loading settings" />}
       {rows.error && <ErrorNote error={rows.error} onRetry={rows.reload} />}
-      <StagedSettings settings={mine} onSaved={() => { rows.reload(); changes.reload() }} />
-      {recent.length > 0 && (
-        <>
-          <h3 className="st__kicker">Recent changes</h3>
-          <ul className="st__changes">
-            {recent.map((c, i) => {
-              const s = byKey.get(c.key)!
-              return <li key={i}><strong>{s.label}</strong>: {readable(s, c.oldValue)} → {readable(s, c.newValue)} <span className="st__muted">· {c.changedAt && dateTime(c.changedAt)}</span></li>
-            })}
-          </ul>
-        </>
-      )}
+      <div className="st__cols">
+        <StagedSettings settings={mine} onSaved={() => { rows.reload(); changes.reload() }} />
+        <aside className="st__card st__rail" aria-label="Recent changes">
+          <div className="st__card-head"><h3>Recent changes</h3>{lastAt && <span className="st__muted">{dateTime(lastAt)}</span>}</div>
+          {recent.length === 0 ? <p className="st__muted">Nothing changed here yet.</p> : (
+            <ol className="st__tl">
+              {recent.map((c, i) => {
+                const s = byKey.get(c.key)!
+                return (
+                  <li key={i}>
+                    <span className="st__tl-dot"><Icon d={ICONS.history} /></span>
+                    <div>
+                      <b>{s.label}</b>
+                      <div className="st__tl-diff"><span className="st__diff-was">{readable(s, c.oldValue)}</span> → <span className="st__diff-now">{readable(s, c.newValue)}</span></div>
+                      <small className="st__muted">{c.changedAt && dateTime(c.changedAt)}{c.changedBy && !/^[0-9a-f-]{36}$/i.test(c.changedBy) ? ` · ${c.changedBy}` : ''}</small>
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+        </aside>
+      </div>
     </section>
   )
 }

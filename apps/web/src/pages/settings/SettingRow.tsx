@@ -34,25 +34,27 @@ export function SettingRow({ s, value, onChange, error }: {
           {changed && <span className="c-chip2 c-chip2--warn st__changed">Not saved</span>}
         </label>
         <p className="st__row-desc">{s.description}</p>
-        <p className="st__row-meta">
-          {range && <>Allowed: {range}</>}
-          {s.updatedAt && <> · last changed {dateTime(s.updatedAt)}</>}
-        </p>
+        {s.updatedAt && <p className="st__row-meta">Last changed {dateTime(s.updatedAt)}</p>}
       </div>
       <div className="st__row-edit">
         {isBool ? (
-          <select id={`set-${s.key}`} className="tg-input st__input" value={value} onChange={(e) => onChange(e.target.value)}>
-            <option value="true">On</option>
-            <option value="false">Off</option>
-          </select>
+          // A switch, staged like every other change until Review and save.
+          <button id={`set-${s.key}`} type="button" role="switch" aria-checked={value === 'true'}
+            className={`st__switch${value === 'true' ? ' st__switch--on' : ''}`} onClick={() => onChange(value === 'true' ? 'false' : 'true')}>
+            <span className="st__switch-knob" />
+            <span className="st__switch-text">{value === 'true' ? 'On' : 'Off'}</span>
+          </button>
         ) : (
-          <span className="st__field">
-            {rupees && <span className="st__prefix">₹</span>}
-            <input id={`set-${s.key}`} className="tg-input st__input" inputMode={isText ? 'text' : 'decimal'} value={value}
-              aria-invalid={!!error || undefined} aria-describedby={error ? `set-${s.key}-err` : undefined}
-              onChange={(e) => onChange(e.target.value)} />
-            {!rupees && !isText && <span className="st__suffix">{unitWord(s.unit)}</span>}
-          </span>
+          <div className="st__ig">
+            <span className={`st__field${isText ? ' st__field--text' : ''}`}>
+              {rupees && <span className="st__prefix">₹</span>}
+              <input id={`set-${s.key}`} className="st__input" inputMode={isText ? 'text' : 'decimal'} value={value}
+                aria-invalid={!!error || undefined} aria-describedby={[range ? `set-${s.key}-range` : '', error ? `set-${s.key}-err` : ''].filter(Boolean).join(' ') || undefined}
+                onChange={(e) => onChange(e.target.value)} />
+              {!rupees && !isText && <span className="st__suffix">{unitWord(s.unit)}</span>}
+            </span>
+            {range && <small id={`set-${s.key}-range`} className="st__range">Allowed {range}</small>}
+          </div>
         )}
         {changed && <button className="st__undo" onClick={() => onChange(shown)}>Undo</button>}
       </div>

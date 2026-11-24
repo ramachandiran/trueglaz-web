@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { api, ApiError, useApi, type Category } from '@trueglaz/core'
+import { SectionHead } from './SettingsLayout'
 
 /**
  * Adding to the gear catalogue: a new brand, or a new model under a brand.
@@ -25,12 +26,11 @@ export function CatalogueSettingsPage() {
   }, [models.data])
 
   return (
-    <section>
-      <h2 className="st__h">Catalogue</h2>
-      <p className="st__lede">
+    <section className="st__page">
+      <SectionHead page="catalogue">
         The brands and models the platform knows about. Anything added here is available straight away when a seller
         consigns gear — no deploy. Existing entries are not edited here.
-      </p>
+      </SectionHead>
 
       <AddBrand onDone={() => brands.reload()} brandCount={brands.data?.length ?? 0} />
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, ApiError, dateTime, useApi, type CompanyProfile } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../../components/ui'
+import { SectionHead } from './SettingsLayout'
 
 const GSTIN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
 
@@ -66,12 +67,11 @@ export function CompanySettingsPage() {
   )
 
   return (
-    <section>
-      <h2 className="st__h">Company & invoices</h2>
-      <p className="st__lede">
+    <section className="st__page">
+      <SectionHead page="company">
         Printed at the top of every tax invoice. Invoices keep the details they were issued with, so changing them here
         applies to invoices from now on.
-      </p>
+      </SectionHead>
       {company.data.source === 'server' && (
         <p className="st__banner">
           Not saved here yet: invoices are using the server's configuration{company.data.profile.legalName ? ` (“${company.data.profile.legalName}”)` : ' (which is empty, so they say “TrueGlaz”)'}.
