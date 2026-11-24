@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError, CANCEL_REASONS, dateOnly, dateTime, isAdmin, money, useApi, useSession, type StaffCancelRow, type StaffOrderLine } from '@trueglaz/core'
 import { QueueScreen } from '../components/QueueScreen'
@@ -7,6 +7,7 @@ import { Icon, ICONS } from '../components/StaffShell'
 import { useQueryState } from '../components/useQueryState'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { FactGrid, PanelSection, SidePanel } from '../components/SidePanel'
 import { LineHistory } from '../components/LineHistory'
 import { COURIER_CHOICES, courierName } from '../components/couriers'
 import './OpsPage.css'
@@ -66,7 +67,10 @@ export function FulfilmentPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [search, setSearch] = useQueryState('q')
   const [page, setPage] = useState(1)
-  const [open, setOpen] = useState<string | null>(null)
+  // TG-205: a line opens as a record over the queue; the address keeps it.
+  const [openParam, setOpenParam] = useQueryState('open')
+  const open = openParam || null
+  const setOpen = (id: string | null) => setOpenParam(id ?? '')
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [done, setDone] = useState(0)
   const perPage = 25
@@ -118,7 +122,7 @@ export function FulfilmentPage() {
         subtitle="Sold items on their way to buyers. Each step is recorded: who, when, which courier and what it cost."
         tabs={TABS.map((t) => ({ key: t.key, label: t.label, count: count(t.key) }))}
         active={tab}
-        onTab={(k) => { setTab(k as Tab); setPage(1); setOpen(null); setNotice(null) }}
+        onTab={(k) => { setTab(k as Tab); setPage(1); setNotice(null) }}
         search={search}
         onSearch={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Search by order, SKU, item, buyer or tracking…"
@@ -159,8 +163,7 @@ export function FulfilmentPage() {
             </thead>
             <tbody>
               {shownCancels.map((r) => (
-                <Fragment key={r.request.id}>
-                  <tr>
+                  <tr key={r.request.id}>
                     <td>
                       <div className="ful__item">
                         <span className="ops__pic"><ModelPhoto modelId={r.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
@@ -188,17 +191,10 @@ export function FulfilmentPage() {
                       <div className="ful__buttons">
                         <button type="button" className="tg-button tg-button--primary" onClick={() => setDialog({ kind: 'cancel-approve', row: r })}>Approve</button>
                         <button type="button" className="tg-button" onClick={() => setDialog({ kind: 'cancel-decline', row: r })}>Decline</button>
-                        <button type="button" className="tg-button tg-button--subtle" aria-expanded={open === r.request.orderLineId}
-                          onClick={() => setOpen(open === r.request.orderLineId ? null : r.request.orderLineId)}>
-                          {open === r.request.orderLineId ? 'Hide history' : 'History'}
-                        </button>
+                        <button type="button" className="tg-button tg-button--subtle" onClick={() => setOpen(r.request.orderLineId)}>Open</button>
                       </div>
                     </td>
                   </tr>
-                  {open === r.request.orderLineId && (
-                    <tr className="ful__history"><td colSpan={5}><LineHistory lineId={r.request.orderLineId} staff refreshKey={done} /></td></tr>
-                  )}
-                </Fragment>
               ))}
             </tbody>
           </table>
@@ -215,8 +211,7 @@ export function FulfilmentPage() {
           </thead>
           <tbody>
             {shown.map((l) => (
-              <Fragment key={l.id}>
-                <tr>
+                <tr key={l.id}>
                   <td>
                     <div className="ful__item">
                       <span className="ops__pic"><ModelPhoto modelId={l.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
@@ -246,24 +241,69 @@ export function FulfilmentPage() {
                   <td className="ful__act">
                     <div className="ful__buttons">
                       <RowAction line={l} admin={admin} onOpen={setDialog} />
-                      <button type="button" className="tg-button tg-button--subtle" aria-expanded={open === l.id}
-                        onClick={() => setOpen(open === l.id ? null : l.id)}>
-                        {open === l.id ? 'Hide history' : 'History'}
-                      </button>
+                      <button type="button" className="tg-button tg-button--subtle" onClick={() => setOpen(l.id)}>Open</button>
                     </div>
                   </td>
                 </tr>
-                {open === l.id && (
-                  <tr className="ful__history">
-                    <td colSpan={5}><LineHistory lineId={l.id} staff refreshKey={done} /></td>
-                  </tr>
-                )}
-              </Fragment>
             ))}
           </tbody>
         </table>
         )}
       </QueueScreen>
+
+      {open && (() => {
+        const l = rows.find((x) => x.id === open)
+        const c = (cancels.data ?? []).find((x) => x.request.orderLineId === open)
+        if (!l && !c) return null
+        const title = l ? (l.title?.split('·')[0].trim() ?? 'Item') : c!.itemLabel
+        const order = l?.orderNumber ?? c?.orderNumber ?? '—'
+        const st = l ? lineStage(l) : null
+        return (
+          <SidePanel open onClose={() => setOpen(null)} eyebrow={`Order · ${order}`} title={title}
+            subtitle={<>{(l?.buyerName ?? c?.buyerName) ?? 'Buyer'} · {money(l ? l.itemPriceMinor : c!.amountMinor)}</>}
+            badges={<>
+              {st && <span className={`c-chip2 c-chip2--${st.tone}`}>{st.label}</span>}
+              {(c || l?.cancelRequested) && <span className="c-chip2 c-chip2--bad">Buyer asked to cancel</span>}
+              {l && <span className="c-chip2 c-chip2--navy">{l.gradeCodeAtSale}</span>}
+            </>}
+            footer={<>
+              {c && <>
+                <button type="button" className="c-btn c-btn--cta c-btn--sm" onClick={() => setDialog({ kind: 'cancel-approve', row: c })}>Approve cancellation</button>
+                <button type="button" className="c-btn c-btn--sm" onClick={() => setDialog({ kind: 'cancel-decline', row: c })}>Decline</button>
+              </>}
+              {l && !c && <RowAction line={l} admin={admin} onOpen={setDialog} />}
+              {l && <Link className="c-btn c-btn--sm sp__foot-end" to={`/items/${l.consignmentItemId}`}>Open the unit</Link>}
+            </>}>
+            {c && (
+              <PanelSection title="Cancellation request" tone="card">
+                <FactGrid facts={[
+                  { label: 'Why', value: cap(CANCEL_REASONS[c.request.reasonCode] ?? c.request.reasonCode) },
+                  { label: 'Asked', value: dateTime(c.request.requestedAt) },
+                  { label: 'Where it is', value: c.lineState === 'dispatched' ? 'With the courier; approving recalls it through Returns' : 'Not dispatched; dispatch is on hold', wide: true },
+                  ...(c.request.note ? [{ label: 'In their words', value: `“${c.request.note}”`, wide: true }] : []),
+                ]} />
+              </PanelSection>
+            )}
+            {l && (
+              <PanelSection title="Shipment" tone="card">
+                <FactGrid facts={[
+                  { label: 'Unit', value: <Link className="tg-mono" to={`/items/${l.consignmentItemId}`}>{l.internalSku ?? l.consignmentItemId.slice(0, 8)}</Link> },
+                  { label: 'Courier', value: l.courierCode ? courierName(l.courierCode) : 'Not dispatched' },
+                  { label: 'Tracking', value: l.trackingNumber ? <span className="tg-mono">{l.trackingNumber}</span> : '—' },
+                  { label: 'Courier cost', value: l.courierCostMinor != null ? money(l.courierCostMinor) : '—' },
+                  { label: 'Dispatched', value: l.dispatchedAt ? dateTime(l.dispatchedAt) : '—' },
+                  { label: 'Delivered', value: l.deliveredAt ? dateTime(l.deliveredAt) : '—' },
+                  ...(l.dispatchNote ? [{ label: 'Dispatch note', value: l.dispatchNote, wide: true }] : []),
+                  ...(l.deliveryRemarks ? [{ label: 'Delivery remarks', value: l.deliveryRemarks, wide: true }] : []),
+                ]} />
+              </PanelSection>
+            )}
+            <PanelSection title="History">
+              <LineHistory lineId={open} staff refreshKey={done} />
+            </PanelSection>
+          </SidePanel>
+        )
+      })()}
 
       {dialog?.kind === 'dispatch' && <DispatchDialog line={dialog.line} onClose={() => setDialog(null)} onDone={finished} />}
       {dialog?.kind === 'deliver' && <DeliverDialog line={dialog.line} onClose={() => setDialog(null)} onDone={finished} />}
@@ -273,6 +313,13 @@ export function FulfilmentPage() {
       {dialog?.kind === 'cancel-decline' && <DeclineCancelDialog row={dialog.row} onClose={() => setDialog(null)} onDone={finished} />}
     </>
   )
+}
+
+/** Where a line is, in the words of the tabs. */
+function lineStage(l: StaffOrderLine): { label: string; tone: 'good' | 'warn' | 'bad' | 'navy' } {
+  const t = TABS.find((x) => x.key !== 'cancel' && inTabRule(x.key, l))
+  const tone = t?.key === 'open' ? 'warn' : t?.key === 'closed' ? 'good' : 'navy'
+  return { label: t?.label ?? l.state.replace(/_/g, ' '), tone }
 }
 
 const when = (l: StaffOrderLine) => l.acceptedAt ?? l.deliveredAt ?? l.dispatchedAt ?? null

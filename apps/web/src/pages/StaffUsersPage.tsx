@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiError, dateOnly, isAdmin, useApi, useSession, type StaffUserRow } from '@trueglaz/core'
+import { api, ApiError, dateOnly, dateTime, isAdmin, useApi, useSession, type StaffUserRow } from '@trueglaz/core'
 import { PayoutReviewStrip } from '../components/PayoutCheckPanel'
 import { QueueScreen } from '../components/QueueScreen'
 import { PeopleTabs } from '../components/PeopleTabs'
 import { KpiCard, KpiRow } from '../components/KpiCard'
 import { Icon, ICONS } from '../components/StaffShell'
 import { useQueryState } from '../components/useQueryState'
+import { FactGrid, PanelSection, SidePanel } from '../components/SidePanel'
 import './StaffUsersPage.css'
 
 const GROUPS: Array<{ key: string; label: string; states: string[] | null }> = [
@@ -38,6 +39,8 @@ export function StaffUsersPage() {
   const { session } = useSession()
   const [view, setView] = useQueryState('view', 'pending_review')
   const [search, setSearch] = useQueryState('q')
+  // TG-205: a name opens a quick view over the queue; the full record is one more click.
+  const [peek, setPeek] = useQueryState('open')
   const [page, setPage] = useState(1)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -141,7 +144,7 @@ export function StaffUsersPage() {
           {shown.map((u) => (
             <tr key={u.userId}>
               <td>
-                <Link to={`/admin/people/${u.userId}`} className="ppl__name">{u.displayName}</Link>
+                <button type="button" className="ppl__name ppl__peek" onClick={() => setPeek(u.userId)}>{u.displayName}</button>
                 <span className="ppl__contact tg-muted">{u.email ?? u.phone ?? 'No contact'}</span>
                 {u.roles.length > 0 && <span className="ppl__roles">{u.roles.join(' · ')}</span>}
               </td>
@@ -159,7 +162,71 @@ export function StaffUsersPage() {
           ))}
         </tbody>
       </table>
+      {peek && <PersonPeek id={peek} onClose={() => setPeek('')} onChanged={people.reload} />}
     </QueueScreen>
+  )
+}
+
+/** One person at a glance (TG-205): identity, selling access, activity. */
+function PersonPeek({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+  const d = useApi(() => api.staffUser(id), [id])
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const u = d.data?.user
+  const k = d.data?.kyc
+  async function decide(approve: boolean) {
+    setBusy(true); setErr(null)
+    try {
+      if (approve) await api.approveSelling(id, note); else await api.rejectSelling(id, note)
+      setNote(''); d.reload(); onChanged()
+    } catch (e) { setErr(e instanceof ApiError ? e.message : 'That did not work') } finally { setBusy(false) }
+  }
+  const canDecide = k?.status === 'verified'
+  return (
+    <SidePanel open onClose={onClose} eyebrow="Person" width={520}
+      title={u?.displayName ?? (d.error ? 'Could not load' : 'Loading…')}
+      subtitle={u ? <>{u.email ?? '—'} · {u.phone ?? '—'}</> : undefined}
+      badges={u && <><KycBadge status={u.kycStatus} /><SellingBadge state={u.sellingState} />
+        {u.accountState !== 'active' && <span className="c-chip2 c-chip2--bad">{u.accountState}</span>}</>}
+      footer={<Link className="c-btn c-btn--navy c-btn--sm sp__foot-end" to={`/admin/people/${id}`}>Open full record</Link>}>
+      {d.error && <p className="ppl__error" role="alert">{d.error.message}</p>}
+      {u && <>
+        <PanelSection title="Activity" tone="card">
+          <FactGrid facts={[
+            { label: 'Consigned', value: `${u.itemsListed} unit${u.itemsListed === 1 ? '' : 's'}` },
+            { label: 'Bought', value: `${u.ordersPlaced} order${u.ordersPlaced === 1 ? '' : 's'}` },
+            { label: 'Joined', value: u.joinedAt ? dateOnly(u.joinedAt) : '—' },
+            { label: 'Roles', value: u.roles.length ? u.roles.join(' · ') : 'Customer' },
+          ]} />
+        </PanelSection>
+        <PanelSection title="Identity check" tone="card">
+          {k ? <FactGrid facts={[
+            { label: 'Status', value: k.status.replace(/_/g, ' ') },
+            { label: 'Document', value: k.idType ? `${k.idType === 'aadhaar' ? 'Aadhaar' : k.idType.toUpperCase()} ending ${k.idLast4 ?? '????'}` : '—' },
+            { label: 'Name on the document', value: k.legalName ?? '—', wide: true },
+            { label: 'Verified', value: k.verifiedAt ? dateTime(k.verifiedAt) : '—' },
+            { label: 'Checked by', value: k.provider ?? '—' },
+          ]} /> : <p className="tg-muted">Not started.</p>}
+        </PanelSection>
+        <PanelSection title="Selling access" tone="card">
+          {d.data!.sellingDecidedAt && (
+            <p className="ppl__peek-was">{u.sellingState.replace(/_/g, ' ')} by {d.data!.sellingDecidedBy ?? 'the system'} on {dateTime(d.data!.sellingDecidedAt)}
+              {d.data!.sellingNote && <span className="tg-muted"> — “{d.data!.sellingNote}”</span>}</p>
+          )}
+          {canDecide ? <>
+            <input className="tg-input" value={note} placeholder="Note kept with the decision" aria-label="Note kept with the decision" onChange={(e) => setNote(e.target.value)} />
+            <div className="ppl__peek-act">
+              <button className="c-btn c-btn--cta c-btn--sm" disabled={busy || u.sellingState === 'approved'} onClick={() => decide(true)}>
+                {u.sellingState === 'approved' ? 'Already selling' : 'Let them sell'}</button>
+              <button className="c-btn c-btn--sm" disabled={busy || u.sellingState === 'rejected'} onClick={() => decide(false)}>
+                {u.sellingState === 'rejected' ? 'Already refused' : 'Refuse'}</button>
+            </div>
+          </> : <p className="tg-muted">Nothing to decide until the identity check has passed.</p>}
+          {err && <p className="ppl__error" role="alert">{err}</p>}
+        </PanelSection>
+      </>}
+    </SidePanel>
   )
 }
 
@@ -209,7 +276,7 @@ function Decision({
   user, busy, onDecide,
 }: { user: StaffUserRow; busy: boolean; onDecide: (u: StaffUserRow, approve: boolean) => void }) {
   if (user.sellingState !== 'pending_review') {
-    return <Link to={`/admin/people/${user.userId}`} className="ppl__open">Open record →</Link>
+    return <Link to={`/admin/people/${user.userId}`} className="ppl__open">Full record →</Link>
   }
   if (user.kycStatus !== 'verified') {
     return (

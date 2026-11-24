@@ -39,6 +39,8 @@ export function SidePanel({ open, onClose, eyebrow, title, subtitle, badges, foo
     // Focus the panel itself so a screen reader starts at its title, not at the X.
     requestAnimationFrame(() => box.current?.focus())
     const key = (e: KeyboardEvent) => {
+      // A dialog opened from the panel (Dispatch, a video) owns the keys until it closes.
+      if (document.querySelector('dialog[open]')) return
       if (e.key === 'Escape') { e.stopPropagation(); close.current() }
       if (e.key === 'Tab' && box.current) {
         const f = [...box.current.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]

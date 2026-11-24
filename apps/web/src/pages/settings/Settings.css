@@ -160,3 +160,28 @@
   .st__bands .st__input { width: 100px; }
   .st__bands .st__input--pct { width: 64px; }
 }
+
+/* TG-204: staged changes and the one save bar. */
+.st__row--changed, .st__row--bad { margin-inline: -12px; padding-inline: 12px; border-radius: 12px; background: var(--tg-accent-soft); }
+.st__row--bad { background: color-mix(in srgb, var(--tg-danger, #b42318) 8%, transparent); }
+.st__changed { margin-left: 8px; vertical-align: 1px; font-size: 11.5px; }
+.st__staged { padding-bottom: 84px; }
+.st__bar {
+  position: sticky; bottom: 16px; z-index: 30; margin-top: var(--tg-space-4);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px 12px 18px; border-radius: 16px;
+  background: var(--tg-bg-raised); border: 1px solid var(--tg-border);
+  box-shadow: 0 12px 32px rgb(16 28 36 / 0.18);
+  animation: st-bar-in 200ms ease-out;
+}
+@keyframes st-bar-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .st__bar { animation: none; } }
+.st__bar-text { margin-right: auto; font-size: 14px; }
+.st__bar-note { color: var(--tg-text-muted); }
+.st__notice { margin: 0 0 var(--tg-space-3); }
+.st__diff { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.st__diff li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: baseline; padding: 8px 10px; border-radius: 10px; background: var(--tg-bg-sunken); font-size: 14px; }
+.st__diff-label { font-weight: 600; min-width: 0; }
+.st__diff-was { color: var(--tg-text-muted); text-decoration: line-through; }
+.st__diff-now { font-weight: 600; }
+@media (max-width: 640px) { .st__diff li { grid-template-columns: 1fr auto auto auto; font-size: 13px; } }

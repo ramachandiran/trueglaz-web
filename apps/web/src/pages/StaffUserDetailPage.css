@@ -56,3 +56,9 @@
 .person__panel { min-width: 0; overflow-wrap: anywhere; }
 .person .people__head { flex-wrap: wrap; }
 .person .people__head > div { min-width: 0; overflow-wrap: anywhere; }
+
+/* TG-205: find and page the selling / buying tables. */
+.person__tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 10px; }
+.person__find { max-width: 320px; flex: 1 1 220px; }
+.person__pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.person__pager .tg-muted { margin-right: auto; font-size: 13px; }

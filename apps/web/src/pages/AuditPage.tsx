@@ -86,14 +86,18 @@ export function AuditPage() {
 }
 
 function Row({ e }: { e: AuditEntry }) {
-  const who = e.actorName?.trim() || e.actorEmail || (e.actorUserId ? e.actorUserId.slice(0, 8) : 'Anonymous')
+  // TG-205: no actor on a domain event means TrueGlaz did it (a timer, a
+  // webhook); on a request it means nobody was signed in.
+  const who = e.actorName?.trim() || e.actorEmail || (e.actorUserId ? e.actorUserId.slice(0, 8) : e.source === 'domain' ? 'System' : 'Signed-out visitor')
   const ok = e.httpStatus == null || e.httpStatus < 400
   return (
     <tr>
       <td className="audit__when">{dateTime(e.occurredAt)}</td>
       <td>
         <span className="audit__who">{who}</span>
-        {e.actorRole && <span className="audit__role">{e.actorRole}</span>}
+        {e.actorRole
+          ? <span className="audit__role">{e.actorRole}</span>
+          : !e.actorUserId && <span className="audit__role">{e.source === 'domain' ? 'automatic' : 'no account'}</span>}
       </td>
       <td className="audit__action">
         <code>{e.action}</code>
