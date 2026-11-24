@@ -90,6 +90,60 @@ const url = (p: string) => `${origin}/api/v1${p}`
 /** A URL the API handed back: absolute (a bucket) as is, relative (this API) against its origin. */
 export const apiAbsolute = (u: string) => (u.startsWith('/') ? `${origin}${u}` : u)
 
+/** One notification as the console's live line sends it (TG-208). */
+export interface LiveNotice {
+  id: string
+  code: string
+  category: string
+  title: string
+  body: string
+  link: string | null
+  at: string
+}
+
+/**
+ * The console's live line (TG-208): one long GET that the API writes Server-Sent
+ * Events down. Read with fetch rather than EventSource so the sign-in goes in
+ * the Authorization header like every other call, never in a URL.
+ *
+ * Resolves when the line ends (the server closed it, or [signal] aborted);
+ * rejects when it could not be opened or broke. The caller reconnects.
+ */
+export async function openStaffStream(
+  onNotice: (n: LiveNotice) => void,
+  onReady: () => void,
+  signal: AbortSignal,
+): Promise<void> {
+  const res = await fetch(url('/staff/stream'), {
+    headers: { Accept: 'text/event-stream', ...(session ? { Authorization: `Bearer ${session.token}` } : {}) },
+    signal,
+    cache: 'no-store',
+  })
+  if (!res.ok || !res.body) throw new ApiError(res.status, 'The live line could not be opened')
+  const reader = res.body.getReader()
+  const text = new TextDecoder()
+  let buf = ''
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) return
+    buf += text.decode(value, { stream: true }).replace(/\r\n/g, '\n')
+    let cut: number
+    while ((cut = buf.indexOf('\n\n')) >= 0) {
+      const block = buf.slice(0, cut); buf = buf.slice(cut + 2)
+      let event = 'message'; const data: string[] = []
+      for (const line of block.split('\n')) {
+        if (line.startsWith(':')) continue // heartbeat
+        if (line.startsWith('event:')) event = line.slice(6).trim()
+        else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''))
+      }
+      if (event === 'ready') onReady()
+      else if (event === 'notification' && data.length) {
+        try { onNotice(JSON.parse(data.join('\n')) as LiveNotice) } catch { /* a malformed event is skipped, not fatal */ }
+      }
+    }
+  }
+}
+
 /**
  * What to say when nothing answered.
  *

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { isAdmin, isStaff, useSession } from '@trueglaz/core'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { api, isAdmin, isStaff, isTechnician, useSession, type LiveNotice } from '@trueglaz/core'
 import { AccountMenu } from './AccountMenu'
 import { LogoMark } from './Logo'
 import { useUnread } from './useUnread'
-import { ConsoleTitleContext, useStaffHome, type ConsoleTitle } from './consoleTitle'
+import { ConsoleTitleContext, invalidateStaffHome, useStaffHome, type ConsoleTitle } from './consoleTitle'
 import { PageHeadView } from './PageHead'
 import { CommandMenu } from './CommandMenu'
+import { addBanner, bannerFor, LiveBanners, type LiveBanner } from './LiveBanners'
+import { useLiveLine } from './useLiveLine'
 import { useEscape } from './useEscape'
 import './StaffShell.css'
 import './console.css'
@@ -124,6 +126,9 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
  * its foot, a top bar card with search, and each screen's heading under it -
  * the approved template's layout in TrueGlaz's own colours.
  */
+/** Asked once per browser whether to show desktop alerts (TG-208). */
+const DESKTOP_ASKED_KEY = 'tg.console.desktopAlertsAsked'
+
 export function StaffShell() {
   const { session } = useSession()
   const { pathname } = useLocation()
@@ -134,7 +139,55 @@ export function StaffShell() {
   // half-minute answer) whenever the screen changes.
   const reloadHome = home.reload
   useEffect(() => { reloadHome() }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
-  const { unread } = useUnread()
+
+  // TG-208: work arriving for this person shows as a banner the moment it is
+  // written, and the bell and the menu counts catch up with it.
+  const nav = useNavigate()
+  const [banners, setBanners] = useState<LiveBanner[]>([])
+  const dismissBanner = useCallback((id: string) => setBanners((b) => b.filter((x) => x.id !== id)), [])
+  const [lineDown, setLineDown] = useState(false)
+  const { unread, refresh: refreshUnread } = useUnread(lineDown ? 15_000 : undefined)
+  const catchUp = useCallback(() => { invalidateStaffHome(); reloadHome(); refreshUnread() }, [reloadHome, refreshUnread])
+  const onNotice = useCallback((n: LiveNotice) => {
+    setBanners((b) => addBanner(b, bannerFor(n)))
+    catchUp()
+    // In another tab or minimised: the browser says so too, if allowed.
+    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        const d = new Notification(n.title, { body: n.body, tag: n.id, icon: '/favicon.svg' })
+        d.onclick = () => { window.focus(); if (n.link) nav(n.link); d.close() }
+      } catch { /* some browsers only allow this from a service worker */ }
+    }
+  }, [catchUp, nav])
+  // Back after a drop (a deploy restarts the API): the bell and counts catch
+  // up, and team work that arrived while the line was down shows as banners.
+  const onReconnect = useCallback((downSince: number) => {
+    catchUp()
+    const since = downSince - 5_000
+    api.notifications().then((r) => {
+      const missed = r.items.filter((x) => !x.readAt && x.category === 'operations' && x.at && Date.parse(x.at) >= since)
+      setBanners((b) => missed.reverse().reduce((acc, x) => addBanner(acc, bannerFor({
+        id: x.id, code: x.code ?? '', category: x.category, title: x.title, body: x.body, link: x.link, at: x.at!,
+      })), b))
+    }).catch(() => {})
+  }, [catchUp])
+  const live = useLiveLine(staff || admin || isTechnician(session), onNotice, onReconnect)
+  useEffect(() => { setLineDown(live === 'connecting') }, [live])
+  // Once the line is up, offer desktop alerts once per browser.
+  useEffect(() => {
+    if (live !== 'live' || !('Notification' in window) || Notification.permission !== 'default') return
+    try { if (localStorage.getItem(DESKTOP_ASKED_KEY)) return; localStorage.setItem(DESKTOP_ASKED_KEY, '1') } catch { return }
+    setBanners((b) => addBanner(b, {
+      id: 'desktop-alerts', tone: 'info', icon: ICONS.bell, area: 'Notifications', at: Date.now(),
+      title: 'Get alerts when this tab is in the background',
+      body: 'Your browser will show new work even while you are in another tab or app.',
+      action: { label: 'Turn on', onClick: () => { void Notification.requestPermission() } },
+    }))
+  }, [live])
+  const openBanner = useCallback((id: string) => {
+    if (id === 'desktop-alerts') return
+    api.markNotificationRead(id).then(() => refreshUnread()).catch(() => {})
+  }, [refreshUnread])
   const [named, setNamed] = useState<ConsoleTitle | null>(null)
   const setTitle = useCallback((t: ConsoleTitle | null) => setNamed(t), [])
   const [drawer, setDrawer] = useState(false)
@@ -234,6 +287,7 @@ export function StaffShell() {
               <AccountMenu />
             </div>
           </header>
+          {banners.length > 0 && <LiveBanners items={banners} onDismiss={dismissBanner} onOpen={openBanner} />}
           <main id="main" tabIndex={-1} className="staff-content">
             {!named?.own && <PageHeadView title={named?.title ?? section} subtitle={named?.subtitle} />}
             <Outlet />

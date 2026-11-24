@@ -20,11 +20,11 @@ export const POLL_MS = 60_000
  * than up to a minute of staleness, and a backgrounded tab costs nothing in the
  * meantime.
  *
- * There is no push here. A websocket or SSE channel would deliver these the
- * instant they happen, and is the right answer eventually; polling a count is
- * what pays for itself today.
+ * In the console the live line (TG-208) delivers new work the instant it
+ * happens and calls [refresh]; this poll is the fallback, every 15 seconds
+ * while that line is down.
  */
-export function useUnread(): { unread: number; refresh: () => void } {
+export function useUnread(pollMs: number = POLL_MS): { unread: number; refresh: () => void } {
   const { session } = useSession()
   const [unread, setUnread] = useState(0)
   const [tick, setTick] = useState(0)
@@ -45,7 +45,7 @@ export function useUnread(): { unread: number; refresh: () => void } {
     }
 
     read()
-    const timer = window.setInterval(read, POLL_MS)
+    const timer = window.setInterval(read, pollMs)
     // Coming back to the tab is the moment the count is most likely wrong and
     // most likely to be looked at.
     document.addEventListener('visibilitychange', read)
@@ -57,7 +57,7 @@ export function useUnread(): { unread: number; refresh: () => void } {
       document.removeEventListener('visibilitychange', read)
       window.removeEventListener('focus', read)
     }
-  }, [session?.userId, tick])
+  }, [session?.userId, tick, pollMs])
 
   return { unread, refresh }
 }
