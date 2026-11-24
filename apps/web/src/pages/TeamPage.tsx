@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { api, ApiError, dateOnly, relative, useApi, useSession, type TeamInvite } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { useConsoleTitle } from '../components/consoleTitle'
+import { PageHead } from '../components/PageHead'
+import { KpiCard, KpiRow } from '../components/KpiCard'
+import { ICONS } from '../components/StaffShell'
 import { PeopleTabs } from '../components/PeopleTabs'
 import './TeamPage.css'
 
@@ -25,7 +27,6 @@ const ROLE_PILL: Record<string, string> = { admin: 'c-pill--cta', staff: 'c-pill
  * again, copied to share another way, or cancelled. Every change is audited.
  */
 export function TeamPage() {
-  useConsoleTitle('People', 'Who can use this console, and what they can do')
   const { session } = useSession()
   const team = useApi(() => api.team(), [])
   const [email, setEmail] = useState('')
@@ -36,8 +37,10 @@ export function TeamPage() {
   const [revoke, setRevoke] = useState<{ userId: string; name: string; role: string } | null>(null)
   const [cancelling, setCancelling] = useState<TeamInvite | null>(null)
 
-  if (team.loading && !team.data) return <Loading label="Loading the team" />
-  if (team.error) return <ErrorNote error={team.error} onRetry={team.reload} />
+  const head = <PageHead title="Team & invites" subtitle="Who can use this console, and what they can do"
+    crumbs={[{ label: 'People', to: '/admin/people' }, { label: 'Team & invites' }]} actions={<PeopleTabs />} />
+  if (team.loading && !team.data) return <>{head}<Loading label="Loading the team" /></>
+  if (team.error) return <>{head}<ErrorNote error={team.error} onRetry={team.reload} /></>
   const t = team.data!
   const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())
 
@@ -65,7 +68,13 @@ export function TeamPage() {
 
   return (
     <div className="team">
-      <PeopleTabs />
+      {head}
+      <KpiRow label="The team" cols={3}>
+        <KpiCard icon={ICONS.people} lead title="Team members" value={t.members.length} note="can sign in to this console" />
+        <KpiCard icon={ICONS.settings} title="Admins" value={t.members.filter((m) => m.roles.some((r) => r.role === 'admin')).length} note="can change money and settings" />
+        <KpiCard icon={ICONS.bell} title="Open invites" value={t.invites.length} tone={t.invites.some((i) => i.expired) ? 'warn' : undefined}
+          note={t.invites.some((i) => i.expired) ? 'some have expired; resend or cancel' : 'waiting for a first sign-in'} />
+      </KpiRow>
 
       <section className="c-card team__invite" aria-labelledby="team-invite">
         <div className="c-card__head"><h2 id="team-invite">Invite someone</h2></div>

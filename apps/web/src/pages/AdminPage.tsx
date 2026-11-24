@@ -3,7 +3,9 @@ import { useMemo, useState } from 'react'
 import { api, ApiError, dateOnly, dateTime, money, useApi, type InventoryRow, type PayoutDestination, type PayoutQueueRow, type RefundDue, type KycReview } from '@trueglaz/core'
 import { Empty, ErrorNote, Loading } from '../components/ui'
 import { KycDocuments } from '../components/KycDocuments'
-import { useConsoleTitle } from '../components/consoleTitle'
+import { PageHead } from '../components/PageHead'
+import { KpiCard, KpiRow } from '../components/KpiCard'
+import { Icon, ICONS } from '../components/StaffShell'
 import { useHashTarget, useQueryState } from '../components/useQueryState'
 import { ConfirmDialog, useConfirm } from '../components/ConfirmDialog'
 import './OpsPage.css'
@@ -70,31 +72,32 @@ export function AdminPage() {
   ]
 
   const w = useBooks(inventory.data, recon.data)
-  useConsoleTitle('Money & oversight', 'Payouts, refunds and the books')
   useHashTarget(!pending.loading && !onHold.loading && !approved.loading && !refunds.loading && !kyc.loading)
   const payoutsLoading = pending.loading || onHold.loading || approved.loading || refunds.loading
 
   return (
-    <div className="ops dash">
-      <header className="dash__head">
-        <p className={`dash__pill${w.attention > 0 ? '' : ' dash__pill--clear'}`}>
-          {w.attention > 0 ? `${w.attention} need${w.attention === 1 ? 's' : ''} a decision` : 'Nothing needs a decision'}
-        </p>
-        <Link to="/admin/inventory" className="c-link money__inv-link">Every unit is in Inventory →</Link>
-      </header>
+    <div className="c-stack money">
+      <PageHead title="Money" subtitle="Payouts, refunds and the books"
+        crumbs={[{ label: 'Control room', to: '/admin' }, { label: 'Money' }]}
+        actions={<>
+          <Link to="/admin/balance-sheet" className="c-btn"><Icon d={ICONS.balance} /> Balance sheet</Link>
+          <Link to="/admin/inventory" className="c-btn">Every unit in Inventory <Icon d={ICONS.chevron} /></Link>
+        </>} />
       {error && <p className="ops__error" role="alert">{error}</p>}
 
-      <Widgets w={w} recon={recon.data} />
+      <Widgets w={w} recon={recon.data} waiting={waiting} onPayouts={() => setTab('payouts')} />
 
-      <div className="people-tabs money__tabs" role="tablist" aria-label="Money">
-        {tabs.map((t) => (
-          <button key={t.key} type="button" role="tab" id={`money-tab-${t.key}`} aria-controls="money-panel"
-            aria-selected={tab === t.key}
-            className={`people-tabs__tab${tab === t.key ? ' people-tabs__tab--on' : ''}`}
-            onClick={() => setTab(t.key)}>
-            {t.label}{t.count ? <span className="money__tab-count"> · {t.count}</span> : null}
-          </button>
-        ))}
+      <div className="c-tbar money__bar">
+        <div className="c-tabs" role="tablist" aria-label="Money">
+          {tabs.map((t) => (
+            <button key={t.key} type="button" role="tab" id={`money-tab-${t.key}`} aria-controls="money-panel"
+              aria-selected={tab === t.key}
+              className={`c-tabs__tab${tab === t.key ? ' c-tabs__tab--on' : ''}`}
+              onClick={() => setTab(t.key)}>
+              {t.label}{t.count ? <span className="c-tabs__n">{t.count}</span> : null}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div id="money-panel" role="tabpanel" aria-labelledby={`money-tab-${tab}`} className="money__panel">
@@ -248,37 +251,25 @@ function useBooks(inventory: InventoryRow[] | null, _recon: unknown) {
 
 type Books = ReturnType<typeof useBooks>
 
-function Widgets({ w, recon }: {
+function Widgets({ w, recon, waiting, onPayouts }: {
   w: Books
   recon: { escrow_liability_held: number; seller_payable_total: number } | null
+  waiting: number
+  onPayouts: () => void
 }) {
+  // Money first (TG-199): what we hold, what we owe, what is waiting on an admin.
+  // Unit counts live in Inventory and the Control room.
   return (
-    <div className="dash__kpis dash__kpis--auto">
-      <Widget label="On sale now" value={String(w.onSale)} note={`${money(w.onSaleValue)} of stock`} lead />
-      <Widget label="Held in escrow" value={recon ? money(recon.escrow_liability_held) : '—'} note="paid for, not yet accepted" />
-      <Widget label="Owed to sellers" value={recon ? money(recon.seller_payable_total) : '—'} note="after commission" />
-      <Widget
-        label="Needs a decision"
-        value={String(w.attention)}
-        note="quarantine, approvals, returns, payouts"
-        tone={w.attention > 0 ? 'warn' : undefined}
-      />
-      <Widget label="Sold" value={String(w.sold)} note={money(w.soldValue)} />
-      <Widget label="In our custody" value={String(w.inCustody)} note="received, graded or listed" />
-      <Widget label="Units, all time" value={String(w.total)} note={`${w.inbound} on their way in`} />
-    </div>
-  )
-}
-
-function Widget({ label, value, note, tone, lead }: {
-  label: string; value: string; note?: string; tone?: 'warn'; lead?: boolean
-}) {
-  return (
-    <div className={`dash__card dash__kpi${lead ? ' dash__kpi--lead' : ''}${tone ? ` dash__kpi--${tone}` : ''}`}>
-      <span className="dash__kpi-lab">{label}</span>
-      <span className="dash__kpi-val">{value}</span>
-      {note && <span className="dash__kpi-note">{note}</span>}
-    </div>
+    <KpiRow label="The books">
+      <KpiCard icon={ICONS.insurance} lead title="Held in escrow" value={recon ? money(recon.escrow_liability_held) : '—'} note="paid for, not yet accepted" />
+      <KpiCard icon={ICONS.people} title="Owed to sellers" value={recon ? money(recon.seller_payable_total) : '—'} note="after commission" />
+      <KpiCard icon={ICONS.money} title="Payouts & refunds" value={waiting} onClick={onPayouts}
+        chip={waiting > 0 ? <span className="c-chip2 c-chip2--warn"><Icon d={ICONS.clock} /> Waiting</span> : <span className="c-chip2 c-chip2--good"><Icon d={ICONS.check} /> Clear</span>}
+        note={`${w.sold} sold · ${money(w.soldValue)}`} />
+      <KpiCard icon={ICONS.alert} title="Needs a decision" value={w.attention} tone={w.attention > 0 ? 'warn' : undefined}
+        to={w.attention > 0 ? '/admin' : undefined}
+        note="quarantine, approvals, returns, payouts" />
+    </KpiRow>
   )
 }
 

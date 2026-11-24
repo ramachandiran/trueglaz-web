@@ -2,6 +2,8 @@ import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError, CANCEL_REASONS, dateOnly, dateTime, isAdmin, money, useApi, useSession, type StaffCancelRow, type StaffOrderLine } from '@trueglaz/core'
 import { QueueScreen } from '../components/QueueScreen'
+import { KpiCard, KpiRow } from '../components/KpiCard'
+import { Icon, ICONS } from '../components/StaffShell'
 import { useQueryState } from '../components/useQueryState'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -92,6 +94,9 @@ export function FulfilmentPage() {
   const shown = filtered.slice((p - 1) * perPage, p * perPage)
   const shownCancels = cancelRows.slice((p - 1) * perPage, p * perPage)
 
+  // What the parcels on the road cost to send.
+  const courierSpend = rows.filter((l) => inTabRule('dispatched', l)).reduce((n, l) => n + (l.courierCostMinor ?? 0), 0)
+
   const finished = (message?: string) => {
     setDialog(null); setDone((n) => n + 1); all.reload(); cancels.reload(); setNotice(message ?? null)
   }
@@ -113,7 +118,24 @@ export function FulfilmentPage() {
         loading={isCancel ? cancels.loading && !cancels.data : all.loading && !all.data}
         error={isCancel ? cancels.error : all.error}
         onRetry={isCancel ? cancels.reload : all.reload}
-        summary={notice ? <p className="ful__notice" role="status">{notice}</p> : undefined}
+        crumbs={[{ label: 'Control room', to: '/admin' }, { label: 'Fulfilment' }]}
+        summary={<>
+          <KpiRow label="Orders by stage">
+            <KpiCard icon={ICONS.bag} lead title="To dispatch" value={count('open')} pressed={tab === 'open'}
+              onClick={() => { setTab('open'); setPage(1) }}
+              chip={count('open') ? <span className="c-chip2 c-chip2--warn"><Icon d={ICONS.clock} /> Pack and ship</span> : <span className="c-chip2 c-chip2--good"><Icon d={ICONS.check} /> All sent</span>}
+              note="paid; pack and hand to the courier" />
+            <KpiCard icon={ICONS.fulfilment} title="In transit" value={count('dispatched')} pressed={tab === 'dispatched'}
+              onClick={() => { setTab('dispatched'); setPage(1) }} note={courierSpend ? `${money(courierSpend)} courier cost` : 'with the courier'} />
+            <KpiCard icon={ICONS.check} title="Delivered" value={count('delivered')} pressed={tab === 'delivered'}
+              onClick={() => { setTab('delivered'); setPage(1) }} note="buyer's acceptance window is open" />
+            <KpiCard icon={ICONS.returns} title="Cancellations" value={count('cancel')} pressed={tab === 'cancel'} tone={count('cancel') ? 'bad' : undefined}
+              onClick={() => { setTab('cancel'); setPage(1) }}
+              chip={count('cancel') ? <span className="c-chip2 c-chip2--bad"><Icon d={ICONS.alert} /> Decide first</span> : undefined}
+              note={count('cancel') ? 'dispatch is on hold' : 'nothing to decide'} />
+          </KpiRow>
+          {notice && <p className="ful__notice" role="status">{notice}</p>}
+        </>}
         emptyTitle={isCancel ? 'No cancellations waiting' : tab === 'open' ? 'Nothing waiting to be dispatched' : tab === 'dispatched' ? 'Nothing in transit' : tab === 'delivered' ? 'Nothing waiting on a buyer' : 'No closed sales yet'}
         emptyHint="That is the queue being empty, not the page being broken."
         page={p}

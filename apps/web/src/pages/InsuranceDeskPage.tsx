@@ -8,7 +8,9 @@ import { useQueryState } from '../components/useQueryState'
 import { openInsuranceDocument } from '../components/VaultInsurance'
 import './OpsPage.css'
 import './InsuranceDeskPage.css'
-import { useConsoleTitle } from '../components/consoleTitle'
+import { PageHead } from '../components/PageHead'
+import { KpiCard, KpiRow } from '../components/KpiCard'
+import { Icon, ICONS } from '../components/StaffShell'
 
 const TABS: { key: InsuranceStatus; label: string }[] = [
   { key: 'requested', label: 'New' },
@@ -60,19 +62,35 @@ export function InsuranceDeskPage() {
     else queue.reload()
   }
   const overdue = rows.filter((r) => r.overdue).length
-  useConsoleTitle('Insurance desk', 'Quote requests from Gear Vault: pass each to the agent; the customer gets a call within 3 working days. TrueGlaz never prices cover or takes payment.')
+  const n = (k: InsuranceStatus) => counts.data?.[k] ?? 0
 
   return (
-    <div className="ops desk">
+    <div className="c-stack desk">
+      <PageHead title="Insurance desk"
+        subtitle="Quote requests from Gear Vault: pass each to the agent; the customer gets a call within 3 working days. TrueGlaz never prices cover or takes payment."
+        crumbs={[{ label: 'Control room', to: '/admin' }, { label: 'Insurance desk' }]} />
 
+      <KpiRow label="Requests by stage">
+        <KpiCard icon={ICONS.bell} lead title="New requests" value={n('requested')} pressed={tab === 'requested'} onClick={() => setTab('requested')}
+          tone={overdue > 0 ? 'bad' : undefined}
+          chip={overdue > 0 ? <span className="c-chip2 c-chip2--bad"><Icon d={ICONS.clock} /> {overdue} overdue</span> : undefined}
+          note="pass to the agent" />
+        <KpiCard icon={ICONS.people} title="With the agent" value={n('with_agent') + n('quote_shared')} pressed={tab === 'with_agent' || tab === 'quote_shared'}
+          onClick={() => setTab('with_agent')} note={`${n('quote_shared')} quote${n('quote_shared') === 1 ? '' : 's'} with customers`} />
+        <KpiCard icon={ICONS.audit} title="Policies to check" value={n('policy_uploaded')} pressed={tab === 'policy_uploaded'}
+          onClick={() => setTab('policy_uploaded')} note="customer uploaded a policy" />
+        <KpiCard icon={ICONS.insurance} title="Insured" value={n('insured')} pressed={tab === 'insured'} onClick={() => setTab('insured')} note="cover in force" />
+      </KpiRow>
 
-      <div className="desk__tabs" role="tablist">
-        {TABS.map((t) => (
-          <button key={t.key} role="tab" aria-selected={tab === t.key}
-            className={`desk__tab${tab === t.key ? ' on' : ''}`} onClick={() => setTab(t.key)}>
-            {t.label}<b>{counts.data?.[t.key] ?? 0}</b>
-          </button>
-        ))}
+      <div className="c-tbar">
+        <div className="c-tabs" role="tablist" aria-label="Insurance requests">
+          {TABS.map((t) => (
+            <button key={t.key} type="button" role="tab" aria-selected={tab === t.key}
+              className={`c-tabs__tab${tab === t.key ? ' c-tabs__tab--on' : ''}`} onClick={() => setTab(t.key)}>
+              {t.label}<span className="c-tabs__n">{n(t.key)}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {queue.loading && !queue.data && <Loading label="Loading requests" />}

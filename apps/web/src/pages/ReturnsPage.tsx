@@ -6,6 +6,8 @@ import {
 } from '@trueglaz/core'
 import { ModelPhoto } from '../components/ModelPhoto'
 import { QueueScreen } from '../components/QueueScreen'
+import { KpiCard, KpiRow } from '../components/KpiCard'
+import { Icon, ICONS } from '../components/StaffShell'
 import { useQueryState } from '../components/useQueryState'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { LineHistory } from '../components/LineHistory'
@@ -76,6 +78,8 @@ export function ReturnsPage() {
   const visible = benchOnly ? stages.filter((s) => s.key === 'received' || s.key === 'settled') : stages
   const stage = stages.find((s) => s.key === tab)!
   const inTab = inState(tab)
+  // One card per stage that needs a person (TG-199); Settled is history, so it stays a tab only.
+  const kpis = visible.filter((v) => v.key !== 'settled')
   const filtered = inTab.filter((r) => {
     const t = search.trim().toLowerCase()
     if (!t) return true
@@ -123,8 +127,27 @@ export function ReturnsPage() {
         page={p}
         pages={pages}
         onPage={setPage}
+        crumbs={[{ label: 'Control room', to: '/admin' }, { label: 'Returns' }]}
         summary={(
           <>
+            {kpis.length > 0 && (
+              <KpiRow label="Returns by stage" cols={kpis.length === 3 ? 3 : kpis.length >= 5 ? 5 : undefined}>
+                {kpis.map((k, i) => {
+                  const n = inState(k.key).length
+                  const value = inState(k.key).reduce((m, r) => m + (r.amountMinor ?? 0), 0)
+                  const hot = k.key === 'escalated' || (k.key === 'requested' && n > 0)
+                  return (
+                    <KpiCard key={k.key} icon={RET_ICON[k.key] ?? ICONS.returns} lead={i === 0} title={k.label} value={n}
+                      pressed={tab === k.key} onClick={() => { setTab(k.key as Tab); setPage(1); setOpen(null); setError(null) }}
+                      tone={k.key === 'escalated' && n > 0 ? 'bad' : undefined}
+                      chip={n > 0 && hot ? (k.key === 'escalated'
+                        ? <span className="c-chip2 c-chip2--bad"><Icon d={ICONS.alert} /> Needs an admin</span>
+                        : <span className="c-chip2 c-chip2--bad"><Icon d={ICONS.clock} /> Buyer's clock stopped</span>) : undefined}
+                      note={n > 0 ? `${money(value)} of sales` : 'nothing here'} />
+                  )
+                })}
+              </KpiRow>
+            )}
             {stage.blurb && <p className="tg-muted ops__fineprint ret__blurb">{stage.blurb}</p>}
             {error && <p className="ops__error" role="alert">{error}</p>}
           </>
@@ -318,4 +341,9 @@ function AdminClose({ row, busy, act }: { row: ReturnCaseView; busy: boolean; ac
       </button>
     </span>
   )
+}
+
+/** Each stage's icon on its card. */
+const RET_ICON: Record<string, string> = {
+  requested: ICONS.returns, approved: ICONS.fulfilment, received: ICONS.wrench, inspected: ICONS.check, escalated: ICONS.alert,
 }

@@ -11,6 +11,8 @@ import { pageOf, useClearParams, useQueryState } from '../components/useQuerySta
 import { useStaffHome } from '../components/consoleTitle'
 import { useSearchParams } from 'react-router-dom'
 import { StateMenu } from '../components/StateMenu'
+import { KpiCard, KpiRow } from '../components/KpiCard'
+import { Icon, ICONS } from '../components/StaffShell'
 import './InventoryDashboard.css'
 
 /**
@@ -171,20 +173,26 @@ export function InventoryDashboard() {
     <QueueScreen
       title="Inventory"
       subtitle="Every unit the platform holds, whatever stage it is at"
+      crumbs={[{ label: 'Control room', to: '/admin' }, { label: 'Inventory' }]}
+      headActions={<button type="button" className="c-btn" disabled={filtered.length === 0} onClick={() => exportItems(filtered, modelName)}>
+        <Icon d={ICONS.export} /> Export {filtered.length === items.length ? 'all' : `${filtered.length}`}
+      </button>}
       summary={tiles.length > 0 && (
-        <section className="c-grid c-grid--4 inv__tiles" aria-label="Units by stage">
-          {tiles.map((t) => {
+        <KpiRow label="Units by stage">
+          {tiles.map((t, i) => {
             const states = t.states ?? []
-            const n = (all.data ?? []).filter((i) => states.includes(i.currentState)).length
+            const inStage = (all.data ?? []).filter((it) => states.includes(it.currentState))
             const on = stateParam === states.join(',')
+            const look = STAGE_LOOK[t.key] ?? { icon: ICONS.inventory, note: '' }
+            const value = inStage.reduce((n, it) => n + (it.askingAmountMinor ?? 0), 0)
             return (
-              <button key={t.key} type="button" className={`c-card c-hit${on ? ' c-mini--on' : ''}`} aria-pressed={on}
-                onClick={() => openStage(states, t.label)}>
-                <div className="c-mini"><div><div className="c-mini__lab">{t.label}</div><div className="c-mini__num">{n}</div></div></div>
-              </button>
+              <KpiCard key={t.key} icon={look.icon} lead={i === 0 && !stateParam} title={t.label} value={inStage.length}
+                pressed={on} onClick={() => openStage(states, t.label)}
+                chip={on ? <span className="c-chip2 c-chip2--navy">Showing</span> : undefined}
+                note={t.key === 'on_sale' ? `${money(value)} asking` : look.note} />
             )
           })}
-        </section>
+        </KpiRow>
       )}
       filter={filter ? { label: labelParam || describe(stateParam, soldParam), onClear: () => clear('state', 'ids', 'sold', 'label', 'page', 'view') } : null}
       unit="units"
@@ -308,4 +316,26 @@ function describe(state: string, sold: string): string {
 
 function staffOrAdmin(session: ReturnType<typeof useSession>['session']): boolean {
   return isStaff(session)
+}
+
+/** How each stage's card looks (TG-199). */
+const STAGE_LOOK: Record<string, { icon: string; note: string }> = {
+  coming_in: { icon: ICONS.fulfilment, note: 'pre-approved or on the way to the hub' },
+  workshop: { icon: ICONS.wrench, note: 'received, on the bench or being priced' },
+  on_sale: { icon: ICONS.tag, note: '' },
+  on_the_way: { icon: ICONS.bag, note: 'sold; packing, shipped or delivered' },
+}
+
+/** The rows on screen as a spreadsheet: what an auditor or an accountant asks for. */
+function exportItems(items: ConsignmentItem[], modelName: (i: ConsignmentItem) => string | null) {
+  const esc = (v: unknown) => { const t = String(v ?? ''); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t }
+  const head = ['SKU', 'Model', 'Serial', 'State', 'Declared grade', 'Grade', 'Asking (INR)', 'Floor (INR)', 'Listed', 'Sold', 'Updated']
+  const rows = items.map((i) => [i.internalSku, modelName(i), i.serialNumber, i.currentState, i.declaredGradeCode, i.assignedGradeCode,
+    (i.askingAmountMinor ?? 0) / 100, i.floorAmountMinor != null ? i.floorAmountMinor / 100 : '', i.listedAt, i.soldAt, i.updatedAt])
+  const url = URL.createObjectURL(new Blob([[head, ...rows].map((r) => r.map(esc).join(',')).join('\n') + '\n'], { type: 'text/csv' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `trueglaz-inventory-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

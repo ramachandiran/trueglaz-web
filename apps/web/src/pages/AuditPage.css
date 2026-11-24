@@ -1,4 +1,4 @@
-.audit { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
+.audit { max-width: none; margin: 0; padding: 0; }
 
 .audit__head {
   display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
@@ -49,3 +49,10 @@
   .audit__src--domain { background: #1b3328; color: #8fd3a6; }
   .audit__role { background: #2a2a38; color: #b9b9d0; }
 }
+/* TG-199: the template's table card. */
+.audit .c-tbar { margin-bottom: 12px; }
+.audit__search { flex: 0 1 340px; }
+.audit .q__pagination { margin-top: 12px; }
+/* Its own scroll box: the console's sticky table header would pin to it, not to the page. */
+.audit .audit__table.q__table thead th { position: static; }
+.audit__tablewrap { border-radius: 14px; }

@@ -6,6 +6,8 @@ import {
   type CourierCharge, type CourierKind, type StatementRow, type StatementTotals,
 } from '@trueglaz/core'
 import { QueueScreen } from '../components/QueueScreen'
+import { KpiCard, KpiRow } from '../components/KpiCard'
+import { Icon, ICONS } from '../components/StaffShell'
 import './BalanceSheetPage.css'
 
 /**
@@ -82,9 +84,10 @@ export function BalanceSheetPage() {
         page={validPage}
         pages={pages}
         onPage={(p) => { setPage(p); setOpen(null) }}
-        actions={
-          <button className="tg-button tg-button--primary" onClick={() => setDownloading(true)}>
-            Download Excel
+        crumbs={[{ label: 'Money', to: '/admin/money' }, { label: 'Balance sheet' }]}
+        headActions={
+          <button type="button" className="c-btn c-btn--navy" onClick={() => setDownloading(true)}>
+            <Icon d={ICONS.export} /> Download Excel
           </button>
         }
         summary={stmt.data && <Summary totals={stmt.data.totals} />}
@@ -137,26 +140,21 @@ export function BalanceSheetPage() {
 }
 
 /** Figures for exactly the period the tabs have selected. */
+/** The period in four figures (TG-199): in, out, the costs between, and what is left. */
 function Summary({ totals: t }: { totals: StatementTotals }) {
-  const cards: Array<{ label: string; value: string; note?: string; tone?: 'profit' }> = [
-    { label: 'Closed items', value: String(t.count) },
-    { label: 'Sold for', value: moneyExact(t.sellingMinor) },
-    { label: 'Shipping from buyers', value: moneyExact(t.shippingMinor) },
-    { label: 'Paid to sellers', value: moneyExact(t.buyingMinor), note: 'buying cost' },
-    { label: 'GST', value: moneyExact(t.gstMinor), note: 'on commission, not ours' },
-    { label: 'Courier charges', value: moneyExact(t.courierMinor) },
-    { label: 'Profit', value: moneyExact(t.profitMinor), tone: 'profit' },
-  ]
+  const margin = t.sellingMinor > 0 ? Math.round((t.profitMinor * 1000) / t.sellingMinor) / 10 : null
   return (
-    <div className="bs__cards">
-      {cards.map((c) => (
-        <div key={c.label} className={`bs__card${c.tone ? ' bs__card--profit' : ''}`}>
-          <span className="bs__card-label">{c.label}</span>
-          <span className={`bs__card-value${c.tone && t.profitMinor < 0 ? ' bs__neg' : ''}`}>{c.value}</span>
-          {c.note && <span className="bs__card-note tg-muted">{c.note}</span>}
-        </div>
-      ))}
-    </div>
+    <KpiRow label="This period">
+      <KpiCard icon={ICONS.rupee} lead title="Sold for" value={moneyExact(t.sellingMinor)}
+        note={`${t.count} closed item${t.count === 1 ? '' : 's'}${t.shippingMinor > 0 ? ` · + ${moneyExact(t.shippingMinor)} shipping` : ''}`} />
+      <KpiCard icon={ICONS.people} title="Paid to sellers" value={moneyExact(t.buyingMinor)} note="buying cost" />
+      <KpiCard icon={ICONS.fulfilment} title="GST & courier" value={moneyExact(t.gstMinor + t.courierMinor)}
+        note={`GST ${moneyExact(t.gstMinor)} (on commission, not ours) · courier ${moneyExact(t.courierMinor)}`} />
+      <KpiCard icon={ICONS.balance} title="Profit" value={<span className={t.profitMinor < 0 ? 'bs__neg' : undefined}>{moneyExact(t.profitMinor)}</span>}
+        tone={t.profitMinor < 0 ? 'bad' : undefined}
+        chip={margin != null ? <span className={`c-chip2 c-chip2--${margin >= 0 ? 'good' : 'bad'}`}>{margin}% margin</span> : undefined}
+        note="after sellers, GST and courier" />
+    </KpiRow>
   )
 }
 
