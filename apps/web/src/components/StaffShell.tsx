@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { isAdmin, isStaff, useSession } from '@trueglaz/core'
 import { AccountMenu } from './AccountMenu'
-import { DemoNotice } from './DemoNotice'
 import { LogoMark } from './Logo'
 import { useUnread } from './useUnread'
 import { ConsoleTitleContext, useStaffHome, type ConsoleTitle } from './consoleTitle'
@@ -235,7 +234,6 @@ export function StaffShell() {
               <AccountMenu />
             </div>
           </header>
-          <DemoNotice />
           <main id="main" tabIndex={-1} className="staff-content">
             {!named?.own && <PageHeadView title={named?.title ?? section} subtitle={named?.subtitle} />}
             <Outlet />
