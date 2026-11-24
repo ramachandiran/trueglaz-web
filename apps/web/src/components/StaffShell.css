@@ -185,7 +185,6 @@
 .staff-help__pop li .c-pill { min-width: 54px; text-align: center; }
 .staff-help__pop p { margin: 0; font-size: 12.5px; color: var(--tg-text-muted); }
 
-.staff-shell .demo-notice { margin: 0; border-radius: 14px; border: 0; text-align: left; }
 .staff-content { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 20px; }
 .staff-content > .c-head + * { margin-top: 0; }
 .staff-foot {

@@ -2,7 +2,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { isAdmin, isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { useMarketView, type MarketView } from '../state/useMarketView'
 import { AccountMenu } from './AccountMenu'
-import { DemoNotice } from './DemoNotice'
 import { HeaderSearch } from './HeaderSearch'
 import { Logo, LogoMark } from './Logo'
 import { VaultIntro } from './VaultIntro'
@@ -12,7 +11,6 @@ export function AppShell() {
   return (
     <div className="shell">
       <a className="skip-link" href="#main">Skip to content</a>
-      <DemoNotice />
       <Header />
       <main id="main" tabIndex={-1} className="shell__main">
         <Outlet />
