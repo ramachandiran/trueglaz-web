@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { api, dateTime, useApi, type AuditEntry } from '@trueglaz/core'
 import { ErrorNote, Loading } from '../components/ui'
 import './AuditPage.css'
-import { useConsoleTitle } from '../components/consoleTitle'
+import { PageHead } from '../components/PageHead'
+import { Icon, ICONS } from '../components/StaffShell'
+import '../components/QueueScreen.css'
 
 const PAGE = 50
 
@@ -32,21 +34,24 @@ export function AuditPage() {
     return (v: string) => { set(v); setOffset(0) }
   }
 
-  useConsoleTitle('Audit log', 'Every action that changed something, newest first')
   return (
-    <section className="audit">{/* titled in the console top bar */}
-      <header className="audit__head">
-        <p className="audit__lede">Every action that changed something, newest first. {total.toLocaleString()} recorded.</p>
-        <div className="audit__filters">
-          <input className="tg-input" aria-label="Filter by action" placeholder="Action, e.g. POST /api/v1/payouts or payout."
+    <div className="c-stack audit">
+      <PageHead title="Audit log" subtitle={`Every action that changed something, newest first. ${total.toLocaleString()} recorded.`}
+        crumbs={[{ label: 'Control room', to: '/admin' }, { label: 'Audit log' }]} />
+    <section className="c-card c-tcard" aria-label="Audit entries">
+      <div className="c-tbar">
+        <h2>Entries</h2>
+        <label className="c-tbar__search audit__search">
+          <Icon d={ICONS.search} />
+          <input type="search" aria-label="Filter by action" placeholder="Action, e.g. payout or POST /api/v1/payouts"
             value={action} onChange={(e) => reset(setAction)(e.target.value)} />
-          <select className="tg-input" aria-label="Source" value={source} onChange={(e) => reset(setSource)(e.target.value)}>
-            <option value="">All sources</option>
-            <option value="request">Requests</option>
-            <option value="domain">Events</option>
-          </select>
-        </div>
-      </header>
+        </label>
+        <select aria-label="Source" value={source} onChange={(e) => reset(setSource)(e.target.value)}>
+          <option value="">All sources</option>
+          <option value="request">Requests</option>
+          <option value="domain">Events</option>
+        </select>
+      </div>
 
       {page.loading && !page.data && <Loading label="Loading the audit trail" />}
       {page.error && <ErrorNote error={page.error} onRetry={page.reload} />}
@@ -54,8 +59,8 @@ export function AuditPage() {
       {page.data && entries.length === 0 && <p className="audit__empty">Nothing matches that.</p>}
 
       {entries.length > 0 && (
-        <div className="audit__tablewrap" tabIndex={0} role="region" aria-label="Audit entries">
-          <table className="audit__table">
+        <div className="audit__tablewrap q__table-container" tabIndex={0} role="region" aria-label="Audit entries table">
+          <table className="audit__table q__table">
             <thead>
               <tr><th>When</th><th>Who</th><th>Action</th><th>Outcome</th><th>Target</th><th>Detail</th></tr>
             </thead>
@@ -67,13 +72,16 @@ export function AuditPage() {
       )}
 
       {total > PAGE && (
-        <nav className="audit__pager">
-          <button className="tg-button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</button>
-          <span className="audit__range">{offset + 1}–{Math.min(offset + PAGE, total)} of {total.toLocaleString()}</span>
-          <button className="tg-button" disabled={offset + PAGE >= total} onClick={() => setOffset(offset + PAGE)}>Older</button>
+        <nav className="q__pagination" aria-label="Pages">
+          <span className="q__page-info">Showing <b>{offset + 1}</b> to <b>{Math.min(offset + PAGE, total)}</b> of <b>{total.toLocaleString()}</b></span>
+          <div className="q__pages">
+            <button type="button" className="q__page q__page--word" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</button>
+            <button type="button" className="q__page q__page--word" disabled={offset + PAGE >= total} onClick={() => setOffset(offset + PAGE)}>Older</button>
+          </div>
         </nav>
       )}
     </section>
+    </div>
   )
 }
 

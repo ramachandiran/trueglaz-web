@@ -4,6 +4,8 @@ import { api, ApiError, dateOnly, isAdmin, useApi, useSession, type StaffUserRow
 import { PayoutReviewStrip } from '../components/PayoutCheckPanel'
 import { QueueScreen } from '../components/QueueScreen'
 import { PeopleTabs } from '../components/PeopleTabs'
+import { KpiCard, KpiRow } from '../components/KpiCard'
+import { Icon, ICONS } from '../components/StaffShell'
 import { useQueryState } from '../components/useQueryState'
 import './StaffUsersPage.css'
 
@@ -99,8 +101,27 @@ export function StaffUsersPage() {
       page={validPage}
       pages={pages}
       onPage={setPage}
-      summary={<><PeopleTabs /><PayoutReviewStrip /><DeletionStrip /></>}
-      actions={isAdmin(session) ? <Link to="/admin/people/team" className="tg-button tg-button--primary">+ Invite staff</Link> : undefined}
+      crumbs={[{ label: 'Control room', to: '/admin' }, { label: 'People' }]}
+      headActions={<>
+        <PeopleTabs />
+        {isAdmin(session) && <Link to="/admin/people/team" className="c-btn c-btn--cta"><Icon d={ICONS.people} /> Invite staff</Link>}
+      </>}
+      summary={<>
+        <KpiRow label="People by selling decision">
+          {GROUPS.filter((g) => g.key !== 'not_requested').map((g, i) => {
+            const n = countFor(g.states)
+            const waiting = g.key === 'pending_review'
+            return (
+              <KpiCard key={g.key} icon={PEOPLE_ICON[g.key] ?? ICONS.people} lead={i === 0} title={g.label} value={n}
+                pressed={group.key === g.key} onClick={() => { setView(g.key); setPage(1) }}
+                tone={waiting && n > 0 ? 'warn' : undefined}
+                chip={waiting ? (n > 0 ? <span className="c-chip2 c-chip2--warn"><Icon d={ICONS.clock} /> Decide</span> : <span className="c-chip2 c-chip2--good"><Icon d={ICONS.check} /> All decided</span>) : undefined}
+                note={PEOPLE_NOTE[g.key]} />
+            )
+          })}
+        </KpiRow>
+        <PayoutReviewStrip /><DeletionStrip />
+      </>}
     >
       <table className="q__table">
         <thead>
@@ -231,3 +252,13 @@ function label(v: string) {
 }
 
 export type { StaffUserRow }
+
+const PEOPLE_ICON: Record<string, string> = {
+  pending_review: ICONS.clock, approved: ICONS.check, rejected: ICONS.close, all: ICONS.people,
+}
+const PEOPLE_NOTE: Record<string, string> = {
+  pending_review: 'asked to sell; identity checked or pending',
+  approved: 'may list gear',
+  rejected: 'told why, can ask again',
+  all: 'every account on the platform',
+}

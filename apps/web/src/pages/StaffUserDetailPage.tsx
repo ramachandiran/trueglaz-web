@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiError, dateOnly, dateTime, money, useApi } from '@trueglaz/core'
+import { PageHead } from '../components/PageHead'
 import { ErrorNote, GradeBadge, Loading } from '../components/ui'
 import { PayoutCheckPanel } from '../components/PayoutCheckPanel'
 import { KycBadge, SellingBadge } from './StaffUsersPage'
@@ -36,8 +37,9 @@ export function StaffUserDetailPage() {
     } finally { setBusy(false) }
   }
 
-  if (detail.loading && !detail.data) return <Loading label="Loading" />
-  if (detail.error && !detail.data) return <ErrorNote error={detail.error} onRetry={detail.reload} />
+  const crumbs = [{ label: 'People', to: '/admin/people' }, { label: detail.data?.user.displayName ?? 'Person' }]
+  if (detail.loading && !detail.data) return <><PageHead title="Person" crumbs={crumbs} /><Loading label="Loading" /></>
+  if (detail.error && !detail.data) return <><PageHead title="Person" crumbs={crumbs} /><ErrorNote error={detail.error} onRetry={detail.reload} /></>
   if (!detail.data) return null
 
   const d = detail.data
@@ -46,23 +48,13 @@ export function StaffUserDetailPage() {
 
   return (
     <div className="people person">
-      <nav className="person__crumbs">
-        <Link to="/admin/people">← People</Link>
-      </nav>
-
-      <header className="people__head">
-        <div>
-          <h2 className="people__title">{u.displayName}</h2>
-          <p className="tg-muted people__sub">
-            {u.email ?? '—'} · {u.phone ?? '—'} · joined {u.joinedAt ? dateOnly(u.joinedAt) : '—'}
-          </p>
-        </div>
-        <div className="person__badges">
+      <PageHead crumbs={crumbs} title={u.displayName}
+        subtitle={<>{u.email ?? '—'} · {u.phone ?? '—'} · joined {u.joinedAt ? dateOnly(u.joinedAt) : '—'}</>}
+        actions={<div className="person__badges">
           <KycBadge status={u.kycStatus} />
           <SellingBadge state={u.sellingState} />
           {u.accountState !== 'active' && <span className="tg-badge tg-badge--bad">{u.accountState}</span>}
-        </div>
-      </header>
+        </div>} />
 
       <div className="person__panels">
         <section className="tg-card person__panel">

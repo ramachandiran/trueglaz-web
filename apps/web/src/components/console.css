@@ -194,7 +194,7 @@ a.c-row:hover .c-row__title { color: var(--tg-accent-text); }
   box-shadow: var(--c-shadow); padding: 14px; top: 88px; align-self: start;
 }
 .staff-shell .st__link { border-left: 0; padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: 500; }
-.staff-shell .st__link--on { background: var(--c-navy-soft); color: var(--tg-brand); font-weight: 600; }
+.staff-shell .st__link--on { background: var(--tg-accent-soft); color: var(--tg-text); font-weight: 600; box-shadow: inset 3px 0 0 var(--tg-accent); }
 @media (max-width: 900px) {
   .staff-shell .st { grid-template-columns: minmax(0, 1fr); }
   .staff-shell .st__side { position: static; }
@@ -311,3 +311,27 @@ a.c-row:hover .c-row__title { color: var(--tg-accent-text); }
 .c-tcard .c-table th { background: color-mix(in srgb, var(--tg-bg-sunken) 45%, var(--tg-bg-raised)); color: var(--tg-text-muted); font-weight: 500; font-size: 13px; padding: 13px 14px; }
 .c-tcard .c-table td { padding: 12px 14px; border-bottom-color: var(--tg-border); }
 .c-late { color: var(--tg-bad); font-weight: 600; }
+
+/* KpiCard variants (TG-199) */
+.c-kpis--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.c-kpis--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1180px) { .c-kpis--3, .c-kpis--5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .c-kpis--3, .c-kpis--5 { grid-template-columns: minmax(0, 1fr); } }
+button.c-kpi2 { text-align: left; font: inherit; color: inherit; width: 100%; }
+.c-kpi2--bad { box-shadow: inset 4px 0 0 var(--tg-bad), var(--c-shadow); }
+.c-kpi2--warn { box-shadow: inset 4px 0 0 var(--tg-warn), var(--c-shadow); }
+.c-kpi2--on { border-color: var(--tg-brand); box-shadow: inset 0 0 0 1px var(--tg-brand), var(--c-shadow); }
+.c-kpi2--on .c-kpi2__ico:not(.c-kpi2__ico--on) { background: var(--tg-brand); color: var(--tg-on-brand); }
+.c-kpi2--on .c-kpi__go { opacity: 1; }
+/* A tab bar straight on the canvas (not inside a table card) needs its own card colour to read as a bar. */
+.c-stack > .c-tbar { background: var(--tg-bg-raised); border: 1px solid var(--tg-border); box-shadow: var(--c-shadow); padding: 8px; margin-bottom: 0; }
+/* Phones: two figure cards across, tighter, so the list is not four screens down. */
+@media (max-width: 520px) {
+  .c-kpis, .c-kpis--3, .c-kpis--5 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .c-kpi2 { padding: 14px; }
+  .c-kpi2__t { font-size: 13.5px; gap: 8px; align-items: flex-start; }
+  .c-kpi2__ico { width: 32px; height: 32px; }
+  .c-kpi2__ico svg { width: 17px; height: 17px; }
+  .c-kpi2__v { font-size: 21px; margin: 10px 0 8px; overflow-wrap: anywhere; }
+  .c-kpi2__f { font-size: 12px; gap: 6px; }
+}
