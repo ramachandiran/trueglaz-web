@@ -2,12 +2,18 @@ import { uploadPhoto } from '../media/uploadPhoto'
 import { FormScroll } from '../components/FormScroll'
 import { useEffect, useMemo, useRef, useState, type ElementRef } from 'react'
 import { Image, Pressable, ScrollView, Switch, TextInput, View } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import type * as ImagePicker from 'expo-image-picker'
+import { openSettings, pickPhotos, type PhotoSource } from '../media/pickPhotos'
+import { SelectField } from '../components/SelectField'
 import { api, useApi, type ProductModel } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Card, Loading, Muted, SectionTitle } from '../components/ui'
+
+/** How many photos one item can carry. */
+const MAX_PHOTOS = 12
 
 export function NewItemScreen({ route, navigation }: { route: any; navigation: any }) {
   const t = useTheme()
@@ -48,6 +54,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<{ text: string; settings?: boolean } | null>(null)
   const scroller = useRef<{ scrollTo: (o: { y: number; animated?: boolean }) => void } | null>(null)
   const cardY = useRef(0)
   const modelY = useRef(0)
@@ -77,11 +84,14 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
     if (cam) setCategoryId(cam.id)
   }, [categories.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addPhotos = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!perm.granted) { setError('Allow photo access to add photos.'); return }
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, selectionLimit: 12, quality: 0.7 })
-    if (!res.canceled) setPhotos((prev) => [...prev, ...res.assets].slice(0, 12))
+  // Camera or library (TG-187): the iPhone library picker has no camera in it.
+  const addPhotos = async (source: PhotoSource) => {
+    setPhotoError(null)
+    const room = MAX_PHOTOS - photos.length
+    if (room <= 0) return
+    const got = await pickPhotos(source, { multiple: true, limit: room })
+    if (got.error) { setPhotoError({ text: got.error, settings: got.needsSettings }); return }
+    if (got.assets.length) setPhotos((prev) => [...prev, ...got.assets].slice(0, MAX_PHOTOS))
   }
 
   const save = async () => {
@@ -150,8 +160,10 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       </Card>
 
       <Card style={{ gap: t.space.x3 }}>
-        <SectionTitle>Brand</SectionTitle>
-        <ChipRow options={(brands.data ?? []).map((b) => ({ value: b.id, label: b.name }))} selected={brandId} onSelect={(v) => { setBrandId(v); setProductModelId(null) }} />
+        {/* A drop-down with search, not a wall of chips (TG-186). */}
+        <SelectField label="Brand" title="Choose a brand" placeholder="Choose a brand" value={brandId}
+          options={[...(brands.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)).map((b) => ({ value: b.id, label: b.name }))}
+          onChange={(v) => { if (v !== brandId) { setBrandId(v); setProductModelId(null) } }} />
       </Card>
 
       {/* zIndex: the suggestions open upwards over the cards above (TG-138). */}
@@ -207,7 +219,23 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
             ))}
           </View>
         )}
-        <Button label={photos.length ? 'Add more photos' : 'Add photos'} variant="ghost" onPress={addPhotos} />
+        {photos.length < MAX_PHOTOS ? (
+          <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
+            <PhotoButton icon="camera-outline" label="Take photo" onPress={() => addPhotos('camera')} />
+            <PhotoButton icon="images-outline" label="From library" onPress={() => addPhotos('library')} />
+          </View>
+        ) : <Muted size={t.size.xs}>That's the maximum of {MAX_PHOTOS} photos.</Muted>}
+        {photos.length > 0 && <Muted size={t.size.xs}>{photos.length} of {MAX_PHOTOS} photos added</Muted>}
+        {photoError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
+            <Txt style={{ color: t.colors.bad, fontSize: t.size.sm, flexShrink: 1 }}>{photoError.text}</Txt>
+            {photoError.settings && (
+              <Pressable onPress={openSettings} accessibilityRole="button" hitSlop={8}>
+                <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never, textDecorationLine: 'underline' }}>Open Settings</Txt>
+              </Pressable>
+            )}
+          </View>
+        )}
       </Card>
 
       <Card style={{ gap: t.space.x3 }}>
@@ -220,10 +248,12 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
 
       <Card style={{ gap: t.space.x1 }}>
         <SectionTitle>What's included</SectionTitle>
-        <Toggle label="Under warranty" value={underWarranty} onChange={setUnderWarranty} />
-        <Toggle label="Original bill" value={hasBill} onChange={setHasBill} />
-        <Toggle label="Original box" value={hasBox} onChange={setHasBox} />
-        <Toggle label="Box accessories" value={hasAccessories} onChange={setHasAccessories} />
+        <Muted size={t.size.xs}>Switch on everything that comes with it. Complete kits sell faster.</Muted>
+        <Toggle icon="shield-checkmark-outline" label="Under warranty" hint="The maker's warranty is still running" value={underWarranty} onChange={setUnderWarranty} />
+        <Toggle icon="receipt-outline" label="Original bill" hint="The purchase invoice" value={hasBill} onChange={setHasBill} />
+        <Toggle icon="cube-outline" label="Original box" hint="The box it came in" value={hasBox} onChange={setHasBox} />
+        {/* Not tied to the box any more (TG-189). */}
+        <Toggle icon="bag-handle-outline" label="Accessories" hint="Strap, caps, charger and the like, with or without the box" value={hasAccessories} onChange={setHasAccessories} last />
       </Card>
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
@@ -314,12 +344,42 @@ function ChipRow({ options, selected, onSelect }: { options: { value: string; la
   )
 }
 
-function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+/**
+ * One "what's included" choice (TG-188). The switch is drawn so both states
+ * show on the cream card: a dark track when off (the old pale one all but
+ * disappeared), orange when on, a white knob either way, and iOS's own
+ * off colour set to match.
+ */
+function Toggle({ icon, label, hint, value, onChange, last }: {
+  icon: React.ComponentProps<typeof Ionicons>['name']; label: string; hint?: string; value: boolean; onChange: (v: boolean) => void; last?: boolean
+}) {
   const t = useTheme()
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: t.space.x2 }}>
-      <Txt style={{ color: t.colors.text }}>{label}</Txt>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: t.colors.accent, false: t.colors.border }} thumbColor={t.colors.bgRaised} />
-    </View>
+    <Pressable onPress={() => onChange(!value)} accessibilityRole="switch" accessibilityState={{ checked: value }} accessibilityLabel={label} accessibilityHint={hint}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3, paddingVertical: t.space.x3, borderBottomWidth: last ? 0 : 1, borderBottomColor: t.colors.border }}>
+      <View style={{ width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: value ? t.colors.accentSoft : t.colors.bgSunken }}>
+        <Ionicons name={icon} size={18} color={value ? t.colors.accent : t.colors.textMuted} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Txt style={{ color: t.colors.text, fontWeight: t.weight.medium as never }}>{label}</Txt>
+        {hint && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{hint}</Txt>}
+      </View>
+      <Switch value={value} onValueChange={onChange} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden
+        trackColor={{ true: t.colors.cta, false: t.colors.borderInput }} ios_backgroundColor={t.colors.borderInput} thumbColor="#ffffff"
+        {...({ activeThumbColor: '#ffffff' } as object) /* the browser build's name for it */} />
+    </Pressable>
+  )
+}
+
+function PhotoButton({ icon, label, onPress }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void }) {
+  const t = useTheme()
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
+      style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48,
+        borderRadius: t.radius.md, borderWidth: 1.5, borderColor: t.colors.accent, borderStyle: 'dashed',
+        backgroundColor: pressed ? t.colors.accentSoft : 'transparent' })}>
+      <Ionicons name={icon} size={18} color={t.colors.accent} />
+      <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{label}</Txt>
+    </Pressable>
   )
 }

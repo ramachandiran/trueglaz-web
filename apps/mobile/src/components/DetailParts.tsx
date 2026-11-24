@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Keyboard, Platform, Pressable, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { dateTime } from '@trueglaz/core'
 import { Txt } from './Txt'
 import { GearArt } from './kit'
 import { useTheme } from '../theme/ThemeContext'
@@ -142,6 +143,38 @@ export function StickyFooter({ children }: { children: React.ReactNode }) {
     <View style={{ flexDirection: 'row', gap: t.space.x2, paddingHorizontal: t.space.x4, paddingTop: t.space.x3, paddingBottom: t.space.x3,
       backgroundColor: t.colors.bgRaised, borderTopWidth: 1, borderTopColor: t.colors.border }}>
       {children}
+    </View>
+  )
+}
+
+/**
+ * The reference people quote to support, made prominent (TG-182, TG-184):
+ * the ID large and selectable so it can be copied, when it last changed
+ * (highlighted), and when it began. Order details and My item share it.
+ */
+export function RefCard({ label, code, updatedAt, since }: {
+  label: string; code: string; updatedAt: string; since?: { label: string; at: string }
+}) {
+  const t = useTheme()
+  return (
+    <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 16, padding: t.space.x4, gap: t.space.x3 }}>
+      <View style={{ gap: 2 }}>
+        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>{label.toUpperCase()}</Txt>
+        <Txt selectable accessibilityLabel={`${label} ${code.split('').join(' ')}`}
+          style={{ color: t.colors.text, fontFamily: t.font.mono, fontSize: t.size.xl, fontWeight: t.weight.bold as never, letterSpacing: 0.5 }}>{code}</Txt>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 6, paddingHorizontal: 12 }}>
+          <Ionicons name="time-outline" size={15} color={t.colors.accentText} />
+          <Txt style={{ color: t.colors.accentText, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Last updated {dateTime(updatedAt)}</Txt>
+        </View>
+        {since && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 }}>
+            <Ionicons name="calendar-outline" size={14} color={t.colors.textMuted} />
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{since.label} {dateTime(since.at)}</Txt>
+          </View>
+        )}
+      </View>
     </View>
   )
 }

@@ -12,7 +12,7 @@ import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
 import { Card, ErrorNote, Loading, Muted } from '../components/ui'
 import { sizedUri, useModelImages } from '../components/ModelImage'
-import { DetailHeader, SummaryCard } from '../components/DetailParts'
+import { DetailHeader, RefCard, SummaryCard } from '../components/DetailParts'
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { FadeIn, Pop, statusKey, useStatusChange } from '../components/motion'
@@ -196,7 +196,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <DetailHeader title="Order" onBack={() => navigation.goBack()} />
       <FormScroll contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
-        <OrderIdCard number={order.orderNumber} placedAt={order.createdAt} updatedAt={history[0]?.at ?? order.createdAt} />
+        <RefCard label="Order ID" code={order.orderNumber} updatedAt={history[0]?.at ?? order.createdAt} since={{ label: 'Placed', at: order.createdAt }} />
 
         <FadeIn>
         {justPaid ? (
@@ -337,36 +337,6 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
               <Button label="Cancel" variant="ghost" onPress={() => setReturnFor(null)} />
             </View>
       </BottomSheet>
-    </View>
-  )
-}
-
-
-/**
- * The order's reference, made prominent (TG-182): the Order ID people quote to
- * support (still selectable, so it can be copied), and when the order last changed.
- */
-function OrderIdCard({ number, placedAt, updatedAt }: { number: string; placedAt: string; updatedAt: string }) {
-  const t = useTheme()
-  return (
-    <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 16, padding: t.space.x4, gap: t.space.x3 }}>
-      <View style={{ gap: 2 }}>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>ORDER ID</Txt>
-        <Txt selectable accessibilityLabel={`Order ID ${number.split('').join(' ')}`}
-          style={{ color: t.colors.text, fontFamily: t.font.mono, fontSize: t.size.xl, fontWeight: t.weight.bold as never, letterSpacing: 0.5 }}>{number}</Txt>
-      </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 6, paddingHorizontal: 12 }}>
-          <Ionicons name="time-outline" size={15} color={t.colors.accentText} />
-          <Txt style={{ color: t.colors.accentText, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>
-            Last updated {dateTime(updatedAt)}
-          </Txt>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 }}>
-          <Ionicons name="calendar-outline" size={14} color={t.colors.textMuted} />
-          <Muted size={t.size.xs}>Placed {dateTime(placedAt)}</Muted>
-        </View>
-      </View>
     </View>
   )
 }

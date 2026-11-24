@@ -268,7 +268,7 @@ function Fact({ k, v, mono, wide }: { k: string; v?: string | null; mono?: boole
 const yesNo = (b: boolean | null | undefined) => (b == null ? null : b ? 'Yes' : 'No')
 
 function comesWith(r: InventoryRow): string {
-  const parts = [r.hasBill && 'original bill', r.hasAccessories ? 'box with accessories' : r.hasBox && 'original box']
+  const parts = [r.hasBill && 'original bill', r.hasBox && 'original box', r.hasAccessories && 'accessories']
     .filter(Boolean) as string[]
   return parts.length ? parts.join(', ') : 'nothing'
 }

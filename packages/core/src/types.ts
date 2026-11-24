@@ -72,7 +72,7 @@ export interface ConsignmentItem {
   underWarranty: boolean | null
   hasBill: boolean
   hasBox: boolean
-  /** The original box still has its accessories in it. Implies hasBox. */
+  /** Accessories come with it (strap, caps, charger…), with or without the original box (TG-189). */
   hasAccessories: boolean
   serialNumber: string | null
   internalSku: string
@@ -90,6 +90,8 @@ export interface ConsignmentItem {
   returnedAt: string | null
   createdAt: string
   updatedAt: string
+  /** Only in the seller's own list (/items/mine): their last move was withdrawing it (TG-191). */
+  withdrawnBySeller?: boolean
 }
 
 /** A name on the bench roster, for the picker. Not a directory entry. */

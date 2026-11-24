@@ -3,7 +3,7 @@ import { notify } from '../components/Confirm'
 import { Pressable, ScrollView, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { api, isSeller, money, STATE_LABELS, useApi, useSession, type Theme } from '@trueglaz/core'
+import { api, isSeller, money, STATE_LABELS, useApi, useSession, type ConsignmentItem, type Theme } from '@trueglaz/core'
 import { PageTitle } from '../components/kit'
 import { Txt, useLargeText } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -102,10 +102,6 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
     (i.productModelId ? models.data?.content.find((m) => m.id === i.productModelId)?.name : null)
     || i.modelFreeText || i.description || i.internalSku
 
-  const pendingIds = new Set((approvals.data ?? []).filter((a) => a.approval.decision === 'pending').map((a) => a.approval.consignmentItemId))
-  const actionOf = (i: { id: string; currentState: string }) =>
-    pendingIds.has(i.id) ? 'Price to approve' : i.currentState === 'DRAFT' ? 'Draft — finish & submit' : null
-
   const pending = useMemo(() => (approvals.data ?? []).filter((a) => a.approval.decision === 'pending'), [approvals.data])
 
   const startSubmission = async () => {
@@ -119,6 +115,52 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
       setCreateError(msg)
       notify('Could not start a submission', msg)
     } finally { setCreating(false) }
+  }
+
+  const pendingById = useMemo(() => new Map(pending.map((a) => [a.approval.consignmentItemId, a])), [pending])
+  const [showClosed, setShowClosed] = useState(false)
+  const groups = useMemo(() => {
+    const g = { needs: [] as ConsignmentItem[], progress: [] as ConsignmentItem[], listed: [] as ConsignmentItem[], sold: [] as ConsignmentItem[], closed: [] as ConsignmentItem[] }
+    for (const i of items.data ?? []) g[groupOf(i, pendingById.has(i.id))].push(i)
+    return g
+  }, [items.data, pendingById])
+
+  // One item, as a card (TG-185): picture, name, status, price and grade, and
+  // the next step in a strip when there is one.
+  const card = (i: ConsignmentItem) => {
+    const a = pendingById.get(i.id)
+    const look = statusLook(t, i, !!a)
+    const next = a ? { icon: 'pricetag-outline' as const, text: `Approve the price: ${money(a.proposedAmountMinor)}, you net ${money(a.expectedNetMinor)}` }
+      : i.currentState === 'DRAFT' ? { icon: 'create-outline' as const, text: 'Finish and submit it' }
+      : i.currentState === 'PRE_APPROVED' ? { icon: 'cube-outline' as const, text: 'Ship it to us and record it' }
+      : null
+    return (
+      <Pressable accessibilityRole="button" key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}
+        accessibilityLabel={`${nameOf(i)}, ${look.label}${next ? `. ${next.text}` : ''}`}
+        style={({ pressed }) => [{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: next ? t.colors.warn : t.colors.border, borderRadius: 16, overflow: 'hidden', opacity: pressed ? 0.85 : 1 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3, padding: 13 }}>
+          <ModelThumb image={pictures.byId(i.productModelId)} size={64} />
+          <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
+            <Txt numberOfLines={2} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.md }}>{nameOf(i)}</Txt>
+            <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: look.bg, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
+              <Ionicons name={look.icon} size={12} color={look.fg} />
+              <Txt style={{ color: look.fg, fontSize: 11, fontWeight: t.weight.bold as never }}>{look.label}</Txt>
+            </View>
+            <Muted size={t.size.xs}>
+              {money(i.askingAmountMinor)} asking{i.assignedGradeCode ? ` · graded ${i.assignedGradeCode}` : ''}{' · '}
+              <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: 11 }}>{i.internalSku}</Txt>
+            </Muted>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />
+        </View>
+        {next && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, backgroundColor: t.colors.warnSoft, paddingHorizontal: 13, paddingVertical: 9 }}>
+            <Ionicons name={next.icon} size={15} color={t.colors.warn} />
+            <Txt style={{ flex: 1, color: t.colors.warn, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{next.text}</Txt>
+          </View>
+        )}
+      </Pressable>
+    )
   }
 
   if (home.loading && !home.data) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
@@ -140,26 +182,11 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
         </View>
       )}
 
-      {pending.length > 0 && (
-        <View style={{ gap: t.space.x3 }}>
-          <SecLabel t={t}>Needs your decision</SecLabel>
-          {pending.map((a) => {
-            const it = (items.data ?? []).find((i) => i.id === a.approval.consignmentItemId)
-            return (
-              <Pressable accessibilityRole="button" key={a.approval.id} onPress={() => navigation.navigate('SellerItem', { id: a.approval.consignmentItemId })}
-                style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1.5, borderColor: t.colors.warn, borderRadius: 16, padding: t.space.x4, gap: t.space.x2 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.space.x2 }}>
-                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.md, flex: 1 }}>{it ? nameOf(it) : 'Price to approve'}</Txt>
-                  <Pill t={t} tone="warn" label="Action needed" />
-                </View>
-                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>
-                  Proposed {money(a.proposedAmountMinor)} · you net <Txt style={{ color: t.colors.good, fontWeight: t.weight.bold as never }}>{money(a.expectedNetMinor)}</Txt>
-                </Txt>
-                <Muted size={t.size.xs}>{a.requiredBecause}</Muted>
-              </Pressable>
-            )
-          })}
-        </View>
+      {/* Anything waiting on the seller comes first (TG-185). */}
+      {groups.needs.length > 0 && (
+        <ItemGroup t={t} title="Needs you" count={groups.needs.length} tone="warn">
+          {groups.needs.map(card)}
+        </ItemGroup>
       )}
 
       <View style={{ backgroundColor: t.colors.brand, borderRadius: 18, padding: t.space.x5, overflow: 'hidden' }}>
@@ -177,31 +204,19 @@ function SellerDashboard({ navigation, insets }: { navigation: any; insets: { to
         </Pressable>
       </View>
 
-      <View style={{ gap: t.space.x3 }}>
-        <SecLabel t={t}>My items</SecLabel>
-        {items.loading && !items.data && <Loading />}
-        {items.data && items.data.length === 0 && <Empty title="No items yet" hint="Tap “List an item” to consign your first piece of gear." />}
-        {(items.data ?? []).map((i) => {
-          const action = actionOf(i)
-          const tone = action ? 'warn' : i.currentState === 'LISTED' || i.currentState === 'SOLD' ? 'good' : 'neutral'
-          return (
-            <Pressable accessibilityRole="button" key={i.id} onPress={() => navigation.navigate('SellerItem', { id: i.id })}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3, backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: action ? t.colors.warn : t.colors.border, borderRadius: 16, padding: 13 }}>
-              <ModelThumb image={pictures.byId(i.productModelId)} size={48} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, flexWrap: 'wrap' }}>
-                  <Txt numberOfLines={1} style={{ color: t.colors.text, fontWeight: t.weight.bold as never, fontSize: t.size.md, flexShrink: 1 }}>{nameOf(i)}</Txt>
-                  <Pill t={t} tone={tone} label={STATE_LABELS[i.currentState] ?? i.currentState} />
-                </View>
-                {action
-                  ? <Txt style={{ color: t.colors.warn, fontSize: t.size.xs, fontWeight: t.weight.bold as never, marginTop: 4 }}>{action}</Txt>
-                  : <Muted size={t.size.xs} style={{ marginTop: 4 }}>asking {money(i.askingAmountMinor)}{i.assignedGradeCode ? ` · graded ${i.assignedGradeCode}` : ''}</Muted>}
-                <Txt style={{ color: t.colors.textMuted, fontFamily: t.font.mono, fontSize: 10.5, marginTop: 2 }}>{i.internalSku}</Txt>
-              </View>
-            </Pressable>
-          )
-        })}
-      </View>
+      {items.loading && !items.data && <Loading />}
+      {items.data && items.data.length === 0 && <Empty title="No items yet" hint="Tap “List an item” to consign your first piece of gear." />}
+      {groups.progress.length > 0 && <ItemGroup t={t} title="In progress" count={groups.progress.length}>{groups.progress.map(card)}</ItemGroup>}
+      {groups.listed.length > 0 && <ItemGroup t={t} title="Listed" count={groups.listed.length} tone="good">{groups.listed.map(card)}</ItemGroup>}
+      {groups.sold.length > 0 && <ItemGroup t={t} title="Sold" count={groups.sold.length} tone="good">{groups.sold.map(card)}</ItemGroup>}
+      {groups.closed.length > 0 && (
+        <ItemGroup t={t} title="Closed" count={groups.closed.length}
+          aside={<Pressable onPress={() => setShowClosed(!showClosed)} accessibilityRole="button" accessibilityState={{ expanded: showClosed }} hitSlop={10}>
+            <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{showClosed ? 'Hide' : 'Show'}</Txt>
+          </Pressable>}>
+          {showClosed ? groups.closed.map(card) : null}
+        </ItemGroup>
+      )}
     </ScrollView>
     </View>
   )
@@ -216,20 +231,55 @@ function Tile({ t, label, value, highlight, full }: { t: Theme; label: string; v
   )
 }
 
-function SecLabel({ t, children }: { t: Theme; children: React.ReactNode }) {
-  return <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.7, textTransform: 'uppercase' }}>{children}</Txt>
+type Group = 'needs' | 'progress' | 'listed' | 'sold' | 'closed'
+const LISTED = new Set(['LISTED', 'RESERVED', 'RELISTED'])
+const SOLD = new Set(['SOLD', 'DISPATCHED', 'DELIVERED', 'ACCEPTED'])
+const CLOSED = new Set(['REJECTED_PRE_INTAKE', 'INSPECTION_FAILED', 'QUARANTINED', 'SELLER_DECLINED', 'RETURN_REQUESTED', 'RETURN_TO_SELLER',
+  'RETURN_IN_TRANSIT', 'RETURN_RECEIVED', 'RETURNED', 'UNSOLD_REVIEW', 'ARCHIVED', 'EXPIRED'])
+
+function groupOf(i: ConsignmentItem, priceWaiting: boolean): Group {
+  if (priceWaiting || i.currentState === 'DRAFT' || i.currentState === 'PRE_APPROVED') return 'needs'
+  if (i.withdrawnBySeller || CLOSED.has(i.currentState)) return 'closed'
+  if (LISTED.has(i.currentState)) return 'listed'
+  if (SOLD.has(i.currentState)) return 'sold'
+  return 'progress'
 }
 
-function Pill({ t, tone, label }: { t: Theme; tone: 'good' | 'warn' | 'bad' | 'neutral'; label: string }) {
-  const c = {
-    good: { fg: t.colors.good, bg: t.colors.goodSoft },
-    warn: { fg: t.colors.warn, bg: t.colors.warnSoft },
-    bad: { fg: t.colors.bad, bg: t.colors.badSoft },
-    neutral: { fg: t.colors.textMuted, bg: t.colors.bgSunken },
-  }[tone]
+type IconName = React.ComponentProps<typeof Ionicons>['name']
+
+/** How an item's status reads in the list; a withdrawal says so (TG-191). */
+function statusLook(t: Theme, i: ConsignmentItem, priceWaiting: boolean): { label: string; icon: IconName; fg: string; bg: string } {
+  const warn = { fg: t.colors.warn, bg: t.colors.warnSoft }
+  const good = { fg: t.colors.good, bg: t.colors.goodSoft }
+  const plain = { fg: t.colors.textMuted, bg: t.colors.bgSunken }
+  const bad = { fg: t.colors.bad, bg: t.colors.badSoft }
+  if (i.withdrawnBySeller) return { label: i.currentState === 'RETURN_TO_SELLER' ? 'Taken off sale by you' : 'Withdrawn by you', icon: 'arrow-undo-outline', ...plain }
+  if (priceWaiting) return { label: 'Price to approve', icon: 'pricetag-outline', ...warn }
+  if (i.currentState === 'DRAFT') return { label: 'Draft', icon: 'create-outline', ...warn }
+  if (i.currentState === 'PRE_APPROVED') return { label: 'Pre-approved', icon: 'checkmark-circle-outline', ...warn }
+  if (LISTED.has(i.currentState)) return { label: STATE_LABELS[i.currentState] ?? i.currentState, icon: 'storefront-outline', ...good }
+  if (SOLD.has(i.currentState)) return { label: STATE_LABELS[i.currentState] ?? i.currentState, icon: 'cash-outline', ...good }
+  if (['REJECTED_PRE_INTAKE', 'INSPECTION_FAILED', 'QUARANTINED'].includes(i.currentState)) {
+    return { label: i.currentState === 'REJECTED_PRE_INTAKE' ? 'Not approved' : STATE_LABELS[i.currentState] ?? i.currentState, icon: 'close-circle-outline', ...bad }
+  }
+  if (CLOSED.has(i.currentState)) return { label: STATE_LABELS[i.currentState] ?? i.currentState, icon: 'return-down-back-outline', ...plain }
+  return { label: STATE_LABELS[i.currentState] ?? i.currentState, icon: 'time-outline', fg: t.colors.accentText, bg: t.colors.accentSoft }
+}
+
+function ItemGroup({ t, title, count, tone, aside, children }: {
+  t: Theme; title: string; count: number; tone?: 'warn' | 'good'; aside?: React.ReactNode; children: React.ReactNode
+}) {
+  const dot = tone === 'warn' ? t.colors.warn : tone === 'good' ? t.colors.good : t.colors.textMuted
   return (
-    <View style={{ backgroundColor: c.bg, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 9 }}>
-      <Txt style={{ color: c.fg, fontSize: 10.5, fontWeight: t.weight.bold as never }}>{label}</Txt>
+    <View style={{ gap: t.space.x3 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dot }} />
+        <Txt accessibilityRole="header" style={{ flex: 1, color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>
+          {title} <Txt style={{ color: t.colors.textMuted, fontWeight: t.weight.normal as never }}>· {count}</Txt>
+        </Txt>
+        {aside}
+      </View>
+      {children}
     </View>
   )
 }

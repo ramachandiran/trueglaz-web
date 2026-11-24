@@ -46,7 +46,11 @@ export function LineReturnNote({ lineId, state, acceptedBy }: { lineId: string; 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 
 /** One entry on the order's history, from any of its lines (or the order itself). */
-export interface HistoryEntry { at: string; title: string; note?: string | null; kind: string; what?: string }
+export interface HistoryEntry {
+  at: string; title: string; note?: string | null; kind: string; what?: string
+  /** Set by callers whose entries are not order events (an item's moves, TG-184). */
+  icon?: IconName; tone?: 'good' | 'bad' | 'warn' | 'plain'
+}
 
 const ICON: Record<string, IconName> = {
   placed: 'receipt-outline', paid: 'card-outline', dispatched: 'car-outline', tracking_updated: 'navigate-outline',
@@ -87,7 +91,7 @@ export function OrderHistory({ entries, loading }: { entries: HistoryEntry[]; lo
           {shown.map((e, i) => {
             const latest = i === 0
             const last = i === shown.length - 1
-            const tn = e.kind === 'placed' ? 'plain' : orderEventTone(e.kind)
+            const tn = e.tone ?? (e.kind === 'placed' ? 'plain' : orderEventTone(e.kind))
             const c = tone[tn]
             // The latest entry is filled; its icon colour is chosen per fill so it stays readable.
             const fill = { good: [t.colors.good, t.colors.onBad], bad: [t.colors.bad, t.colors.onBad], warn: [t.colors.cta, t.colors.onCta], plain: [t.colors.accent, t.colors.onAccent] }[tn]
@@ -98,7 +102,7 @@ export function OrderHistory({ entries, loading }: { entries: HistoryEntry[]; lo
                 <View style={{ alignItems: 'center', width: 32 }}>
                   <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
                     backgroundColor: latest ? fill[0] : t.colors.bgSunken, borderWidth: latest ? 0 : 1, borderColor: t.colors.border }}>
-                    <Ionicons name={ICON[e.kind] ?? 'ellipse-outline'} size={16} color={latest ? fill[1] : c} />
+                    <Ionicons name={e.icon ?? ICON[e.kind] ?? 'ellipse-outline'} size={16} color={latest ? fill[1] : c} />
                   </View>
                   {!last && <View style={{ flex: 1, width: 2, backgroundColor: t.colors.border, marginVertical: 2 }} />}
                 </View>

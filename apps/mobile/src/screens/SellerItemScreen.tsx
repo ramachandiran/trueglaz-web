@@ -2,21 +2,25 @@ import { uploadPhoto } from '../media/uploadPhoto'
 import { FormScroll } from '../components/FormScroll'
 import { useEffect, useMemo, useState } from 'react'
 import { Image, Pressable, ScrollView, View } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
+import type * as ImagePicker from 'expo-image-picker'
+import { pickPhotos, type PhotoSource } from '../media/pickPhotos'
 import {
-  api, dateOnly, dateTime, HAPPY_PATH, money, OFF_PATH_TERMINALS, STATE_BLURBS, STATE_LABELS, useApi,
+  api, dateOnly, dateTime, HAPPY_PATH, money, OFF_PATH_TERMINALS, STATE_LABELS, useApi,
   type ItemStateTransition, type SellerApprovalView,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { type TrackState, type TrackStep } from '../components/StatusTracker'
-import { ProgressSection, StatusHero } from '../components/StatusViews'
+import { ProgressSection } from '../components/StatusViews'
 import { Button, Field } from '../components/form'
 import { DateField } from '../components/DateField'
 import { todayIso } from '../components/dateField.shared'
-import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
+import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle } from '../components/ui'
 import { sizedUri, useModelImages } from '../components/ModelImage'
-import { DetailHeader, DetailRef, StickyFooter, SummaryCard } from '../components/DetailParts'
+import { DetailHeader, RefCard, StickyFooter, SummaryCard } from '../components/DetailParts'
+import { OrderHistory, type HistoryEntry } from '../components/LineHistoryList'
+import { GearArt } from '../components/kit'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { confirm } from '../components/Confirm'
 
 /** Where a seller can still call it off (TG-139), and how. */
@@ -35,8 +39,7 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
   const photos = useApi(() => api.itemMedia(id), [id])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [historyOpen, setHistoryOpen] = useState(false)
-
+  
   // Back from Edit: read the draft again.
   useEffect(() => navigation.addListener('focus', () => { item.reload(); photos.reload() }), [navigation]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -69,6 +72,10 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
   const live = listings.find((l) => l.state === 'published')
   const included = [it.hasBill && 'Bill', it.hasBox && 'Box', it.hasAccessories && 'Accessories'].filter(Boolean).join(' · ') || 'None'
   const canWithdraw = WITHDRAW_BOX.includes(state) || WITHDRAW_LISTED.includes(state)
+  // TG-191: a withdrawal is stored as "rejected before intake" (or "returning"),
+  // so the reason on the last move decides how it reads to the seller.
+  const withdrawn = isWithdrawal(item.data.history[item.data.history.length - 1])
+  const statusLabel = withdrawn ? 'Withdrawn by you' : STATE_LABELS[state] ?? state
 
   async function run(key: string, fn: () => Promise<unknown>, after?: () => void) {
     setBusy(key); setError(null)
@@ -93,7 +100,7 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
 
   const summary = (
     <SummaryCard
-      label={isDraft ? 'Review your item' : 'Item summary'}
+      label="Item summary"
       things={[{
         key: it.id,
         image: pic ? sizedUri(pic, 200) : null,
@@ -101,7 +108,7 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
         chips: [
           ...(it.assignedGradeCode ? [{ label: `Graded ${it.assignedGradeCode}`, tone: 'good' as const }] : []),
           { label: `You said ${it.declaredGradeCode}`, tone: 'neutral' as const },
-          ...(!isDraft ? [{ label: STATE_LABELS[state] ?? state, tone: 'accent' as const }] : []),
+          { label: statusLabel, tone: withdrawn ? 'neutral' as const : 'accent' as const },
         ],
         sub: [brandName, categoryName].filter(Boolean).join(' · ') || undefined,
         price: money(it.askingAmountMinor),
@@ -111,125 +118,182 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
         { label: 'Lowest you’d take', value: it.floorAmountMinor != null ? money(it.floorAmountMinor) : '—' },
         ...(live ? [{ label: 'Listed at', value: money(live.priceMinor), tone: 'good' as const }] : []),
         ...(pending ? [{ label: 'You’d receive', value: money(pending.expectedNetMinor), tone: 'good' as const }] : []),
-        { label: 'Serial number', value: it.serialNumber ? (isDraft ? it.serialNumber : `••${it.serialNumber.slice(-4)}`) : '—' },
+        { label: 'Serial number', value: it.serialNumber ? `••${it.serialNumber.slice(-4)}` : '—' },
         { label: 'Under warranty', value: it.underWarranty ? 'Yes' : 'No' },
         { label: 'Included', value: included },
       ]}
-    >
-      {isDraft && (
-        <View style={{ gap: t.space.x2 }}>
-          <View style={{ gap: 2 }}>
-            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>DESCRIPTION</Txt>
-            <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>{it.description || '—'}</Txt>
-          </View>
-          <View style={{ gap: 2 }}>
-            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>WHY YOU’RE SELLING</Txt>
-            <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>{it.reasonToSell || '—'}</Txt>
-          </View>
-        </View>
-      )}
-    </SummaryCard>
+    />
   )
 
   const photoStrip = (photos.data?.length ?? 0) > 0 && (
-    <View style={{ gap: t.space.x2 }}>
-      <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>YOUR PHOTOS · {photos.data!.length}</Txt>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.space.x2 }}>
-        {photos.data!.map((m) => (
-          <Image key={m.id} source={{ uri: sizedUri(m, 200) }} style={{ width: 84, height: 84, borderRadius: 12, backgroundColor: t.colors.bgSunken }} resizeMode="cover" />
-        ))}
-      </ScrollView>
-    </View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: t.space.x2 }}>
+      {photos.data!.map((m) => (
+        <Image key={m.id} source={{ uri: sizedUri(m, 200) }} style={{ width: 84, height: 84, borderRadius: 12, backgroundColor: t.colors.bgSunken }} resizeMode="cover" />
+      ))}
+    </ScrollView>
   )
 
+  if (isDraft) {
+    const photoCount = photos.data?.length ?? 0
+    return (
+      <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
+        <DetailHeader title="Review & submit" onBack={() => navigation.goBack()} />
+        <FormScroll contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
+          {/* TG-190: a review page a seller can trust before they send it. */}
+          <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 16, padding: t.space.x4, gap: t.space.x3 }}>
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>STEP 2 OF 2 · CHECK AND SUBMIT</Txt>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+              <GearArt uri={pic ? sizedUri(pic, 200) : (photos.data?.[0] ? sizedUri(photos.data[0], 200) : null)} width={72} height={72} radius={14} icon={30}
+                lens={/\d+mm\b|f\/\d/i.test(title)} />
+              <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                <Txt numberOfLines={2} style={{ color: t.colors.text, fontSize: t.size.lg, fontWeight: t.weight.bold as never }}>{title}</Txt>
+                <Muted size={t.size.sm}>{[brandName, categoryName].filter(Boolean).join(' · ')}</Muted>
+                <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: t.colors.warnSoft, borderRadius: t.radius.pill, paddingVertical: 3, paddingHorizontal: 10 }}>
+                  <Ionicons name="create-outline" size={12} color={t.colors.warn} />
+                  <Txt style={{ color: t.colors.warn, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>Draft · not sent yet</Txt>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {photoCount === 0 && (
+            <View style={{ flexDirection: 'row', gap: t.space.x3, alignItems: 'flex-start', backgroundColor: t.colors.warnSoft, borderRadius: 14, padding: t.space.x3 }}>
+              <Ionicons name="camera-outline" size={20} color={t.colors.warn} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>No photos yet</Txt>
+                <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>Items with clear photos are reviewed faster. Add a few before you submit.</Txt>
+                <Pressable onPress={edit} accessibilityRole="button" hitSlop={8}>
+                  <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never, textDecorationLine: 'underline' }}>Add photos</Txt>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          <ReviewSection title="Item details" onEdit={edit}>
+            <ReviewRow label="Type" value={categoryName ?? '—'} />
+            <ReviewRow label="Brand" value={brandName ?? '—'} />
+            <ReviewRow label="Model" value={title} />
+            <ReviewRow label="Serial number" value={it.serialNumber ?? '—'} mono />
+            <ReviewRow label="Condition you think it is" value={it.declaredGradeCode} last />
+          </ReviewSection>
+
+          <ReviewSection title="Description" onEdit={edit}>
+            <Txt style={{ color: t.colors.text, fontSize: t.size.sm, lineHeight: 20 }}>{it.description || '—'}</Txt>
+            <View style={{ height: 1, backgroundColor: t.colors.border, marginVertical: t.space.x2 }} />
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.4 }}>WHY YOU’RE SELLING</Txt>
+            <Txt style={{ color: t.colors.text, fontSize: t.size.sm, lineHeight: 20 }}>{it.reasonToSell || '—'}</Txt>
+          </ReviewSection>
+
+          <ReviewSection title={`Photos · ${photoCount}`} onEdit={edit}>
+            {photoCount > 0 ? photoStrip : <Muted size={t.size.sm}>None added.</Muted>}
+          </ReviewSection>
+
+          <ReviewSection title="Price" onEdit={edit}>
+            <ReviewRow label="Asking price" value={money(it.askingAmountMinor)} strong />
+            <ReviewRow label="Lowest you’d take" value={it.floorAmountMinor != null ? money(it.floorAmountMinor) : '—'} last />
+            <Muted size={t.size.xs}>We confirm the final price after inspection. You approve it before anything is listed.</Muted>
+          </ReviewSection>
+
+          <ReviewSection title="What’s included" onEdit={edit}>
+            {([['Under warranty', !!it.underWarranty], ['Original bill', it.hasBill], ['Original box', it.hasBox], ['Accessories', it.hasAccessories]] as [string, boolean][]).map(([k, on], i, all) => (
+              <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x2, paddingVertical: 8, borderBottomWidth: i === all.length - 1 ? 0 : 1, borderBottomColor: t.colors.border }}>
+                <Ionicons name={on ? 'checkmark-circle' : 'remove-circle-outline'} size={18} color={on ? t.colors.good : t.colors.textMuted} />
+                <Txt style={{ flex: 1, color: on ? t.colors.text : t.colors.textMuted }}>{k}</Txt>
+                <Txt style={{ color: on ? t.colors.good : t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{on ? 'Included' : 'Not included'}</Txt>
+              </View>
+            ))}
+          </ReviewSection>
+
+          <View style={{ backgroundColor: t.colors.bgSunken, borderRadius: 16, padding: t.space.x4, gap: t.space.x3 }}>
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>WHAT HAPPENS NEXT</Txt>
+            {[
+              ['We review it', 'Usually within a working day. We tell you as soon as it is approved.'],
+              ['You send it to us', 'Hand it to a courier and record it here, or use the TrueGlaz courier.'],
+              ['We inspect, grade and list it', 'You approve the price first. You are paid once the buyer keeps it.'],
+            ].map(([h, d], i) => (
+              <View key={h} style={{ flexDirection: 'row', gap: t.space.x3 }}>
+                <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: t.colors.brand, alignItems: 'center', justifyContent: 'center' }}>
+                  <Txt style={{ color: t.colors.onBrand, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>{i + 1}</Txt>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{h}</Txt>
+                  <Muted size={t.size.xs}>{d}</Muted>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <Muted size={t.size.xs} style={{ textAlign: 'center' }}>Item ID {it.internalSku} · started {dateOnly(it.createdAt)}</Muted>
+          {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
+        </FormScroll>
+
+        {/* Delete is the secondary button, not red text (TG-190); it still asks first. */}
+        <StickyFooter>
+          <Button label={busy === 'delete' ? 'Deleting…' : 'Delete draft'} variant="ghost" onPress={deleteDraft} disabled={!!busy} style={{ flex: 1 }} />
+          <Button label="Submit for review" variant="cta" onPress={submit} loading={busy === 'submit'} disabled={!!busy} style={{ flex: 2 }} />
+        </StickyFooter>
+      </View>
+    )
+  }
+
+  const history = itemHistory(item.data.history)
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <DetailHeader title={isDraft ? 'Review & submit' : 'My item'} onBack={() => navigation.goBack()} />
+      <DetailHeader title="My item" onBack={() => navigation.goBack()} />
       <FormScroll contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
-        <DetailRef code={it.internalSku} when={`Added ${dateOnly(it.createdAt)}`} />
+        {/* Laid out like Order details (TG-184): the ID and last change first; no
+            "Where your item is" card, the Item status tracker below says it. */}
+        <RefCard label="Item ID" code={it.internalSku} updatedAt={history[0]?.at ?? it.createdAt} since={{ label: 'Added', at: it.createdAt }} />
 
-        {isDraft ? (
-          <>
-            <StatusHero tone="accent" badge="Draft — not sent yet" title="Check everything, then submit"
-              body="Once you submit, TrueGlaz reviews it and tells you how to send it in. You can still edit it until then." />
-            {summary}
+        {state === 'PRE_APPROVED' && <ShipToUs submissionId={it.submissionId} itemId={it.id} onDone={reloadAll} />}
+        {pending && <PriceDecision a={pending} onDone={reloadAll} />}
+
+        <ProgressSection steps={track} label="ITEM STATUS" />
+
+        {summary}
+        {photoStrip && (
+          <View style={{ gap: t.space.x2 }}>
+            <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>YOUR PHOTOS · {photos.data!.length}</Txt>
             {photoStrip}
-            <Pressable onPress={deleteDraft} disabled={!!busy} accessibilityRole="button" style={{ alignSelf: 'center', padding: t.space.x2 }}>
-              <Txt style={{ color: t.colors.bad, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{busy === 'delete' ? 'Deleting…' : 'Delete draft'}</Txt>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <StatusHero
-              tone={stateTone(state)}
-              badge={STATE_LABELS[state] ?? state}
-              title="Where your item is"
-              body={STATE_BLURBS[state] ?? STATE_LABELS[state] ?? state}
-            />
-
-            {state === 'PRE_APPROVED' && <ShipToUs submissionId={it.submissionId} itemId={it.id} onDone={reloadAll} />}
-            {pending && <PriceDecision a={pending} onDone={reloadAll} />}
-
-            <ProgressSection steps={track} label="ITEM STATUS" />
-
-            {summary}
-            {photoStrip}
-
-            {inspections.length > 0 && (
-              <Card style={{ gap: t.space.x3 }}>
-                <SectionTitle>Inspection</SectionTitle>
-                {inspections.map((r) => (
-                  <View key={r.id} style={{ gap: t.space.x2 }}>
-                    <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
-                      <Badge label={r.purpose} />
-                      <Badge label={`QC ${r.qcState}`} tone={r.qcState === 'confirmed' ? 'good' : r.qcState === 'overridden' ? 'warn' : 'neutral'} />
-                      {r.finalGradeCode && <Badge label={`Grade ${r.finalGradeCode}`} tone="accent" />}
-                    </View>
-                    <Muted size={t.size.xs}>Submitted {dateTime(r.submittedAt)}{r.qcAt ? ` · QC ${dateTime(r.qcAt)}` : ''}</Muted>
-                  </View>
-                ))}
-              </Card>
-            )}
-
-            {defects.length > 0 && (
-              <Card style={{ gap: t.space.x3 }}>
-                <SectionTitle>What we disclosed</SectionTitle>
-                {defects.map((d) => (
-                  <View key={d.id} style={{ backgroundColor: t.colors.bgSunken, borderRadius: t.radius.md, padding: t.space.x3, gap: 4 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{d.title}</Txt>
-                      <Badge label={d.severity} tone={d.severity === 'optical' ? 'bad' : d.severity === 'functional' ? 'warn' : 'neutral'} />
-                    </View>
-                    <Muted size={t.size.xs}>{d.descriptionPublic}</Muted>
-                  </View>
-                ))}
-              </Card>
-            )}
-
-            <View style={{ gap: t.space.x2 }}>
-              <Pressable onPress={() => setHistoryOpen(!historyOpen)} hitSlop={6} accessibilityRole="button">
-                <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{historyOpen ? 'Hide history' : 'History'}</Txt>
-              </Pressable>
-              {historyOpen && [...item.data.history].reverse().map((h) => (
-                <View key={h.id} style={{ borderBottomWidth: 1, borderBottomColor: t.colors.border, paddingVertical: t.space.x2 }}>
-                  <Txt style={{ color: t.colors.text, fontSize: t.size.sm }}>
-                    {h.fromState ? `${STATE_LABELS[h.fromState] ?? h.fromState} → ` : ''}{STATE_LABELS[h.toState] ?? h.toState}
-                  </Txt>
-                  <Muted size={t.size.xs}>{(h.actorRole ?? 'System')} · {dateTime(h.occurredAt)}</Muted>
-                </View>
-              ))}
-            </View>
-          </>
+          </View>
         )}
+
+        {inspections.length > 0 && (
+          <Card style={{ gap: t.space.x3 }}>
+            <SectionTitle>Inspection</SectionTitle>
+            {inspections.map((r) => (
+              <View key={r.id} style={{ gap: t.space.x2 }}>
+                <View style={{ flexDirection: 'row', gap: t.space.x2, flexWrap: 'wrap' }}>
+                  <Badge label={r.purpose} />
+                  <Badge label={`QC ${r.qcState}`} tone={r.qcState === 'confirmed' ? 'good' : r.qcState === 'overridden' ? 'warn' : 'neutral'} />
+                  {r.finalGradeCode && <Badge label={`Grade ${r.finalGradeCode}`} tone="accent" />}
+                </View>
+                <Muted size={t.size.xs}>Submitted {dateTime(r.submittedAt)}{r.qcAt ? ` · QC ${dateTime(r.qcAt)}` : ''}</Muted>
+              </View>
+            ))}
+          </Card>
+        )}
+
+        {defects.length > 0 && (
+          <Card style={{ gap: t.space.x3 }}>
+            <SectionTitle>What we disclosed</SectionTitle>
+            {defects.map((d) => (
+              <View key={d.id} style={{ backgroundColor: t.colors.bgSunken, borderRadius: t.radius.md, padding: t.space.x3, gap: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{d.title}</Txt>
+                  <Badge label={d.severity} tone={d.severity === 'optical' ? 'bad' : d.severity === 'functional' ? 'warn' : 'neutral'} />
+                </View>
+                <Muted size={t.size.xs}>{d.descriptionPublic}</Muted>
+              </View>
+            ))}
+          </Card>
+        )}
+
+        <OrderHistory entries={history} />
         {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
       </FormScroll>
 
-      {isDraft ? (
-        <StickyFooter>
-          <Button label="Edit" variant="ghost" onPress={edit} disabled={!!busy} style={{ flex: 1 }} />
-          <Button label="Submit for review" variant="cta" onPress={submit} loading={busy === 'submit'} disabled={!!busy} style={{ flex: 2 }} />
-        </StickyFooter>
-      ) : canWithdraw ? (
+      {canWithdraw ? (
         <StickyFooter>
           <Button label={WITHDRAW_LISTED.includes(state) ? 'Take it off sale' : 'Withdraw item'} variant="danger"
             onPress={withdraw} loading={busy === 'withdraw'} disabled={!!busy} style={{ flex: 1 }} />
@@ -237,6 +301,68 @@ export function SellerItemScreen({ route, navigation }: { route: any; navigation
       ) : null}
     </View>
   )
+}
+
+/** One part of the review page, with its own way back into the form. */
+function ReviewSection({ title, onEdit, children }: { title: string; onEdit: () => void; children: React.ReactNode }) {
+  const t = useTheme()
+  return (
+    <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 16, padding: t.space.x4, gap: t.space.x2 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+        <Txt accessibilityRole="header" style={{ color: t.colors.text, fontSize: t.size.md, fontWeight: t.weight.bold as never }}>{title}</Txt>
+        <Pressable onPress={onEdit} accessibilityRole="button" accessibilityLabel={`Edit ${title.split(' · ')[0].toLowerCase()}`} hitSlop={10}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Ionicons name="create-outline" size={15} color={t.colors.accentText} />
+          <Txt style={{ color: t.colors.accentText, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Edit</Txt>
+        </Pressable>
+      </View>
+      {children}
+    </View>
+  )
+}
+
+function ReviewRow({ label, value, mono, strong, last }: { label: string; value: string; mono?: boolean; strong?: boolean; last?: boolean }) {
+  const t = useTheme()
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.x3, paddingVertical: 8, borderBottomWidth: last ? 0 : 1, borderBottomColor: t.colors.border }}>
+      <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm, flexShrink: 1 }}>{label}</Txt>
+      <Txt style={{ color: t.colors.text, fontSize: strong ? t.size.md : t.size.sm, fontWeight: (strong ? t.weight.bold : t.weight.medium) as never,
+        fontFamily: mono ? t.font.mono : undefined, textAlign: 'right', flexShrink: 1 }}>{value}</Txt>
+    </View>
+  )
+}
+
+/** Was the item's last move the seller calling it off (TG-191)? */
+export const isWithdrawal = (h: ItemStateTransition | undefined) => h?.reasonCode === 'seller_withdrawal'
+
+type IconName = React.ComponentProps<typeof Ionicons>['name']
+const STATE_ICON: Record<string, IconName> = {
+  DRAFT: 'create-outline', SUBMITTED: 'paper-plane-outline', PRE_APPROVED: 'checkmark-circle-outline', IN_TRANSIT_INBOUND: 'car-outline',
+  RECEIVED: 'archive-outline', AWAITING_INSPECTION: 'hourglass-outline', IN_INSPECTION: 'search-outline', GRADED: 'ribbon-outline',
+  PRICE_PROPOSED: 'pricetag-outline', AWAITING_SELLER_APPROVAL: 'hand-left-outline', LISTED: 'storefront-outline', RESERVED: 'time-outline',
+  SOLD: 'cash-outline', DISPATCHED: 'car-outline', DELIVERED: 'cube-outline', ACCEPTED: 'checkmark-done-outline',
+  REJECTED_PRE_INTAKE: 'close-circle-outline', INSPECTION_FAILED: 'close-circle-outline', QUARANTINED: 'alert-circle-outline',
+  SELLER_DECLINED: 'thumbs-down-outline', RETURN_REQUESTED: 'return-down-back-outline', RETURN_TO_SELLER: 'return-down-back-outline',
+  RETURN_IN_TRANSIT: 'car-outline', RETURN_RECEIVED: 'archive-outline', RETURNED: 'home-outline', UNSOLD_REVIEW: 'help-circle-outline', ARCHIVED: 'archive-outline',
+}
+const GOOD = new Set(['PRE_APPROVED', 'GRADED', 'LISTED', 'SOLD', 'DELIVERED', 'ACCEPTED'])
+const BAD = new Set(['REJECTED_PRE_INTAKE', 'INSPECTION_FAILED', 'QUARANTINED'])
+
+/** The item's moves as history entries, newest first, in the seller's words (TG-184, TG-191). */
+function itemHistory(history: ItemStateTransition[]): HistoryEntry[] {
+  return [...history]
+    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+    .map((h) => {
+      const withdrawal = isWithdrawal(h)
+      const title = withdrawal
+        ? (h.toState === 'RETURN_TO_SELLER' ? 'You took it off sale' : 'You withdrew it')
+        : h.toState === 'DRAFT' ? 'Draft started' : STATE_LABELS[h.toState] ?? h.toState
+      return {
+        at: h.occurredAt, title, note: h.note, kind: h.toState,
+        icon: withdrawal ? 'arrow-undo-outline' : STATE_ICON[h.toState],
+        tone: withdrawal ? 'plain' : BAD.has(h.toState) ? 'bad' : GOOD.has(h.toState) ? 'good' : 'plain',
+      }
+    })
 }
 
 type Arranged = 'third_party' | 'trueglaz'
@@ -254,11 +380,11 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const pickPhoto = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!perm.granted) { setError('Allow photo access to attach a package photo.'); return }
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 })
-    if (!res.canceled) setPhoto(res.assets[0])
+  // Camera or library (TG-187): a parcel is usually photographed there and then.
+  const pickPhoto = async (source: PhotoSource) => {
+    const got = await pickPhotos(source)
+    if (got.error) { setError(got.error); return }
+    if (got.assets[0]) setPhoto(got.assets[0])
   }
 
   const submit = async () => {
@@ -316,7 +442,10 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
       <View style={{ gap: t.space.x2 }}>
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Package photo (required)</Txt>
         {photo && <Image source={{ uri: photo.uri }} style={{ width: '100%', height: 160, borderRadius: t.radius.md }} resizeMode="cover" />}
-        <Button label={photo ? 'Change package photo' : 'Add package photo'} variant="ghost" onPress={pickPhoto} />
+        <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
+          <Button label={photo ? 'Retake' : 'Take photo'} variant="ghost" onPress={() => pickPhoto('camera')} style={{ flex: 1 }} />
+          <Button label="From library" variant="ghost" onPress={() => pickPhoto('library')} style={{ flex: 1 }} />
+        </View>
       </View>
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
@@ -418,7 +547,14 @@ function sellerTrack(history: ItemStateTransition[], currentState: string): Trac
   let reached = idxOf(currentState)
   for (const h of history) reached = Math.max(reached, idxOf(h.toState))
 
-  const terminal = OFF_PATH_TERMINALS.has(currentState) ? SELLER_TERMINALS[currentState] : undefined
+  const last = [...history].sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()).pop()
+  const withdrawn = isWithdrawal(last)
+  const terminal = withdrawn
+    // The seller called it off: say so, at the stage it stopped (TG-191).
+    ? currentState === 'RETURN_TO_SELLER'
+      ? { at: 5, title: 'You took it off sale', desc: 'It is on its way back to you.' }
+      : { at: when.has('PRE_APPROVED') ? 1 : 0, title: 'You withdrew it', desc: 'You called it off. Nothing more to do.' }
+    : OFF_PATH_TERMINALS.has(currentState) ? SELLER_TERMINALS[currentState] : undefined
 
   const steps: TrackStep[] = SELLER_MILESTONES.map((m, mi) => {
     const date = m.states.map((s) => when.get(s)).filter(Boolean).pop()

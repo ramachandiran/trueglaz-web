@@ -309,14 +309,13 @@ export function NewSubmissionPage() {
                 />
                 Original bill
               </label>
-              <label className={`sell__choice${item.hasBox && !item.hasAccessories ? ' sell__choice--on' : ''}`}>
+              {/* Box and accessories are independent (TG-189): a strap and caps
+                  often come without the box, and the other way round. */}
+              <label className={`sell__choice${item.hasBox ? ' sell__choice--on' : ''}`}>
                 <input
                   type="checkbox"
-                  checked={item.hasBox && !item.hasAccessories}
-                  // Ticking the plain box clears the accessories claim: the two
-                  // are alternatives, not a box you tick twice.
-                  onChange={(e) =>
-                    setItem({ ...item, hasBox: e.target.checked, hasAccessories: false, packagingAnswered: true })}
+                  checked={item.hasBox}
+                  onChange={(e) => setItem({ ...item, hasBox: e.target.checked, packagingAnswered: true })}
                 />
                 Original box
               </label>
@@ -324,25 +323,18 @@ export function NewSubmissionPage() {
                 <input
                   type="checkbox"
                   checked={item.hasAccessories}
-                  // Accessories come in the box, so this implies it.
-                  onChange={(e) =>
-                    setItem({
-                      ...item,
-                      hasAccessories: e.target.checked,
-                      hasBox: e.target.checked || item.hasBox,
-                      packagingAnswered: true,
-                    })}
+                  onChange={(e) => setItem({ ...item, hasAccessories: e.target.checked, packagingAnswered: true })}
                 />
-                Original box with accessories
+                Accessories
               </label>
               <label
                 className={`sell__choice${
-                  item.packagingAnswered && !item.hasBill && !item.hasBox ? ' sell__choice--on' : ''
+                  item.packagingAnswered && !item.hasBill && !item.hasBox && !item.hasAccessories ? ' sell__choice--on' : ''
                 }`}
               >
                 <input
                   type="checkbox"
-                  checked={item.packagingAnswered && !item.hasBill && !item.hasBox}
+                  checked={item.packagingAnswered && !item.hasBill && !item.hasBox && !item.hasAccessories}
                   onChange={() =>
                     setItem({
                       ...item,
@@ -356,7 +348,7 @@ export function NewSubmissionPage() {
               </label>
             </div>
             <span className="tg-muted sell__hint">
-              Caps, hood, strap and charger are what a buyer means by accessories.
+              Caps, hood, strap and charger are what a buyer means by accessories, with or without the box.
             </span>
           </fieldset>
 
