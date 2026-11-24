@@ -884,7 +884,9 @@ export interface Profile {
 /** What happened to the things you are selling or buying. */
 export interface Notification {
   id: string
-  category: 'selling' | 'buying' | 'payouts' | 'security' | 'rewards' | string
+  category: 'selling' | 'buying' | 'payouts' | 'security' | 'rewards' | 'operations' | string
+  /** The kind of notice (TG-208), e.g. staff_return_requested. */
+  code?: string
   title: string
   body: string
   /** Relative, inside the app. Null when there is nowhere useful to go. */
