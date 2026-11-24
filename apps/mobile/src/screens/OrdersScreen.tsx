@@ -28,7 +28,7 @@ function statusOf(t: Theme, state: string): [string, string] {
     case 'paid': return ['Packing', t.colors.cta]
     case 'dispatched': return ['Shipped', t.colors.good]
     case 'delivered': return ['Delivered · check it', t.colors.good]
-    case 'completed': return ['Yours', t.colors.good]
+    case 'completed': return ['Completed', t.colors.good]
     case 'cancelled': return ['Cancelled', t.colors.bad]
     case 'refunded': case 'returned': return ['Refunded', t.colors.textMuted]
     default: return [state.replace(/_/g, ' '), t.colors.textMuted]
@@ -41,7 +41,7 @@ function lineStatus(t: Theme, l: OrderSummary['lines'][number]): [string, string
     case 'dispatched': return ['Shipped', t.colors.good]
     case 'delivered': return ['Delivered · check it', t.colors.good]
     case 'return_requested': return ['Return in progress', t.colors.warn]
-    case 'accepted': return ['Yours', t.colors.good]
+    case 'accepted': return ['Completed', t.colors.good]
     case 'cancelled': return ['Cancelled', t.colors.bad]
     case 'returned': return ['Refunded', t.colors.textMuted]
     default: return ['Packing', t.colors.cta]
@@ -92,7 +92,8 @@ export function OrdersScreen({ navigation }: { navigation: any }) {
             <FadeIn index={index} key={`${tab}-${o.id}`}>
               <OrderCard t={t} o={o}
                 img={o.lines[0]?.modelSlug ? imageBySlug.get(o.lines[0].modelSlug) : undefined}
-                onOpen={() => navigation.navigate('OrderDetail', { id: o.id })} />
+                onOpen={() => navigation.navigate('OrderDetail', { id: o.id })}
+                onInvoice={() => navigation.navigate('Invoice', { invoiceId: o.invoiceId, invoiceNumber: o.invoiceNumber })} />
             </FadeIn>
           )}
         />
@@ -101,7 +102,7 @@ export function OrdersScreen({ navigation }: { navigation: any }) {
   )
 }
 
-function OrderCard({ t, o, img, onOpen }: { t: Theme; o: OrderSummary; img?: string; onOpen: () => void }) {
+function OrderCard({ t, o, img, onOpen, onInvoice }: { t: Theme; o: OrderSummary; img?: string; onOpen: () => void; onInvoice: () => void }) {
   const first = o.lines[0]
   const extra = o.lines.length - 1
   // A paid order's own state stays "paid" while its item travels, so the card
@@ -110,6 +111,8 @@ function OrderCard({ t, o, img, onOpen }: { t: Theme; o: OrderSummary; img?: str
   const name = first ? first.title.split('·')[0].trim() : 'Order'
   const moved = useStatusChange(o.id, statusKey(o.state, first?.state), 'peek')
   const moving = MOVING.includes(o.state) && first?.state !== 'delivered'
+  // A finished order's useful next step is its tax invoice, not a status (TG-158).
+  const done = o.state === 'completed' || (o.state === 'paid' && first?.state === 'accepted')
   return (
     <Surface style={{ padding: t.space.x4 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -135,10 +138,14 @@ function OrderCard({ t, o, img, onOpen }: { t: Theme; o: OrderSummary; img?: str
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.sm }}>
           Total: <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{money(o.totalMinor)}</Txt>
         </Txt>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
-          <LiveDot color={colour} live={moving} />
-          <Txt style={{ color: colour, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{status}</Txt>
-        </View>
+        {done && o.invoiceId ? (
+          <Pill label="Invoice" icon="document-text-outline" variant="ghost" small onPress={onInvoice} />
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+            <LiveDot color={colour} live={moving} />
+            <Txt style={{ color: colour, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>{status}</Txt>
+          </View>
+        )}
       </View>
     </Surface>
   )

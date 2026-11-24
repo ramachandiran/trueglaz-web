@@ -79,7 +79,7 @@ export function InventoryDashboard() {
   const openStage = (states: string[], label: string) =>
     setParams(stateParam === states.join(',') ? {} : { state: states.join(','), label }, { replace: true })
 
-  const itemsPerPage = 10
+  const itemsPerPage = 25
   const staff = isStaff(session)
 
   // No state parameter means every state, which is what this screen is for.
@@ -172,7 +172,7 @@ export function InventoryDashboard() {
       title="Inventory"
       subtitle="Every unit the platform holds, whatever stage it is at"
       summary={tiles.length > 0 && (
-        <section className="c-grid c-grid--4" aria-label="Units by stage">
+        <section className="c-grid c-grid--4 inv__tiles" aria-label="Units by stage">
           {tiles.map((t) => {
             const states = t.states ?? []
             const n = (all.data ?? []).filter((i) => states.includes(i.currentState)).length

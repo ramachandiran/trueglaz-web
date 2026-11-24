@@ -189,12 +189,7 @@ export function SignInScreen() {
             {step === 'code' && (
               <>
                 <Title>Enter your code</Title>
-                <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 6 }}>
-                  <Muted>Sent to <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{contact.trim()}</Txt></Muted>
-                  <Pressable onPress={changeEmail} accessibilityRole="button" hitSlop={8}>
-                    <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Change</Txt>
-                  </Pressable>
-                </View>
+                <Muted style={{ textAlign: 'center' }}>Sent to <Txt style={{ color: t.colors.text, fontWeight: t.weight.bold as never }}>{contact.trim()}</Txt></Muted>
                 {devCode && (
                   <View style={{ backgroundColor: t.colors.accentSoft, borderRadius: t.radius.md, padding: t.space.x3, alignItems: 'center' }}>
                     <Txt style={{ color: t.colors.accentText, fontWeight: t.weight.bold as never }}>Demo code: {devCode}</Txt>
@@ -212,6 +207,9 @@ export function SignInScreen() {
                     onExpire={() => { setExpired(true); setStatus(undefined); setError(null) }} />
                 )}
                 {!expired && <Button label="Verify" variant="cta" onPress={() => verify()} loading={busy} disabled={status === 'success'} />}
+                {/* A real button under Verify rather than a word beside the address (TG-176);
+                    still there once the code has expired. The email typed is kept to correct. */}
+                {status !== 'success' && <Button label="Use a different email" variant="ghost" onPress={changeEmail} disabled={busy} />}
               </>
             )}
 

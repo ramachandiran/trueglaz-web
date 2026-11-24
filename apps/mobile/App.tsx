@@ -7,7 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
-  api, enableOfflineCache, setApiOrigin, setOnline, setStorage, SessionProvider, useApi, useSession, type Storage,
+  api, setApiOrigin, setOnline, setStorage, SessionProvider, useApi, useSession, type Storage,
 } from '@trueglaz/core'
 import { API_ORIGIN } from './src/config'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -36,10 +36,11 @@ import { WishlistScreen } from './src/screens/WishlistScreen'
 import { PayoutAccountScreen } from './src/screens/PayoutAccountScreen'
 import { DeleteAccountScreen } from './src/screens/DeleteAccountScreen'
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen'
+import { InvoiceScreen } from './src/screens/InvoiceScreen'
 import { onPushReceived, setBadge, usePushWhileSignedIn } from './src/push'
 import { InAppBanner, noteInbox, resetInbox } from './src/components/InAppBanner'
 import { DialogHost } from './src/components/Confirm'
-import { OfflineBar } from './src/components/OfflineBar'
+import { OfflineGate, useOfflineGate } from './src/components/OfflineGate'
 import * as Network from 'expo-network'
 
 const navRef = createNavigationContainerRef<any>()
@@ -51,9 +52,6 @@ const nativeStorage: Storage = {
   async remove(key) { try { await AsyncStorage.removeItem(key) } catch { /* ignore */ } },
 }
 setStorage(nativeStorage)
-// The last answer to each page is kept on the phone, so orders, the wishlist
-// and the vault still open with no connection (TG-156).
-enableOfflineCache()
 
 /** Follow the phone's connection: "no network" or "network but no internet" both count as offline. */
 function useConnectivity() {
@@ -167,6 +165,7 @@ function AppStack() {
       <Root.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
       {/* Off the tab bar (TG-111): reached from the home order card and Profile. */}
       <Root.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />
+      <Root.Screen name="Invoice" component={InvoiceScreen} options={({ route }: any) => ({ title: route.params?.invoiceNumber ? `Invoice ${route.params.invoiceNumber}` : 'Invoice' })} />
       <Root.Screen name="Pay" component={PayScreen} options={{ title: 'Payment' }} />
       <Root.Screen name="OrderPlaced" component={OrderPlacedScreen} options={{ headerShown: false, gestureEnabled: false, ...ownBottom }} />
       <Root.Screen name="SellerItem" component={SellerItemScreen} options={{ headerShown: false }} />
@@ -203,13 +202,17 @@ function Routes() {
   }
   useEffect(() => { if (!session) resetInbox() }, [session])
   useConnectivity()
+  const offline = useOfflineGate()
   if (!ready) return <View style={{ flex: 1, backgroundColor: t.colors.bg }}><Loading /></View>
   return (
     <NavigationContainer theme={navTheme} ref={navRef}>
       <StatusBar style={t.name === 'dark' ? 'light' : 'dark'} />
-      {session ? <AppStack /> : <AuthStack />}
-      {session && <InAppBanner navRef={navRef as never} />}
-      <OfflineBar />
+      {/* Offline, the screens stay mounted (so typing is kept) but are hidden from screen readers too (TG-157). */}
+      <View style={{ flex: 1 }} importantForAccessibility={offline ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={offline}>
+        {session ? <AppStack /> : <AuthStack />}
+        {session && !offline && <InAppBanner navRef={navRef as never} />}
+      </View>
+      <OfflineGate shown={offline} />
       <DialogHost />
     </NavigationContainer>
   )

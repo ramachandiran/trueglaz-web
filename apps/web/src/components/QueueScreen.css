@@ -11,7 +11,7 @@
 .q__toolbar { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; }
 .q__search-box {
   flex: 0 1 290px; min-width: 200px; display: flex; align-items: center; gap: 8px;
-  border: 1px solid var(--tg-border); border-radius: 22px; padding: 0 14px; background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border-input); border-radius: 22px; padding: 0 14px; background: var(--tg-bg-raised);
 }
 .q__search-box:focus-within { border-color: var(--tg-accent); }
 .q__search-box svg { width: 17px; height: 17px; fill: none; stroke: var(--tg-text-muted); stroke-width: 1.8; stroke-linecap: round; flex: none; }
@@ -33,18 +33,27 @@
 .q__table-container { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
 .q__table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .q__table th {
-  padding: 12px; text-align: left; white-space: nowrap; font-weight: 600; font-size: 13.5px;
+  padding: 10px 12px; text-align: left; white-space: nowrap; font-weight: 600; font-size: 13.5px;
   color: var(--tg-text); border-bottom: 1px solid var(--tg-border);
 }
 .q__table tbody tr { border-bottom: 1px solid var(--c-line-soft, var(--tg-border)); transition: background-color 150ms; }
 .q__table tbody tr:last-child { border-bottom: 0; }
 .q__table tbody tr:hover { background-color: var(--tg-bg-hover); }
-.q__table td { padding: 11px 12px; vertical-align: middle; }
+.q__table td { padding: 7px 12px; vertical-align: middle; }
 /* The last column is where the action lives on every one of these screens. */
 .q__table th:last-child, .q__table td:last-child { text-align: right; padding-right: 12px; }
 /* Both selectors name the element: `.q__table th` sets text-align: left and is
    more specific than a bare `.q__num`. */
 .q__table th.q__num, .q__table td.q__num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* The header stays in view while the list scrolls (TG-168). It sticks under the
+   console's own sticky top bar. On a desktop the table fits, so the container
+   need not scroll sideways (a scrolling ancestor would pin the header to it
+   instead of to the page); below that it scrolls sideways as before. */
+@media (min-width: 1025px) {
+  .q__table-container { overflow-x: visible; }
+  .q__table thead th { position: sticky; top: 76px; z-index: 2; background: var(--tg-bg-raised); box-shadow: 0 1px 0 var(--tg-border); }
+}
 
 /* -- pager ----------------------------------------------------------------- */
 .q__pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 4px; }

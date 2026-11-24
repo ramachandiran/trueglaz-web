@@ -1135,6 +1135,8 @@ export interface MediaView {
   url: string
   /** Width in pixels to the URL that serves it, ready for a srcset. */
   sizes: Record<number, string>
+  /** Which disclosed defect a `defect` photograph shows (TG-167). */
+  defectId?: string | null
 }
 
 /** Where an Aadhaar code was sent, masked. */

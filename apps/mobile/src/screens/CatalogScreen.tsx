@@ -8,6 +8,7 @@ import {
   type SearchFacets, type SearchHit, type Sort,
 } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
+import { Button } from '../components/form'
 import { BottomSheet } from '../components/BottomSheet'
 import { mobileFontFamily } from '../theme/fonts'
 import { useTheme } from '../theme/ThemeContext'
@@ -114,18 +115,33 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
       <PageTitle title="Shop" />
 
-      {/* Search, as a pill on a shadow rather than a sunken box. */}
-      <View style={[{ marginHorizontal: t.space.x4, marginTop: t.space.x3, flexDirection: 'row', alignItems: 'center', gap: t.space.x2,
-        backgroundColor: t.colors.bgRaised, borderRadius: t.radius.pill, paddingHorizontal: t.space.x4, minHeight: 48 }, lift(t)]}>
-        <Ionicons name="search" size={18} color={t.colors.textMuted} />
-        <TextInput
-          value={typed}
-          onChangeText={setTyped}
-          placeholder="Search cameras, lenses…"
-          placeholderTextColor={t.colors.textMuted}
-          accessibilityLabel="Search the shop"
-          style={{ flex: 1, color: t.colors.text, fontFamily: mobileFontFamily.regular, fontSize: 14 }}
-        />
+      {/* Search, and beside it the Filters button where people look for it (TG-183):
+          labelled, not just an icon, and filled orange with a count when any are on. */}
+      <View style={{ marginHorizontal: t.space.x4, marginTop: t.space.x3, flexDirection: 'row', alignItems: 'center', gap: t.space.x2 }}>
+        <View style={[{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.space.x2,
+          backgroundColor: t.colors.bgRaised, borderRadius: t.radius.pill, paddingHorizontal: t.space.x4, minHeight: 48 }, lift(t)]}>
+          <Ionicons name="search" size={18} color={t.colors.textMuted} />
+          <TextInput
+            value={typed}
+            onChangeText={setTyped}
+            placeholder="Search cameras, lenses…"
+            placeholderTextColor={t.colors.textMuted}
+            accessibilityLabel="Search the shop"
+            style={{ flex: 1, color: t.colors.text, fontFamily: mobileFontFamily.regular, fontSize: 14 }}
+          />
+        </View>
+        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button"
+          accessibilityLabel={active ? `Filters, ${active} on` : 'Filters'}
+          style={[{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: t.space.x4, borderRadius: t.radius.pill,
+            backgroundColor: active ? t.colors.cta : t.colors.bgRaised, borderWidth: active ? 0 : 1.5, borderColor: t.colors.accent }, lift(t)]}>
+          <Ionicons name="options-outline" size={18} color={active ? t.colors.onCta : t.colors.accent} />
+          <Txt style={{ color: active ? t.colors.onCta : t.colors.text, fontSize: t.size.sm, fontWeight: t.weight.bold as never }}>Filters</Txt>
+          {active > 0 && (
+            <View style={{ minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, backgroundColor: t.colors.onCta, alignItems: 'center', justifyContent: 'center' }}>
+              <Txt style={{ color: t.colors.cta, fontSize: 11, fontWeight: t.weight.bold as never }}>{active}</Txt>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       <View style={{ marginTop: t.space.x3 }}>
@@ -137,18 +153,23 @@ export function CatalogScreen({ navigation, route }: { navigation: any; route?: 
         </ChipRow>
       </View>
 
-      {/* Filters · sort · how many, as one quiet row. */}
+      {/* How many, a way back out of the filters, and the sort as its own button. */}
       {/* Wraps onto two lines when the phone's text is large (TG-148). */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: t.space.x4, rowGap: t.space.x2, paddingHorizontal: t.space.x4, paddingVertical: t.space.x3 }}>
-        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={12} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="filter" size={18} color={t.colors.text} />
-          <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>Filters{active ? ` · ${active}` : ''}</Txt>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: t.space.x3, rowGap: t.space.x2, paddingHorizontal: t.space.x4, paddingVertical: t.space.x3 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.x3 }}>
+          <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{total} {total === 1 ? 'piece' : 'pieces'}</Txt>
+          {active > 0 && (
+            <Pressable onPress={() => { setFilters({ ...EMPTY_FILTERS, sort: filters.sort }); setTyped('') }} accessibilityRole="button" hitSlop={12}>
+              <Txt style={{ color: t.colors.accentText, fontSize: t.size.xs, fontWeight: t.weight.bold as never, textDecorationLine: 'underline' }}>Clear filters</Txt>
+            </Pressable>
+          )}
+        </View>
+        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" accessibilityLabel={`Sort: ${sortLabel[filters.sort]}`} hitSlop={8}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: t.radius.pill, borderWidth: 1, borderColor: t.colors.border, backgroundColor: t.colors.bgRaised }}>
+          <Ionicons name="swap-vertical" size={14} color={t.colors.text} />
+          <Txt style={{ color: t.colors.text, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>{sortLabel[filters.sort]}</Txt>
+          <Ionicons name="chevron-down" size={12} color={t.colors.textMuted} />
         </Pressable>
-        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button" hitSlop={12} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="swap-vertical" size={16} color={t.colors.text} />
-          <Txt style={{ color: t.colors.text, fontSize: t.size.xs }}>{sortLabel[filters.sort]}</Txt>
-        </Pressable>
-        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{total} {total === 1 ? 'piece' : 'pieces'}</Txt>
       </View>
 
       {search.loading && !search.data && <Loading />}
@@ -217,9 +238,14 @@ function FilterSheet({
                   <Txt style={{ color: t.colors.accentText }}>Clear {active}</Txt>
                 </Pressable>
               )}
-              <Pressable accessibilityRole="button" hitSlop={12} onPress={onClose}><Txt style={{ color: t.colors.accentText, fontWeight: t.weight.medium as never }}>Show {total}</Txt></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close filters" hitSlop={12} onPress={onClose}>
+                <Ionicons name="close" size={22} color={t.colors.textMuted} />
+              </Pressable>
             </View>
           </View>
+    )} footer={(
+      // The way out is a real button, with the count it leads to (TG-183).
+      <Button label={total === 0 ? 'No pieces match' : `Show ${total} ${total === 1 ? 'piece' : 'pieces'}`} variant="cta" onPress={onClose} disabled={total === 0} />
     )}>
 
             <Group title="Sort">

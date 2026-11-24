@@ -168,7 +168,9 @@ function Kpi({ to, icon, tone, title, value, note, spark }: {
   to: string; icon: string; tone?: 'cta' | 'good' | 'bad'; title: string; value: number; note: string; spark?: number[]
 }) {
   return (
-    <Link to={to} className="c-card c-hit" aria-label={`${title}: ${value}. ${note}. Open the list.`}>
+    // Named by what it shows (TG-163): an aria-label that rephrased the tile
+    // left voice-control users unable to say the words on screen.
+    <Link to={to} className="c-card c-hit">
       <div className="c-kpi__top">
         <span className={`c-tile${tone ? ` c-tile--${tone}` : ''}`}><Icon d={icon} /></span>
         <span className="c-kpi__title">{title}</span>
@@ -176,6 +178,7 @@ function Kpi({ to, icon, tone, title, value, note, spark }: {
       </div>
       <div className="c-kpi__num">{value}</div>
       <div className="c-kpi__foot"><span>{note}</span>{spark && <Spark values={spark} />}</div>
+      <span className="tg-visually-hidden"> Open the list.</span>
     </Link>
   )
 }
@@ -222,10 +225,14 @@ function SalesChart({ months }: { months: NonNullable<StaffHome['months']> }) {
               {m.units > 0
                 ? <rect x={x} y={H - bot - h} width={bw * 0.6} height={h} rx={6} className={last ? 'home__bar-now' : recent ? 'home__bar-recent' : 'home__bar-old'} />
                 : <rect x={x} y={H - bot - 3} width={bw * 0.6} height={3} rx={1.5} className="home__bar-zero" />}
-              <text x={x + bw * 0.3} y={H - 9} textAnchor="middle" className="home__axis">{monthName(m.month)}</text>
             </g>
           )
         })}
+        {/* Axis labels sit outside the focusable bars, so each bar is named by
+            its full label alone ("December 2025: …"), not "Dec" plus that (TG-163). */}
+        {months.map((m, i) => (
+          <text key={`l-${m.month}`} x={left + i * bw + bw * 0.5} y={H - 9} textAnchor="middle" className="home__axis" aria-hidden="true">{monthName(m.month)}</text>
+        ))}
       </svg>
       {cur && (
         <div className="c-kpi__foot">

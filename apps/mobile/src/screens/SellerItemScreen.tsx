@@ -12,6 +12,8 @@ import { useTheme } from '../theme/ThemeContext'
 import { type TrackState, type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { Button, Field } from '../components/form'
+import { DateField } from '../components/DateField'
+import { todayIso } from '../components/dateField.shared'
 import { Badge, Card, ErrorNote, Loading, Muted, SectionTitle, StateBadge, stateTone } from '../components/ui'
 import { sizedUri, useModelImages } from '../components/ModelImage'
 import { DetailHeader, DetailRef, StickyFooter, SummaryCard } from '../components/DetailParts'
@@ -241,7 +243,8 @@ type Arranged = 'third_party' | 'trueglaz'
 
 function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; itemId: string; onDone: () => void }) {
   const t = useTheme()
-  const today = new Date().toISOString().slice(0, 10)
+  // Today in India, not in UTC: before 5:30 am the UTC date is still yesterday.
+  const today = todayIso()
   const [arrangedBy, setArrangedBy] = useState<Arranged>('third_party')
   const [courierName, setCourierName] = useState('')
   const [consignmentId, setConsignmentId] = useState('')
@@ -263,7 +266,6 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
       if (!courierName.trim()) { setError('Which courier did you use?'); return }
       if (!consignmentId.trim()) { setError('Enter the consignment / tracking id.'); return }
     }
-    if (shippedDate && !/^\d{4}-\d{2}-\d{2}$/.test(shippedDate)) { setError('Date must be YYYY-MM-DD.'); return }
     if (weightKg && !(Number(weightKg) > 0)) { setError('Weight must be a positive number.'); return }
     if (!photo) { setError('A photo of the handed-over parcel is required.'); return }
     setError(null); setBusy(true)
@@ -303,7 +305,7 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
         <>
           <Field label="Courier vendor" value={courierName} onChangeText={setCourierName} placeholder="e.g. Blue Dart, DTDC" />
           <Field label="Consignment id" value={consignmentId} onChangeText={setConsignmentId} placeholder="Tracking number from the courier" autoCapitalize="characters" />
-          <Field label="Date of shipment" value={shippedDate} onChangeText={setShippedDate} placeholder="YYYY-MM-DD" />
+          <DateField label="Date of shipment" value={shippedDate} onChange={setShippedDate} maximumDate={today} optional />
         </>
       ) : (
         <Muted size={t.size.xs}>TrueGlaz's courier collects using the label we sent you. We'll mark it on its way.</Muted>

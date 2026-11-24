@@ -3,10 +3,14 @@
 
 /* SKU above, brand and model beneath. Three columns said the same thing and
    made a staff member read sideways to answer "which one is this". */
-.inv__photo { float: left; margin: 2px var(--tg-space-2) 0 0; }
+/* One line per unit (TG-168): picture, SKU, then brand and model, so a laptop
+   shows a dozen units instead of five. The rare bench line wraps beneath. */
+.inv__photo { float: left; margin: 0 var(--tg-space-2) 0 0; }
+.inv__photo .model-photo--mini { width: 28px; height: 28px; }
 
 .inv__sku {
-  display: block;
+  display: inline-block;
+  line-height: 28px;
   font-weight: var(--tg-weight-medium);
   color: var(--tg-accent-text);
   text-decoration: none;
@@ -15,8 +19,8 @@
 .inv__sku:hover { text-decoration: underline; }
 
 .inv__gear {
-  display: block;
-  margin-top: 2px;
+  display: inline;
+  margin-left: 10px;
   font-size: var(--tg-text-sm);
   color: var(--tg-text);
 }
@@ -25,18 +29,24 @@
    an empty column on fifty of sixty lines is a column that earns nothing. */
 .inv__bench {
   display: block;
+  clear: left;
   margin-top: 2px;
   font-size: var(--tg-text-xs);
   color: var(--tg-accent-text);
 }
 
 .inv__price {
-  display: block;
   font-variant-numeric: tabular-nums;
 }
 
+/* Price and floor on one line, so a row is two lines, not three (TG-168). */
 .inv__floor {
-  display: block;
+  margin-left: 8px;
   font-size: var(--tg-text-xs);
   font-variant-numeric: tabular-nums;
 }
+
+/* The stage tiles stay (they are filters), in a slimmer card (TG-168). */
+.inv__tiles .c-card { padding: 10px 16px; }
+.inv__tiles .c-mini__lab { margin-bottom: 0; }
+.inv__tiles .c-mini__num { font-size: 20px; }

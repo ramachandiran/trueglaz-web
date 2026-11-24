@@ -176,3 +176,6 @@
   font-weight: var(--tg-weight-bold);
   line-height: 1;
 }
+
+/* Initials drawn from data-initials, so they are not part of the button's text (TG-163). */
+.account__avatar[data-initials]::before { content: attr(data-initials); }

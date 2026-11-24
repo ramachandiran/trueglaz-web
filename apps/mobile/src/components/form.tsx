@@ -1,5 +1,5 @@
 import { useRef, type ElementRef } from 'react'
-import { ActivityIndicator, Pressable, TextInput, View, type TextInputProps } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, TextInput, View, type TextInputProps } from 'react-native'
 import { useRevealOnFocus } from './FormScroll'
 import { MAX_FONT_SCALE, Txt } from './Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -45,10 +45,25 @@ export function Button({
 }
 
 /** A labelled text input that honours the theme. */
-export function Field({ label, hint, style, onFocus, ...rest }: TextInputProps & { label?: string; hint?: string }) {
+/**
+ * oneParagraph: wraps over several lines as it is typed, but Enter never adds
+ * a line break — it moves on (onSubmitEditing), or closes the keyboard — and
+ * pasted line breaks become spaces (TG-159).
+ * fieldRef: the input itself, so the field before can move focus here.
+ */
+export function Field({ label, hint, style, onFocus, oneParagraph, fieldRef, onChangeText, ...rest }: TextInputProps & {
+  label?: string; hint?: string; oneParagraph?: boolean; fieldRef?: React.MutableRefObject<ElementRef<typeof TextInput> | null>
+}) {
   const t = useTheme()
   // Inside a FormScroll, a focused field is kept above the keyboard (TG-141).
   const input = useRef<ElementRef<typeof TextInput>>(null)
+  const paragraph: Partial<TextInputProps> = oneParagraph ? {
+    multiline: true,
+    submitBehavior: rest.onSubmitEditing ? 'submit' : 'blurAndSubmit',
+    returnKeyType: rest.onSubmitEditing ? 'next' : 'done',
+    // The browser build only reads the older prop.
+    ...(Platform.OS === 'web' ? { blurOnSubmit: true } : {}),
+  } : {}
   const reveal = useRevealOnFocus()
   return (
     <View style={{ gap: t.space.x1 }}>
@@ -56,19 +71,21 @@ export function Field({ label, hint, style, onFocus, ...rest }: TextInputProps &
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>{label}</Txt>
       )}
       <TextInput
-        ref={input}
+        ref={(el) => { input.current = el; if (fieldRef) fieldRef.current = el }}
         onFocus={(e) => { reveal?.(input.current as never); onFocus?.(e) }}
         placeholderTextColor={t.colors.textMuted}
         maxFontSizeMultiplier={MAX_FONT_SCALE}
         style={[
           {
             color: t.colors.text, fontFamily: mobileFontFamily.regular, fontSize: t.size.md,
-            backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border,
+            backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.borderInput,
             borderRadius: t.radius.md, paddingHorizontal: t.space.x3, paddingVertical: t.space.x3,
           },
           style as object,
         ]}
+        {...paragraph}
         {...rest}
+        onChangeText={oneParagraph && onChangeText ? (v) => onChangeText(v.replace(/[ \t]*[\r\n]+[ \t]*/g, ' ')) : onChangeText}
       />
       {hint && <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs }}>{hint}</Txt>}
     </View>

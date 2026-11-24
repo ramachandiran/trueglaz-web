@@ -43,7 +43,10 @@ export function ReturnsPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Tab and search in the address, so a Control room count opens its queue (TG-126).
-  const [tabParam, setTabParam] = useQueryState('tab', 'requested')
+  // A technician's only part in a return is the bench check (TG-169), so that
+  // is all they see; staff and admins keep every stage.
+  const benchOnly = tech && !staff
+  const [tabParam, setTabParam] = useQueryState('tab', benchOnly ? 'received' : 'requested')
   const tab = tabParam as Tab
   const setTab = (t: Tab) => setTabParam(t)
   const [search, setSearch] = useQueryState('q')
@@ -51,7 +54,7 @@ export function ReturnsPage() {
   const [open, setOpen] = useState<string | null>(null)
   const [video, setVideo] = useState<ReturnCaseView | null>(null)
   const [done, setDone] = useState(0)
-  const perPage = 10
+  const perPage = 25
 
   async function act(id: string, fn: () => Promise<unknown>) {
     setBusy(id); setError(null)
@@ -70,6 +73,7 @@ export function ReturnsPage() {
     { key: 'escalated', label: 'Admin', show: admin, blurb: 'Refund anyway sends the unit home to the seller. Sale stands sends it back to the buyer and pays the seller.' },
     { key: 'settled', label: 'Settled', show: true, blurb: '' },
   ]
+  const visible = benchOnly ? stages.filter((s) => s.key === 'received' || s.key === 'settled') : stages
   const stage = stages.find((s) => s.key === tab)!
   const inTab = inState(tab)
   const filtered = inTab.filter((r) => {
@@ -102,7 +106,7 @@ export function ReturnsPage() {
       <QueueScreen
         title="Returns"
         subtitle="Every return from the buyer’s request to the refund, with the unboxing video and a full history."
-        tabs={stages.map((s) => ({ key: s.key, label: s.label, count: inState(s.key).length }))}
+        tabs={visible.map((s) => ({ key: s.key, label: s.label, count: inState(s.key).length }))}
         active={tab}
         onTab={(k) => { setTab(k as Tab); setPage(1); setOpen(null); setError(null) }}
         search={search}

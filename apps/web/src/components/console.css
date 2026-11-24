@@ -208,6 +208,8 @@ a.c-row:hover .c-row__title { color: var(--tg-accent-text); }
 }
 .staff-shell .dash__kpi--lead { background: var(--tg-bg-raised); color: var(--tg-text); border-color: var(--tg-border); }
 .staff-shell .dash__kpi--lead .dash__kpi-lab, .staff-shell .dash__kpi--lead .dash__kpi-note { color: var(--tg-text-muted); }
+/* The lead tile is a white card in the console, so its number is text-coloured, not the cream it has on the brand fill (TG-161). */
+.staff-shell .dash__kpi--lead .dash__kpi-val { color: var(--tg-text); }
 .staff-shell .dash__kpi--lead { box-shadow: inset 4px 0 0 var(--tg-brand), var(--c-shadow); }
 .staff-shell .dash__kpi--warn { background: var(--tg-bg-raised); box-shadow: inset 4px 0 0 var(--tg-cta), var(--c-shadow); }
 .staff-shell .dash__kpi-val { font-family: var(--tg-font-heading); font-weight: 600; }
@@ -220,3 +222,11 @@ a.c-row:hover .c-row__title { color: var(--tg-accent-text); }
 .people-tabs__tab:hover { color: var(--tg-text); background: var(--tg-bg-hover); }
 .people-tabs__tab--on, .people-tabs__tab--on:hover { background: var(--c-navy-soft); color: var(--tg-brand); font-weight: 600; }
 :root[data-theme="dark"] .people-tabs__tab--on, :root[data-theme="midnight"] .people-tabs__tab--on { color: var(--tg-text); }
+
+/* Money (TG-165): tabs under the KPI row, payouts first. */
+.money__tabs { margin-top: 4px; }
+.money__tabs .people-tabs__tab { border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 14px; }
+.money__tabs .people-tabs__tab--on { background: var(--c-navy-soft); }
+.money__tab-count { font-variant-numeric: tabular-nums; }
+.money__panel { display: flex; flex-direction: column; gap: 20px; }
+.money__inv-link { margin-left: auto; align-self: center; font-size: 14px; }

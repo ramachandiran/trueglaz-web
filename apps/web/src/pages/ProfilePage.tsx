@@ -101,17 +101,35 @@ export function ProfilePage() {
 
 function PersonalDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
   const [name, setName] = useState(me.displayName)
+  const [mobile, setMobile] = useState(phoneForField(me.phone))
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const { refresh } = useSession()
+  const meta = useApi(() => api.meta(), [])
+  const support = meta.data?.support?.email
+
+  const nameChanged = name.trim() !== me.displayName.trim()
+  const phoneChanged = mobile.replace(/\s/g, '') !== phoneForField(me.phone).replace(/\s/g, '')
+  const foreign = mobile.trim().startsWith('+')
 
   async function save() {
-    setBusy(true); setError(null); setSaved(false)
+    const m = mobile.replace(/[\s-]/g, '')
+    if (phoneChanged && !(foreign ? /^\+[1-9]\d{7,14}$/.test(m) : /^[6-9]\d{9}$/.test(m))) {
+      setPhoneError(foreign ? 'Enter the number with its country code, like +44 7911 123456.' : 'Enter a 10-digit mobile number.')
+      return
+    }
+    setBusy(true); setError(null); setPhoneError(null); setSaved(false)
     try {
-      await api.updateProfile(name)
-      // The header shows this name, so it has to change there too.
-      await refresh()
+      if (nameChanged) {
+        await api.updateProfile(name.trim())
+        // The header shows this name, so it has to change there too.
+        await refresh()
+      }
+      if (phoneChanged) {
+        try { await api.updatePhone(m) } catch (e) { setPhoneError(e instanceof ApiError ? e.message : 'Could not save that number'); return }
+      }
       setSaved(true)
       onSaved()
     } catch (e) {
@@ -126,28 +144,51 @@ function PersonalDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) 
       <div className="profile__grid">
         <label className="profile__field">
           <span className="profile__label">Name</span>
-          <input className="tg-input" value={name} onChange={(e) => { setName(e.target.value); setSaved(false) }} />
+          <input className="tg-input" value={name} autoComplete="name" onChange={(e) => { setName(e.target.value); setSaved(false) }} />
           <span className="tg-muted profile__hint">Shown on your orders and to our team.</span>
         </label>
 
-        <ContactField kind="phone" current={me.phone} onChanged={onSaved}
-          hint="Signs you in, and used for delivery updates." />
-        <ContactField kind="email" current={me.email} onChanged={onSaved} hint="This signs you in." />
+        {/* Saved straight away, no code (TG-178). */}
+        <label className="profile__field">
+          <span className="profile__label">Mobile number</span>
+          <span className="profile__contact-input">
+            {!foreign && <span className="profile__prefix" aria-hidden="true">+91</span>}
+            <input className="tg-input" value={mobile} type="tel" inputMode="tel" autoComplete={foreign ? 'tel' : 'tel-national'}
+              placeholder="98765 43210" aria-label={foreign ? 'Mobile number' : 'Mobile number, after +91'}
+              aria-invalid={!!phoneError} aria-describedby="mobile-hint"
+              onChange={(e) => { setMobile(e.target.value); setSaved(false); setPhoneError(null) }} />
+          </span>
+          <span id="mobile-hint" className={phoneError ? 'profile__error' : 'tg-muted profile__hint'} role={phoneError ? 'alert' : undefined}>
+            {phoneError ?? 'For order and delivery updates by SMS.'}
+          </span>
+        </label>
+
+        {/* The email signs you in, so it is not changed here (TG-179). */}
+        <div className="profile__field">
+          <span className="profile__label">Sign-in email</span>
+          <p className="profile__value profile__locked">{me.email ?? <span className="tg-muted">Not set</span>}</p>
+          <span className="tg-muted profile__hint">
+            This is how you sign in, so it cannot be changed here. To change it, write to{' '}
+            {support ? <a href={`mailto:${support}?subject=Change%20my%20sign-in%20email`}>{support}</a> : 'our support team'}.
+          </span>
+        </div>
       </div>
 
       <div className="profile__actions">
-        <button
-          className="tg-button tg-button--primary"
-          disabled={busy || name.trim() === me.displayName || name.trim().length < 2}
-          onClick={save}
-        >
-          {busy ? 'Saving…' : 'Save name'}
+        <button className="tg-button tg-button--primary" disabled={busy || (!nameChanged && !phoneChanged) || name.trim().length < 2} onClick={save}>
+          {busy ? 'Saving…' : 'Save changes'}
         </button>
         {saved && <span className="profile__ok">Saved</span>}
         {error && <span className="profile__error" role="alert">{error}</span>}
       </div>
     </section>
   )
+}
+
+/** The number as the field shows it: the ten digits after +91, or a foreign number whole. */
+function phoneForField(phone: string | null): string {
+  if (!phone) return ''
+  return phone.startsWith('+91') ? phone.slice(3) : phone
 }
 
 /* -- addresses ------------------------------------------------------------- */
@@ -582,105 +623,6 @@ function BankDetails({ me, onSaved }: { me: Profile; onSaved: () => void }) {
         Payouts will wait until you add a new account. You can add one again at any time.
       </ConfirmDialog>
     </section>
-  )
-}
-
-/**
- * A phone number or email that signs you in, with its own Change (TG-154).
- * A code goes to the NEW contact and has to come back, which is what proves it
- * is theirs; the old one is told when it changes. Indian mobiles can be typed
- * as ten digits.
- */
-function ContactField({ kind, current, hint, onChanged }: {
-  kind: 'phone' | 'email'; current: string | null; hint: string; onChanged: () => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [value, setValue] = useState('')
-  const [sent, setSent] = useState<CodeSent | null>(null)
-  const [sentTo, setSentTo] = useState('')
-  const [code, setCode] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
-  const noun = kind === 'phone' ? 'phone number' : 'email'
-
-  function normalised(): string | null {
-    const v = value.trim()
-    if (kind === 'email') return /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v) ? v.toLowerCase() : null
-    const digits = v.replace(/[^\d+]/g, '')
-    if (/^\+[1-9]\d{7,14}$/.test(digits)) return digits
-    const local = digits.replace(/^0+/, '')
-    return /^[6-9]\d{9}$/.test(local) ? `+91${local}` : null
-  }
-  async function send() {
-    const c = normalised()
-    if (!c) { setError(kind === 'phone' ? 'Enter a 10-digit mobile number.' : 'Enter a valid email address.'); return }
-    setBusy(true); setError(null)
-    try {
-      const res = await api.requestContactCode(c)
-      setSent(res); setSentTo(c)
-      if (res.devCode) setCode(res.devCode)
-    } catch (e) { setError(e instanceof ApiError ? e.message : 'Could not send a code') } finally { setBusy(false) }
-  }
-  async function confirm() {
-    setBusy(true); setError(null)
-    try {
-      await api.confirmContact(sentTo, code.trim())
-      setEditing(false); setSent(null); setCode(''); setValue(''); setDone(true)
-      onChanged()
-    } catch (e) { setError(e instanceof ApiError ? e.message : 'That code did not work') } finally { setBusy(false) }
-  }
-  function cancel() { setEditing(false); setSent(null); setCode(''); setValue(''); setError(null) }
-
-  return (
-    <div className="profile__field">
-      <span className="profile__label">{kind === 'phone' ? 'Phone' : 'Email'}</span>
-      <div className="profile__contact">
-        <p className="profile__value">{current ?? <span className="tg-muted">Not set</span>}</p>
-        {!editing && (
-          <button type="button" className="tg-button tg-button--small" onClick={() => { setEditing(true); setDone(false) }}
-            aria-label={`${current ? 'Change' : 'Add'} ${noun}`}>
-            {current ? 'Change' : 'Add'}
-          </button>
-        )}
-      </div>
-      {!editing && <span className="tg-muted profile__hint">{done ? `Changed. Your new ${noun} now signs you in.` : hint}</span>}
-      {editing && (
-        <div className="profile__contact-edit">
-          {!sent ? (
-            <>
-              <div className="profile__contact-input">
-                {kind === 'phone' && <span className="profile__prefix" aria-hidden="true">+91</span>}
-                <input className="tg-input" value={value} onChange={(e) => setValue(e.target.value)} autoFocus
-                  type={kind === 'phone' ? 'tel' : 'email'} inputMode={kind === 'phone' ? 'tel' : 'email'}
-                  autoComplete={kind === 'phone' ? 'tel-national' : 'email'}
-                  placeholder={kind === 'phone' ? '98765 43210' : 'you@example.com'} aria-label={`New ${noun}`} />
-              </div>
-              <div className="profile__actions">
-                <button type="button" className="tg-button tg-button--primary" disabled={busy || value.trim().length < 5} onClick={send}>
-                  {busy ? 'Sending…' : 'Send a code'}
-                </button>
-                <button type="button" className="tg-button" onClick={cancel}>Cancel</button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="tg-muted profile__hint">We sent a code to <strong>{sentTo}</strong>. It expires at {dateTime(sent.expiresAt)}.</p>
-              <div className="profile__actions">
-                <input className="tg-input profile__code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric"
-                  placeholder="6-digit code" aria-label="Confirmation code" autoComplete="one-time-code" />
-                <button type="button" className="tg-button tg-button--primary" disabled={busy || code.trim().length < 4} onClick={confirm}>
-                  {busy ? 'Confirming…' : 'Confirm'}
-                </button>
-                <button type="button" className="tg-button tg-button--subtle" disabled={busy} onClick={send}>Send a new code</button>
-                <button type="button" className="tg-button" onClick={cancel}>Cancel</button>
-              </div>
-            </>
-          )}
-          {error && <p className="profile__error" role="alert">{error}</p>}
-        </div>
-      )}
-    </div>
   )
 }
 

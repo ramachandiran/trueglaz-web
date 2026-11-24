@@ -230,13 +230,24 @@ input[type='checkbox'] { accent-color: var(--tg-cta); }
 .tg-select {
   width: 100%;
   padding: var(--tg-space-2) var(--tg-space-3);
-  border: 1px solid var(--tg-border);
+  /* Its own token: the general border is 1.24:1 and a field's edge needs 3:1 (TG-162). */
+  border: 1px solid var(--tg-border-input);
   border-radius: var(--tg-radius-md);
   background: var(--tg-bg-raised);
   transition: border-color var(--tg-transition);
 }
 .tg-input:focus,
 .tg-select:focus { border-color: var(--tg-accent); }
+/* Locked, not just inert: a filled-in report must not look like a form waiting
+   for answers (TG-164). The text stays readable (textMuted on sunken, 5:1). */
+.tg-input:disabled,
+.tg-select:disabled {
+  background: var(--tg-bg-sunken);
+  border-color: var(--tg-border);
+  color: var(--tg-text-muted);
+  cursor: not-allowed;
+  opacity: 1;
+}
 
 .tg-skeleton {
   background: var(--tg-bg-sunken);

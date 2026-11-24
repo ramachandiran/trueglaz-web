@@ -13,11 +13,12 @@ import { Txt } from '../components/Txt'
 import { PageTitle, Pill, RoundIcon, Surface } from '../components/kit'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
+import { DateField } from '../components/DateField'
+import { todayIso } from '../components/dateField.shared'
 import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
 import { ClaimSheet, CoverRow, PolicySheet, QuoteSheet, Sheet } from '../components/VaultCover'
 import { ModelThumb, useModelImages } from '../components/ModelImage'
 import { FadeIn, Pop, statusKey, useCountUp, useFill, useStatusChange } from '../components/motion'
-import { InsureBanner } from '../components/InsureBanner'
 
 /** The midpoint estimate, or the purchase cost when there is no valuation yet. */
 function estimate(it: VaultItem): number {
@@ -70,7 +71,9 @@ export function VaultScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." scrolled={scrolled} />
+      {/* Adding is the Vault's one action, so it sits top right (TG-181); quotes are per item (TG-180). */}
+      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." scrolled={scrolled}
+        actions={data && items.length > 0 ? <RoundIcon icon="add" label="Add gear" tone="cta" onPress={() => setAdding(true)} /> : undefined} />
       <View style={{ height: t.space.x3 }} />
 
 
@@ -103,9 +106,6 @@ export function VaultScreen() {
               </Txt>
             </View>
             </FadeIn>
-            <FadeIn delay={120}>
-              <InsureBanner t={t} gear={items} onQuote={(id) => { const it = items.find((i) => i.id === id); if (it) setInsuring({ item: it, what: 'quote' }) }} />
-            </FadeIn>
             </View>
           ) : undefined}
           ListEmptyComponent={
@@ -114,9 +114,6 @@ export function VaultScreen() {
               <Button label="+ Add your first item" variant="cta" onPress={() => setAdding(true)} />
             </View>
           }
-          ListFooterComponent={items.length > 0 ? (
-            <Button label="+ Add gear" variant="ghost" onPress={() => setAdding(true)} style={{ marginTop: t.space.x1 }} />
-          ) : undefined}
           renderItem={({ item, index }) => {
             const cost = item.costMinor
             const serial = item.serial
@@ -231,7 +228,7 @@ function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => vo
       )}
       <Field label="Serial number" placeholder="Kept private & sealed" value={serial} onChangeText={setSerial} />
       <Field label="What you paid (₹)" placeholder="e.g. 130000" keyboardType="numeric" value={cost} onChangeText={setCost} />
-      <Field label="Purchase date (YYYY-MM-DD)" placeholder="2024-06-15" value={date} onChangeText={setDate} />
+      <DateField label="Purchase date" value={date} onChange={setDate} maximumDate={todayIso()} optional />
       <Muted size={t.size.xs}>We’ll estimate its value from our market and work out the warranty from the purchase date.</Muted>
       {err && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{err}</Txt>}
       <View style={{ flexDirection: 'row', gap: t.space.x2, marginTop: t.space.x2 }}>

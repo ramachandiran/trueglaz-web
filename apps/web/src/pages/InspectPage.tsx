@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, useApi, isStaff, useSession, type ChecklistItem } from '@trueglaz/core'
+import { api, ApiError, dateTime, useApi, isStaff, useSession, type ChecklistItem, type MediaView } from '@trueglaz/core'
 import { ErrorNote, Loading, SeverityBadge } from '../components/ui'
 import { ModelPhoto } from '../components/ModelPhoto'
+import { PhotoUpload } from '../components/PhotoUpload'
 import './OpsPage.css'
 
 type Answer = { valueBoolean?: boolean | null; valueNumeric?: number | null; valueText?: string | null; valueOption?: string | null }
@@ -39,6 +40,14 @@ export function InspectPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [suggested, setSuggested] = useState<string | null>(null)
+  const media = useApi(() => api.itemMedia(itemId), [itemId])
+
+  // Autosave (TG-166): answers are saved a moment after the technician stops
+  // changing them, so leaving or refreshing the page never loses a checklist.
+  // `dirty` is set only by the person's own edits, never by loading what was
+  // saved before, so opening a report does not write it straight back.
+  const dirty = useRef(false)
+  const [save, setSave] = useState<{ state: 'idle' | 'saving' | 'saved' | 'error'; at?: Date }>({ state: 'idle' })
 
   // Pre-fill from whatever has already been answered, so a half-done report resumes.
   useEffect(() => {
@@ -56,6 +65,49 @@ export function InspectPage() {
       setAnswers(next)
     }).catch(() => { /* nothing saved yet */ })
   }, [report?.id, questions.data])
+
+  // A report that has been proposed shows its grade (TG-164): the picker sat
+  // empty above "QC confirmed — final grade TG-8".
+  useEffect(() => {
+    const g = report?.finalGradeCode ?? report?.proposedGradeCode
+    if (g) { setProposed(g); return }
+    // An open report starts from what the rubric suggests, not an empty picker.
+    if (report && !report.submittedAt) {
+      api.suggestedGrade(report.id).then((s) => {
+        setSuggested(s.suggestedGradeCode)
+        setProposed((p) => p || s.suggestedGradeCode || '')
+      }).catch(() => { /* no suggestion yet */ })
+    }
+  }, [report?.id, report?.proposedGradeCode, report?.finalGradeCode])
+
+  const persist = useCallback(async () => {
+    if (!report) return
+    dirty.current = false
+    setSave({ state: 'saving' })
+    try {
+      await api.saveAnswers(report.id, Object.entries(answers).map(([checklistItemCode, a]) => ({ checklistItemCode, ...a })))
+      setSave({ state: 'saved', at: new Date() })
+      const s = await api.suggestedGrade(report.id)
+      setSuggested(s.suggestedGradeCode)
+      setProposed((p) => p || s.suggestedGradeCode || '')
+    } catch {
+      dirty.current = true
+      setSave({ state: 'error' })
+    }
+  }, [report, answers])
+
+  useEffect(() => {
+    if (!dirty.current || !report || report.submittedAt) return
+    const t = setTimeout(() => { void persist() }, 900)
+    return () => clearTimeout(t)
+  }, [answers, persist, report])
+
+  // Leaving with an unsaved change asks first; the browser words the question.
+  useEffect(() => {
+    const guard = (e: BeforeUnloadEvent) => { if (dirty.current || save.state === 'saving') { e.preventDefault(); e.returnValue = '' } }
+    window.addEventListener('beforeunload', guard)
+    return () => window.removeEventListener('beforeunload', guard)
+  }, [save.state])
 
   const sections = useMemo(() => {
     const by = new Map<string, ChecklistItem[]>()
@@ -75,23 +127,10 @@ export function InspectPage() {
   if (!item.data) return null
   if (!report) return <ErrorNote error={new Error('No inspection has been started for this item')} />
 
+  const required = (questions.data ?? []).filter((q) => q.isMandatory).length
   const submitted = report.submittedAt != null
   const qcDone = report.qcState === 'confirmed' || report.qcState === 'overridden'
   const sameTechnician = report.technicianUserId === session?.userId
-
-  async function saveAnswers() {
-    setBusy(true); setError(null)
-    try {
-      await api.saveAnswers(report!.id, Object.entries(answers).map(([checklistItemCode, a]) => ({
-        checklistItemCode, ...a,
-      })))
-      const s = await api.suggestedGrade(report!.id)
-      setSuggested(s.suggestedGradeCode)
-      if (!proposed && s.suggestedGradeCode) setProposed(s.suggestedGradeCode)
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not save')
-    } finally { setBusy(false) }
-  }
 
   async function addDefect() {
     setBusy(true); setError(null)
@@ -112,6 +151,7 @@ export function InspectPage() {
       await api.saveAnswers(report!.id, Object.entries(answers).map(([checklistItemCode, a]) => ({
         checklistItemCode, ...a,
       })))
+      dirty.current = false
       await api.submitReport(report!.id, {
         proposedGradeCode: proposed,
         overrideReason: overrideReason || null,
@@ -150,6 +190,15 @@ export function InspectPage() {
 
       {error && <p className="ops__error" role="alert">{error}</p>}
 
+      {/* A finished report reads as finished (TG-164). */}
+      {submitted && (
+        <p className={`insp__state${qcDone ? ' insp__state--done' : ''}`} role="status">
+          {qcDone
+            ? <>QC {report.qcState} · final grade <strong>{report.finalGradeCode ?? '—'}</strong>. This report is closed; answers and defects are read-only.</>
+            : <>Submitted for QC{report.submittedAt ? ` on ${dateTime(report.submittedAt)}` : ''} · proposed <strong>{report.proposedGradeCode}</strong>. Answers are locked.</>}
+        </p>
+      )}
+
       <section className="tg-card ops__card">
         <h2 className="ops__subtitle">Checklist</h2>
         {questions.loading && <Loading label="Loading checklist" />}
@@ -165,22 +214,12 @@ export function InspectPage() {
                   q={q}
                   value={answers[q.code]}
                   disabled={submitted}
-                  onChange={(a) => setAnswers({ ...answers, [q.code]: a })}
+                  onChange={(a) => { dirty.current = true; setAnswers((prev) => ({ ...prev, [q.code]: a })) }}
                 />
               ))}
             </div>
           </div>
         ))}
-        {!submitted && (
-          <div className="ops__actions">
-            <button className="tg-button" disabled={busy} onClick={saveAnswers}>Save answers</button>
-            {mandatoryMissing.length > 0 && (
-              <span className="tg-muted ops__fineprint">
-                {mandatoryMissing.length} mandatory question{mandatoryMissing.length === 1 ? '' : 's'} left
-              </span>
-            )}
-          </div>
-        )}
       </section>
 
       <section className="tg-card ops__card">
@@ -189,28 +228,59 @@ export function InspectPage() {
           This wording goes on the public listing. Write it the way you'd want it written for you.
         </p>
         {item.data.defects.length > 0 && (
-          <ul className="ops__items">
-            {item.data.defects.map((d) => (
-              <li key={d.id}>
-                <strong>{d.title}</strong>
-                <SeverityBadge severity={d.severity} />
-                <span className="tg-muted">{d.descriptionPublic}</span>
-              </li>
-            ))}
+          <ul className="insp__defects">
+            {item.data.defects.map((d) => {
+              const shots = (media.data ?? []).filter((m: MediaView) => m.role === 'defect' && m.defectId === d.id)
+              return (
+                <li key={d.id} className="insp__defect">
+                  <div className="insp__defect-head">
+                    <strong>{d.title}</strong>
+                    <SeverityBadge severity={d.severity} />
+                  </div>
+                  <p className="tg-muted insp__defect-text">{d.descriptionPublic}</p>
+                  {/* The evidence behind the words (TG-167): up to five photos
+                      each, until QC closes the report. */}
+                  {qcDone ? (
+                    shots.length > 0 ? (
+                      <ul className="shots__grid" aria-label={`Photos of ${d.title}`}>
+                        {shots.map((m) => <li key={m.id} className="shots__item"><img src={m.sizes[400] ?? m.url} alt={`${d.title}, photo`} loading="lazy" /></li>)}
+                      </ul>
+                    ) : <p className="tg-muted ops__fineprint">No photo of this defect.</p>
+                  ) : media.loading ? null : (
+                    <PhotoUpload
+                      key={`${d.id}-${shots.length}`}
+                      ownerType="item" ownerId={itemId} role="defect" defectId={d.id}
+                      max={5} existing={shots}
+                      hint={shots.length === 0 ? 'Add a photo of this defect: it goes on the listing with the words above. Up to 5, JPEG or PNG.' : undefined}
+                    />
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
         {!submitted && (
-          <div className="ops__defect-form">
-            <input className="tg-input" placeholder="What is wrong" value={defect.title} onChange={(e) => setDefect({ ...defect, title: e.target.value })} />
-            <select className="tg-select" value={defect.severity} onChange={(e) => setDefect({ ...defect, severity: e.target.value })} aria-label="Severity">
-              <option value="cosmetic">Cosmetic</option>
-              <option value="functional">Functional</option>
-              <option value="optical">Optical</option>
-            </select>
-            <input className="tg-input" placeholder="How you'd describe it to a buyer" value={defect.descriptionPublic} onChange={(e) => setDefect({ ...defect, descriptionPublic: e.target.value })} />
+          <div className="ops__defect-form insp__defect-form">
+            <label className="insp__field">
+              <span className="insp__label">What is wrong</span>
+              <input className="tg-input" value={defect.title} onChange={(e) => setDefect({ ...defect, title: e.target.value })} placeholder="e.g. Marks on the barrel" />
+            </label>
+            <label className="insp__field">
+              <span className="insp__label">Severity</span>
+              <select className="tg-select" value={defect.severity} onChange={(e) => setDefect({ ...defect, severity: e.target.value })}>
+                <option value="cosmetic">Cosmetic</option>
+                <option value="functional">Functional</option>
+                <option value="optical">Optical</option>
+              </select>
+            </label>
+            <label className="insp__field">
+              <span className="insp__label">How a buyer reads it</span>
+              <input className="tg-input" value={defect.descriptionPublic} onChange={(e) => setDefect({ ...defect, descriptionPublic: e.target.value })} placeholder="e.g. Visible handling marks; cosmetic only" />
+            </label>
             <button className="tg-button" disabled={busy || !defect.title || !defect.descriptionPublic} onClick={addDefect}>
               Disclose
             </button>
+            <p className="tg-muted ops__fineprint insp__defect-note">Once disclosed, add its photos under it.</p>
           </div>
         )}
       </section>
@@ -221,7 +291,7 @@ export function InspectPage() {
           <p className="ops__result">The rubric suggests <strong>{suggested}</strong> from the defects disclosed.</p>
         )}
         <div className="ops__grade-row">
-          <select className="tg-select" value={proposed} onChange={(e) => setProposed(e.target.value)} disabled={submitted && qcDone} aria-label="Grade">
+          <select className="tg-select" value={proposed} onChange={(e) => setProposed(e.target.value)} disabled={submitted && (qcDone || sameTechnician || !isStaff(session))} aria-label="Grade">
             <option value="">Choose a grade</option>
             {(grades.data ?? []).filter((g) => g.isActive).sort((a, b) => b.rank - a.rank).map((g) => (
               <option key={g.code} value={g.code}>{g.code} · {g.label}</option>
@@ -238,13 +308,7 @@ export function InspectPage() {
         </div>
 
         {!submitted ? (
-          <button
-            className="tg-button tg-button--primary"
-            disabled={busy || !proposed || mandatoryMissing.length > 0}
-            onClick={submitReport}
-          >
-            Submit for QC
-          </button>
+          <p className="tg-muted ops__fineprint">Submit from the bar at the bottom of the page once every required answer is in.</p>
         ) : !qcDone ? (
           <div className="ops__qc">
             <p className="tg-muted ops__fineprint">
@@ -275,6 +339,36 @@ export function InspectPage() {
           <p className="ops__result">QC {report.qcState} — final grade {report.finalGradeCode ?? '—'}.</p>
         )}
       </section>
+
+      {/* Always in view while the checklist is open (TG-166): how far along it
+          is, whether it is saved, and the one action that ends the job. */}
+      {!submitted && (
+        <div className="insp__bar" role="region" aria-label="Inspection progress">
+          <span className="insp__progress">
+            <strong>{required - mandatoryMissing.length} of {required}</strong> required answered
+          </span>
+          <span className={`insp__save insp__save--${save.state}`} aria-live="polite">
+            {save.state === 'saving' && 'Saving…'}
+            {save.state === 'saved' && save.at && `Saved at ${save.at.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`}
+            {save.state === 'error' && <>Not saved. <button type="button" className="insp__retry" onClick={() => { void persist() }}>Try again</button></>}
+            {save.state === 'idle' && 'Answers save as you go'}
+          </span>
+          <span className="insp__bar-end">
+            {(mandatoryMissing.length > 0 || !proposed) && (
+              <span className="tg-muted insp__why">
+                {mandatoryMissing.length > 0 ? `${mandatoryMissing.length} required left` : 'Choose a grade'}
+              </span>
+            )}
+            <button
+              className="tg-button tg-button--primary"
+              disabled={busy || !proposed || mandatoryMissing.length > 0}
+              onClick={submitReport}
+            >
+              Submit for QC
+            </button>
+          </span>
+        </div>
+      )}
     </div>
   )
 }

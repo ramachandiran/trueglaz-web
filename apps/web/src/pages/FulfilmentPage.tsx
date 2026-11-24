@@ -67,7 +67,7 @@ export function FulfilmentPage() {
   const [open, setOpen] = useState<string | null>(null)
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [done, setDone] = useState(0)
-  const perPage = 10
+  const perPage = 25
 
   const rows = all.data ?? []
   const count = (t: Tab) => t === 'cancel' ? (cancels.data?.length ?? 0)

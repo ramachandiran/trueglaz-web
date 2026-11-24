@@ -10,7 +10,9 @@
 .home__bar-zero { fill: var(--c-navy-tint); }
 .home__bar:hover rect:not([fill]), .home__bar:focus-visible rect:not([fill]) { filter: brightness(0.92); }
 .home__bar:hover .home__bar-old, .home__bar:focus-visible .home__bar-old { fill: var(--c-navy-tint); }
-.home__bar:focus-visible rect[fill='transparent'] { stroke: var(--tg-accent); stroke-width: 1.5; }
+.home__bar:focus-visible rect[fill='transparent'] { stroke: var(--tg-brand); stroke-width: 2.5; }
+/* A slice in focus gets a navy edge: the old cue was only "not faded", invisible with no hover (TG-163). */
+.home__slice:focus-visible { stroke: var(--tg-brand); stroke-width: 3; }
 .home__strong { color: var(--tg-text); font-weight: 600; }
 
 .home__ring { display: block; width: 190px; max-width: 100%; margin: 4px auto 0; }

@@ -198,3 +198,36 @@
 
 /* The model picture at the start of a queue row. */
 .ops__pic { float: left; margin: 2px var(--tg-space-2) 0 0; }
+
+/* -- inspection bench (TG-164, TG-166, TG-167) ------------------------------ */
+.insp__state {
+  margin: 0; padding: 12px 16px; border-radius: var(--tg-radius-md);
+  background: var(--tg-bg-sunken); border-left: 4px solid var(--tg-brand); color: var(--tg-text);
+}
+.insp__state--done { border-left-color: var(--tg-good); }
+
+.insp__defects { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.insp__defect { border: 1px solid var(--tg-border); border-radius: var(--tg-radius-md); padding: 12px 14px; display: grid; gap: 8px; }
+.insp__defect-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.insp__defect-text { margin: 0; font-size: var(--tg-text-sm); }
+
+.insp__defect-form { align-items: end; }
+.insp__field { display: grid; gap: 4px; min-width: 0; }
+.insp__label { font-size: 13px; font-weight: 600; color: var(--tg-text); }
+.insp__defect-note { grid-column: 1 / -1; margin: 0; }
+
+/* Sticks to the bottom of the window while the checklist scrolls. */
+.insp__bar {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap;
+  padding: 12px 18px; border-radius: var(--tg-radius-md) var(--tg-radius-md) 0 0;
+  background: var(--tg-bg-raised); border: 1px solid var(--tg-border-strong);
+  box-shadow: 0 -6px 18px rgb(35 62 80 / 0.10);
+}
+.insp__progress { font-size: 14px; }
+.insp__save { font-size: 13px; color: var(--tg-text-muted); }
+.insp__save--saved { color: var(--tg-good); }
+.insp__save--error { color: var(--tg-bad); }
+.insp__retry { background: none; border: 0; padding: 0; color: var(--tg-accent-text); text-decoration: underline; cursor: pointer; font: inherit; }
+.insp__bar-end { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.insp__why { font-size: 13px; }

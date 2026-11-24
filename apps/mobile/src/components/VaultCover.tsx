@@ -14,6 +14,8 @@ import { Txt } from './Txt'
 import { BottomSheet } from './BottomSheet'
 import { Chip, Pill } from './kit'
 import { Button, Field } from './form'
+import { DateField } from './DateField'
+import { fromIsoDay, toIsoDay } from './dateField.shared'
 import { ErrorNote, Loading, Muted } from './ui'
 import { useTheme } from '../theme/ThemeContext'
 import { PushPrompt } from './PushPrompt'
@@ -314,11 +316,13 @@ export function PolicySheet({ item, onClose, onDone }: { item: VaultItem; onClos
   const coverMinor = Math.round((parseFloat(cover.replace(/,/g, '')) || 0) * 100)
   const can = !!doc && !!insurer.trim() && !!no.trim() && ISO.test(starts) && ISO.test(ends) && coverMinor > 0 && !busy
 
+  // A policy runs a year less a day; the end follows the start unless it is already later.
   function onStarts(v: string) {
     setStarts(v)
-    if (ISO.test(v) && !ends) {
-      const d = new Date(v); d.setFullYear(d.getFullYear() + 1); d.setDate(d.getDate() - 1)
-      if (!Number.isNaN(d.getTime())) setEnds(d.toISOString().slice(0, 10))
+    const d = fromIsoDay(v)
+    if (d && (!ends || ends <= v)) {
+      d.setFullYear(d.getFullYear() + 1); d.setDate(d.getDate() - 1)
+      setEnds(toIsoDay(d))
     }
   }
 
@@ -362,8 +366,8 @@ export function PolicySheet({ item, onClose, onDone }: { item: VaultItem; onClos
       <Field label="Insurer" placeholder="e.g. New India Assurance" value={insurer} onChangeText={setInsurer} />
       <Field label="Policy number" value={no} onChangeText={setNo} />
       <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
-        <View style={{ flex: 1 }}><Field label="Starts (YYYY-MM-DD)" placeholder="2026-11-14" value={starts} onChangeText={onStarts} /></View>
-        <View style={{ flex: 1 }}><Field label="Ends (YYYY-MM-DD)" placeholder="2027-11-13" value={ends} onChangeText={setEnds} /></View>
+        <View style={{ flex: 1 }}><DateField label="Starts" value={starts} onChange={onStarts} /></View>
+        <View style={{ flex: 1 }}><DateField label="Ends" value={ends} onChange={setEnds} minimumDate={starts || undefined} /></View>
       </View>
       <Field label="Cover amount on the policy (₹)" keyboardType="numeric" value={cover} onChangeText={(v: string) => setCover(v.replace(/[^\d.,]/g, ''))} />
     </Sheet>

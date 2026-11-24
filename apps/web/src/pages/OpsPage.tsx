@@ -56,7 +56,7 @@ export function OpsPage() {
   const [stateParam] = useQueryState('state')
   const [overdueParam] = useQueryState('overdue')
   const clearParams = useClearParams()
-  const perPage = 10
+  const perPage = 25
 
   // Intake and pricing are staff work. A technician asking for them gets a 403,
   // so they are not asked for: an error where a queue should be reads as the
