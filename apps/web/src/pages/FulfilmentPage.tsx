@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError, CANCEL_REASONS, dateOnly, dateTime, isAdmin, money, useApi, useSession, type StaffCancelRow, type StaffOrderLine } from '@trueglaz/core'
 import { QueueScreen } from '../components/QueueScreen'
@@ -72,6 +72,16 @@ export function FulfilmentPage() {
   const perPage = 25
 
   const rows = all.data ?? []
+  // Arriving with a search and no tab (the command menu's order results): open
+  // the tab the order is actually in, not "To dispatch" with nothing in it.
+  const [askedTab] = useState(() => new URLSearchParams(window.location.search).has('tab'))
+  useEffect(() => {
+    if (askedTab || !search.trim() || !all.data) return
+    const t = search.trim().toLowerCase()
+    const hit = (l: StaffOrderLine) => [l.orderNumber, l.internalSku, l.title, l.buyerName].some((v) => v?.toLowerCase().includes(t))
+    const where = TABS.find((x) => x.key !== 'cancel' && all.data!.some((l) => inTabRule(x.key, l) && hit(l)))
+    if (where && where.key !== tab) setTab(where.key)
+  }, [all.data]) // eslint-disable-line react-hooks/exhaustive-deps
   const count = (t: Tab) => t === 'cancel' ? (cancels.data?.length ?? 0)
     : rows.filter((l) => inTabRule(t, l)).length
   const cancelRows = (cancels.data ?? []).filter((r) => {

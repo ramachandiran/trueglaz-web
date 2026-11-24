@@ -1696,6 +1696,18 @@ export interface StaffHome {
   recentOrders?: { id: string; orderNumber: string; state: string; totalMinor: number; at: string | null; buyerName: string | null; lineStates: string[] }[]
 }
 
+/** One result in the console's command menu (TG-202). */
+export interface ConsoleHit {
+  kind: 'unit' | 'order' | 'person'
+  id: string
+  title: string
+  subtitle?: string | null
+  /** A state, for units and orders. */
+  meta?: string | null
+  amountMinor?: number | null
+}
+export interface ConsoleSearch { query: string; units: ConsoleHit[]; orders: ConsoleHit[]; people: ConsoleHit[] }
+
 /** One period of sales (TG-196). Commission and refunds are null for anyone but an administrator. */
 export interface SalesPoint {
   /** `YYYY-MM` for a month, `YYYY-MM-DD` (its Monday) for a week. */

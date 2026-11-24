@@ -5,7 +5,7 @@ import type {
   ActorHint, Brand, Category, ChecklistItem, ChecklistTemplate, ConsignmentItem, Defect,
   FeeQuote, FeeRule, FeeSnapshot, Grade, InboundShipment, InspectionAnswer, InspectionReport,
   Intake, InventoryRow, Invoice, InvoiceDetail, ItemDetail, LedgerAccountBalance, LedgerTransactionView, LensRange, LensType, Listing, ListingDetail, ManagedListing, NewModel,
-  AccountDeletionStatus, StaffAccountDeletion, PublicInvite, Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutQueueRow, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, StaffInsights, ReturnCase, ReturnCaseView, ReturnForBuyer,
+  AccountDeletionStatus, StaffAccountDeletion, PublicInvite, Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutQueueRow, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, StaffInsights, ConsoleSearch, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, InboundClock, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
   EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
@@ -502,6 +502,7 @@ export const api = {
   lineHistory: (lineId: string) => get<OrderLineEvent[]>(`/order-lines/${lineId}/history`),
   staffHome: () => get<StaffHome>('/staff/home'),
   staffInsights: () => get<StaffInsights>('/staff/insights'),
+  staffSearch: (q: string) => get<ConsoleSearch>(`/staff/search?q=${encodeURIComponent(q)}`),
   sellerHome: () => get<SellerHome>('/seller/home'),
   buyerHome: () => get<BuyerHome>('/buyer/home'),
 

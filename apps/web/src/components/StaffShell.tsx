@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { isAdmin, isStaff, useSession } from '@trueglaz/core'
 import { AccountMenu } from './AccountMenu'
 import { DemoNotice } from './DemoNotice'
@@ -7,6 +7,7 @@ import { LogoMark } from './Logo'
 import { useUnread } from './useUnread'
 import { ConsoleTitleContext, useStaffHome, type ConsoleTitle } from './consoleTitle'
 import { PageHeadView } from './PageHead'
+import { CommandMenu } from './CommandMenu'
 import { useEscape } from './useEscape'
 import './StaffShell.css'
 import './console.css'
@@ -221,7 +222,7 @@ export function StaffShell() {
               <Icon d={ICONS.menu} />
             </button>
             <p className="staff-top__title">{section}</p>
-            <ConsoleSearch />
+            <CommandMenu screens={sections(staff, admin, () => 0).flatMap((g) => g.items.map((it) => ({ label: it.label, to: it.to })))} />
             <div className="staff-top__tools">
               <HelpMenu />
               <Link to="/profile#notifications" className="staff-top__icon" aria-label={unread > 0 ? `${unread} unread notifications` : 'Notifications'}>
@@ -246,48 +247,6 @@ export function StaffShell() {
   )
 }
 
-/**
- * Search from anywhere in the console: an item, a serial, an SKU, an order
- * number or a seller. It opens Inventory filtered by what was typed - the one
- * list that holds every unit. "/" or ⌘K (Ctrl K) puts the cursor in it.
- */
-function ConsoleSearch() {
-  const nav = useNavigate()
-  const { pathname, search } = useLocation()
-  const ref = useRef<HTMLInputElement>(null)
-  const [q, setQ] = useState('')
-  // Coming back to Inventory shows what it is filtered by.
-  useEffect(() => {
-    if (pathname === '/admin/inventory') setQ(new URLSearchParams(search).get('q') ?? '')
-  }, [pathname, search])
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName))
-      if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) {
-        e.preventDefault()
-        ref.current?.focus()
-        ref.current?.select()
-      }
-    }
-    document.addEventListener('keydown', key)
-    return () => document.removeEventListener('keydown', key)
-  }, [])
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const term = q.trim()
-    nav(term ? `/admin/inventory?q=${encodeURIComponent(term)}` : '/admin/inventory')
-    ref.current?.blur()
-  }
-  return (
-    <form role="search" className="staff-search" onSubmit={submit}>
-      <Icon d={ICONS.search} />
-      <input ref={ref} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items, serials, SKUs…"
-        aria-label="Search inventory" aria-keyshortcuts={isMac ? 'Meta+K /' : 'Control+K /'} />
-      <span className="staff-search__keys" aria-hidden="true"><kbd>{isMac ? '⌘' : 'Ctrl'}</kbd><kbd>K</kbd></span>
-    </form>
-  )
-}
-
 /** What the colours and shortcuts mean, a click away from every screen. */
 function HelpMenu() {
   const [open, setOpen] = useState(false)
@@ -308,7 +267,7 @@ function HelpMenu() {
         <div id="console-help" className="staff-help__pop" role="dialog" aria-label="Help">
           <h2>Shortcuts</h2>
           <dl>
-            <div><dt><kbd>{isMac ? '⌘' : 'Ctrl'}</kbd> <kbd>K</kbd> or <kbd>/</kbd></dt><dd>Search inventory</dd></div>
+            <div><dt><kbd>{isMac ? '⌘' : 'Ctrl'}</kbd> <kbd>K</kbd> or <kbd>/</kbd></dt><dd>Find a unit, order, person or screen</dd></div>
             <div><dt><kbd>Esc</kbd></dt><dd>Close a menu or dialog</dd></div>
           </dl>
           <h2>Colours</h2>
