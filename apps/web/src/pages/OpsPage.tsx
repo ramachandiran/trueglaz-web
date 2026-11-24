@@ -56,6 +56,10 @@ export function OpsPage() {
   // Filters a Control room widget can open a queue with (TG-126).
   const [stateParam] = useQueryState('state')
   const [overdueParam] = useQueryState('overdue')
+  // My bench (TG-203): a technician starts on their own units; staff on everyone's.
+  const [benchParam, setBenchParam] = useQueryState('bench')
+  // The outcome of a bulk action, kept here because the table reloads under it.
+  const [notice, setNotice] = useState<{ text: string; bad: boolean } | null>(null)
   const clearParams = useClearParams()
   const perPage = 25
 
@@ -69,7 +73,6 @@ export function OpsPage() {
   const inInspection = useApi(() => api.itemQueue('IN_INSPECTION'), [])
   const graded = useApi(() => (staff ? api.itemQueue('GRADED') : Promise.resolve([])), [staff])
   const wanted = useApi(() => (staff ? api.requestQueue() : Promise.resolve([])), [staff])
-  const people = useApi(() => (staff ? api.staffUsers('', 'pending_review') : Promise.resolve([])), [staff])
   const roster = useApi(() => api.technicians(), [])
   // The bench clock (TG-198): how long each unit has waited since it arrived, and the week's figures.
   const insights = useApi(() => api.staffInsights(), [])
@@ -149,7 +152,11 @@ export function OpsPage() {
     : active === 'inbound' && overdueParam
       ? { label: 'Boxes past their ship-by date', test: (r: any) => lateFor(r) > 0 }
       : null
-  const rows: any[] = ((source.data as any[]) ?? []).filter(widget?.test ?? (() => true))
+  const bench = benchParam || (staff ? 'all' : 'mine')
+  const mineOnly = active === 'inspect' && bench === 'mine'
+  const rows: any[] = ((source.data as any[]) ?? [])
+    .filter(widget?.test ?? (() => true))
+    .filter((r) => !mineOnly || r.assignedTechnicianUserId === session?.userId)
 
   // One predicate per queue: the thing a person would actually type.
   const matches = (r: any) => {
@@ -205,8 +212,26 @@ export function OpsPage() {
         title={STAGE[active].title}
         subtitle={STAGE[active].line}
         crumbs={[{ label: 'Operations', to: '/admin/operations' }, { label: STAGE[active].title }]}
-        summary={active === 'inspect' ? <BenchFigures sla={insights.data?.inspection ?? null} roster={roster.data?.length ?? 0}
-          unassigned={inspectRows.filter((i) => i.currentState === 'RECEIVED' && !i.assignedTechnicianUserId).length} /> : undefined}
+        actions={active === 'inspect' ? (
+          <div className="ops__bench" role="group" aria-label="Whose units">
+            <button type="button" aria-pressed={bench === 'mine'} onClick={() => setBenchParam(staff ? 'mine' : '', ['page'])}>
+              My bench <span>{inspectRows.filter((i) => i.assignedTechnicianUserId === session?.userId).length}</span>
+            </button>
+            <button type="button" aria-pressed={bench === 'all'} onClick={() => setBenchParam(staff ? '' : 'all', ['page'])}>
+              Everyone <span>{inspectRows.length}</span>
+            </button>
+          </div>
+        ) : undefined}
+        summary={active === 'inspect' ? <>
+          <BenchFigures sla={insights.data?.inspection ?? null} roster={roster.data?.length ?? 0}
+            unassigned={inspectRows.filter((i) => i.currentState === 'RECEIVED' && !i.assignedTechnicianUserId).length} />
+          {notice && (
+            <div className={`ops__notice${notice.bad ? ' ops__notice--bad' : ''}`} role="status">
+              <span>{notice.text}</span>
+              <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss">✕</button>
+            </div>
+          )}
+        </> : undefined}
         filter={widget ? { label: widget.label, onClear: () => clearParams('state', 'overdue', 'page') } : null}
         tabs={tabs}
         active={active}
@@ -220,7 +245,8 @@ export function OpsPage() {
         loading={source.loading}
         error={source.error}
         onRetry={source.reload}
-        emptyTitle={empty}
+        emptyTitle={mineOnly ? 'Nothing on your bench' : empty}
+        emptyHint={mineOnly ? 'Units assigned to you appear here. Switch to Everyone to see the whole bench.' : undefined}
         page={validPage}
         pages={pages}
         onPage={setPage}
@@ -228,24 +254,13 @@ export function OpsPage() {
         {active === 'intake' && <IntakeTable rows={shown} names={names} reload={pending.reload} />}
         {active === 'inbound' && <InboundTable rows={shown} names={names} clock={clock} reload={source.reload} />}
         {active === 'inspect' && (
-          <InspectTable rows={shown} names={names} roster={roster.data ?? []} arrived={arrived} windowHours={insights.data?.inspection.windowHours ?? 48} reload={source.reload} />
+          <InspectTable rows={shown} names={names} roster={roster.data ?? []} staff={staff} onNotice={setNotice} arrived={arrived} windowHours={insights.data?.inspection.windowHours ?? 48} reload={source.reload} />
         )}
         {active === 'price' && <PricingTable rows={shown} names={names} reload={graded.reload} />}
         {active === 'listed' && <ListedTable rows={shown} reload={listed.reload} />}
         {active === 'wanted' && <RequestTable rows={shown} reload={wanted.reload} />}
       </QueueScreen>
 
-      {/* Not a queue of items, so not a tab — but it is staff work waiting, and
-          a staff member looking for their work should not have to find it
-          somewhere else on the page. */}
-      {staff && (
-        <p className="ops__aside">
-          <Link to="/admin/people">
-            People waiting on a selling decision
-            <span className="ops__aside-count">{people.data?.length ?? 0}</span>
-          </Link>
-        </p>
-      )}
     </>
   )
 }
@@ -311,7 +326,7 @@ function WaitingCell({ at, windowHours }: { at: string | null | undefined; windo
   const h = Math.max(0, Math.floor((Date.now() - Date.parse(at)) / 3600000))
   const late = h > windowHours
   const text = h < 1 ? 'under 1 h' : h < 48 ? `${h} h` : `${Math.floor(h / 24)} d ${h % 24} h`
-  return <td className={late ? 'c-late' : undefined} title={`Arrived ${dateTime(at)}`}>{text}{late && <span className="tg-visually-hidden"> (past {windowHours} hours)</span>}</td>
+  return <td className={late ? "c-late ops__wait" : "ops__wait"} title={`Arrived ${dateTime(at)}`}>{text}{late && <span className="tg-visually-hidden"> (past {windowHours} hours)</span>}</td>
 }
 
 /** Shared by every table here: run one action, show what went wrong, reload. */
@@ -694,16 +709,72 @@ function AssignSelect({ item, roster, reload }: { item: ConsignmentItem; roster:
 
 /** Received and in progress in one list, because it is one bench. */
 function InspectTable({
-  rows, names, roster, arrived, windowHours, reload,
-}: { rows: ConsignmentItem[]; names: Map<string, string>; roster: Technician[]; arrived: Map<string, string | null>; windowHours: number; reload: () => void }) {
+  rows, names, roster, staff, onNotice, arrived, windowHours, reload,
+}: { rows: ConsignmentItem[]; names: Map<string, string>; roster: Technician[]; staff: boolean; onNotice: (n: { text: string; bad: boolean }) => void; arrived: Map<string, string | null>; windowHours: number; reload: () => void }) {
   const navigate = useNavigate()
+  // Bulk work (TG-203): pick several received units, assign them or send them to the bench in one go.
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [bulkTech, setBulkTech] = useState('')
+  const [bulk, setBulk] = useState<{ busy: boolean; done: number; total: number; failed: { id: string; why: string }[] } | null>(null)
+  const selectable = rows.filter((i) => i.currentState === 'RECEIVED')
+  const chosen = selectable.filter((i) => picked.has(i.id))
+  const allOn = selectable.length > 0 && chosen.length === selectable.length
+  const toggle = (id: string) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  async function runBulk(label: string, fn: (i: ConsignmentItem) => Promise<unknown>, items: ConsignmentItem[]) {
+    const failed: { id: string; why: string }[] = []
+    setBulk({ busy: true, done: 0, total: items.length, failed })
+    for (const [n, i] of items.entries()) {
+      try { await fn(i) } catch (e) { failed.push({ id: i.id, why: e instanceof ApiError ? e.message : `${label} did not work` }) }
+      setBulk({ busy: true, done: n + 1, total: items.length, failed: [...failed] })
+    }
+    setBulk(null)
+    // What failed stays picked, so it can be fixed and tried again.
+    setPicked(new Set(failed.map((f) => f.id)))
+    const ok = items.length - failed.length
+    onNotice(failed.length === 0
+      ? { text: `${label} done for all ${items.length} unit${items.length === 1 ? '' : 's'}.`, bad: false }
+      : { text: `${ok} done, ${failed.length} not: ${failed[0].why}${failed.length > 1 ? ` (and ${failed.length - 1} more)` : ''}. They are still selected.`, bad: true })
+    reload()
+  }
+  const sendable = chosen.filter((i) => i.assignedTechnicianUserId || bulkTech)
   const { busy, error, act } = useAction(reload)
   const bench = (id?: string | null) => roster.find((t) => t.id === id)?.displayName ?? null
 
   return (
+    <>
+    {(chosen.length > 0 || bulk) && (
+      <div className="ops__bulk" role="region" aria-label="Bulk actions">
+        {chosen.length > 0 && <b>{chosen.length} selected</b>}
+        {staff && chosen.length > 0 && (
+          <>
+            <select className="tg-select" aria-label="Assign the selected units to" value={bulkTech} onChange={(e) => setBulkTech(e.target.value)} disabled={bulk?.busy}>
+              <option value="">Assign to…</option>
+              {roster.map((t) => <option key={t.id} value={t.id}>{t.displayName}</option>)}
+            </select>
+            <button type="button" className="c-btn c-btn--sm" disabled={!bulkTech || bulk?.busy}
+              onClick={() => runBulk('Assignment', (i) => api.assignTechnician(i.id, bulkTech), chosen)}>Assign {chosen.length}</button>
+            <button type="button" className="c-btn c-btn--sm c-btn--cta" disabled={sendable.length === 0 || bulk?.busy}
+              title={sendable.length === 0 ? 'Assign a technician first' : undefined}
+              onClick={() => runBulk('Sending to inspection', async (i) => {
+                const tech = i.assignedTechnicianUserId ?? bulkTech
+                if (!i.assignedTechnicianUserId) await api.assignTechnician(i.id, tech)
+                await api.sendToInspection(i.id, tech)
+              }, sendable)}>Send {sendable.length} to inspection</button>
+          </>
+        )}
+        {bulk && <span className="ops__bulk-status" role="status">Working… {bulk.done} of {bulk.total}</span>}
+        <button type="button" className="ops__bulk-clear" onClick={() => { setPicked(new Set()); setBulk(null) }}>Clear</button>
+      </div>
+    )}
     <table className="q__table">
       <thead>
         <tr>
+          {staff && (
+            <th className="ops__pick">
+              <input type="checkbox" aria-label="Select every received unit" checked={allOn} disabled={selectable.length === 0}
+                onChange={() => setPicked(allOn ? new Set() : new Set(selectable.map((i) => i.id)))} />
+            </th>
+          )}
           <th>Item</th>
           <th>Declared</th>
           <th>On the bench of</th>
@@ -714,9 +785,16 @@ function InspectTable({
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={7} />
+        <ErrorRow error={error} span={staff ? 8 : 7} />
         {rows.map((i) => (
-          <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
+          <tr key={i.id} className={`q__row--click${picked.has(i.id) ? ' ops__row--picked' : ''}`} onClick={() => navigate(`/items/${i.id}`)}>
+            {staff && (
+              <td className="ops__pick" onClick={(e) => e.stopPropagation()}>
+                {i.currentState === 'RECEIVED'
+                  ? <input type="checkbox" aria-label={`Select ${itemTitle(i, names) ?? i.internalSku}`} checked={picked.has(i.id)} onChange={() => toggle(i.id)} />
+                  : null}
+              </td>
+            )}
             <ItemCell item={i} names={names} />
             <td>{i.declaredGradeCode}</td>
             <td onClick={(e) => e.stopPropagation()}>
@@ -758,6 +836,7 @@ function InspectTable({
         ))}
       </tbody>
     </table>
+    </>
   )
 }
 

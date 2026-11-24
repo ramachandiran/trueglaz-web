@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api, ApiError, dateTime, isAdmin, isStaff, isTechnician, money, useApi, useSession,
@@ -10,6 +10,7 @@ import { KpiCard, KpiRow } from '../components/KpiCard'
 import { Icon, ICONS } from '../components/StaffShell'
 import { useQueryState } from '../components/useQueryState'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { FactGrid, PanelSection, SidePanel } from '../components/SidePanel'
 import { LineHistory } from '../components/LineHistory'
 import { COURIER_CHOICES, courierName } from '../components/couriers'
 import './OpsPage.css'
@@ -53,7 +54,10 @@ export function ReturnsPage() {
   const setTab = (t: Tab) => setTabParam(t)
   const [search, setSearch] = useQueryState('q')
   const [page, setPage] = useState(1)
-  const [open, setOpen] = useState<string | null>(null)
+  // TG-205: a return opens as a record over the queue, linkable like the Insurance desk.
+  const [openParam, setOpenParam] = useQueryState('open')
+  const open = openParam || null
+  const setOpen = (id: string | null) => setOpenParam(id ?? '')
   const [video, setVideo] = useState<ReturnCaseView | null>(null)
   const [done, setDone] = useState(0)
   const perPage = 25
@@ -112,7 +116,7 @@ export function ReturnsPage() {
         subtitle="Every return from the buyer’s request to the refund, with the unboxing video and a full history."
         tabs={visible.map((s) => ({ key: s.key, label: s.label, count: inState(s.key).length }))}
         active={tab}
-        onTab={(k) => { setTab(k as Tab); setPage(1); setOpen(null); setError(null) }}
+        onTab={(k) => { setTab(k as Tab); setPage(1); setError(null) }}
         search={search}
         onSearch={(v) => { setSearch(v); setPage(1) }}
         searchPlaceholder="Search by order, SKU, item, buyer or note…"
@@ -138,7 +142,7 @@ export function ReturnsPage() {
                   const hot = k.key === 'escalated' || (k.key === 'requested' && n > 0)
                   return (
                     <KpiCard key={k.key} icon={RET_ICON[k.key] ?? ICONS.returns} lead={i === 0} title={k.label} value={n}
-                      pressed={tab === k.key} onClick={() => { setTab(k.key as Tab); setPage(1); setOpen(null); setError(null) }}
+                      pressed={tab === k.key} onClick={() => { setTab(k.key as Tab); setPage(1); setError(null) }}
                       tone={k.key === 'escalated' && n > 0 ? 'bad' : undefined}
                       chip={n > 0 && hot ? (k.key === 'escalated'
                         ? <span className="c-chip2 c-chip2--bad"><Icon d={ICONS.alert} /> Needs an admin</span>
@@ -153,53 +157,86 @@ export function ReturnsPage() {
           </>
         )}
       >
-        <table className="q__table ful">
+        <table className="q__table ful ret__rows">
           <thead>
             <tr>
               <th>Item</th>
               <th>Order</th>
               <th>Reason</th>
               <th>Asked</th>
-              <th className="ful__act">Action</th>
+              <th className="ful__act">Next</th>
             </tr>
           </thead>
           <tbody>
             {shown.map((r) => (
-              <Fragment key={r.orderLineId}>
-                <tr>
-                  <td><Summary row={r} /></td>
-                  <td>
-                    <div className="tg-mono">{r.orderNumber}</div>
-                    <div className="tg-muted ful__small">{r.buyerName ?? 'Buyer'} · {money(r.amountMinor)}</div>
-                  </td>
-                  <td className="ful__small ret__reason">
-                    <strong>{REASON_LABELS[r.case.reasonCode] ?? r.case.reasonCode}</strong>
-                    {r.case.buyerNote && <div>“{r.case.buyerNote}”</div>}
-                    {r.video
-                      ? <button type="button" className="tg-button ret__video-btn" onClick={() => setVideo(r)}>▶ Unboxing video</button>
-                      : <div className="tg-muted">{r.case.reasonCode === 'cancelled_in_transit' ? 'Recalled from the courier — no video' : 'No video (raised before it was required)'}</div>}
-                    {r.case.decisionNote && <div className="tg-muted">Declined: {r.case.decisionNote}</div>}
-                    {r.case.resolutionNote && <div className="tg-muted">Staff: {r.case.resolutionNote}</div>}
-                  </td>
-                  <td className="ful__small tg-muted">{dateTime(r.case.requestedAt)}</td>
-                  <td className="ful__act">
-                    <div className="ful__buttons ret__actions">
-                      {stage.show || tab === 'settled' ? render(r) : <span className="tg-muted ful__small">Waiting on someone else</span>}
-                      <button type="button" className="tg-button tg-button--subtle" aria-expanded={open === r.orderLineId}
-                        onClick={() => setOpen(open === r.orderLineId ? null : r.orderLineId)}>
-                        {open === r.orderLineId ? 'Hide history' : 'History'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                {open === r.orderLineId && (
-                  <tr className="ful__history"><td colSpan={5}><LineHistory lineId={r.orderLineId} staff refreshKey={done} /></td></tr>
-                )}
-              </Fragment>
+              <tr key={r.orderLineId} className="ret__row" onClick={() => setOpen(r.orderLineId)}>
+                <td><Summary row={r} /></td>
+                <td>
+                  <div className="tg-mono">{r.orderNumber}</div>
+                  <div className="tg-muted ful__small">{r.buyerName ?? 'Buyer'} · {money(r.amountMinor)}</div>
+                </td>
+                <td className="ful__small ret__reason">
+                  <strong>{REASON_LABELS[r.case.reasonCode] ?? r.case.reasonCode}</strong>
+                  {r.video && <div className="tg-muted">Unboxing video sent</div>}
+                </td>
+                <td className="ful__small tg-muted">{dateTime(r.case.requestedAt)}</td>
+                <td className="ful__act">
+                  <button type="button" className="c-btn c-btn--sm" aria-label={`Open the return for ${r.orderNumber}`}
+                    onClick={(e) => { e.stopPropagation(); setOpen(r.orderLineId) }}>
+                    {stage.show && tab !== 'settled' ? 'Review' : 'Open'}
+                  </button>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
       </QueueScreen>
+      {(() => {
+        const r = open ? rows.find((x) => x.orderLineId === open) : undefined
+        if (!r) return null
+        const mine = stages.find((x) => x.key === (SETTLED.includes(r.case.state) ? 'settled' : r.case.state))
+        const f = r.case.inspection
+        return (
+          <SidePanel open onClose={() => setOpen(null)} eyebrow={`Return · ${r.orderNumber}`} title={r.itemLabel}
+            subtitle={<>{r.buyerName ?? 'Buyer'} · {money(r.amountMinor)} · asked {dateTime(r.case.requestedAt)}</>}
+            badges={<span className={`c-chip2 c-chip2--${r.case.state === 'escalated' ? 'bad' : SETTLED.includes(r.case.state) ? 'good' : 'warn'}`}>{mine?.label ?? r.case.state.replace('_', ' ')}</span>}
+            footer={<Link className="c-btn c-btn--sm" to={`/items/${r.case.consignmentItemId}`}>Open the unit {r.itemSku}</Link>}>
+            <PanelSection title="What the buyer said" tone="card">
+              <FactGrid facts={[
+                { label: 'Reason', value: REASON_LABELS[r.case.reasonCode] ?? r.case.reasonCode },
+                { label: 'Unboxing video', value: r.video
+                  ? <button type="button" className="c-btn c-btn--sm" onClick={() => setVideo(r)}>▶ Watch</button>
+                  : r.case.reasonCode === 'cancelled_in_transit' ? 'Recalled from the courier' : 'None (raised before it was required)' },
+                ...(r.case.buyerNote ? [{ label: 'In their words', value: `“${r.case.buyerNote}”`, wide: true }] : []),
+              ]} />
+            </PanelSection>
+            {(f || r.case.decisionNote || r.case.resolutionNote) && (
+              <PanelSection title="What we found" tone="card">
+                <FactGrid facts={[
+                  ...(f ? [
+                    { label: 'Serial', value: f.serialMatches ? 'Matches' : 'Does not match' },
+                    { label: 'Condition', value: f.conditionOk ? 'As it left' : 'Worse than it left' },
+                    { label: 'Accessories', value: f.accessoriesOk ? 'Complete' : 'Missing' },
+                    ...(f.note ? [{ label: 'Bench note', value: f.note, wide: true }] : []),
+                  ] : []),
+                  ...(r.case.decisionNote ? [{ label: 'Declined because', value: r.case.decisionNote, wide: true }] : []),
+                  ...(r.case.resolutionNote ? [{ label: 'Staff note', value: r.case.resolutionNote, wide: true }] : []),
+                ]} />
+              </PanelSection>
+            )}
+            {!SETTLED.includes(r.case.state) && (
+              <PanelSection title="Your decision" tone="card">
+                {mine?.blurb && <p className="tg-muted ful__small ret__panel-blurb">{mine.blurb}</p>}
+                {mine?.show ? <div className="ret__panel-act">{render(r)}</div> : <p className="tg-muted ful__small">This stage belongs to another role.</p>}
+                {error && <p className="ops__error" role="alert">{error}</p>}
+              </PanelSection>
+            )}
+            <PanelSection title="History">
+              <LineHistory lineId={r.orderLineId} staff refreshKey={done} />
+            </PanelSection>
+          </SidePanel>
+        )
+      })()}
       {video && <VideoDialog row={video} onClose={() => setVideo(null)} />}
     </>
   )

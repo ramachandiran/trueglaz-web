@@ -187,20 +187,8 @@ a.c-row:hover .c-row__title { color: var(--tg-accent-text); }
 @keyframes c-target { 0%, 40% { box-shadow: 0 0 0 3px var(--tg-cta); } 100% { box-shadow: var(--c-shadow); } }
 @media (prefers-reduced-motion: reduce) { .c-target { animation: none; outline: 3px solid var(--tg-cta); } }
 
-/* -- Settings: the section menu as a card, the template's sub-navigation ---- */
-.staff-shell .st { padding: 0; max-width: none; grid-template-columns: 250px minmax(0, 1fr); gap: 24px; }
-.staff-shell .st__side {
-  background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: var(--c-radius);
-  box-shadow: var(--c-shadow); padding: 14px; top: 88px; align-self: start;
-}
-.staff-shell .st__link { border-left: 0; padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: 500; }
-.staff-shell .st__link--on { background: var(--tg-accent-soft); color: var(--tg-text); font-weight: 600; box-shadow: inset 3px 0 0 var(--tg-accent); }
-@media (max-width: 900px) {
-  .staff-shell .st { grid-template-columns: minmax(0, 1fr); }
-  .staff-shell .st__side { position: static; }
-  .staff-shell .st__nav { display: flex; overflow-x: auto; }
-  .staff-shell .st__link { white-space: nowrap; }
-}
+/* Settings has its own frame (pages/settings/Settings.css, TG-206). */
+
 
 /* -- older dashboard tiles (Money) in the new tile style ------------------- */
 .staff-shell .dash__card {

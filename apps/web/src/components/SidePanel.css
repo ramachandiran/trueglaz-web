@@ -1,0 +1,55 @@
+/* The slide-over record panel (TG-200). Colours come from the console's tokens. */
+.sp { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: flex-end; }
+.sp__scrim { position: absolute; inset: 0; background: rgb(16 28 36 / 0.38); animation: sp-fade 180ms ease-out; }
+.sp__panel {
+  position: relative; width: min(var(--sp-w, 560px), 100vw); height: 100%;
+  background: var(--tg-bg); display: flex; flex-direction: column; outline: none;
+  box-shadow: -16px 0 48px rgb(16 28 36 / 0.22); border-radius: 20px 0 0 20px;
+  animation: sp-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes sp-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sp-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sp__panel, .sp__scrim { animation: none; } }
+
+.sp__head {
+  display: flex; align-items: flex-start; gap: 16px; padding: 22px 24px 18px;
+  background: var(--tg-bg-raised); border-bottom: 1px solid var(--tg-border); border-radius: 20px 0 0 0;
+}
+.sp__head-text { flex: 1; min-width: 0; }
+.sp__eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-text-muted); margin-bottom: 4px; }
+.sp__title { margin: 0; font: 700 22px/1.25 var(--tg-font-heading); letter-spacing: -0.01em; }
+.sp__sub { margin: 4px 0 0; color: var(--tg-text-muted); font-size: 14px; }
+.sp__badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.sp__close {
+  flex: none; width: 40px; height: 40px; border-radius: 12px; border: 0; cursor: pointer;
+  background: var(--tg-bg-sunken); color: var(--tg-text); display: grid; place-items: center;
+}
+.sp__close:hover { background: var(--tg-bg-hover); }
+.sp__close:focus-visible { outline: 2px solid var(--tg-accent); outline-offset: 2px; }
+.sp__close svg { width: 18px; height: 18px; }
+
+.sp__body { flex: 1; overflow-y: auto; padding: 18px 24px 24px; display: flex; flex-direction: column; gap: 14px; overscroll-behavior: contain; }
+.sp__foot {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 24px;
+  background: var(--tg-bg-raised); border-top: 1px solid var(--tg-border);
+}
+.sp__foot .sp__foot-end { margin-left: auto; }
+
+.sp__sec { display: flex; flex-direction: column; gap: 10px; }
+.sp__sec--card { background: var(--tg-bg-raised); border: 1px solid var(--tg-border); border-radius: 16px; padding: 16px 18px; }
+.sp__sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sp__sec-head h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-text-muted); }
+
+.sp__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; margin: 0; }
+.sp__fact { min-width: 0; }
+.sp__fact--wide { grid-column: 1 / -1; }
+.sp__fact dt { font-size: 12.5px; color: var(--tg-text-muted); margin-bottom: 2px; }
+.sp__fact dd { margin: 0; font-size: 14.5px; font-weight: 500; overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .sp__panel { width: 100vw; border-radius: 0; }
+  .sp__head { border-radius: 0; padding: 16px; }
+  .sp__body { padding: 14px 16px 20px; }
+  .sp__foot { padding: 12px 16px; }
+  .sp__facts { grid-template-columns: minmax(0, 1fr); }
+}

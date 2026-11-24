@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiError, dateOnly, dateTime, money, useApi } from '@trueglaz/core'
 import { PageHead } from '../components/PageHead'
@@ -168,12 +168,15 @@ export function StaffUserDetailPage() {
 
 function SellingTab({ userId }: { userId: string }) {
   const rows = useApi(() => api.staffUserSelling(userId), [userId])
+  const all = useMemo(() => rows.data ?? [], [rows.data])
+  const page = usePaged(all, (r) => `${r.title} ${r.state} ${r.gradeCode ?? ''}`)
   if (rows.loading && !rows.data) return <Loading label="Loading gear" />
   if (rows.error) return <ErrorNote error={rows.error} onRetry={rows.reload} />
-  const list = rows.data ?? []
-  if (list.length === 0) return <p className="tg-muted person__empty">Nothing consigned.</p>
+  if (all.length === 0) return <p className="tg-muted person__empty">Nothing consigned.</p>
 
   return (
+    <>
+    <TableTools page={page} placeholder="Find gear or state" noun="units" />
     <table className="people__table">
       <thead>
         <tr>
@@ -185,7 +188,7 @@ function SellingTab({ userId }: { userId: string }) {
         </tr>
       </thead>
       <tbody>
-        {list.map((r) => (
+        {page.rows.map((r) => (
           <tr key={r.itemId}>
             <td><Link to={`/items/${r.itemId}`} className="people__name">{withoutGrade(r.title)}</Link></td>
             <td><span className="tg-badge">{label(r.state)}</span></td>
@@ -198,17 +201,22 @@ function SellingTab({ userId }: { userId: string }) {
         ))}
       </tbody>
     </table>
+    <Pager page={page} />
+    </>
   )
 }
 
 function BuyingTab({ userId }: { userId: string }) {
   const rows = useApi(() => api.staffUserBuying(userId), [userId])
+  const all = useMemo(() => rows.data ?? [], [rows.data])
+  const page = usePaged(all, (r) => `${r.orderNumber} ${r.title} ${r.orderState} ${r.lineState}`)
   if (rows.loading && !rows.data) return <Loading label="Loading orders" />
   if (rows.error) return <ErrorNote error={rows.error} onRetry={rows.reload} />
-  const list = rows.data ?? []
-  if (list.length === 0) return <p className="tg-muted person__empty">Nothing bought.</p>
+  if (all.length === 0) return <p className="tg-muted person__empty">Nothing bought.</p>
 
   return (
+    <>
+    <TableTools page={page} placeholder="Find an order or gear" noun="lines" />
     <table className="people__table">
       <thead>
         <tr>
@@ -218,7 +226,7 @@ function BuyingTab({ userId }: { userId: string }) {
         </tr>
       </thead>
       <tbody>
-        {list.map((r, i) => (
+        {page.rows.map((r, i) => (
           <tr key={`${r.orderId}-${i}`}>
             <td className="tg-mono">{r.orderNumber}</td>
             <td>{withoutGrade(r.title)}</td>
@@ -231,6 +239,54 @@ function BuyingTab({ userId }: { userId: string }) {
         ))}
       </tbody>
     </table>
+    <Pager page={page} />
+    </>
+  )
+}
+
+const PAGE = 20
+
+type Paged<T> = { rows: T[]; total: number; matched: number; from: number; to: number; q: string; setQ: (q: string) => void; at: number; setAt: (n: number) => void }
+
+/**
+ * TG-205: a long-standing seller has hundreds of rows. Filter as you type,
+ * twenty at a time; the filter runs on what the page already holds.
+ */
+function usePaged<T>(list: T[], text: (r: T) => string): Paged<T> {
+  const [q, setQ] = useState('')
+  const [at, setAt] = useState(0)
+  const hits = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    return t ? list.filter((r) => text(r).toLowerCase().includes(t)) : list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list, q])
+  useEffect(() => { setAt(0) }, [q])
+  const from = Math.min(at, Math.max(0, hits.length - 1))
+  return { rows: hits.slice(from, from + PAGE), total: list.length, matched: hits.length, from, to: Math.min(hits.length, from + PAGE), q, setQ, at, setAt }
+}
+
+function TableTools<T>({ page, placeholder, noun }: { page: Paged<T>; placeholder: string; noun: string }) {
+  if (page.total <= 8) return null
+  return (
+    <div className="person__tools">
+      <input className="tg-input person__find" type="search" value={page.q} placeholder={placeholder}
+        aria-label={placeholder} onChange={(e) => page.setQ(e.target.value)} />
+      <span className="tg-muted" role="status">
+        {page.q.trim() ? `${page.matched} of ${page.total} ${noun} match` : `${page.total} ${noun}`}
+      </span>
+    </div>
+  )
+}
+
+function Pager<T>({ page }: { page: Paged<T> }) {
+  if (page.matched === 0) return <p className="tg-muted person__empty">Nothing matches “{page.q.trim()}”.</p>
+  if (page.matched <= PAGE) return null
+  return (
+    <nav className="person__pager" aria-label="Pages">
+      <span className="tg-muted">{page.from + 1}–{page.to} of {page.matched}</span>
+      <button className="c-btn c-btn--sm" disabled={page.from === 0} onClick={() => page.setAt(Math.max(0, page.from - PAGE))}>Previous</button>
+      <button className="c-btn c-btn--sm" disabled={page.to >= page.matched} onClick={() => page.setAt(page.from + PAGE)}>Next</button>
+    </nav>
   )
 }
 

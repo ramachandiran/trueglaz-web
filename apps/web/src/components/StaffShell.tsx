@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { isAdmin, isStaff, useSession } from '@trueglaz/core'
 import { AccountMenu } from './AccountMenu'
 import { DemoNotice } from './DemoNotice'
@@ -7,6 +7,7 @@ import { LogoMark } from './Logo'
 import { useUnread } from './useUnread'
 import { ConsoleTitleContext, useStaffHome, type ConsoleTitle } from './consoleTitle'
 import { PageHeadView } from './PageHead'
+import { CommandMenu } from './CommandMenu'
 import { useEscape } from './useEscape'
 import './StaffShell.css'
 import './console.css'
@@ -50,6 +51,10 @@ export const ICONS = {
   check: 'M20 6 9 17l-5-5',
   wrench: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9l-3.8 3.8z',
   bag: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
+  phone: 'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z',
+  lock: 'M6 11h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zM8 11V7a4 4 0 0 1 8 0v4M12 15v2',
+  building: 'M4 21V6l8-3 8 3v15M3 21h18M9 21v-4h6v4M8.5 9h.01M12 9h.01M15.5 9h.01M8.5 13h.01M12 13h.01M15.5 13h.01',
+  image: 'M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 20',
   history: 'M3 12a9 9 0 1 0 9-9 9.8 9.8 0 0 0-6.7 2.7L3 8M3 3v5h5M12 7v5l4 2',
 } as const
 
@@ -220,7 +225,7 @@ export function StaffShell() {
               <Icon d={ICONS.menu} />
             </button>
             <p className="staff-top__title">{section}</p>
-            <ConsoleSearch />
+            <CommandMenu screens={sections(staff, admin, () => 0).flatMap((g) => g.items.map((it) => ({ label: it.label, to: it.to })))} />
             <div className="staff-top__tools">
               <HelpMenu />
               <Link to="/profile#notifications" className="staff-top__icon" aria-label={unread > 0 ? `${unread} unread notifications` : 'Notifications'}>
@@ -245,48 +250,6 @@ export function StaffShell() {
   )
 }
 
-/**
- * Search from anywhere in the console: an item, a serial, an SKU, an order
- * number or a seller. It opens Inventory filtered by what was typed - the one
- * list that holds every unit. "/" or ⌘K (Ctrl K) puts the cursor in it.
- */
-function ConsoleSearch() {
-  const nav = useNavigate()
-  const { pathname, search } = useLocation()
-  const ref = useRef<HTMLInputElement>(null)
-  const [q, setQ] = useState('')
-  // Coming back to Inventory shows what it is filtered by.
-  useEffect(() => {
-    if (pathname === '/admin/inventory') setQ(new URLSearchParams(search).get('q') ?? '')
-  }, [pathname, search])
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName))
-      if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) {
-        e.preventDefault()
-        ref.current?.focus()
-        ref.current?.select()
-      }
-    }
-    document.addEventListener('keydown', key)
-    return () => document.removeEventListener('keydown', key)
-  }, [])
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const term = q.trim()
-    nav(term ? `/admin/inventory?q=${encodeURIComponent(term)}` : '/admin/inventory')
-    ref.current?.blur()
-  }
-  return (
-    <form role="search" className="staff-search" onSubmit={submit}>
-      <Icon d={ICONS.search} />
-      <input ref={ref} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items, serials, SKUs…"
-        aria-label="Search inventory" aria-keyshortcuts={isMac ? 'Meta+K /' : 'Control+K /'} />
-      <span className="staff-search__keys" aria-hidden="true"><kbd>{isMac ? '⌘' : 'Ctrl'}</kbd><kbd>K</kbd></span>
-    </form>
-  )
-}
-
 /** What the colours and shortcuts mean, a click away from every screen. */
 function HelpMenu() {
   const [open, setOpen] = useState(false)
@@ -307,7 +270,7 @@ function HelpMenu() {
         <div id="console-help" className="staff-help__pop" role="dialog" aria-label="Help">
           <h2>Shortcuts</h2>
           <dl>
-            <div><dt><kbd>{isMac ? '⌘' : 'Ctrl'}</kbd> <kbd>K</kbd> or <kbd>/</kbd></dt><dd>Search inventory</dd></div>
+            <div><dt><kbd>{isMac ? '⌘' : 'Ctrl'}</kbd> <kbd>K</kbd> or <kbd>/</kbd></dt><dd>Find a unit, order, person or screen</dd></div>
             <div><dt><kbd>Esc</kbd></dt><dd>Close a menu or dialog</dd></div>
           </dl>
           <h2>Colours</h2>
