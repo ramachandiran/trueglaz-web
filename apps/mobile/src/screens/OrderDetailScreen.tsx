@@ -344,7 +344,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
 
 /**
  * The order's reference, made prominent (TG-182): the Order ID people quote to
- * support, selectable so it can be copied, and when the order last changed.
+ * support (still selectable, so it can be copied), and when the order last changed.
  */
 function OrderIdCard({ number, placedAt, updatedAt }: { number: string; placedAt: string; updatedAt: string }) {
   const t = useTheme()
@@ -367,7 +367,6 @@ function OrderIdCard({ number, placedAt, updatedAt }: { number: string; placedAt
           <Muted size={t.size.xs}>Placed {dateTime(placedAt)}</Muted>
         </View>
       </View>
-      <Muted size={t.size.xs}>Press and hold the ID to copy it.</Muted>
     </View>
   )
 }
