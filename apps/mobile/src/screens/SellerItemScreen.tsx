@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Image, Pressable, ScrollView, View } from 'react-native'
 import type * as ImagePicker from 'expo-image-picker'
 import { pickPhotos, type PhotoSource } from '../media/pickPhotos'
+import { PhotoTile, type UploadStatus } from '../components/PhotoUpload'
 import {
   api, dateOnly, dateTime, HAPPY_PATH, money, OFF_PATH_TERMINALS, STATE_LABELS, useApi,
   type ItemStateTransition, type SellerApprovalView,
@@ -377,6 +378,8 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
   const [shippedDate, setShippedDate] = useState(today)
   const [weightKg, setWeightKg] = useState('')
   const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null)
+  const [photoStatus, setPhotoStatus] = useState<UploadStatus | undefined>(undefined)
+  const [boxW, setBoxW] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -384,7 +387,7 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
   const pickPhoto = async (source: PhotoSource) => {
     const got = await pickPhotos(source)
     if (got.error) { setError(got.error); return }
-    if (got.assets[0]) setPhoto(got.assets[0])
+    if (got.assets[0]) { setPhoto(got.assets[0]); setPhotoStatus(undefined) }
   }
 
   const submit = async () => {
@@ -398,7 +401,13 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
     try {
       // Attach the optional package photo to the item before marking shipped,
       // so a failed upload does not leave the parcel "shipped" without it.
-      if (photo) await uploadPhoto(photo, { ownerType: 'item', ownerId: itemId, role: 'seller_submission' })
+      if (photo && photoStatus?.phase !== 'done') {
+        setPhotoStatus({ phase: 'uploading', progress: 0 })
+        try {
+          await uploadPhoto(photo, { ownerType: 'item', ownerId: itemId, role: 'seller_submission' }, (f) => setPhotoStatus({ phase: 'uploading', progress: f }))
+          setPhotoStatus({ phase: 'done', progress: 1 })
+        } catch (e) { setPhotoStatus({ phase: 'failed', progress: 0 }); throw e }
+      }
       await api.shipSubmission(submissionId, {
         arrangedBy,
         courierName: arrangedBy === 'third_party' ? courierName.trim() : null,
@@ -441,7 +450,9 @@ function ShipToUs({ submissionId, itemId, onDone }: { submissionId: string; item
 
       <View style={{ gap: t.space.x2 }}>
         <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.medium as never }}>Package photo (required)</Txt>
-        {photo && <Image source={{ uri: photo.uri }} style={{ width: '100%', height: 160, borderRadius: t.radius.md }} resizeMode="cover" />}
+        <View onLayout={(e) => setBoxW(e.nativeEvent.layout.width)}>
+          {photo && boxW > 0 && <PhotoTile uri={photo.uri} width={boxW} height={170} status={photoStatus} />}
+        </View>
         <View style={{ flexDirection: 'row', gap: t.space.x2 }}>
           <Button label={photo ? 'Retake' : 'Take photo'} variant="ghost" onPress={() => pickPhoto('camera')} style={{ flex: 1 }} />
           <Button label="From library" variant="ghost" onPress={() => pickPhoto('library')} style={{ flex: 1 }} />

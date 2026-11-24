@@ -6,6 +6,8 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import type * as ImagePicker from 'expo-image-picker'
 import { openSettings, pickPhotos, type PhotoSource } from '../media/pickPhotos'
 import { SelectField } from '../components/SelectField'
+import { PhotoTile, UploadProgress, type UploadStatus } from '../components/PhotoUpload'
+import { useReducedMotion } from '../components/motion'
 import { api, useApi, type ProductModel } from '@trueglaz/core'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
@@ -52,7 +54,10 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
   const [hasAccessories, setHasAccessories] = useState(false)
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([])
   const [busy, setBusy] = useState(false)
-  const [progress, setProgress] = useState<string | null>(null)
+  // TG-192: how each photo's upload is going, and the batch as a whole.
+  const [uploads, setUploads] = useState<Record<number, UploadStatus>>({})
+  const [batch, setBatch] = useState<{ done: number; total: number; current: number } | null>(null)
+  const reducedMotion = useReducedMotion()
   const [error, setError] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<{ text: string; settings?: boolean } | null>(null)
   const scroller = useRef<{ scrollTo: (o: { y: number; animated?: boolean }) => void } | null>(null)
@@ -131,12 +136,36 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       // Upload any photos onto the new item before leaving, so it never reaches
       // the queue without the pictures the seller meant to send. Resumes where a
       // failed attempt stopped.
-      for (let i = c.uploaded; i < photos.length; i++) {
-        setProgress(`Uploading photo ${i + 1} of ${photos.length}…`)
-        await uploadPhoto(photos[i], { ownerType: 'item', ownerId: c.id, role: 'seller_submission' })
-        c.uploaded = i + 1
+      if (c.uploaded < photos.length) {
+        const total = photos.length
+        setUploads((u) => {
+          const next = { ...u }
+          for (let i = c.uploaded; i < total; i++) next[i] = { phase: 'waiting', progress: 0 }
+          return next
+        })
+        setBatch({ done: c.uploaded, total, current: 0 })
+        for (let i = c.uploaded; i < total; i++) {
+          setUploads((u) => ({ ...u, [i]: { phase: 'uploading', progress: 0 } }))
+          let shown = 0
+          try {
+            await uploadPhoto(photos[i], { ownerType: 'item', ownerId: c.id, role: 'seller_submission' }, (f) => {
+              // A step every 2% is smooth enough and spares the screen hundreds of redraws.
+              if (f < 1 && f - shown < 0.02) return
+              shown = f
+              setUploads((u) => ({ ...u, [i]: { phase: 'uploading', progress: f } }))
+              setBatch({ done: i, total, current: f })
+            })
+          } catch (e) {
+            setUploads((u) => ({ ...u, [i]: { phase: 'failed', progress: shown } }))
+            throw e
+          }
+          c.uploaded = i + 1
+          setUploads((u) => ({ ...u, [i]: { phase: 'done', progress: 1 } }))
+          setBatch({ done: i + 1, total, current: 0 })
+        }
+        // A beat to see them all ticked before the screen moves on.
+        if (!reducedMotion) await new Promise((r) => setTimeout(r, 900))
       }
-      setProgress(null)
       // TG-138: the next page is the review — check it, edit it, or submit it.
       if (editItemId) navigation.goBack()
       else navigation.replace('SellerItem', { id: c.id })
@@ -145,7 +174,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       setError(created.current
         ? `Your item is saved, but a photo didn't upload (${msg}). Tap the button again to finish uploading.`
         : msg)
-    } finally { setBusy(false); setProgress(null) }
+    } finally { setBusy(false) }
   }
 
   if (categories.loading || brands.loading || grades.loading || (editItemId && !editing.data)) {
@@ -201,7 +230,7 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
         {(editPhotos.data?.length ?? 0) > 0 && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
             {editPhotos.data!.map((m) => (
-              <Image key={m.id} source={{ uri: m.sizes[200] ?? m.url }} style={{ width: 88, height: 88, borderRadius: t.radius.md }} resizeMode="cover" />
+              <PhotoTile key={m.id} uri={m.sizes[200] ?? m.url} />
             ))}
           </View>
         )}
@@ -209,13 +238,8 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
         {photos.length > 0 && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
             {photos.map((p, i) => (
-              <View key={p.uri + i} style={{ position: 'relative' }}>
-                <Image source={{ uri: p.uri }} style={{ width: 88, height: 88, borderRadius: t.radius.md }} resizeMode="cover" />
-                <Pressable accessibilityRole="button" accessibilityLabel={`Remove photo ${i + 1}`} onPress={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} hitSlop={11}
-                  style={{ position: 'absolute', top: -6, right: -6, backgroundColor: t.colors.bad, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }}>
-                  <Txt style={{ color: '#fff', fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>✕</Txt>
-                </Pressable>
-              </View>
+              <PhotoTile key={p.uri + i} uri={p.uri} status={uploads[i]} removeLabel={`Remove photo ${i + 1}`}
+                onRemove={busy ? undefined : () => { setPhotos((prev) => prev.filter((_, j) => j !== i)); setUploads({}) }} />
             ))}
           </View>
         )}
@@ -257,8 +281,10 @@ export function NewItemScreen({ route, navigation }: { route: any; navigation: a
       </Card>
 
       {error && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{error}</Txt>}
-      {progress && <Muted size={t.size.xs}>{progress}</Muted>}
-      <Button label={created.current ? 'Finish uploading photos' : editItemId ? 'Save and review' : 'Review'} variant="cta" loading={busy} onPress={save} />
+      {batch && <UploadProgress done={batch.done} total={batch.total} current={batch.current}
+        photos={photos.map((p, i) => ({ uri: p.uri, status: uploads[i] }))} />}
+      <Button label={batch && busy ? (batch.done >= batch.total ? 'All uploaded' : `Uploading ${batch.done + 1} of ${batch.total}…`) : created.current ? 'Finish uploading photos' : editItemId ? 'Save and review' : 'Review'}
+        variant="cta" loading={busy} onPress={save} />
     </FormScroll>
   )
 }
