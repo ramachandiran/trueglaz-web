@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { Empty, ErrorNote, Loading } from './ui'
-import { useConsoleTitle } from './consoleTitle'
+import { PageHead } from './PageHead'
 import './QueueScreen.css'
 
 export interface QueueTab {
@@ -36,6 +36,7 @@ export function QueueScreen({
   loading, error, onRetry, emptyTitle, emptyHint,
   page, pages, onPage,
   actions, summary, filter, perPage = 25,
+  crumbs, headActions,
   children,
 }: {
   title: string
@@ -64,19 +65,39 @@ export function QueueScreen({
   /** A filter a Control room widget opened this screen with: named, and one click to clear. */
   filter?: { label: string; onClear: () => void } | null
   perPage?: number
+  /** Where this screen sits, for the breadcrumb over its heading. */
+  crumbs?: { label: string; to?: string }[]
+  /** Buttons at the right of the heading (TG-198): Export, Assign… */
+  headActions?: ReactNode
   children: ReactNode
 }) {
-  useConsoleTitle(title, subtitle)
   const from = shown === 0 ? 0 : (page - 1) * perPage + 1
   const to = Math.min(shown, page * perPage)
 
   return (
     <div className="q">
+      <PageHead title={title} subtitle={subtitle} crumbs={crumbs} actions={headActions} />
       {summary}
 
-      <section className="q__card" aria-label={title}>
-        <div className="q__toolbar">
-          <label className="q__search-box">
+      <section className="q__card c-tcard" aria-label={title}>
+        <div className="q__toolbar c-tbar">
+          {/* The counts are the point of a tab row on a work screen: an empty
+              queue should read as empty before it is opened, not after. */}
+          <nav className="c-tabs" aria-label={`${title} views`}>
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`c-tabs__tab${active === t.key ? ' c-tabs__tab--on' : ''}`}
+                onClick={() => onTab(t.key)}
+                aria-pressed={active === t.key}
+              >
+                {t.label}
+                <span className="c-tabs__n">{t.count}</span>
+              </button>
+            ))}
+          </nav>
+          <label className="c-tbar__search q__search-box">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5" /></svg>
             <input
               type="search"
@@ -87,22 +108,6 @@ export function QueueScreen({
               aria-label={`Search ${title.toLowerCase()}`}
             />
           </label>
-          {/* The counts are the point of a tab row on a work screen: an empty
-              queue should read as empty before it is opened, not after. */}
-          <nav className="q__filters" aria-label={`${title} views`}>
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                className={`q__filter${active === t.key ? ' q__filter--active' : ''}`}
-                onClick={() => onTab(t.key)}
-                aria-pressed={active === t.key}
-              >
-                {t.label}
-                <span className="q__filter-count">{t.count}</span>
-              </button>
-            ))}
-          </nav>
           {actions && <div className="q__actions">{actions}</div>}
         </div>
 

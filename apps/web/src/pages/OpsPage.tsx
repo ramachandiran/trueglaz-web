@@ -2,12 +2,13 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, dateTime, isStaff, money, relative, useApi, useSession,
-  type ConsignmentItem, type InboundClock, type ManagedListing, type ReviewRequest, type Submission, type Technician,
+  type ConsignmentItem, type InboundClock, type InspectionSla, type ManagedListing, type ReviewRequest, type Submission, type Technician,
 } from '@trueglaz/core'
 import { StateBadge } from '../components/ui'
 import { QueueScreen } from '../components/QueueScreen'
 import { pageOf, useClearParams, useQueryState } from '../components/useQueryState'
 import { ModelPhoto } from '../components/ModelPhoto'
+import { Icon, ICONS } from '../components/StaffShell'
 import './OpsPage.css'
 
 type Queue = 'intake' | 'inbound' | 'inspect' | 'price' | 'listed' | 'wanted'
@@ -70,6 +71,12 @@ export function OpsPage() {
   const wanted = useApi(() => (staff ? api.requestQueue() : Promise.resolve([])), [staff])
   const people = useApi(() => (staff ? api.staffUsers('', 'pending_review') : Promise.resolve([])), [staff])
   const roster = useApi(() => api.technicians(), [])
+  // The bench clock (TG-198): how long each unit has waited since it arrived, and the week's figures.
+  const insights = useApi(() => api.staffInsights(), [])
+  const arrived = useMemo(
+    () => new Map((insights.data?.bench ?? []).map((b) => [b.itemId, b.receivedAt] as const)),
+    [insights.data],
+  )
   // Pre-approved and in transit are one queue: both are units the hub is
   // waiting on, and receiving is the same act either way.
   const preApproved = useApi(() => (staff ? api.itemQueue('PRE_APPROVED') : Promise.resolve([])), [staff])
@@ -128,7 +135,7 @@ export function OpsPage() {
                reload: () => { preApproved.reload(); inTransit.reload(); received.reload(); shipClock.reload() } },
     inspect: { ...received, data: inspectRows, error: received.error ?? awaitingInspection.error ?? inInspection.error,
                loading: received.loading || awaitingInspection.loading || inInspection.loading,
-               reload: () => { received.reload(); awaitingInspection.reload(); inInspection.reload() } },
+               reload: () => { received.reload(); awaitingInspection.reload(); inInspection.reload(); insights.reload() } },
     price: graded,
     listed,
     wanted,
@@ -195,8 +202,11 @@ export function OpsPage() {
   return (
     <>
       <QueueScreen
-        title="Operations"
-        subtitle="What is waiting, and what to do about it"
+        title={STAGE[active].title}
+        subtitle={STAGE[active].line}
+        crumbs={[{ label: 'Operations', to: '/admin/operations' }, { label: STAGE[active].title }]}
+        summary={active === 'inspect' ? <BenchFigures sla={insights.data?.inspection ?? null} roster={roster.data?.length ?? 0}
+          unassigned={inspectRows.filter((i) => i.currentState === 'RECEIVED' && !i.assignedTechnicianUserId).length} /> : undefined}
         filter={widget ? { label: widget.label, onClear: () => clearParams('state', 'overdue', 'page') } : null}
         tabs={tabs}
         active={active}
@@ -218,7 +228,7 @@ export function OpsPage() {
         {active === 'intake' && <IntakeTable rows={shown} names={names} reload={pending.reload} />}
         {active === 'inbound' && <InboundTable rows={shown} names={names} clock={clock} reload={source.reload} />}
         {active === 'inspect' && (
-          <InspectTable rows={shown} names={names} roster={roster.data ?? []} reload={source.reload} />
+          <InspectTable rows={shown} names={names} roster={roster.data ?? []} arrived={arrived} windowHours={insights.data?.inspection.windowHours ?? 48} reload={source.reload} />
         )}
         {active === 'price' && <PricingTable rows={shown} names={names} reload={graded.reload} />}
         {active === 'listed' && <ListedTable rows={shown} reload={listed.reload} />}
@@ -238,6 +248,70 @@ export function OpsPage() {
       )}
     </>
   )
+}
+
+/** Each stage's heading and its one line (TG-198). */
+const STAGE: Record<Queue, { title: string; line: string }> = {
+  intake: { title: 'Intake', line: 'New submissions to pre-approve or turn down, with a reason the seller sees.' },
+  inbound: { title: 'Inbound', line: 'Boxes on their way to the hub. The one most past its ship-by date leads.' },
+  inspect: { title: 'Inspection', line: 'Units on the bench, oldest first. Assign, inspect, grade or log defects.' },
+  price: { title: 'Pricing', line: 'Graded units waiting on a price before they go on sale.' },
+  listed: { title: 'Listed', line: 'Everything on sale now. Reprice without leaving Operations.' },
+  wanted: { title: 'Requests', line: 'What buyers have asked for. Publish to the Wanted board or turn down.' },
+}
+
+/** The bench in four figures (TG-198): how much is on it, what is late, how fast it moves, what passed. */
+function BenchFigures({ sla, roster, unassigned }: { sla: InspectionSla | null; roster: number; unassigned: number }) {
+  if (!sla) return null
+  const faster = sla.avgHoursLast7 != null && sla.avgHoursPrev7 != null ? Math.round((sla.avgHoursPrev7 - sla.avgHoursLast7) * 10) / 10 : null
+  const done = sla.passedLast7 + sla.failedLast7
+  const passRate = done ? Math.round((sla.passedLast7 * 100) / done) : null
+  return (
+    <section className="c-kpis" aria-label="The bench in figures">
+      <div className="c-card c-kpi2">
+        <span className="c-kpi2__t"><span className="c-kpi2__ico c-kpi2__ico--on"><Icon d={ICONS.wrench} /></span>On the bench</span>
+        <span className="c-kpi2__v">{sla.onBench}</span>
+        <span className="c-kpi2__f"><span className="c-chip2">{roster} technician{roster === 1 ? '' : 's'}</span>{unassigned > 0 ? `${unassigned} not assigned` : 'all assigned'}</span>
+      </div>
+      <div className="c-card c-kpi2">
+        <span className="c-kpi2__t"><span className="c-kpi2__ico"><Icon d={ICONS.clock} /></span>Past {sla.windowHours} h</span>
+        <span className="c-kpi2__v">{sla.pastWindow}</span>
+        <span className="c-kpi2__f">
+          {sla.pastWindow > 0
+            ? <span className="c-chip2 c-chip2--bad"><Icon d={ICONS.alert} /> Act today</span>
+            : <span className="c-chip2 c-chip2--good"><Icon d={ICONS.check} /> On time</span>}
+          {sla.oldestHours != null ? `oldest ${sla.oldestHours} h` : 'nothing waiting'}
+        </span>
+      </div>
+      <div className="c-card c-kpi2">
+        <span className="c-kpi2__t"><span className="c-kpi2__ico"><Icon d={ICONS.history} /></span>Avg. time on bench</span>
+        <span className="c-kpi2__v">{sla.avgHoursLast7 ?? '—'}{sla.avgHoursLast7 != null && <small> h</small>}</span>
+        <span className="c-kpi2__f">
+          {faster != null && faster !== 0 && (
+            <span className={`c-chip2 c-chip2--${faster > 0 ? 'good' : 'bad'}`}>{Math.abs(faster)} h {faster > 0 ? 'faster' : 'slower'}</span>
+          )}
+          {faster == null ? 'last 7 days' : 'vs the 7 days before'}
+        </span>
+      </div>
+      <div className="c-card c-kpi2">
+        <span className="c-kpi2__t"><span className="c-kpi2__ico"><Icon d={ICONS.check} /></span>Passed, last 7 days</span>
+        <span className="c-kpi2__v">{sla.passedLast7}</span>
+        <span className="c-kpi2__f">
+          {sla.failedLast7 > 0 && <span className="c-chip2 c-chip2--warn">{sla.failedLast7} failed</span>}
+          {passRate != null ? `${passRate}% pass rate` : 'nothing finished yet'}
+        </span>
+      </div>
+    </section>
+  )
+}
+
+/** Hours since a unit arrived, red past the window. */
+function WaitingCell({ at, windowHours }: { at: string | null | undefined; windowHours: number }) {
+  if (!at) return <td className="tg-muted">—</td>
+  const h = Math.max(0, Math.floor((Date.now() - Date.parse(at)) / 3600000))
+  const late = h > windowHours
+  const text = h < 1 ? 'under 1 h' : h < 48 ? `${h} h` : `${Math.floor(h / 24)} d ${h % 24} h`
+  return <td className={late ? 'c-late' : undefined} title={`Arrived ${dateTime(at)}`}>{text}{late && <span className="tg-visually-hidden"> (past {windowHours} hours)</span>}</td>
 }
 
 /** Shared by every table here: run one action, show what went wrong, reload. */
@@ -620,8 +694,8 @@ function AssignSelect({ item, roster, reload }: { item: ConsignmentItem; roster:
 
 /** Received and in progress in one list, because it is one bench. */
 function InspectTable({
-  rows, names, roster, reload,
-}: { rows: ConsignmentItem[]; names: Map<string, string>; roster: Technician[]; reload: () => void }) {
+  rows, names, roster, arrived, windowHours, reload,
+}: { rows: ConsignmentItem[]; names: Map<string, string>; roster: Technician[]; arrived: Map<string, string | null>; windowHours: number; reload: () => void }) {
   const navigate = useNavigate()
   const { busy, error, act } = useAction(reload)
   const bench = (id?: string | null) => roster.find((t) => t.id === id)?.displayName ?? null
@@ -633,13 +707,14 @@ function InspectTable({
           <th>Item</th>
           <th>Declared</th>
           <th>On the bench of</th>
+          <th>Waiting</th>
           <th>Status</th>
           <th>Last updated</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={6} />
+        <ErrorRow error={error} span={7} />
         {rows.map((i) => (
           <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
             <ItemCell item={i} names={names} />
@@ -649,6 +724,7 @@ function InspectTable({
                 ? <AssignSelect item={i} roster={roster} reload={reload} />
                 : (bench(i.assignedTechnicianUserId) ?? <span className="tg-muted">unassigned</span>)}
             </td>
+            <WaitingCell at={arrived.get(i.id)} windowHours={windowHours} />
             <td><StateBadge state={i.currentState} /></td>
             <UpdatedCell at={i.updatedAt} />
             <td onClick={(e) => e.stopPropagation()}>

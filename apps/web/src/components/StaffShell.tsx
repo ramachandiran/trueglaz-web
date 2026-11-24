@@ -206,7 +206,7 @@ export function StaffShell() {
 
           {urgent && (
             <div className="staff-alert" role="status">
-              <b><Icon d={ICONS.alert} /> {urgent.count} {urgent.title.charAt(0).toLowerCase() + urgent.title.slice(1)}</b>
+              <b><Icon d={ICONS.alert} /><span>{urgent.title}</span><span className="staff-alert__n">{urgent.count}</span></b>
               <p>{urgent.hint}</p>
               <Link to={staffHref(urgent.href)} className="staff-alert__go">Review now</Link>
             </div>

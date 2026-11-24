@@ -1728,6 +1728,8 @@ export interface StaffInsights {
   months: SalesPoint[]
   weeks: SalesPoint[]
   inspection: InspectionSla
+  /** Each unit on the bench and when it arrived at the hub (null when there is no record). */
+  bench?: { itemId: string; receivedAt: string | null }[]
 }
 
 /** A seller's day: where their gear is, what they are owed, what is waiting on them. */

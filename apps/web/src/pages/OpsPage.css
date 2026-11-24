@@ -231,3 +231,54 @@
 .insp__retry { background: none; border: 0; padding: 0; color: var(--tg-accent-text); text-decoration: underline; cursor: pointer; font: inherit; }
 .insp__bar-end { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .insp__why { font-size: 13px; }
+
+/* ---- TG-198: the inspection page in the template's layout ------------------ */
+.insp__cols { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+.insp__main, .insp__side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 1180px) { .insp__cols { grid-template-columns: minmax(0, 1fr); } }
+.insp__card { padding: 20px 24px; }
+.insp__card .ops__section { border: 0; padding: 0; margin: 0 0 14px; }
+.insp__card .ops__section-title { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-text-muted); margin: 6px 0 10px; }
+.insp__card .ops__questions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .insp__card .ops__questions { grid-template-columns: minmax(0, 1fr); } }
+.insp__card .ops__question {
+  display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--tg-border); border-radius: 14px; margin: 0;
+}
+.insp__card .ops__question .tg-select, .insp__card .ops__question .tg-input { width: 100%; }
+
+.insp__gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.insp__gallery figure { position: relative; margin: 0; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: var(--tg-bg-sunken); border: 1px solid var(--tg-border); display: grid; place-items: center; }
+.insp__gallery .insp__ref { grid-row: span 2; grid-column: span 2; }
+.insp__gallery img, .insp__gallery figure > :first-child:not(figcaption) { width: 100%; height: 100%; object-fit: cover; }
+.insp__ref img { object-fit: contain !important; padding: 12%; }
+.insp__gallery figcaption { position: absolute; left: 8px; bottom: 8px; }
+.insp__noshots { grid-column: span 2; align-self: center; text-align: left; }
+@media (max-width: 760px) { .insp__gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.insp__ref-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--tg-bg-sunken); border-radius: 14px; padding: 14px 16px; }
+.insp__ref-card small { display: block; color: var(--tg-text-muted); font-size: 12px; }
+.insp__ref-card b { font-size: 15px; }
+.insp__ref-right { text-align: right; font-size: 13.5px; }
+.insp__kv { margin: 6px 0 0; }
+.insp__kv div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--tg-border); font-size: 14px; }
+.insp__kv div:last-child { border-bottom: 0; }
+.insp__kv dt { color: var(--tg-text-muted); }
+.insp__kv dd { margin: 0; text-align: right; }
+.insp__price { margin-top: 10px; border-radius: 14px; padding: 12px 14px; background: var(--tg-accent-soft); }
+.insp__price small { display: block; color: var(--tg-text-muted); font-size: 12.5px; }
+.insp__price b { font: 700 20px var(--tg-font); letter-spacing: -0.02em; }
+
+.insp__tl { list-style: none; padding: 0; margin: 0; }
+.insp__tl li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding-bottom: 14px; position: relative; }
+.insp__tl li::before { content: ''; position: absolute; left: 13px; top: 30px; bottom: 0; width: 2px; background: var(--tg-border); }
+.insp__tl li:last-child::before { display: none; }
+.insp__tl i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--tg-bg-sunken); color: var(--tg-text-muted); }
+.insp__tl i svg { width: 14px; height: 14px; }
+.insp__tl i.insp__tl-now { background: var(--tg-cta); color: var(--tg-on-cta); }
+.insp__tl b { display: block; font-size: 14px; font-weight: 600; text-transform: none; }
+.insp__tl b::first-letter { text-transform: uppercase; }
+.insp__tl small { display: block; color: var(--tg-text-muted); font-size: 12.5px; margin-top: 2px; }
+/* The item cell: picture on the left, name and SKU stacked beside it (TG-198). */
+.q__table td:has(> .ops__pic) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center; }
+.q__table td > .ops__pic { float: none; margin: 0; grid-row: span 2; }
+.q__table td > .ops__pic + .ops__model:last-child { grid-row: span 2; }

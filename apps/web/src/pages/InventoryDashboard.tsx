@@ -271,7 +271,8 @@ export function InventoryDashboard() {
  *
  *  - state: a comma list of exact states
  *  - ids:   a comma list of item ids (for counts no state can express)
- *  - sold:  "7d" for the last seven days, or "YYYY-MM" for a month in India time
+ *  - sold:  "7d" for the last seven days, "YYYY-MM" for a month, or
+ *           "YYYY-MM-DD" for the week starting that Monday - India time
  */
 function widgetFilter(state: string, ids: string, sold: string): ((i: ConsignmentItem) => boolean) | null {
   const tests: ((i: ConsignmentItem) => boolean)[] = []
@@ -282,6 +283,11 @@ function widgetFilter(state: string, ids: string, sold: string): ((i: Consignmen
     tests.push((i) => !!i.soldAt && Date.parse(i.soldAt) > since)
   } else if (/^\d{4}-\d{2}$/.test(sold)) {
     tests.push((i) => !!i.soldAt && istMonth(i.soldAt) === sold)
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(sold)) {
+    // The week the Control room's weekly bar counted (TG-197): Monday 00:00 IST for seven days.
+    const from = Date.parse(`${sold}T00:00:00+05:30`)
+    const to = from + 7 * 24 * 3600 * 1000
+    tests.push((i) => !!i.soldAt && Date.parse(i.soldAt) >= from && Date.parse(i.soldAt) < to)
   }
   return tests.length ? (i) => tests.every((t) => t(i)) : null
 }
@@ -294,6 +300,7 @@ export function istMonth(iso: string): string {
 
 function describe(state: string, sold: string): string {
   if (sold === '7d') return 'Sold in the last 7 days'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(sold)) return `Sold in the week of ${new Date(`${sold}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
   if (sold) return `Sold in ${new Date(`${sold}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}`
   if (state) return state.split(',').map((s) => s.replace(/_/g, ' ').toLowerCase()).join(', ')
   return 'Filtered'
