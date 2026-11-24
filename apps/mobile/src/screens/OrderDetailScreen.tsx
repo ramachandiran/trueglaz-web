@@ -5,14 +5,14 @@ import { BottomSheet } from '../components/BottomSheet'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as ImagePicker from 'expo-image-picker'
 import { api, dateTime, money, useApi, type OrderLine, type ReturnEvidence } from '@trueglaz/core'
-import { LineReturnAndHistory } from '../components/LineHistoryList'
+import { historyEntries, LineReturnNote, OrderHistory } from '../components/LineHistoryList'
 import { LineCancel } from '../components/LineCancel'
 import { Txt } from '../components/Txt'
 import { useTheme } from '../theme/ThemeContext'
 import { Button, Field } from '../components/form'
-import { Card, ErrorNote, Loading, Muted, stateTone } from '../components/ui'
+import { Card, ErrorNote, Loading, Muted } from '../components/ui'
 import { sizedUri, useModelImages } from '../components/ModelImage'
-import { DetailHeader, DetailRef, SummaryCard } from '../components/DetailParts'
+import { DetailHeader, SummaryCard } from '../components/DetailParts'
 import { type TrackStep } from '../components/StatusTracker'
 import { ProgressSection, StatusHero } from '../components/StatusViews'
 import { FadeIn, Pop, statusKey, useStatusChange } from '../components/motion'
@@ -44,18 +44,6 @@ function VaultAdd({ lineId, state }: { lineId: string; state: string }) {
       </Txt>
     </Pressable>
   )
-}
-
-/** A one-line summary of where a buyer's order line stands, for the status hero. */
-const ORDER_BLURB: Record<string, string> = {
-  open: 'Your payment is confirmed and we are getting it ready.',
-  packing: 'We are preparing your item for dispatch.',
-  dispatched: 'On its way to you.',
-  delivered: 'Delivered — accept it to finalise the sale.',
-  accepted: 'Sale finalised. Enjoy your gear!',
-  cancelled: 'This order was cancelled.',
-  return_requested: "We'll be in touch about your return.",
-  returned: 'This item was returned to TrueGlaz.',
 }
 
 /** What a line's state means to the buyer, in words (never the raw code). */
@@ -128,6 +116,14 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   const firstLine = data?.lines?.[0]
   const moved = useStatusChange(id, data ? statusKey(data.order.state, firstLine?.state) : undefined, 'commit')
 
+  // Every line's history, loaded with the page: it dates "Last updated" at the
+  // top and fills the History at the bottom (TG-182).
+  const lineKey = (data?.lines ?? []).map((l) => `${l.id}:${l.state}`).join(',')
+  const histories = useApi(
+    () => Promise.all((data?.lines ?? []).map((l) => api.lineHistory(l.id))),
+    [lineKey],
+  )
+
   const [busyLine, setBusyLine] = useState<string | null>(null)
   const [returnFor, setReturnFor] = useState<OrderLine | null>(null)
   const [reasonCode, setReasonCode] = useState<string | null>(null)
@@ -191,13 +187,16 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   // arrived, keep it in the vault. They sit under the status, not at the bottom.
   const hasNextStep = delivered.length > 0 || owned.length > 0
   const thingTitle = (l: OrderLine) => (data.lineTitles?.[l.id] ?? 'Your item').split('·')[0].trim()
+  const history = historyEntries(order.createdAt, lines.map((l, i) => ({
+    what: lines.length > 1 ? thingTitle(l) : undefined, events: histories.data?.[i] ?? [],
+  })))
   const pic = (l: OrderLine) => { const m = pictures.byId(data.lineModels?.[l.id]); return m ? sizedUri(m, 200) : null }
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <DetailHeader title="Order" onBack={() => navigation.goBack()} />
       <FormScroll contentContainerStyle={{ padding: t.space.x4, paddingTop: t.space.x2, gap: t.space.x4, paddingBottom: t.space.x6 }}>
-        <DetailRef code={order.orderNumber} when={`Placed ${dateTime(order.createdAt)}`} />
+        <OrderIdCard number={order.orderNumber} placedAt={order.createdAt} updatedAt={history[0]?.at ?? order.createdAt} />
 
         <FadeIn>
         {justPaid ? (
@@ -208,14 +207,7 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
               body="Pay to confirm it. If it stays unpaid, the order lapses and the item goes back on sale." />
             {unpaid && <Button label={`Pay ${money(order.totalMinor)}`} variant="cta" onPress={() => navigation.navigate('Pay', { orderId: order.id })} />}
           </View>
-        ) : (
-          <StatusHero
-            tone={stateTone(first?.state ?? order.state)}
-            badge={LINE_STATUS[first?.state ?? ''] ?? (first?.state ?? order.state).replace(/_/g, ' ')}
-            title="Where your order is"
-            body={ORDER_BLURB[first?.state ?? order.state]}
-          />
-        )}
+        ) : null /* No "Where your order is" card: the Order status tracker below says it (TG-182). */}
         </FadeIn>
 
         {!unpaid && lines.map((l) => (
@@ -239,6 +231,9 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
             {owned.map((l) => <VaultAdd key={l.id} lineId={l.id} state={l.state} />)}
           </Card>
         )}
+
+        {/* Where a return stands, next to the actions rather than inside the summary. */}
+        {lines.map((l) => <LineReturnNote key={`rn-${l.id}`} lineId={l.id} state={l.state} acceptedBy={l.acceptedBy} />)}
 
         {moved.ready ? (() => {
           const steps = orderSteps(order.state, first)
@@ -287,9 +282,9 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
             ...(order.discountMinor > 0 ? [{ label: 'Discount', value: `− ${money(order.discountMinor)}`, tone: 'good' as const }] : []),
           ]}
           total={{ label: unpaid ? 'To pay' : 'Total paid', value: money(order.totalMinor) }}
-        >
-          {lines.map((l) => <LineReturnAndHistory key={l.id} lineId={l.id} state={l.state} acceptedBy={l.acceptedBy} />)}
-        </SummaryCard>
+        />
+
+        <OrderHistory entries={history} loading={histories.loading} />
 
         {actionError && <Txt style={{ color: t.colors.bad, fontSize: t.size.sm }}>{actionError}</Txt>}
       </FormScroll>
@@ -346,3 +341,33 @@ export function OrderDetailScreen({ route, navigation }: { route: any; navigatio
   )
 }
 
+
+/**
+ * The order's reference, made prominent (TG-182): the Order ID people quote to
+ * support, selectable so it can be copied, and when the order last changed.
+ */
+function OrderIdCard({ number, placedAt, updatedAt }: { number: string; placedAt: string; updatedAt: string }) {
+  const t = useTheme()
+  return (
+    <View style={{ backgroundColor: t.colors.bgRaised, borderWidth: 1, borderColor: t.colors.border, borderRadius: 16, padding: t.space.x4, gap: t.space.x3 }}>
+      <View style={{ gap: 2 }}>
+        <Txt style={{ color: t.colors.textMuted, fontSize: t.size.xs, fontWeight: t.weight.bold as never, letterSpacing: 0.6 }}>ORDER ID</Txt>
+        <Txt selectable accessibilityLabel={`Order ID ${number.split('').join(' ')}`}
+          style={{ color: t.colors.text, fontFamily: t.font.mono, fontSize: t.size.xl, fontWeight: t.weight.bold as never, letterSpacing: 0.5 }}>{number}</Txt>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.x2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.colors.accentSoft, borderRadius: t.radius.pill, paddingVertical: 6, paddingHorizontal: 12 }}>
+          <Ionicons name="time-outline" size={15} color={t.colors.accentText} />
+          <Txt style={{ color: t.colors.accentText, fontSize: t.size.xs, fontWeight: t.weight.bold as never }}>
+            Last updated {dateTime(updatedAt)}
+          </Txt>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 }}>
+          <Ionicons name="calendar-outline" size={14} color={t.colors.textMuted} />
+          <Muted size={t.size.xs}>Placed {dateTime(placedAt)}</Muted>
+        </View>
+      </View>
+      <Muted size={t.size.xs}>Press and hold the ID to copy it.</Muted>
+    </View>
+  )
+}

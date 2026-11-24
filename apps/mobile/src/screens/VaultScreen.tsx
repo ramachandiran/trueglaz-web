@@ -19,7 +19,6 @@ import { Empty, ErrorNote, Loading, Muted } from '../components/ui'
 import { ClaimSheet, CoverRow, PolicySheet, QuoteSheet, Sheet } from '../components/VaultCover'
 import { ModelThumb, useModelImages } from '../components/ModelImage'
 import { FadeIn, Pop, statusKey, useCountUp, useFill, useStatusChange } from '../components/motion'
-import { InsureBanner } from '../components/InsureBanner'
 
 /** The midpoint estimate, or the purchase cost when there is no valuation yet. */
 function estimate(it: VaultItem): number {
@@ -72,7 +71,9 @@ export function VaultScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg, paddingTop: insets.top }}>
-      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." scrolled={scrolled} />
+      {/* Adding is the Vault's one action, so it sits top right (TG-181); quotes are per item (TG-180). */}
+      <PageTitle title="Gear Vault" sub="What you own, valued from real sales." scrolled={scrolled}
+        actions={data && items.length > 0 ? <RoundIcon icon="add" label="Add gear" tone="cta" onPress={() => setAdding(true)} /> : undefined} />
       <View style={{ height: t.space.x3 }} />
 
 
@@ -105,9 +106,6 @@ export function VaultScreen() {
               </Txt>
             </View>
             </FadeIn>
-            <FadeIn delay={120}>
-              <InsureBanner t={t} gear={items} onQuote={(id) => { const it = items.find((i) => i.id === id); if (it) setInsuring({ item: it, what: 'quote' }) }} />
-            </FadeIn>
             </View>
           ) : undefined}
           ListEmptyComponent={
@@ -116,9 +114,6 @@ export function VaultScreen() {
               <Button label="+ Add your first item" variant="cta" onPress={() => setAdding(true)} />
             </View>
           }
-          ListFooterComponent={items.length > 0 ? (
-            <Button label="+ Add gear" variant="ghost" onPress={() => setAdding(true)} style={{ marginTop: t.space.x1 }} />
-          ) : undefined}
           renderItem={({ item, index }) => {
             const cost = item.costMinor
             const serial = item.serial
