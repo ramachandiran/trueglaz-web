@@ -118,3 +118,6 @@
 .desk__tl i.desk__tl-now { background: var(--tg-cta); color: var(--tg-on-cta); }
 .desk__tl b { display: block; font-size: 14px; font-weight: 500; }
 .desk__tl small { display: block; color: var(--tg-text-muted); font-size: 12.5px; margin-top: 2px; }
+.sp textarea.tg-input, .sp input.tg-input { font-family: var(--tg-font); font-size: 14px; }
+.sp .desk__note-row label, .sp .desk__date { margin: 0; padding: 0; }
+.sp .desk__note-row .desk__date { flex-direction: column; align-items: flex-start; gap: 4px; }

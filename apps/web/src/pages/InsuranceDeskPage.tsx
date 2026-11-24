@@ -286,7 +286,7 @@ function Detail({ id, onClose, onChanged }: { id: string; onClose: () => void; o
         </div>
         <div className="desk__contact">
           {x.phone
-            ? <a className="c-btn c-btn--navy" href={`tel:${x.phone}`}><Icon d={ICONS.bell} /> Call {x.phone}</a>
+            ? <a className="c-btn c-btn--navy" href={`tel:${x.phone}`}><Icon d={ICONS.phone} /> Call {x.phone}</a>
             : <span className="tg-muted">No phone on file</span>}
           {x.email && <a className="c-btn" href={`mailto:${x.email}`}>Email {x.email}</a>}
         </div>
