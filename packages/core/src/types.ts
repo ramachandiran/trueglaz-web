@@ -1158,6 +1158,29 @@ export interface KycDocumentView {
 }
 
 /** Where to PUT the bytes, and the ticket that seals them afterwards. */
+/** What the Receive popup records about how a box arrived (TG-210). */
+export interface ReceiveInput {
+  outcomes: Record<string, string>
+  binCode: string | null
+  notes?: string | null
+  arrivalMethod: 'courier' | 'handover'
+  courierCode?: string | null
+  trackingNumber?: string | null
+  handoverName?: string | null
+  handoverPhone?: string | null
+  evidenceIds: string[]
+}
+
+/** A photo or video of a box as it reached the hub (TG-210). */
+export interface IntakeEvidence {
+  id: string
+  kind: 'photo' | 'video'
+  fileName: string | null
+  contentType: string
+  bytes: number
+  createdAt: string | null
+}
+
 export interface UploadIntent {
   url: string
   method: string

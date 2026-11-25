@@ -12,7 +12,9 @@ export function StateBadge({ state }: { state: string }) {
   const warn = ['RETURN_REQUESTED', 'RETURN_TO_SELLER', 'UNSOLD_REVIEW', 'AWAITING_SELLER_APPROVAL']
   const good = ['ACCEPTED', 'LISTED', 'DELIVERED']
   const tone = bad.includes(state) ? 'bad' : warn.includes(state) ? 'warn' : good.includes(state) ? 'good' : ''
-  return <span className={`tg-badge${tone ? ` tg-badge--${tone}` : ''}`}>{state.replace(/_/g, ' ')}</span>
+  // TG-210: the team calls it Approve, not pre-approve.
+  const text = state === 'PRE_APPROVED' ? 'APPROVED' : state.replace(/_/g, ' ')
+  return <span className={`tg-badge${tone ? ` tg-badge--${tone}` : ''}`}>{text}</span>
 }
 
 export function SeverityBadge({ severity }: { severity: string }) {

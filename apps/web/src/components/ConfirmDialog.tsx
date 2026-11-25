@@ -11,6 +11,7 @@ import './ConfirmDialog.css'
  */
 export function ConfirmDialog({
   open, title, children, confirmLabel, busy = false, destructive = false, cancelLabel = 'Cancel', onConfirm, onCancel,
+  confirmDisabled = false, error = null, wide = false,
 }: {
   open: boolean
   title: string
@@ -22,6 +23,12 @@ export function ConfirmDialog({
   cancelLabel?: string
   onConfirm: () => void
   onCancel: () => void
+  /** Hold the confirm button until the form is complete (TG-210). */
+  confirmDisabled?: boolean
+  /** What went wrong, shown above the buttons. */
+  error?: string | null
+  /** A form rather than a question: more room. */
+  wide?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
 
@@ -35,16 +42,17 @@ export function ConfirmDialog({
   return (
     <dialog
       ref={ref}
-      className="confirm tg-card"
+      className={`confirm tg-card${wide ? ' confirm--wide' : ''}`}
       aria-labelledby="confirm-title"
       onCancel={(e) => { e.preventDefault(); if (!busy) onCancel() }}
     >
       <h2 id="confirm-title" className="confirm__title">{title}</h2>
       <div className="confirm__body">{children}</div>
+      {error && <p className="confirm__error" role="alert">{error}</p>}
       <div className="confirm__actions">
         <button type="button" className="tg-button" onClick={onCancel} disabled={busy}>{cancelLabel}</button>
         <button type="button" className={`tg-button ${destructive ? 'tg-button--danger' : 'tg-button--primary'}`}
-          onClick={onConfirm} disabled={busy} aria-busy={busy}>
+          onClick={onConfirm} disabled={busy || confirmDisabled} aria-busy={busy}>
           {busy ? 'Working…' : confirmLabel}
         </button>
       </div>

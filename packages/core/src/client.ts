@@ -8,7 +8,7 @@ import type {
   AccountDeletionStatus, StaffAccountDeletion, PublicInvite, Address, AuthResult, CodeSent, KycReview, KycStatus, Order, OrderDetail, OrderLine, OrderSummary, Page, Payout, PayoutQueueRow, PayoutDestination, RefundDue, SellerHome, BuyerHome, PaymentPreference, PaymentStatusView, PaymentMethods, ModelImageEntry, AdminModelList, ModelImageHistory, FeesView, CommissionBand, CompanyProfile, CompanyProfileView, StaffHome, StaffInsights, ConsoleSearch, ReturnCase, ReturnCaseView, ReturnForBuyer,
   Meta, MyRequests, Notifications, PaymentSessionView, PayoutAccountView, PhotographyGenre, PlatformSetting, Profile, ReviewRequest, InboundClock, SessionInfo, SettingChange, SignUpDetails, WantedRequest, AuditPage, AuditQuery,
   PriceProposal, ProductModel, ProposalOutcome, ReasonCode, Reconciliation, RenderedReport, Reservation, SellerApproval, SensorFormat,
-  EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
+  EkycStarted, HomeView, KycDocumentView, MediaView, Mount, SellerApprovalView, UploadIntent, ReceiveInput, IntakeEvidence, Session, ShipmentLeg, SoldListing, StorageBin, Submission, SubmissionView, TransitionRule,
   StaffBuyingRow, StaffSellingRow, StaffUserDetail, StaffUserRow, Technician,
   CourierCharge, MonthCount, NewCourierCharge, Statement,
   VaultItem, AddGearInput, InsuranceRequest, InsuranceQueueRow, ListingSearchResult, InsuranceStart, InsuranceTerms, InsuranceDocument, QuoteRequestInput, AddPolicyInput, InsuranceDeskDetail, NotificationSettings, DigilockerResult, StaffPayoutAccount,
@@ -769,16 +769,21 @@ export const api = {
   inboundClock: () => get<InboundClock[]>('/ops/submissions/inbound-clock'),
   extendShipBy: (id: string, days: number) => post<Submission>(`/ops/submissions/${id}/extend`, { days }),
   lapseSubmission: (id: string) => post<Submission>(`/ops/submissions/${id}/lapse`),
-  preApprove: (id: string, courierCode: string) =>
-    post<InboundShipment>(`/ops/submissions/${id}/pre-approve`, { courierCode }),
+  /** Approve a submission and issue its inbound label; the comment is required and kept on the record (TG-210). */
+  preApprove: (id: string, courierCode: string, note: string) =>
+    post<InboundShipment>(`/ops/submissions/${id}/pre-approve`, { courierCode, note }),
   rejectSubmission: (id: string, reasonCode: string, note?: string) =>
     post<Submission>(`/ops/submissions/${id}/reject`, { reasonCode, note: note ?? null }),
   markInTransit: (shipmentId: string) =>
     post<InboundShipment>(`/ops/inbound-shipments/${shipmentId}/in-transit`),
-  receive: (
-    shipmentId: string,
-    body: { outcomes: Record<string, string>; binCode?: string | null; notes?: string | null },
-  ) => post<Intake>(`/ops/inbound-shipments/${shipmentId}/receive`, body),
+  receive: (shipmentId: string, body: ReceiveInput) => post<Intake>(`/ops/inbound-shipments/${shipmentId}/receive`, body),
+  /** A photo or video of an arriving box (TG-210): ask, PUT to the store, seal. */
+  uploadIntakeEvidence: async (shipmentId: string, file: File, onProgress?: (f: number) => void): Promise<IntakeEvidence> => {
+    const intent = await post<UploadIntent>(`/ops/inbound-shipments/${shipmentId}/evidence/intent`, { contentType: file.type, bytes: file.size })
+    await putWithProgress(apiAbsolute(intent.url), intent.method, intent.headers, file, onProgress)
+    return post<IntakeEvidence>('/ops/inbound-shipments/evidence/seal', { ticket: intent.ticket, fileName: file.name })
+  },
+  intakeEvidence: (shipmentId: string) => get<IntakeEvidence[]>(`/ops/inbound-shipments/${shipmentId}/evidence`),
   storageBins: () => get<StorageBin[]>('/ops/storage-bins'),
   technicians: () => get<Technician[]>('/ops/technicians'),
   submissionShipments: (submissionId: string) =>

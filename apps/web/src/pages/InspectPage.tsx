@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError, dateTime, money, relative, STATE_LABELS, useApi, isStaff, useSession, type ChecklistItem, type MediaView } from '@trueglaz/core'
 import { ErrorNote, Loading, SeverityBadge } from '../components/ui'
-import { ModelPhoto } from '../components/ModelPhoto'
 import { PhotoUpload } from '../components/PhotoUpload'
 import { PageHead } from '../components/PageHead'
 import { Icon, ICONS } from '../components/StaffShell'
@@ -226,11 +225,6 @@ export function InspectPage() {
           <section className="c-card insp__card">
             <div className="c-card__head"><h2>Photos</h2><span className="c-card__note">{sellerShots.length} from the seller · {defectShots.length} of defects</span></div>
             <div className="insp__gallery">
-              {/* What the model should look like, to compare the unit on the bench against. */}
-              <figure className="insp__ref">
-                <ModelPhoto modelId={it.productModelId} kind="gear" size="thumb" alt="Reference picture of this model" badge={false} />
-                <figcaption className="c-chip2 c-chip2--navy">Reference</figcaption>
-              </figure>
               {[...sellerShots, ...defectShots].slice(0, 7).map((m) => (
                 <figure key={m.id} className="insp__shot">
                   <img src={m.sizes[400] ?? m.url} alt={m.role === 'defect' ? 'Defect photo' : 'Seller photo'} loading="lazy" />

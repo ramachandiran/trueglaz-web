@@ -44,7 +44,7 @@ const RECIPES: Record<string, Recipe> = {
     target: { kind: 'go', to: () => '/sell/manage' },
   },
   'SUBMITTED>PRE_APPROVED': {
-    label: 'Pre-approve and issue a label',
+    label: 'Approve and issue a label',
     hint: 'Issues the inbound label and starts the ship-by clock.',
     target: { kind: 'go', to: () => '/admin/operations?tab=intake' },
   },
