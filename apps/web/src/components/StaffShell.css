@@ -138,15 +138,6 @@
 }
 .staff-top__burger { display: none; color: var(--tg-brand); }
 .staff-top__title { margin: 0; font: 600 21px var(--tg-font-heading); white-space: nowrap; flex: none; }
-.staff-search {
-  flex: 0 1 480px; min-width: 0; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 10px 0 16px;
-  background: var(--tg-bg-sunken); border-radius: 14px; color: var(--tg-text-muted); border: 1px solid transparent;
-}
-.staff-search:focus-within { border-color: var(--tg-border-input); background: var(--tg-bg-raised); }
-.staff-search svg { width: 20px; height: 20px; flex: none; }
-.staff-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: 400 14.5px var(--tg-font); color: var(--tg-text); outline: none; }
-.staff-search input::placeholder { color: var(--tg-text-muted); }
-.staff-search__keys { display: flex; gap: 4px; flex: none; }
 .staff-shell kbd {
   min-width: 24px; height: 24px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 6px;
   background: var(--tg-bg-raised); border: 1px solid var(--tg-border); font: 500 11px var(--tg-font); color: var(--tg-text-muted);
@@ -194,8 +185,7 @@
 .staff-scrim { display: none; }
 
 @media (max-width: 1280px) {
-  .staff-search__keys { display: none; }
-  .staff-top { gap: 16px; }
+    .staff-top { gap: 16px; }
 }
 
 /* ---- tablet and phone: the sidebar becomes a drawer ---- */
@@ -225,9 +215,8 @@
 @media (max-width: 640px) {
   .staff-shell, .staff-shell--slim { padding: 8px; }
   .staff-top { top: 8px; border-radius: 16px; }
-  .staff-top__title { display: none; }
-  .staff-search { height: 42px; padding: 0 10px; }
-  .staff-top__icon, .staff-top .account__trigger .account__avatar { width: 40px; height: 40px; border-radius: 12px; }
+  .staff-top__title { flex: 1 1 auto; min-width: 0; font-size: 18px; overflow: hidden; text-overflow: ellipsis; }
+    .staff-top__icon, .staff-top .account__trigger .account__avatar { width: 40px; height: 40px; border-radius: 12px; }
   .staff-top .account__trigger .account__avatar { border-radius: 50%; }
   .staff-help { display: none; }
 }

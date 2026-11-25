@@ -6,7 +6,6 @@ import { LogoMark } from './Logo'
 import { useUnread } from './useUnread'
 import { ConsoleTitleContext, invalidateStaffHome, useStaffHome, type ConsoleTitle } from './consoleTitle'
 import { PageHeadView } from './PageHead'
-import { CommandMenu } from './CommandMenu'
 import { addBanner, bannerFor, LiveBanners, type LiveBanner } from './LiveBanners'
 import { useLiveLine } from './useLiveLine'
 import { useEscape } from './useEscape'
@@ -118,7 +117,6 @@ export function staffHref(href: string): string {
 
 const COLLAPSE_KEY = 'tg.console.collapsed'
 const GROUPS_KEY = 'tg.console.groups'
-const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
 /**
  * The staff / admin console (TG-126, redesigned in TG-195): a floating
@@ -277,7 +275,6 @@ export function StaffShell() {
               <Icon d={ICONS.menu} />
             </button>
             <p className="staff-top__title">{section}</p>
-            <CommandMenu screens={sections(staff, admin, () => 0).flatMap((g) => g.items.map((it) => ({ label: it.label, to: it.to })))} />
             <div className="staff-top__tools">
               <HelpMenu />
               <Link to="/profile#notifications" className="staff-top__icon" aria-label={unread > 0 ? `${unread} unread notifications` : 'Notifications'}>
@@ -322,7 +319,6 @@ function HelpMenu() {
         <div id="console-help" className="staff-help__pop" role="dialog" aria-label="Help">
           <h2>Shortcuts</h2>
           <dl>
-            <div><dt><kbd>{isMac ? '⌘' : 'Ctrl'}</kbd> <kbd>K</kbd> or <kbd>/</kbd></dt><dd>Find a unit, order, person or screen</dd></div>
             <div><dt><kbd>Esc</kbd></dt><dd>Close a menu or dialog</dd></div>
           </dl>
           <h2>Colours</h2>
