@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { SessionProvider, setStorage, setApiOrigin, setOnline } from '@trueglaz/core'
 import { App } from './App'
 import { webStorage } from './state/webStorage'
+import { framedByAnotherSite } from './frameGuard'
 import './theme/index.css'
 
 // Core is platform-agnostic; the app supplies the storage adapter.
@@ -19,10 +20,22 @@ if (import.meta.env.VITE_API_ORIGIN) {
   setApiOrigin(import.meta.env.VITE_API_ORIGIN)
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <SessionProvider>
-      <App />
-    </SessionProvider>
-  </React.StrictMode>,
-)
+if (framedByAnotherSite()) {
+  // Framed by another site: render nothing clickable, and offer the real page.
+  const root = document.getElementById('root')!
+  root.textContent = ''
+  const a = document.createElement('a')
+  a.href = window.location.href
+  a.target = '_top'
+  a.rel = 'noopener'
+  a.textContent = 'Open TrueGlaz in its own window'
+  root.appendChild(a)
+} else {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <SessionProvider>
+        <App />
+      </SessionProvider>
+    </React.StrictMode>,
+  )
+}

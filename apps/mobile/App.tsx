@@ -5,11 +5,11 @@ import { NavigationContainer, DefaultTheme, DarkTheme, createNavigationContainer
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
-  api, setApiOrigin, setOnline, setStorage, SessionProvider, useApi, useSession, type Storage,
+  api, setApiOrigin, setOnline, setStorage, SessionProvider, useApi, useSession,
 } from '@trueglaz/core'
 import { API_ORIGIN } from './src/config'
+import { nativeStorage } from './src/state/nativeStorage'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useEffect, type ComponentProps } from 'react'
 import { Loading } from './src/components/ui'
@@ -45,12 +45,7 @@ import * as Network from 'expo-network'
 
 const navRef = createNavigationContainerRef<any>()
 
-/** The React Native adapter for core's storage port (web uses localStorage). */
-const nativeStorage: Storage = {
-  async get(key) { try { return await AsyncStorage.getItem(key) } catch { return null } },
-  async set(key, value) { try { await AsyncStorage.setItem(key, value) } catch { /* ignore */ } },
-  async remove(key) { try { await AsyncStorage.removeItem(key) } catch { /* ignore */ } },
-}
+/** The React Native adapter for core's storage port: the session in the Keychain/Keystore (src/state/nativeStorage). */
 setStorage(nativeStorage)
 
 /** Follow the phone's connection: "no network" or "network but no internet" both count as offline. */

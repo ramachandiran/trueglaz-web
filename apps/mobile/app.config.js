@@ -23,10 +23,15 @@ module.exports = ({ config }) => {
     },
     android: {
       ...config.android,
+      // The session token must not travel to a new phone inside an Android
+      // backup (security round 2); it lives in the Keystore and is re-earned
+      // by signing in.
+      allowBackup: false,
       ...(hasFirebase ? { googleServicesFile: './google-services.json' } : {}),
     },
     plugins: [
       ...(config.plugins ?? []),
+      'expo-secure-store',
       ['expo-notifications', {
         icon: './assets/notification-icon.png', color: '#FF6B35', defaultChannel: 'buying',
         mode: process.env.IOS_APS_ENV === 'development' ? 'development' : 'production',
