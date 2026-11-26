@@ -2,13 +2,12 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, dateTime, isStaff, money, relative, useApi, useSession,
-  type ConsignmentItem, type InboundClock, type InspectionSla, type ManagedListing, type ReviewRequest, type Submission, type Technician,
+  type ConsignmentItem, type InboundClock, type ManagedListing, type ReviewRequest, type Submission, type Technician,
 } from '@trueglaz/core'
 import { StateBadge } from '../components/ui'
 import { QueueScreen } from '../components/QueueScreen'
 import { pageOf, useClearParams, useQueryState } from '../components/useQueryState'
-import { ModelPhoto } from '../components/ModelPhoto'
-import { Icon, ICONS } from '../components/StaffShell'
+import { ActionDialog, Comment, Facts, Field, ReceiveDialog } from '../components/OpsDialogs'
 import './OpsPage.css'
 
 type Queue = 'intake' | 'inbound' | 'inspect' | 'price' | 'listed' | 'wanted'
@@ -95,6 +94,9 @@ export function OpsPage() {
   const listed = useApi(() => (staff ? api.managedListings() : Promise.resolve([])), [staff])
   // The catalogue, to turn an item's productModelId into a readable model name.
   const models = useApi(() => api.models(), [])
+  // TG-210: the seller's name on Intake and Inbound rows.
+  const people = useApi(() => (staff ? api.staffUsers('', '') : Promise.resolve([])), [staff])
+  const sellers = useMemo(() => new Map((people.data ?? []).map((u) => [u.userId, u.displayName])), [people.data])
   const names = useMemo(
     () => new Map((models.data?.content ?? []).map((m) => [m.id, m.name] as const)),
     [models.data],
@@ -162,8 +164,8 @@ export function OpsPage() {
   const matches = (r: any) => {
     const t = search.trim().toLowerCase()
     if (!t) return true
-    const hay = active === 'intake' ? [r.id, r.pricingMode]
-      : active === 'inbound' ? [r.id, ...r.items.map((i: ConsignmentItem) => i.internalSku)]
+    const hay = active === 'intake' ? [r.id, sellers.get(r.sellerUserId) ?? null]
+      : active === 'inbound' ? [r.id, sellers.get(r.items[0]?.sellerUserId) ?? null, ...r.items.map((i: ConsignmentItem) => i.internalSku)]
       : active === 'wanted' ? [r.wanted, r.note, r.minGradeCode]
       : active === 'listed' ? [r.internalSku, r.title, r.brandName, r.modelName, r.gradeCode, r.sellerName]
         : [r.internalSku, r.serialNumber, r.declaredGradeCode, r.assignedGradeCode]
@@ -192,13 +194,13 @@ export function OpsPage() {
 
   const unit = active === 'intake' || active === 'inbound' ? 'submissions'
     : active === 'wanted' ? 'requests' : active === 'listed' ? 'listings' : 'items'
-  const placeholder = active === 'intake' ? 'Search by submission id…'
-    : active === 'inbound' ? 'Search by submission or SKU…'
+  const placeholder = active === 'intake' ? 'Search by seller or submission id…'
+    : active === 'inbound' ? 'Search by seller, submission or SKU…'
     : active === 'wanted' ? 'Search what buyers asked for…'
     : active === 'listed' ? 'Search by item, SKU, grade or seller…'
       : 'Search by SKU, serial or grade…'
   const empty = {
-    intake: 'Nothing waiting on pre-approval',
+    intake: 'Nothing waiting on approval',
     inbound: 'Nothing on its way in',
     inspect: 'Nothing to inspect',
     price: 'Nothing waiting on a price',
@@ -222,9 +224,7 @@ export function OpsPage() {
             </button>
           </div>
         ) : undefined}
-        summary={active === 'inspect' ? <>
-          <BenchFigures sla={insights.data?.inspection ?? null} roster={roster.data?.length ?? 0}
-            unassigned={inspectRows.filter((i) => i.currentState === 'RECEIVED' && !i.assignedTechnicianUserId).length} />
+        summary={active === 'inspect' && notice ? <>
           {notice && (
             <div className={`ops__notice${notice.bad ? ' ops__notice--bad' : ''}`} role="status">
               <span>{notice.text}</span>
@@ -251,8 +251,8 @@ export function OpsPage() {
         pages={pages}
         onPage={setPage}
       >
-        {active === 'intake' && <IntakeTable rows={shown} names={names} reload={pending.reload} />}
-        {active === 'inbound' && <InboundTable rows={shown} names={names} clock={clock} reload={source.reload} />}
+        {active === 'intake' && <IntakeTable rows={shown} names={names} sellers={sellers} reload={pending.reload} />}
+        {active === 'inbound' && <InboundTable rows={shown} names={names} sellers={sellers} clock={clock} reload={source.reload} />}
         {active === 'inspect' && (
           <InspectTable rows={shown} names={names} roster={roster.data ?? []} staff={staff} onNotice={setNotice} arrived={arrived} windowHours={insights.data?.inspection.windowHours ?? 48} reload={source.reload} />
         )}
@@ -267,57 +267,12 @@ export function OpsPage() {
 
 /** Each stage's heading and its one line (TG-198). */
 const STAGE: Record<Queue, { title: string; line: string }> = {
-  intake: { title: 'Intake', line: 'New submissions to pre-approve or turn down, with a reason the seller sees.' },
+  intake: { title: 'Intake', line: 'New submissions to approve or reject. A rejection gives the seller a reason.' },
   inbound: { title: 'Inbound', line: 'Boxes on their way to the hub. The one most past its ship-by date leads.' },
   inspect: { title: 'Inspection', line: 'Units on the bench, oldest first. Assign, inspect, grade or log defects.' },
   price: { title: 'Pricing', line: 'Graded units waiting on a price before they go on sale.' },
   listed: { title: 'Listed', line: 'Everything on sale now. Reprice without leaving Operations.' },
   wanted: { title: 'Requests', line: 'What buyers have asked for. Publish to the Wanted board or turn down.' },
-}
-
-/** The bench in four figures (TG-198): how much is on it, what is late, how fast it moves, what passed. */
-function BenchFigures({ sla, roster, unassigned }: { sla: InspectionSla | null; roster: number; unassigned: number }) {
-  if (!sla) return null
-  const faster = sla.avgHoursLast7 != null && sla.avgHoursPrev7 != null ? Math.round((sla.avgHoursPrev7 - sla.avgHoursLast7) * 10) / 10 : null
-  const done = sla.passedLast7 + sla.failedLast7
-  const passRate = done ? Math.round((sla.passedLast7 * 100) / done) : null
-  return (
-    <section className="c-kpis" aria-label="The bench in figures">
-      <div className="c-card c-kpi2">
-        <span className="c-kpi2__t"><span className="c-kpi2__ico c-kpi2__ico--on"><Icon d={ICONS.wrench} /></span>On the bench</span>
-        <span className="c-kpi2__v">{sla.onBench}</span>
-        <span className="c-kpi2__f"><span className="c-chip2">{roster} technician{roster === 1 ? '' : 's'}</span>{unassigned > 0 ? `${unassigned} not assigned` : 'all assigned'}</span>
-      </div>
-      <div className="c-card c-kpi2">
-        <span className="c-kpi2__t"><span className="c-kpi2__ico"><Icon d={ICONS.clock} /></span>Past {sla.windowHours} h</span>
-        <span className="c-kpi2__v">{sla.pastWindow}</span>
-        <span className="c-kpi2__f">
-          {sla.pastWindow > 0
-            ? <span className="c-chip2 c-chip2--bad"><Icon d={ICONS.alert} /> Act today</span>
-            : <span className="c-chip2 c-chip2--good"><Icon d={ICONS.check} /> On time</span>}
-          {sla.oldestHours != null ? `oldest ${sla.oldestHours} h` : 'nothing waiting'}
-        </span>
-      </div>
-      <div className="c-card c-kpi2">
-        <span className="c-kpi2__t"><span className="c-kpi2__ico"><Icon d={ICONS.history} /></span>Avg. time on bench</span>
-        <span className="c-kpi2__v">{sla.avgHoursLast7 ?? '—'}{sla.avgHoursLast7 != null && <small> h</small>}</span>
-        <span className="c-kpi2__f">
-          {faster != null && faster !== 0 && (
-            <span className={`c-chip2 c-chip2--${faster > 0 ? 'good' : 'bad'}`}>{Math.abs(faster)} h {faster > 0 ? 'faster' : 'slower'}</span>
-          )}
-          {faster == null ? 'last 7 days' : 'vs the 7 days before'}
-        </span>
-      </div>
-      <div className="c-card c-kpi2">
-        <span className="c-kpi2__t"><span className="c-kpi2__ico"><Icon d={ICONS.check} /></span>Passed, last 7 days</span>
-        <span className="c-kpi2__v">{sla.passedLast7}</span>
-        <span className="c-kpi2__f">
-          {sla.failedLast7 > 0 && <span className="c-chip2 c-chip2--warn">{sla.failedLast7} failed</span>}
-          {passRate != null ? `${passRate}% pass rate` : 'nothing finished yet'}
-        </span>
-      </div>
-    </section>
-  )
 }
 
 /** Hours since a unit arrived, red past the window. */
@@ -327,19 +282,6 @@ function WaitingCell({ at, windowHours }: { at: string | null | undefined; windo
   const late = h > windowHours
   const text = h < 1 ? 'under 1 h' : h < 48 ? `${h} h` : `${Math.floor(h / 24)} d ${h % 24} h`
   return <td className={late ? "c-late ops__wait" : "ops__wait"} title={`Arrived ${dateTime(at)}`}>{text}{late && <span className="tg-visually-hidden"> (past {windowHours} hours)</span>}</td>
-}
-
-/** Shared by every table here: run one action, show what went wrong, reload. */
-function useAction(reload: () => void) {
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  async function act(id: string, fn: () => Promise<unknown>) {
-    setBusy(id); setError(null)
-    try { await fn(); reload() } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'That did not work')
-    } finally { setBusy(null) }
-  }
-  return { busy, error, act }
 }
 
 /**
@@ -360,7 +302,6 @@ function ItemCell({ item, names, meta }: { item: ConsignmentItem; names: Map<str
   const name = itemTitle(item, names)
   return (
     <td>
-      <span className="ops__pic"><ModelPhoto modelId={item.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
       <span className="ops__model">{name ?? item.internalSku}</span>
       {(name || meta) && (
         <span className="ops__gear">
@@ -370,13 +311,6 @@ function ItemCell({ item, names, meta }: { item: ConsignmentItem; names: Map<str
         </span>
       )}
     </td>
-  )
-}
-
-function ErrorRow({ error, span }: { error: string | null; span: number }) {
-  if (!error) return null
-  return (
-    <tr><td colSpan={span}><p className="ops__error" role="alert">{error}</p></td></tr>
   )
 }
 
@@ -438,120 +372,118 @@ function UpdatedCell({ at }: { at: string | null }) {
   )
 }
 
-/** Pre-approve, issue the label, or turn it away with a reason the seller sees. */
-function IntakeTable({ rows, names, reload }: { rows: Submission[]; names: Map<string, string>; reload: () => void }) {
-  return (
-    <table className="q__table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Pricing</th>
-          <th>Submitted</th>
-          <th>Last updated</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((s) => <IntakeRow key={s.id} s={s} names={names} reload={reload} />)}
-      </tbody>
-    </table>
-  )
+/** The rows' popups (TG-210): one open at a time, closed by Cancel, Esc or a done action. */
+function useDialog() {
+  const [dialog, setDialog] = useState<ReactNode>(null)
+  return { dialog, open: setDialog, close: () => setDialog(null) }
 }
 
-/** One submission row: the model leads, and the whole row opens the item. */
-function IntakeRow({ s, names, reload }: { s: Submission; names: Map<string, string>; reload: () => void }) {
-  const navigate = useNavigate()
-  const { busy, error, act } = useAction(reload)
-  const [rejecting, setRejecting] = useState(false)
-  const [reason, setReason] = useState('')
-  const [note, setNote] = useState('')
-  const view = useApi(() => api.submission(s.id), [s.id])
-
-  const items = view.data?.items ?? []
-  const first = items[0]
-  const name = first ? itemTitle(first, names) : null
-  const title = first ? (name ?? first.internalSku) : 'Loading…'
-  const open = () => { if (first) navigate(`/items/${first.id}`) }
-
+/** Approve (with a comment on the record) or reject (with a reason the seller sees). */
+function IntakeTable({ rows, names, sellers, reload }: { rows: Submission[]; names: Map<string, string>; sellers: Map<string, string>; reload: () => void }) {
+  const d = useDialog()
   return (
     <>
-      <tr className={first ? 'q__row--click' : undefined} onClick={open}>
-        <td>
-          <span className="ops__model">{title}{items.length > 1 ? ` +${items.length - 1} more` : ''}</span>
-          {first && (
-            <span className="ops__gear">
-              {name && <span className="tg-mono">{items.map((i) => i.internalSku).join(', ')} · </span>}
-              {money(items.reduce((t, i) => t + i.askingAmountMinor, 0))} asked
-            </span>
-          )}
-        </td>
-        <td><span className="tg-badge">{s.pricingMode}</span></td>
-        <td className="tg-muted">{s.submittedAt ? dateOnly(s.submittedAt) : '—'}</td>
-        <UpdatedCell at={latest(s.updatedAt, s.submittedAt, s.createdAt)} />
-        <td onClick={(e) => e.stopPropagation()}>
-          {rejecting ? (
-            <span className="ops__inline ops__reject">
-              <select
-                className="tg-select ops__reason"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                aria-label="Reason for turning it away"
-              >
-                <option value="">Pick a reason…</option>
-                {INTAKE_REASONS.map((r) => (
-                  <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
-              <textarea
-                className="tg-input ops__reject-note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Add a note for the seller — what exactly was wrong? (optional)"
-                rows={2}
-                maxLength={1000}
-                aria-label="Note to the seller"
-              />
-              <span className="ops__inline">
-                <button
-                  className="tg-button"
-                  disabled={!reason || busy === s.id}
-                  onClick={() => act(s.id, () => api.rejectSubmission(s.id, reason, note.trim() || undefined))}
-                >
-                  Confirm
-                </button>
-                <button className="tg-button" onClick={() => { setRejecting(false); setReason(''); setNote('') }}>
-                  Cancel
-                </button>
-              </span>
-            </span>
-          ) : (
-            <span className="ops__inline">
-              <button
-                className="tg-button tg-button--primary"
-                disabled={busy === s.id}
-                onClick={() => act(s.id, () => api.preApprove(s.id, 'bluedart'))}
-              >
-                {busy === s.id ? 'Working…' : 'Pre-approve and label'}
-              </button>
-              <button className="tg-button" disabled={busy === s.id} onClick={() => setRejecting(true)}>
-                Reject
-              </button>
-            </span>
-          )}
-        </td>
-      </tr>
-      {error && <tr><td colSpan={5}><p className="ops__error" role="alert">{error}</p></td></tr>}
+      <table className="q__table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Seller</th>
+            <th>Submitted</th>
+            <th>Last updated</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((s) => <IntakeRow key={s.id} s={s} names={names} seller={sellers.get(s.sellerUserId) ?? '—'} reload={reload} dialog={d} />)}
+        </tbody>
+      </table>
+      {d.dialog}
     </>
   )
 }
 
+function IntakeRow({ s, names, seller, reload, dialog }: { s: Submission; names: Map<string, string>; seller: string; reload: () => void; dialog: ReturnType<typeof useDialog> }) {
+  const navigate = useNavigate()
+  const view = useApi(() => api.submission(s.id), [s.id])
+  const items = view.data?.items ?? []
+  const first = items[0]
+  const name = first ? itemTitle(first, names) : null
+  const title = first ? (name ?? first.internalSku) : 'Loading…'
+  const asked = items.reduce((t, i) => t + i.askingAmountMinor, 0)
+  const facts = (): Array<[string, ReactNode]> => [
+    ['Seller', seller],
+    ['Items', items.map((i) => `${itemTitle(i, names) ?? i.internalSku} (${i.internalSku})`).join(', ') || '—'],
+    ['Asking', money(asked)],
+    ['Submitted', s.submittedAt ? dateOnly(s.submittedAt) : '—'],
+  ]
+
+  return (
+    <tr className={first ? 'q__row--click' : undefined} onClick={() => { if (first) navigate(`/items/${first.id}`) }}>
+      <td>
+        <span className="ops__model">{title}{items.length > 1 ? ` +${items.length - 1} more` : ''}</span>
+        {first && (
+          <span className="ops__gear">
+            {name && <span className="tg-mono">{items.map((i) => i.internalSku).join(', ')} · </span>}
+            {money(asked)} asked
+          </span>
+        )}
+      </td>
+      <td>{seller}</td>
+      <td className="tg-muted">{s.submittedAt ? dateOnly(s.submittedAt) : '—'}</td>
+      <UpdatedCell at={latest(s.updatedAt, s.submittedAt, s.createdAt)} />
+      <td onClick={(e) => e.stopPropagation()}>
+        <span className="ops__inline">
+          <button className="tg-button tg-button--primary" disabled={!first} onClick={() => dialog.open(
+            <ApproveDialog key={s.id} id={s.id} title={title} facts={facts()} onClose={dialog.close} onDone={reload} />,
+          )}>Approve</button>
+          <button className="tg-button" disabled={!first} onClick={() => dialog.open(
+            <RejectSubmissionDialog key={s.id} id={s.id} title={title} facts={facts()} onClose={dialog.close} onDone={reload} />,
+          )}>Reject</button>
+        </span>
+      </td>
+    </tr>
+  )
+}
+
+function ApproveDialog({ id, title, facts, onClose, onDone }: { id: string; title: string; facts: Array<[string, ReactNode]>; onClose: () => void; onDone: () => void }) {
+  const [note, setNote] = useState('')
+  return (
+    <ActionDialog title={`Approve ${title}?`} confirmLabel="Approve" ready={note.trim().length >= 3} onClose={onClose} onDone={onDone}
+      run={() => api.preApprove(id, 'bluedart', note.trim())}>
+      <Facts rows={facts} />
+      <p className="opsd__hint">The seller gets a shipping label and a date to ship by.</p>
+      <Comment required label="Comment" value={note} onChange={setNote} placeholder="Why it is approved (kept on the record)" />
+    </ActionDialog>
+  )
+}
+
+const INTAKE_REASON_LABELS: Record<string, string> = {
+  insufficient_detail: 'Not enough detail to judge it',
+  prohibited_item: 'Not something TrueGlaz accepts',
+  price_unrealistic: 'Asking price far from what it sells for',
+}
+
+function RejectSubmissionDialog({ id, title, facts, onClose, onDone }: { id: string; title: string; facts: Array<[string, ReactNode]>; onClose: () => void; onDone: () => void }) {
+  const [reason, setReason] = useState('')
+  const [note, setNote] = useState('')
+  return (
+    <ActionDialog title={`Reject ${title}?`} confirmLabel="Reject" destructive ready={!!reason} onClose={onClose} onDone={onDone}
+      run={() => api.rejectSubmission(id, reason, note.trim() || undefined)}>
+      <Facts rows={facts} />
+      <Field label="Reason" required hint="The seller sees this.">
+        <select className="tg-select" value={reason} onChange={(e) => setReason(e.target.value)} aria-required>
+          <option value="">Choose a reason…</option>
+          {INTAKE_REASONS.map((r) => <option key={r} value={r}>{INTAKE_REASON_LABELS[r] ?? r.replace(/_/g, ' ')}</option>)}
+        </select>
+      </Field>
+      <Comment label="Note for the seller" value={note} onChange={setNote} placeholder="What exactly was wrong" />
+    </ActionDialog>
+  )
+}
+
 /**
- * What pre-approval produced, shown where the box now waits.
- *
- * Pre-approve issues an inbound label and a tracking number, but nothing in the
- * queue said so — the row simply moved here, which read as "nothing happened".
- * This is the proof it did: the courier and the tracking number the seller is
- * shipping under.
+ * What approval produced, shown where the box now waits: the courier and the
+ * tracking number the seller is shipping under.
  */
 function InboundInfo({ submissionId }: { submissionId: string }) {
   const ships = useApi(() => api.submissionShipments(submissionId), [submissionId])
@@ -564,146 +496,113 @@ function InboundInfo({ submissionId }: { submissionId: string }) {
   )
 }
 
-/**
- * Boxes the hub is waiting on, and the act of taking one in.
- *
- * Receiving is the one step with no other home: the state machine's
- * IN_TRANSIT_INBOUND → RECEIVED move routes here precisely because the raw
- * transition would skip the intake record and the bin assignment.
- */
+/** Boxes the hub is waiting on: receive one (with its details), give the seller more time, or lapse it. */
 function InboundTable({
-  rows, names, clock, reload,
+  rows, names, sellers, clock, reload,
 }: {
   rows: Array<{ id: string; items: ConsignmentItem[] }>
   names: Map<string, string>
+  sellers: Map<string, string>
   clock: Map<string, InboundClock>
   reload: () => void
 }) {
   const navigate = useNavigate()
-  const { busy, error, act } = useAction(reload)
-  // Lapsing voids the seller's label, so it takes a second, deliberate click.
-  const [confirming, setConfirming] = useState<string | null>(null)
-  const bins = useApi(() => api.storageBins(), [])
-  const bin = bins.data?.[0]
-
-  async function receive(submissionId: string) {
-    const shipments = await api.submissionShipments(submissionId)
-    const shipment = shipments[0]
-    if (!shipment) throw new Error('No inbound shipment for this submission')
-    // A courier that never scanned still arrives at the counter; the state
-    // machine wants the leg recorded before the box can be taken in.
-    if (shipment.state === 'label_issued') await api.markInTransit(shipment.id)
-    await api.receive(shipment.id, { outcomes: {}, binCode: bin?.code ?? null })
-  }
-
+  const d = useDialog()
   return (
-    <table className="q__table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Ship by</th>
-          <th>Status</th>
-          <th>Last updated</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ErrorRow error={error} span={5} />
-        {rows.map((r) => {
-          const first = r.items[0]
-          const name = itemTitle(first, names)
-          const title = name ?? first.internalSku
-          const c = clock.get(r.id)
-          // Still at the seller's: nothing scanned, so the clock applies and
-          // the box can be given more time or lapsed. Once a courier has it,
-          // it is on its way however late, and only receiving makes sense.
-          const unposted = r.items.every((i) => i.currentState === 'PRE_APPROVED')
-          return (
-            <tr key={r.id} className="q__row--click" onClick={() => navigate(`/items/${first.id}`)}>
-              <td>
-                <span className="ops__pic"><ModelPhoto modelId={first.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
-                <span className="ops__model">{title}{r.items.length > 1 ? ` +${r.items.length - 1} more` : ''}</span>
-                <span className="ops__gear">
-                  {name && <span className="tg-mono">{r.items.map((i) => i.internalSku).join(', ')} · </span>}
-                  {r.items.length} item{r.items.length === 1 ? '' : 's'}
-                </span>
-                <InboundInfo submissionId={r.id} />
-              </td>
-              <ShipByCell clock={c} unposted={unposted} />
-              <td><StateBadge state={first.currentState} /></td>
-              <UpdatedCell at={latest(c?.updatedAt, ...r.items.map((i) => i.updatedAt))} />
-              <td onClick={(e) => e.stopPropagation()}>
-                {confirming === r.id ? (
-                  <span className="ops__inline ops__confirm">
-                    <span>Void the label? The seller is told and can submit again.</span>
-                    <button
-                      className="tg-button ops__danger"
-                      disabled={busy === r.id}
-                      onClick={() => act(r.id, async () => { await api.lapseSubmission(r.id); setConfirming(null) })}
-                    >
-                      {busy === r.id ? 'Lapsing…' : 'Yes, lapse it'}
-                    </button>
-                    <button className="tg-button" onClick={() => setConfirming(null)}>Keep it</button>
+    <>
+      <table className="q__table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Seller</th>
+            <th>Ship by</th>
+            <th>Status</th>
+            <th>Last updated</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const first = r.items[0]
+            const name = itemTitle(first, names)
+            const title = name ?? first.internalSku
+            const seller = sellers.get(first.sellerUserId) ?? '—'
+            const c = clock.get(r.id)
+            // Still at the seller's: the clock applies, so it can be extended or lapsed.
+            const unposted = r.items.every((i) => i.currentState === 'PRE_APPROVED')
+            const facts: Array<[string, ReactNode]> = [['Seller', seller], ['In the box', r.items.map((i) => i.internalSku).join(', ')], ['Ship by', c?.shipBy ? dateOnly(c.shipBy) : '—']]
+            return (
+              <tr key={r.id} className="q__row--click" onClick={() => navigate(`/items/${first.id}`)}>
+                <td>
+                  <span className="ops__model">{title}{r.items.length > 1 ? ` +${r.items.length - 1} more` : ''}</span>
+                  <span className="ops__gear">
+                    {name && <span className="tg-mono">{r.items.map((i) => i.internalSku).join(', ')} · </span>}
+                    {r.items.length} item{r.items.length === 1 ? '' : 's'}
                   </span>
-                ) : (
+                  <InboundInfo submissionId={r.id} />
+                </td>
+                <td>{seller}</td>
+                <ShipByCell clock={c} unposted={unposted} />
+                <td><StateBadge state={first.currentState} /></td>
+                <UpdatedCell at={latest(c?.updatedAt, ...r.items.map((i) => i.updatedAt))} />
+                <td onClick={(e) => e.stopPropagation()}>
                   <span className="ops__inline">
-                    <button
-                      className="tg-button tg-button--primary"
-                      disabled={busy === r.id}
-                      onClick={() => act(r.id, () => receive(r.id))}
-                    >
-                      {busy === r.id ? 'Working…' : `Receive into ${bin?.code ?? 'a bin'}`}
-                    </button>
+                    <button className="tg-button tg-button--primary" onClick={() => d.open(
+                      <ReceiveDialog key={r.id} submissionId={r.id} title={title} seller={seller} items={r.items} onClose={d.close} onDone={reload} />,
+                    )}>Receive</button>
                     {unposted && c && (
                       <>
-                        <button
-                          className="tg-button"
-                          disabled={busy === r.id}
-                          title="Move the ship-by date on a week and tell the seller"
-                          onClick={() => act(r.id, () => api.extendShipBy(r.id, 7))}
-                        >
-                          Extend 7 days
-                        </button>
-                        <button className="tg-button" disabled={busy === r.id} onClick={() => setConfirming(r.id)}>
-                          Lapse now
-                        </button>
+                        <button className="tg-button" onClick={() => d.open(
+                          <ActionDialog key={r.id} title={`Give the seller 7 more days for ${title}?`} confirmLabel="Extend 7 days"
+                            run={() => api.extendShipBy(r.id, 7)} onClose={d.close} onDone={reload}>
+                            <Facts rows={facts} />
+                            <p className="opsd__hint">The ship-by date moves on a week (from today if it has passed) and the seller is told.</p>
+                          </ActionDialog>,
+                        )}>Extend 7 days</button>
+                        <button className="tg-button" onClick={() => d.open(
+                          <ActionDialog key={r.id} title={`Lapse ${title} now?`} confirmLabel="Lapse it" destructive
+                            run={() => api.lapseSubmission(r.id)} onClose={d.close} onDone={reload}>
+                            <Facts rows={facts} />
+                            <p className="opsd__hint">The label is voided and the seller is told. They can submit again.</p>
+                          </ActionDialog>,
+                        )}>Lapse now</button>
                       </>
                     )}
                   </span>
-                )}
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      {d.dialog}
+    </>
   )
 }
 
-/** Staff picks who inspects a received unit; the technician then starts it. */
-function AssignSelect({ item, roster, reload }: { item: ConsignmentItem; roster: Technician[]; reload: () => void }) {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  async function set(id: string) {
-    setBusy(true); setError(null)
-    try { await api.assignTechnician(item.id, id || null); reload() }
-    catch (e) { setError(e instanceof ApiError ? e.message : 'Could not assign that') }
-    finally { setBusy(false) }
-  }
+/** Staff pick who inspects a received unit; the choice is confirmed in a popup. */
+function AssignSelect({ item, title, roster, reload, dialog }: { item: ConsignmentItem; title: string; roster: Technician[]; reload: () => void; dialog: ReturnType<typeof useDialog> }) {
+  const current = roster.find((t) => t.id === item.assignedTechnicianUserId)?.displayName
   return (
-    <>
-      <select
-        className="tg-select"
-        aria-label="Assign a technician"
-        value={item.assignedTechnicianUserId ?? ''}
-        disabled={busy}
-        onChange={(e) => set(e.target.value)}
-      >
-        <option value="">Assign a technician…</option>
-        {roster.map((t) => <option key={t.id} value={t.id}>{t.displayName}</option>)}
-      </select>
-      {error && <p className="ops__error" role="alert">{error}</p>}
-    </>
+    <select
+      className="tg-select"
+      aria-label="Assign a technician"
+      value={item.assignedTechnicianUserId ?? ''}
+      onChange={(e) => {
+        const id = e.target.value
+        const who = roster.find((t) => t.id === id)?.displayName
+        dialog.open(
+          <ActionDialog key={`${item.id}-${id}`} title={id ? `Assign ${title} to ${who}?` : `Take ${title} off ${current ?? 'the bench'}?`}
+            confirmLabel={id ? 'Assign' : 'Unassign'} run={() => api.assignTechnician(item.id, id || null)} onClose={dialog.close} onDone={reload}>
+            <Facts rows={[['Unit', item.internalSku], ['Now with', current ?? 'nobody'], ['Goes to', who ?? 'nobody']]} />
+            {id && <p className="opsd__hint">{who} is told straight away.</p>}
+          </ActionDialog>,
+        )
+      }}
+    >
+      <option value="">Assign a technician…</option>
+      {roster.map((t) => <option key={t.id} value={t.id}>{t.displayName}</option>)}
+    </select>
   )
 }
 
@@ -712,20 +611,21 @@ function InspectTable({
   rows, names, roster, staff, onNotice, arrived, windowHours, reload,
 }: { rows: ConsignmentItem[]; names: Map<string, string>; roster: Technician[]; staff: boolean; onNotice: (n: { text: string; bad: boolean }) => void; arrived: Map<string, string | null>; windowHours: number; reload: () => void }) {
   const navigate = useNavigate()
+  const d = useDialog()
   // Bulk work (TG-203): pick several received units, assign them or send them to the bench in one go.
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [bulkTech, setBulkTech] = useState('')
-  const [bulk, setBulk] = useState<{ busy: boolean; done: number; total: number; failed: { id: string; why: string }[] } | null>(null)
+  const [bulk, setBulk] = useState<{ busy: boolean; done: number; total: number } | null>(null)
   const selectable = rows.filter((i) => i.currentState === 'RECEIVED')
   const chosen = selectable.filter((i) => picked.has(i.id))
   const allOn = selectable.length > 0 && chosen.length === selectable.length
   const toggle = (id: string) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n })
   async function runBulk(label: string, fn: (i: ConsignmentItem) => Promise<unknown>, items: ConsignmentItem[]) {
     const failed: { id: string; why: string }[] = []
-    setBulk({ busy: true, done: 0, total: items.length, failed })
+    setBulk({ busy: true, done: 0, total: items.length })
     for (const [n, i] of items.entries()) {
       try { await fn(i) } catch (e) { failed.push({ id: i.id, why: e instanceof ApiError ? e.message : `${label} did not work` }) }
-      setBulk({ busy: true, done: n + 1, total: items.length, failed: [...failed] })
+      setBulk({ busy: true, done: n + 1, total: items.length })
     }
     setBulk(null)
     // What failed stays picked, so it can be fixed and tried again.
@@ -737,8 +637,9 @@ function InspectTable({
     reload()
   }
   const sendable = chosen.filter((i) => i.assignedTechnicianUserId || bulkTech)
-  const { busy, error, act } = useAction(reload)
   const bench = (id?: string | null) => roster.find((t) => t.id === id)?.displayName ?? null
+  const label = (i: ConsignmentItem) => itemTitle(i, names) ?? i.internalSku
+  const list = (xs: ConsignmentItem[]) => xs.map((i) => i.internalSku).join(', ')
 
   return (
     <>
@@ -751,15 +652,26 @@ function InspectTable({
               <option value="">Assign to…</option>
               {roster.map((t) => <option key={t.id} value={t.id}>{t.displayName}</option>)}
             </select>
-            <button type="button" className="c-btn c-btn--sm" disabled={!bulkTech || bulk?.busy}
-              onClick={() => runBulk('Assignment', (i) => api.assignTechnician(i.id, bulkTech), chosen)}>Assign {chosen.length}</button>
+            <button type="button" className="c-btn c-btn--sm" disabled={!bulkTech || bulk?.busy} onClick={() => d.open(
+              <ActionDialog key="bulk-assign" title={`Assign ${chosen.length} unit${chosen.length === 1 ? '' : 's'} to ${bench(bulkTech)}?`} confirmLabel={`Assign ${chosen.length}`}
+                run={async () => { void runBulk('Assignment', (i) => api.assignTechnician(i.id, bulkTech), chosen) }} onClose={d.close}>
+                <Facts rows={[['Units', list(chosen)], ['Technician', bench(bulkTech)]]} />
+              </ActionDialog>,
+            )}>Assign {chosen.length}</button>
             <button type="button" className="c-btn c-btn--sm c-btn--cta" disabled={sendable.length === 0 || bulk?.busy}
-              title={sendable.length === 0 ? 'Assign a technician first' : undefined}
-              onClick={() => runBulk('Sending to inspection', async (i) => {
-                const tech = i.assignedTechnicianUserId ?? bulkTech
-                if (!i.assignedTechnicianUserId) await api.assignTechnician(i.id, tech)
-                await api.sendToInspection(i.id, tech)
-              }, sendable)}>Send {sendable.length} to inspection</button>
+              title={sendable.length === 0 ? 'Assign a technician first' : undefined} onClick={() => d.open(
+                <ActionDialog key="bulk-send" title={`Send ${sendable.length} unit${sendable.length === 1 ? '' : 's'} to inspection?`} confirmLabel={`Send ${sendable.length}`}
+                  run={async () => {
+                    void runBulk('Sending to inspection', async (i) => {
+                      const tech = i.assignedTechnicianUserId ?? bulkTech
+                      if (!i.assignedTechnicianUserId) await api.assignTechnician(i.id, tech)
+                      await api.sendToInspection(i.id, tech)
+                    }, sendable)
+                  }} onClose={d.close}>
+                  <Facts rows={[['Units', list(sendable)]]} />
+                  <p className="opsd__hint">Each goes to its technician's bench to be inspected.</p>
+                </ActionDialog>,
+              )}>Send {sendable.length} to inspection</button>
           </>
         )}
         {bulk && <span className="ops__bulk-status" role="status">Working… {bulk.done} of {bulk.total}</span>}
@@ -785,21 +697,20 @@ function InspectTable({
         </tr>
       </thead>
       <tbody>
-        <ErrorRow error={error} span={staff ? 8 : 7} />
         {rows.map((i) => (
           <tr key={i.id} className={`q__row--click${picked.has(i.id) ? ' ops__row--picked' : ''}`} onClick={() => navigate(`/items/${i.id}`)}>
             {staff && (
               <td className="ops__pick" onClick={(e) => e.stopPropagation()}>
                 {i.currentState === 'RECEIVED'
-                  ? <input type="checkbox" aria-label={`Select ${itemTitle(i, names) ?? i.internalSku}`} checked={picked.has(i.id)} onChange={() => toggle(i.id)} />
+                  ? <input type="checkbox" aria-label={`Select ${label(i)}`} checked={picked.has(i.id)} onChange={() => toggle(i.id)} />
                   : null}
               </td>
             )}
             <ItemCell item={i} names={names} />
             <td>{i.declaredGradeCode}</td>
             <td onClick={(e) => e.stopPropagation()}>
-              {i.currentState === 'RECEIVED'
-                ? <AssignSelect item={i} roster={roster} reload={reload} />
+              {i.currentState === 'RECEIVED' && staff
+                ? <AssignSelect item={i} title={label(i)} roster={roster} reload={reload} dialog={d} />
                 : (bench(i.assignedTechnicianUserId) ?? <span className="tg-muted">unassigned</span>)}
             </td>
             <WaitingCell at={arrived.get(i.id)} windowHours={windowHours} />
@@ -808,27 +719,24 @@ function InspectTable({
             <td onClick={(e) => e.stopPropagation()}>
               <span className="ops__inline">
                 {i.currentState === 'IN_INSPECTION' ? (
-                  // Already on the bench — the technician resumes their report.
+                  // Already on the bench: the technician resumes their report.
                   <Link className="tg-button tg-button--primary" to={`/admin/operations/inspect/${i.id}`}>Continue →</Link>
                 ) : i.currentState === 'AWAITING_INSPECTION' ? (
-                  // Queued — the technician starts the checklist (not staff).
-                  <button
-                    className="tg-button tg-button--primary"
-                    disabled={busy === i.id}
-                    onClick={() => act(i.id, () => api.startInspection(i.id))}
-                  >
-                    {busy === i.id ? 'Starting…' : 'Start inspection'}
-                  </button>
+                  <button className="tg-button tg-button--primary" onClick={() => d.open(
+                    <ActionDialog key={i.id} title={`Start inspecting ${label(i)}?`} confirmLabel="Start inspection"
+                      run={() => api.startInspection(i.id)} onClose={d.close} onDone={() => navigate(`/admin/operations/inspect/${i.id}`)}>
+                      <Facts rows={[['Unit', i.internalSku], ['Declared', i.declaredGradeCode], ['Bench', bench(i.assignedTechnicianUserId) ?? 'unassigned']]} />
+                      <p className="opsd__hint">Opens the inspection report. Answers save as you go.</p>
+                    </ActionDialog>,
+                  )}>Start inspection</button>
                 ) : (
-                  // RECEIVED — staff send it to inspection once a technician is picked.
-                  <button
-                    className="tg-button tg-button--primary"
-                    disabled={busy === i.id || !i.assignedTechnicianUserId}
-                    title={i.assignedTechnicianUserId ? undefined : 'Assign a technician first'}
-                    onClick={() => act(i.id, () => api.sendToInspection(i.id, i.assignedTechnicianUserId!))}
-                  >
-                    {busy === i.id ? 'Sending…' : 'Send to inspection'}
-                  </button>
+                  <button className="tg-button tg-button--primary" disabled={!i.assignedTechnicianUserId}
+                    title={i.assignedTechnicianUserId ? undefined : 'Assign a technician first'} onClick={() => d.open(
+                      <ActionDialog key={i.id} title={`Send ${label(i)} to inspection?`} confirmLabel="Send to inspection"
+                        run={() => api.sendToInspection(i.id, i.assignedTechnicianUserId!)} onClose={d.close} onDone={reload}>
+                        <Facts rows={[['Unit', i.internalSku], ['Technician', bench(i.assignedTechnicianUserId) ?? '—']]} />
+                      </ActionDialog>,
+                    )}>Send to inspection</button>
                 )}
               </span>
             </td>
@@ -836,153 +744,110 @@ function InspectTable({
         ))}
       </tbody>
     </table>
+    {d.dialog}
     </>
   )
 }
 
-/** Graded items waiting on a price. */
+/** Graded items waiting on a price: the guided price, or one set by hand with the reason. */
 function PricingTable({ rows, names, reload }: { rows: ConsignmentItem[]; names: Map<string, string>; reload: () => void }) {
   const navigate = useNavigate()
-  const { busy, error, act } = useAction(reload)
-  const [override, setOverride] = useState<Record<string, string>>({})
-  const [open, setOpen] = useState<string | null>(null)
-
-  const price = (id: string, amount?: number) =>
-    act(id, () => api.propose(id, {
-      staffAmountMinor: amount ?? null,
-      staffOverrideReason: amount ? 'Priced off comparable recent sales' : null,
-    }))
-
-  /**
-   * The guided price needs a reference price for this model and grade, and most
-   * of the catalogue has none — a widened model list outran the reference data.
-   * When that is why it fails, this is not a dead end: open the by-hand field
-   * right here with a message, rather than leaving a staff member staring at a
-   * refusal with nowhere to go.
-   */
-  const priceGuided = (id: string) =>
-    act(id, async () => {
-      try {
-        await api.propose(id, {})
-      } catch (e) {
-        if (e instanceof ApiError && /guided price/i.test(e.message)) {
-          setOpen(id)
-          throw new Error('No guided price for this model and grade yet — set one by hand below.')
-        }
-        throw e
-      }
-    })
-
+  const d = useDialog()
+  const label = (i: ConsignmentItem) => itemTitle(i, names) ?? i.internalSku
+  const facts = (i: ConsignmentItem): Array<[string, ReactNode]> => [
+    ['Unit', i.internalSku], ['Grade', i.assignedGradeCode ?? '—'], ['Seller asked', money(i.askingAmountMinor)],
+    ['Seller floor', i.floorAmountMinor != null ? money(i.floorAmountMinor) : '—'],
+  ]
   return (
-    <table className="q__table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Grade</th>
-          <th className="q__num">Asking</th>
-          <th className="q__num">Floor</th>
-          <th>Last updated</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ErrorRow error={error} span={6} />
-        {rows.map((i) => (
-          <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
-            {/* Pricing takes the fee snapshot: it is what the payout will read,
-                whatever the fee table says later. */}
-            <ItemCell item={i} names={names} meta={`declared ${i.declaredGradeCode} · takes the fee snapshot`} />
-            <td><span className="tg-badge tg-badge--accent">{i.assignedGradeCode}</span></td>
-            <td className="q__num">{money(i.askingAmountMinor)}</td>
-            <td className="q__num">{i.floorAmountMinor != null ? money(i.floorAmountMinor) : '—'}</td>
-            <UpdatedCell at={i.updatedAt} />
-            <td onClick={(e) => e.stopPropagation()}>
-              {open === i.id ? (
-                <span className="ops__inline">
-                  <input
-                    className="tg-input ops__amount"
-                    type="number"
-                    min={1}
-                    placeholder="Override (₹)"
-                    aria-label="Price it by hand"
-                    value={override[i.id] ?? ''}
-                    onChange={(e) => setOverride({ ...override, [i.id]: e.target.value })}
-                  />
-                  <button
-                    className="tg-button tg-button--primary"
-                    disabled={busy === i.id || !Number(override[i.id])}
-                    onClick={() => price(i.id, Math.round(Number(override[i.id]) * 100))}
-                  >
-                    Set
-                  </button>
-                  <button className="tg-button" onClick={() => setOpen(null)}>Cancel</button>
-                </span>
-              ) : (
-                <span className="ops__inline">
-                  <button
-                    className="tg-button tg-button--primary"
-                    disabled={busy === i.id}
-                    onClick={() => priceGuided(i.id)}
-                  >
-                    {busy === i.id ? 'Pricing…' : 'Use the guided price'}
-                  </button>
-                  <button className="tg-button" disabled={busy === i.id} onClick={() => setOpen(i.id)}>
-                    By hand
-                  </button>
-                </span>
-              )}
-            </td>
+    <>
+      <table className="q__table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Grade</th>
+            <th className="q__num">Asking</th>
+            <th className="q__num">Floor</th>
+            <th>Last updated</th>
+            <th>Action</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((i) => (
+            <tr key={i.id} className="q__row--click" onClick={() => navigate(`/items/${i.id}`)}>
+              {/* Pricing takes the fee snapshot: it is what the payout will read, whatever the fee table says later. */}
+              <ItemCell item={i} names={names} meta={`declared ${i.declaredGradeCode} · takes the fee snapshot`} />
+              <td><span className="tg-badge tg-badge--accent">{i.assignedGradeCode}</span></td>
+              <td className="q__num">{money(i.askingAmountMinor)}</td>
+              <td className="q__num">{i.floorAmountMinor != null ? money(i.floorAmountMinor) : '—'}</td>
+              <UpdatedCell at={i.updatedAt} />
+              <td onClick={(e) => e.stopPropagation()}>
+                <span className="ops__inline">
+                  <button className="tg-button tg-button--primary" onClick={() => d.open(
+                    <ActionDialog key={i.id} title={`Use the guided price for ${label(i)}?`} confirmLabel="Use guided price"
+                      run={async () => {
+                        try { await api.propose(i.id, {}) } catch (e) {
+                          if (e instanceof ApiError && /guided price/i.test(e.message)) throw new Error('There is no guided price for this model and grade yet. Cancel and use "By hand".')
+                          throw e
+                        }
+                      }} onClose={d.close} onDone={reload}>
+                      <Facts rows={facts(i)} />
+                      <p className="opsd__hint">The price comes from recent sales of this model and grade. The seller is asked to accept it.</p>
+                    </ActionDialog>,
+                  )}>Use the guided price</button>
+                  <button className="tg-button" onClick={() => d.open(
+                    <PriceByHandDialog key={i.id} item={i} title={label(i)} facts={facts(i)} onClose={d.close} onDone={reload} />,
+                  )}>By hand</button>
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {d.dialog}
+    </>
+  )
+}
+
+function PriceByHandDialog({ item, title, facts, onClose, onDone }: { item: ConsignmentItem; title: string; facts: Array<[string, ReactNode]>; onClose: () => void; onDone: () => void }) {
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  const minor = Math.round(Number(amount) * 100)
+  return (
+    <ActionDialog title={`Price ${title} by hand`} confirmLabel="Set price" ready={minor > 0 && reason.trim().length >= 3} onClose={onClose} onDone={onDone}
+      run={() => api.propose(item.id, { staffAmountMinor: minor, staffOverrideReason: reason.trim() })}>
+      <Facts rows={facts} />
+      <Field label="Price (₹)" required>
+        <input className="tg-input" type="number" min={1} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} aria-required />
+      </Field>
+      <Comment required label="Why this price" value={reason} onChange={setReason} placeholder="e.g. Priced off comparable recent sales" />
+    </ActionDialog>
   )
 }
 
 /**
- * Live listings, with an inline reprice.
- *
- * Repricing is a staff action — the backend retakes the fee snapshot and tells
- * the seller — so it is here, not something a technician sees. The seller's
- * floor is shown and the input is held above it, because the backend refuses a
- * price under the floor (that is the seller's promised minimum) and a form that
- * lets you type a number it will only reject is a worse form.
+ * Live listings, repriced in a popup. The seller's floor is shown and the new
+ * price held above it, because the backend refuses one under the floor.
  */
 function ListedTable({ rows, reload }: { rows: ManagedListing[]; reload: () => void }) {
-  const { busy, error, act } = useAction(reload)
-  const [open, setOpen] = useState<string | null>(null)
-  const [draft, setDraft] = useState<Record<string, string>>({})
-
-  const save = (l: ManagedListing) => {
-    const minor = Math.round(Number(draft[l.listingId]) * 100)
-    act(l.listingId, async () => {
-      await api.changeListingPrice(l.listingId, minor, 'staff_override')
-      setOpen(null)
-    })
-  }
-
+  const d = useDialog()
   return (
-    <table className="q__table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Grade</th>
-          <th>Seller</th>
-          <th className="q__num">Floor</th>
-          <th className="q__num">Price</th>
-          <th>Last updated</th>
-          <th>Reprice</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ErrorRow error={error} span={7} />
-        {rows.map((l) => {
-          const belowFloor = l.floorMinor != null && Number(draft[l.listingId]) * 100 < l.floorMinor
-          const valid = Number(draft[l.listingId]) > 0 && !belowFloor
-          return (
+    <>
+      <table className="q__table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Grade</th>
+            <th>Seller</th>
+            <th className="q__num">Floor</th>
+            <th className="q__num">Price</th>
+            <th>Last updated</th>
+            <th>Reprice</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((l) => (
             <tr key={l.listingId}>
               <td>
-                <span className="ops__pic"><ModelPhoto modelId={l.productModelId} kind="gear" size="mini" alt="" badge={false} /></span>
                 <Link to={`/listings/${l.listingId}`} className="ops__id">{l.title}</Link>
                 <span className="ops__gear tg-mono">{l.internalSku}</span>
               </td>
@@ -992,115 +857,105 @@ function ListedTable({ rows, reload }: { rows: ManagedListing[]; reload: () => v
               <td className="q__num"><strong>{money(l.priceMinor)}</strong></td>
               <UpdatedCell at={latest(l.updatedAt, l.listedAt)} />
               <td>
-                {open === l.listingId ? (
-                  <span className="ops__inline">
-                    <input
-                      className="tg-input ops__amount" type="number" min={1} autoFocus
-                      placeholder="New price (₹)" aria-label={`New price for ${l.title}`}
-                      value={draft[l.listingId] ?? ''}
-                      onChange={(e) => setDraft({ ...draft, [l.listingId]: e.target.value })}
-                    />
-                    <button className="tg-button tg-button--primary" disabled={busy === l.listingId || !valid} onClick={() => save(l)}>
-                      {busy === l.listingId ? 'Saving…' : 'Save'}
-                    </button>
-                    <button className="tg-button" onClick={() => setOpen(null)}>Cancel</button>
-                    {belowFloor && <span className="ops__gear">below the seller's floor</span>}
-                  </span>
-                ) : (
-                  <button className="tg-button" disabled={busy === l.listingId}
-                    onClick={() => { setOpen(l.listingId); setDraft({ ...draft, [l.listingId]: String(Math.round(l.priceMinor / 100)) }) }}>
-                    Change price
-                  </button>
-                )}
+                <button className="tg-button" onClick={() => d.open(<RepriceDialog key={l.listingId} l={l} onClose={d.close} onDone={reload} />)}>
+                  Change price
+                </button>
               </td>
             </tr>
-          )
-        })}
-      </tbody>
-    </table>
+          ))}
+        </tbody>
+      </table>
+      {d.dialog}
+    </>
+  )
+}
+
+function RepriceDialog({ l, onClose, onDone }: { l: ManagedListing; onClose: () => void; onDone: () => void }) {
+  const [amount, setAmount] = useState(String(Math.round(l.priceMinor / 100)))
+  const minor = Math.round(Number(amount) * 100)
+  const belowFloor = l.floorMinor != null && minor < l.floorMinor
+  return (
+    <ActionDialog title={`Change the price of ${l.title}?`} confirmLabel="Change price" ready={minor > 0 && !belowFloor && minor !== l.priceMinor}
+      onClose={onClose} onDone={onDone} run={() => api.changeListingPrice(l.listingId, minor, 'staff_override')}>
+      <Facts rows={[['Unit', l.internalSku], ['Seller', l.sellerName ?? '—'], ['Now', money(l.priceMinor)], ['Seller floor', l.floorMinor != null ? money(l.floorMinor) : '—']]} />
+      <Field label="New price (₹)" required hint={belowFloor ? "Below the seller's floor; it would be refused." : 'The seller is told.'}>
+        <input className="tg-input" type="number" min={1} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} aria-invalid={belowFloor} />
+      </Field>
+    </ActionDialog>
   )
 }
 
 /**
- * What buyers have asked for, waiting to go on the public board.
- *
- * This is the only place on the site where a member of the public writes words
- * that other people will read, so nothing reaches the board unread — an
- * unmoderated noticeboard on a marketplace becomes a channel for off-platform
- * deals within a week.
+ * What buyers have asked for, waiting to go on the public board. Nothing
+ * reaches the board unread: an unmoderated noticeboard on a marketplace becomes
+ * a channel for off-platform deals within a week.
  */
 function RequestTable({ rows, reload }: { rows: ReviewRequest[]; reload: () => void }) {
-  const { busy, error, act } = useAction(reload)
-  const [rejecting, setRejecting] = useState<string | null>(null)
-  const [reason, setReason] = useState('')
-
+  const d = useDialog()
+  const facts = (r: ReviewRequest): Array<[string, ReactNode]> => [
+    ['Wanted', r.wanted], ['Up to', r.maxPriceMinor != null ? money(r.maxPriceMinor) : '—'], ['Note', r.note ? `“${r.note}”` : '—'],
+  ]
   return (
-    <table className="q__table">
-      <thead>
-        <tr>
-          <th>Wanted</th>
-          <th className="q__num">Up to</th>
-          <th>Asked</th>
-          <th>Last updated</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ErrorRow error={error} span={5} />
-        {rows.map((r) => (
-          <tr key={r.id}>
-            <td>
-              <span className="ops__wanted">{r.wanted}</span>
-              {r.fromCatalogue && <span className="tg-badge tg-badge--accent">from the catalogue</span>}
-              {r.note && <span className="ops__gear">“{r.note}”</span>}
-            </td>
-            <td className="q__num">
-              {r.maxPriceMinor != null ? money(r.maxPriceMinor) : '—'}
-              {r.minGradeCode && <span className="ops__gear">{r.minGradeCode} or better</span>}
-            </td>
-            <td className="tg-muted">{r.createdAt ? dateOnly(r.createdAt) : '—'}</td>
-            <UpdatedCell at={latest(r.updatedAt, r.createdAt)} />
-            <td>
-              {rejecting === r.id ? (
-                <span className="ops__inline">
-                  <select
-                    className="tg-select ops__reason"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    aria-label="Reason for turning it down"
-                  >
-                    <option value="">Pick a reason…</option>
-                    {REJECT_REASONS.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}
-                  </select>
-                  <button
-                    className="tg-button"
-                    disabled={!reason || busy === r.id}
-                    onClick={() => act(r.id, () => api.rejectRequest(r.id, reason))}
-                  >
-                    Confirm
-                  </button>
-                  <button className="tg-button" onClick={() => { setRejecting(null); setReason('') }}>
-                    Cancel
-                  </button>
-                </span>
-              ) : (
-                <span className="ops__inline">
-                  <button
-                    className="tg-button tg-button--primary"
-                    disabled={busy === r.id}
-                    onClick={() => act(r.id, () => api.publishRequest(r.id))}
-                  >
-                    Put on the board
-                  </button>
-                  <button className="tg-button" disabled={busy === r.id} onClick={() => setRejecting(r.id)}>
-                    Turn down
-                  </button>
-                </span>
-              )}
-            </td>
+    <>
+      <table className="q__table">
+        <thead>
+          <tr>
+            <th>Wanted</th>
+            <th className="q__num">Up to</th>
+            <th>Asked</th>
+            <th>Last updated</th>
+            <th>Action</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id}>
+              <td>
+                <span className="ops__wanted">{r.wanted}</span>
+                {r.fromCatalogue && <span className="tg-badge tg-badge--accent">from the catalogue</span>}
+                {r.note && <span className="ops__gear">“{r.note}”</span>}
+              </td>
+              <td className="q__num">
+                {r.maxPriceMinor != null ? money(r.maxPriceMinor) : '—'}
+                {r.minGradeCode && <span className="ops__gear">{r.minGradeCode} or better</span>}
+              </td>
+              <td className="tg-muted">{r.createdAt ? dateOnly(r.createdAt) : '—'}</td>
+              <UpdatedCell at={latest(r.updatedAt, r.createdAt)} />
+              <td>
+                <span className="ops__inline">
+                  <button className="tg-button tg-button--primary" onClick={() => d.open(
+                    <ActionDialog key={r.id} title="Put this on the Wanted board?" confirmLabel="Put on the board"
+                      run={() => api.publishRequest(r.id)} onClose={d.close} onDone={reload}>
+                      <Facts rows={facts(r)} />
+                      <p className="opsd__hint">Everyone can read it once it is on the board.</p>
+                    </ActionDialog>,
+                  )}>Put on the board</button>
+                  <button className="tg-button" onClick={() => d.open(
+                    <TurnDownDialog key={r.id} r={r} facts={facts(r)} onClose={d.close} onDone={reload} />,
+                  )}>Turn down</button>
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {d.dialog}
+    </>
+  )
+}
+
+function TurnDownDialog({ r, facts, onClose, onDone }: { r: ReviewRequest; facts: Array<[string, ReactNode]>; onClose: () => void; onDone: () => void }) {
+  const [reason, setReason] = useState('')
+  return (
+    <ActionDialog title="Turn this request down?" confirmLabel="Turn down" destructive ready={!!reason} onClose={onClose} onDone={onDone}
+      run={() => api.rejectRequest(r.id, reason)}>
+      <Facts rows={facts} />
+      <Field label="Reason" required hint="The buyer sees this.">
+        <select className="tg-select" value={reason} onChange={(e) => setReason(e.target.value)} aria-required>
+          <option value="">Choose a reason…</option>
+          {REJECT_REASONS.map((x) => <option key={x.code} value={x.code}>{x.label}</option>)}
+        </select>
+      </Field>
+    </ActionDialog>
   )
 }

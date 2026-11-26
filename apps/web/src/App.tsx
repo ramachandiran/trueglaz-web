@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from 'react-r
 import { isOps, isSeller, isStaff, useSession } from '@trueglaz/core'
 import { AppShell } from './components/AppShell'
 import { StaffShell } from './components/StaffShell'
+import { SellerShell } from './components/SellerShell'
 import { storedMarketView } from './state/useMarketView'
 import { Guard } from './components/Guard'
 import { TeamPage } from './pages/TeamPage'
@@ -70,6 +71,12 @@ function SmartHome() {
   return <HomePage />
 }
 
+/** A seller's item opens in their workspace; the team's in the shop's frame. */
+function ItemShell() {
+  const { session } = useSession()
+  return isOps(session) ? <AppShell /> : <SellerShell />
+}
+
 export function App() {
   return (
     <BrowserRouter>
@@ -98,15 +105,21 @@ export function App() {
           <Route path="/vault/:itemId" element={<Guard need="signed-in"><VaultPage /></Guard>} />
           <Route path="/profile" element={<Guard need="signed-in"><ProfilePage /></Guard>} />
 
-          {/* Seller */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+
+        {/* The seller's workspace (TG-211): the console's layout for selling.
+            An item's page opens in it too, except for the team, who reach a
+            unit from their own screens and keep the shop's header there. */}
+        <Route element={<SellerShell />}>
           <Route path="/sell" element={<Guard need="signed-in"><SellerHomePage /></Guard>} />
           <Route path="/sell/manage" element={<Guard need="signed-in"><SellPage /></Guard>} />
           <Route path="/sell/new" element={<Guard need="signed-in"><NewSubmissionPage /></Guard>} />
           {/* Links about one submission: drafts are finished here, sent ones open their item. */}
           <Route path="/sell/:id" element={<Guard need="signed-in"><SubmissionLinkPage /></Guard>} />
+        </Route>
+        <Route element={<ItemShell />}>
           <Route path="/items/:id" element={<Guard need="signed-in"><ItemDetailPage /></Guard>} />
-
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
 
         {/* The admin / staff console, all under /admin, in its own sidebar shell.

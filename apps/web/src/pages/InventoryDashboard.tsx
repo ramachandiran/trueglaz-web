@@ -320,7 +320,7 @@ function staffOrAdmin(session: ReturnType<typeof useSession>['session']): boolea
 
 /** How each stage's card looks (TG-199). */
 const STAGE_LOOK: Record<string, { icon: string; note: string }> = {
-  coming_in: { icon: ICONS.fulfilment, note: 'pre-approved or on the way to the hub' },
+  coming_in: { icon: ICONS.fulfilment, note: 'approved or on the way to the hub' },
   workshop: { icon: ICONS.wrench, note: 'received, on the bench or being priced' },
   on_sale: { icon: ICONS.tag, note: '' },
   on_the_way: { icon: ICONS.bag, note: 'sold; packing, shipped or delivered' },

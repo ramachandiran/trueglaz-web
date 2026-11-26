@@ -14,3 +14,7 @@
   gap: var(--tg-space-2);
   margin-top: var(--tg-space-5);
 }
+
+/* TG-210: forms in a popup (Operations) */
+.confirm--wide { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; }
+.confirm__error { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--tg-bad-soft); color: var(--tg-bad); font-size: 14px; }
