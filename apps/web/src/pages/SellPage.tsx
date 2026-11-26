@@ -1,17 +1,16 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEscape } from '../components/useEscape'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   api, ApiError, dateOnly, money, useApi, HAPPY_PATH, STATE_LABELS,
   type SellerApprovalView, type KycStatus,
 } from '@trueglaz/core'
-import { Empty, ErrorNote, Loading } from '../components/ui'
+import { photoKindFor } from '../components/GearPhoto'
+import { Empty, ErrorNote, GradeBadge, Loading, StateBadge } from '../components/ui'
 import { KycPanel } from '../components/KycPanel'
 import { SellerPriceDecision } from '../components/SellerPriceDecision'
-import { Icon, ICONS } from '../components/StaffShell'
-import { PageHead } from '../components/PageHead'
-import { ConfirmDialog } from '../components/ConfirmDialog'
-import { chipFor } from './SellerHomePage'
 import './SellPage.css'
+import { ModelPhoto } from '../components/ModelPhoto'
 
 type Tab = 'items' | 'approvals' | 'payouts'
 
@@ -23,11 +22,9 @@ type Tab = 'items' | 'approvals' | 'payouts'
 type Phase = 'loading' | 'open' | 'identity' | 'awaiting' | 'declined'
 
 export function SellPage() {
-  // The tab lives in the URL (TG-211): the sidebar links to each one.
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const asked = searchParams.get('tab')
-  const tab: Tab = asked === 'approvals' || asked === 'payouts' ? asked : 'items'
-  const setTab = (t: Tab) => setSearchParams(t === 'items' ? {} : { tab: t })
+  const [tab, setTab] = useState<Tab>(asked === 'approvals' || asked === 'payouts' ? asked : 'items')
   const approvals = useApi(() => api.myApprovals(), [])
   const kyc = useApi(() => api.myKyc(), [])
   // The authoritative selling state (approved / pending_review / rejected /
@@ -55,47 +52,65 @@ export function SellPage() {
         : verified ? (sellingState === 'rejected' ? 'declined' : 'awaiting')
           : 'identity'
 
-  const TITLES: Record<Tab, string> = { items: 'My items', approvals: 'Price approvals', payouts: 'Payouts' }
-  const head = (
-    <PageHead
-      title={TITLES[tab]}
-      crumbs={[{ label: 'Dashboard', to: '/sell' }, { label: TITLES[tab] }]}
-      subtitle={tab === 'items' ? 'Everything you have consigned, where it is and what it is asking.'
-        : tab === 'approvals' ? 'An item stays unlisted until you answer.' : 'What you have been paid, and where we send it.'}
-      actions={<Link to="/sell/new" className="c-btn c-btn--cta"><Icon d={ICONS.camera} /> Consign an item</Link>}
-    />
-  )
-
   if (phase === 'open') {
     return (
-      <div className="c-stack sell">
-        {head}
-        {submitted && (
-          <p className="sell__success" role="status"><Icon d={ICONS.check} /> Item submitted. We will review it and tell you what happens next.</p>
-        )}
-        <section className="c-card c-tcard" aria-label="Your selling">
-          <div className="c-tbar">
-            <div className="c-tabs" role="tablist" aria-label="Seller sections">
-              <TabButton active={tab === 'items'} onClick={() => setTab('items')} label="My items" />
-              <TabButton active={tab === 'approvals'} onClick={() => setTab('approvals')} label="Price approvals" badge={pending.length || undefined} />
-              <TabButton active={tab === 'payouts'} onClick={() => setTab('payouts')} label="Payouts" />
+      <div className="sell">
+        <aside className="sell__sidebar">
+          <div className="sell__aside-card tg-card">
+            <h1 className="sell__title">Selling</h1>
+            <p className="tg-muted sell__blurb">
+              Track what you’ve consigned, answer price approvals, and follow payouts from one place.
+            </p>
+            <Link to="/sell/new" className="tg-button tg-button--primary sell__cta">
+              Consign an item
+            </Link>
+          </div>
+          <div className="sell__aside-card tg-card">
+            <h2 className="sell__aside-title">Identity check</h2>
+            <KycPanel kyc={kyc} onChanged={() => { approvals.reload() }} />
+          </div>
+        </aside>
+
+        <section className="sell__main" aria-label="Seller sections">
+          <div className="sell__head">
+            <div>
+              <Link to="/sell" className="tg-muted">← Back to your home</Link>
+              <p className="sell__eyebrow tg-muted">Your selling workspace</p>
+              <h2 className="sell__main-title">Manage inventory, approvals, and payouts</h2>
             </div>
           </div>
+
+          {submitted && (
+            <div className="tg-card sell__success">
+              <p className="sell__success-text">✓ Item submitted and waiting for approval</p>
+            </div>
+          )}
+
+          <p className="sell__wanted tg-muted">
+            Not sure what to send in? <Link to="/wanted">See what buyers are asking for</Link> —
+            every one of them is somebody waiting.
+          </p>
+
+          <nav className="sell__tabs" aria-label="Seller sections">
+            <TabButton active={tab === 'items'} onClick={() => setTab('items')} label="My items" />
+            <TabButton
+              active={tab === 'approvals'}
+              onClick={() => setTab('approvals')}
+              label="Price approvals"
+              badge={pending.length || undefined}
+            />
+            <TabButton active={tab === 'payouts'} onClick={() => setTab('payouts')} label="Payouts" />
+          </nav>
+
           {tab === 'items' && <MyItems />}
           {tab === 'approvals' && <Approvals state={approvals} />}
-          {tab === 'payouts' && <Payouts kyc={kyc} onChanged={() => approvals.reload()} />}
+          {tab === 'payouts' && <Payouts />}
         </section>
       </div>
     )
   }
 
-  return (
-    <div className="c-stack sell">
-      <PageHead title="Start selling" crumbs={[{ label: 'Dashboard', to: '/sell' }, { label: 'Start selling' }]}
-        subtitle="We confirm who you are once, then you can consign as much as you like." />
-      <SellGate phase={phase} kyc={kyc} legalName={kyc.data?.legalName ?? null} rejectedReason={kyc.data?.rejectedReasonCode ?? null} onChanged={() => { approvals.reload(); home.reload() }} />
-    </div>
-  )
+  return <SellGate phase={phase} kyc={kyc} legalName={kyc.data?.legalName ?? null} rejectedReason={kyc.data?.rejectedReasonCode ?? null} onChanged={() => { approvals.reload(); home.reload() }} />
 }
 
 /**
@@ -113,7 +128,7 @@ function SellGate({
   onChanged: () => void
 }) {
   if (phase === 'loading') {
-    return <div className="sellgate"><Loading label="Loading your selling status" /></div>
+    return <div className="sell sell--gate"><div className="sellgate"><Loading label="Loading your selling status" /></div></div>
   }
 
   const steps = [
@@ -125,8 +140,9 @@ function SellGate({
   const activeIndex = phase === 'identity' ? 0 : 1 // declined also sits at step 2
 
   return (
+    <div className="sell sell--gate">
       <div className="sellgate">
-        <div className="c-card sellgate__hero">
+        <div className="tg-card sellgate__hero">
           {phase === 'identity' && (
             <>
               <span className="tg-badge tg-badge--accent sellgate__badge">Step 1 of 2 to start selling</span>
@@ -187,6 +203,7 @@ function SellGate({
           })}
         </ol>
       </div>
+    </div>
   )
 }
 
@@ -194,9 +211,13 @@ function TabButton({
   active, onClick, label, badge,
 }: { active: boolean; onClick: () => void; label: string; badge?: number }) {
   return (
-    <button type="button" role="tab" aria-selected={active} className={`c-tabs__tab${active ? ' c-tabs__tab--on' : ''}`} onClick={onClick}>
+    <button
+      type="button"
+      className={`sell__tab${active ? ' sell__tab--active' : ''}`}
+      onClick={onClick}
+    >
       {label}
-      {badge ? <span className="c-tabs__n">{badge}</span> : null}
+      {badge ? <span className="tg-badge tg-badge--accent sell__tab-badge">{badge}</span> : null}
     </button>
   )
 }
@@ -208,9 +229,6 @@ function MyItems() {
   const submissions = useApi(() => api.mySubmissions(), [])
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest')
   const [status, setStatus] = useState<string | 'all'>('all')
-  const [q, setQ] = useState('')
-  const [at, setAt] = useState(0)
-  const [allDrafts, setAllDrafts] = useState(false)
 
   const rows = items.data ?? []
   const drafts = (submissions.data ?? []).filter((s) => s.state === 'draft')
@@ -248,20 +266,15 @@ function MyItems() {
         model,
         category,
         title: model?.name ?? item.modelFreeText ?? item.internalSku,
+        kind: photoKindFor(category?.name),
       }
     })
   }, [rows, sort, modelById, categoryById])
-  const visibleRows = useMemo(() => {
-    const t = q.trim().toLowerCase()
-    return sortedRows.filter(({ item, title, category }) =>
-      (status === 'all' || item.currentState === status) &&
-      (!t || `${title} ${item.internalSku} ${category?.name ?? ''}`.toLowerCase().includes(t)))
-  }, [sortedRows, status, q])
-  // Twenty at a time (TG-211): a long-standing seller has hundreds.
-  const from = at < visibleRows.length ? at : 0
-  const pageRows = visibleRows.slice(from, from + PAGE)
+  const visibleRows = useMemo(
+    () => sortedRows.filter(({ item }) => status === 'all' || item.currentState === status),
+    [sortedRows, status],
+  )
 
-  const nav = useNavigate()
   if (items.loading) return <Loading label="Loading your items" />
   if (items.error) return <ErrorNote error={items.error} onRetry={items.reload} />
 
@@ -283,64 +296,84 @@ function MyItems() {
   return (
     <>
       {drafts.length > 0 && (
-        <div className="sell__drafts">
-          <span className="c-tile c-tile--warn sell__drafts-tile"><Icon d={ICONS.clock} /></span>
-          <div className="sell__drafts-body">
-            <b>You have {drafts.length} unfinished {drafts.length === 1 ? 'submission' : 'submissions'}</b>
-            <ul className="sell__draft-list">
-              {(allDrafts ? drafts : drafts.slice(0, 3)).map((s) => (
-                <li key={s.id} className="sell__draft-line">
-                  <Link to={`/sell/${s.id}`} className="c-link">Started {dateOnly(s.createdAt)} · {s.pricingMode} pricing</Link>
-                  <button type="button" className="c-btn c-btn--sm" disabled={discardingId === s.id} onClick={() => { setDiscardError(null); setDiscardTarget(s.id) }}>
-                    {discardingId === s.id ? 'Discarding…' : 'Discard'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {drafts.length > 3 && (
-              <button type="button" className="sell__more" onClick={() => setAllDrafts((v) => !v)}>
-                {allDrafts ? 'Show fewer' : `Show all ${drafts.length}`}
+        <div className="sell__drafts tg-card">
+          <strong>You have {drafts.length} unfinished {drafts.length === 1 ? 'submission' : 'submissions'}.</strong>
+          <ul className="sell__draft-list">
+            {drafts.map((s) => (
+              <li key={s.id} className="sell__draft-line">
+                <Link to={`/sell/${s.id}`}>Started {dateOnly(s.createdAt)} · {s.pricingMode} pricing</Link>
+                <button
+                  type="button"
+                  className="tg-button sell__draft-discard"
+                  disabled={discardingId === s.id}
+                  onClick={() => setDiscardTarget(s.id)}
+                >
+                  {discardingId === s.id ? 'Discarding…' : 'Discard'}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {discardError && <p className="sell__error" role="alert">{discardError}</p>}
+        </div>
+      )}
+
+      {discardTarget && <EscapeCloses onClose={() => !discardingId && setDiscardTarget(null)} />}
+      {discardTarget && (
+        <div className="sell__scrim" onMouseDown={() => !discardingId && setDiscardTarget(null)}>
+          <div
+            className="sell__confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sell-discard-title"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h3 id="sell-discard-title" className="sell__confirm-title">Discard unfinished submission?</h3>
+            <p className="sell__confirm-copy tg-muted">
+              This draft will be deleted and cannot be restored.
+            </p>
+            {discardError && <p className="sell__error" role="alert">{discardError}</p>}
+            <div className="sell__confirm-actions">
+              <button
+                type="button"
+                className="tg-button"
+                disabled={!!discardingId}
+                onClick={() => setDiscardTarget(null)}
+              >
+                Keep it
               </button>
-            )}
+              <button
+                type="button"
+                className="tg-button tg-button--primary"
+                disabled={!!discardingId}
+                onClick={discardDraft}
+              >
+                {discardingId === discardTarget ? 'Discarding…' : 'Discard submission'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <ConfirmDialog
-        open={!!discardTarget}
-        title="Discard unfinished submission?"
-        confirmLabel="Discard submission"
-        cancelLabel="Keep it"
-        destructive
-        busy={!!discardingId}
-        error={discardError}
-        onConfirm={discardDraft}
-        onCancel={() => !discardingId && setDiscardTarget(null)}
-      >
-        This draft will be deleted and cannot be restored.
-      </ConfirmDialog>
-
-      <div className="sell__filters">
-        <label className="sell__find">
-          <Icon d={ICONS.search} />
-          <input type="search" value={q} placeholder="Find by name or SKU" aria-label="Find by name or SKU"
-            onChange={(e) => { setQ(e.target.value); setAt(0) }} />
-        </label>
-        <p className="sell__count"><b>{visibleRows.length}</b> {visibleRows.length === 1 ? 'item' : 'items'}{status !== 'all' && ` · ${STATE_LABELS[status] ?? status}`}</p>
-        <label className="sell__sel">
-          <span className="tg-visually-hidden">Status</span>
-          <select value={status} onChange={(e) => { setStatus(e.target.value as string | 'all'); setAt(0) }}>
+      <div className="sell__items-toolbar">
+        <p className="tg-muted sell__items-count">
+          {visibleRows.length} {visibleRows.length === 1 ? 'item' : 'items'}
+        </p>
+        <label className="sell__sort">
+          <span className="tg-muted">Status</span>
+          <select className="tg-select" value={status} onChange={(e) => setStatus(e.target.value as string | 'all')}>
             <option value="all">All statuses ({rows.length})</option>
             {statuses.map((s) => (
-              <option key={s} value={s}>{STATE_LABELS[s] ?? s} ({byStatus.get(s) ?? 0})</option>
+              <option key={s} value={s}>
+                {STATE_LABELS[s] ?? s} ({byStatus.get(s) ?? 0})
+              </option>
             ))}
           </select>
         </label>
-        <label className="sell__sel">
-          <span className="tg-visually-hidden">Sort by</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value as 'newest' | 'oldest')}>
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
+        <label className="sell__sort">
+          <span className="tg-muted">Sort by</span>
+          <select className="tg-select" value={sort} onChange={(e) => setSort(e.target.value as 'newest' | 'oldest')}>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
           </select>
         </label>
       </div>
@@ -348,57 +381,52 @@ function MyItems() {
       {rows.length === 0 ? (
         <Empty title="Nothing consigned yet" hint="Send us a lens or a body and we'll grade it, list it and pay you when it sells." />
       ) : visibleRows.length === 0 ? (
-        <Empty title="Nothing matches" hint="Try other words, a different status, or All statuses." />
+        <Empty title="Nothing matches that status" hint="Try a different status or switch back to All statuses." />
       ) : (
-        <div className="c-table-wrap">
-          <table className="c-table">
-            <thead>
-              <tr>
-                <th>Item</th><th>Stage</th><th>Grade</th>
-                <th className="c-num">Asking</th><th className="c-num">Floor</th><th>Since</th><th aria-label="Open" />
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.map(({ item, title, category }) => (
-                <tr key={item.id} className="c-clickable" onClick={() => nav(`/items/${item.id}`)}>
-                  <td>
-                    <Link to={`/items/${item.id}`} className="sell__item" onClick={(e) => e.stopPropagation()}>
-                      <b>{title}</b>
-                      <span><span className="tg-mono">{item.internalSku}</span>{category && ` · ${category.name}`}</span>
-                    </Link>
-                  </td>
-                  <td>
-                    <span className={`c-chip2 c-chip2--${chipFor(item.currentState)}`}>
-                      {item.withdrawnBySeller ? 'Withdrawn by you' : STATE_LABELS[item.currentState] ?? item.currentState}
-                    </span>
-                  </td>
-                  <td>
-                    {item.assignedGradeCode
-                      ? <span className="c-chip2" title={`You declared ${item.declaredGradeCode}`}>{item.assignedGradeCode}</span>
-                      : <span className="tg-muted" title="Declared by you; we grade it on arrival">{item.declaredGradeCode} declared</span>}
-                  </td>
-                  <td className="c-num"><b>{money(item.askingAmountMinor)}</b></td>
-                  <td className="c-num">{item.floorAmountMinor != null ? money(item.floorAmountMinor) : <span className="tg-muted">—</span>}</td>
-                  <td className="tg-muted">{dateOnly(item.listedAt ?? item.createdAt)}</td>
-                  <td className="sell__go"><Icon d={ICONS.chevron} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="sell__widgets">
+          {visibleRows.map(({ item, title, kind, category }) => (
+            <Link key={item.id} to={`/items/${item.id}`} className="sell__widget tg-card">
+              <div className="sell__widget-image">
+                <ModelPhoto modelId={item.productModelId} kind={kind} size="thumb" alt={title} />
+              </div>
+              <div className="sell__widget-content">
+                <div className="sell__widget-header">
+                  <strong className="sell__widget-title">{title}</strong>
+                  <div className="sell__widget-badges">
+                    <StateBadge state={item.currentState} />
+                    {item.assignedGradeCode && <GradeBadge code={item.assignedGradeCode} />}
+                  </div>
+                </div>
+                <p className="tg-muted sell__widget-meta">
+                  <span className="tg-mono">{item.internalSku}</span>
+                  {category && <span>{category.name}</span>}
+                </p>
+              </div>
+              <div className="sell__widget-footer">
+                <div className="sell__widget-prices">
+                  <div className="sell__widget-price-item">
+                    <span className="tg-muted">Declared</span>
+                    <strong>{item.declaredGradeCode}</strong>
+                  </div>
+                  <div className="sell__widget-price-item">
+                    <span className="tg-muted">Asking</span>
+                    <strong>{money(item.askingAmountMinor)}</strong>
+                  </div>
+                  {item.floorAmountMinor != null && (
+                    <div className="sell__widget-price-item">
+                      <span className="tg-muted">Floor</span>
+                      <strong>{money(item.floorAmountMinor)}</strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
-      )}
-      {visibleRows.length > PAGE && (
-        <nav className="sell__pager" aria-label="Pages">
-          <span>{from + 1}–{Math.min(visibleRows.length, from + PAGE)} of {visibleRows.length}</span>
-          <button type="button" className="c-btn c-btn--sm" disabled={from === 0} onClick={() => setAt(Math.max(0, from - PAGE))}>Previous</button>
-          <button type="button" className="c-btn c-btn--sm" disabled={from + PAGE >= visibleRows.length} onClick={() => setAt(from + PAGE)}>Next</button>
-        </nav>
       )}
     </>
   )
 }
-
-const PAGE = 20
 
 function Approvals({ state }: { state: ReturnType<typeof useApi<SellerApprovalView[]>> }) {
   if (state.loading) return <Loading label="Loading approvals" />
@@ -410,8 +438,17 @@ function Approvals({ state }: { state: ReturnType<typeof useApi<SellerApprovalVi
   }
 
   return (
-    <div className="sell__approvals">
-      <p className="sell__count"><b>{rows.length}</b> {rows.length === 1 ? 'item' : 'items'} waiting on you</p>
+    <div className="sell__section">
+      <div className="sell__section-bar">
+        <div>
+          <p className="sell__eyebrow tg-muted">Pending decisions</p>
+          <h3 className="sell__section-title">Price approvals</h3>
+        </div>
+        <p className="tg-muted sell__section-note">
+          {rows.length} {rows.length === 1 ? 'item' : 'items'} waiting on you
+        </p>
+      </div>
+
       <div className="sell__list">
         {rows.map((a) => (
           <SellerPriceDecision key={a.approval.id} a={a} onDone={state.reload} />
@@ -421,76 +458,97 @@ function Approvals({ state }: { state: ReturnType<typeof useApi<SellerApprovalVi
   )
 }
 
-function Payouts({ kyc, onChanged }: { kyc: ReturnType<typeof useApi<KycStatus>>; onChanged: () => void }) {
+function Payouts() {
   const payouts = useApi(() => api.myPayouts(), [])
   const account = useApi(() => api.myPayoutAccount(), [])
-  const list = payouts.data ?? []
-  const paid = useMemo(() => list.filter((p) => p.state === 'paid').reduce((sum, p) => sum + p.netMinor, 0), [list])
-  const due = useMemo(() => list.filter((p) => p.state !== 'paid' && p.state !== 'cancelled').reduce((sum, p) => sum + p.netMinor, 0), [list])
+
+  const total = useMemo(
+    () => (payouts.data ?? []).filter((p) => p.state === 'paid').reduce((sum, p) => sum + p.netMinor, 0),
+    [payouts.data],
+  )
 
   return (
-    <div className="sell__payouts">
-      <div className="sell__side">
-        <section className="sell__panel" aria-labelledby="sell-acct">
-          <h3 id="sell-acct">Where we send your money</h3>
-          {account.loading && <Loading label="Loading" />}
-          {account.data ? (
-            <div className="sell__acct">
-              <span className="c-tile sh__tile--navy"><Icon d={ICONS.building} /></span>
-              <span className="sell__acct-main">
-                <b>{account.data.method.toUpperCase()}</b>
-                <span>{account.data.upiVpa ?? (account.data.accountLast4 ? `account ending ${account.data.accountLast4}` : account.data.accountHolderName)}</span>
-              </span>
-              <span className={`c-chip2 c-chip2--${account.data.verificationState === 'verified' ? 'good' : 'warn'}`}>{account.data.verificationState}</span>
-              <Link to="/profile#bank" className="c-btn c-btn--sm">Change</Link>
-            </div>
-          ) : (
-            !account.loading && (
-              <p className="sell__fine">
-                Payouts are held until an account is on file and verified. <Link to="/profile#bank" className="c-link">Add your bank or UPI details</Link>.
-                It takes a code sent to your email, so nobody can redirect your money with a stolen session alone.
-              </p>
-            )
-          )}
-        </section>
-        <section className="sell__panel" aria-labelledby="sell-kyc">
-          <h3 id="sell-kyc">Identity check</h3>
-          <KycPanel kyc={kyc} onChanged={onChanged} />
-        </section>
+    <div className="sell__section">
+      <div className="sell__section-bar">
+        <div>
+          <p className="sell__eyebrow tg-muted">Money</p>
+          <h3 className="sell__section-title">Payouts</h3>
+        </div>
+        <p className="tg-muted sell__section-note">
+          {payouts.data?.length ?? 0} {((payouts.data?.length ?? 0) === 1 ? 'payout' : 'payouts')}
+          {total > 0 && ` · ${money(total)} paid to date`}
+        </p>
       </div>
 
-      <section className="sell__panel sell__panel--table" aria-labelledby="sell-paid">
+      <div className="sell__list">
+      <section className="tg-card sell__panel">
+        <h2 className="sell__panel-title">Where we send your money</h2>
+        {account.loading && <Loading label="Loading" />}
+        {account.data ? (
+          <p className="sell__account">
+            <strong>{account.data.method.toUpperCase()}</strong>
+            {' · '}
+            {account.data.upiVpa ?? (account.data.accountLast4 ? `account ending ${account.data.accountLast4}` : account.data.accountHolderName)}
+            {' · '}
+            <span className={`tg-badge ${account.data.verificationState === 'verified' ? 'tg-badge--good' : 'tg-badge--warn'}`}>
+              {account.data.verificationState}
+            </span>
+            {' '}
+            <Link to="/profile#bank">Change</Link>
+          </p>
+        ) : (
+          !account.loading && (
+            <p className="tg-muted sell__fineprint">
+              Payouts are held until an account is on file and verified.{' '}
+              <Link to="/profile#bank">Add your bank or UPI details</Link> — it takes a code
+              sent to your email, because nobody should be able to redirect your money
+              with a stolen session alone.
+            </p>
+          )
+        )}
+      </section>
+
+      <section className="tg-card sell__panel">
         <div className="sell__panel-head">
-          <h3 id="sell-paid">Payout history</h3>
-          <span className="c-card__note"><b>{money(paid)}</b> paid{due > 0 && <> · <b>{money(due)}</b> on its way</>}</span>
+          <h2 className="sell__panel-title">Payouts</h2>
+          {total > 0 && <span className="sell__paid-total">{money(total)} paid to date</span>}
         </div>
         {payouts.loading && <Loading label="Loading payouts" />}
         {payouts.error && <ErrorNote error={payouts.error} onRetry={payouts.reload} />}
-        {payouts.data?.length === 0 && <p className="c-empty">Nothing yet. A payout appears when a buyer accepts delivery.</p>}
-        {list.length > 0 && (
-          <div className="c-table-wrap">
-            <table className="c-table">
-              <thead>
-                <tr><th className="c-num">Sale</th><th className="c-num">Net to you</th><th>State</th><th>Paid</th></tr>
-              </thead>
-              <tbody>
-                {list.map((p) => (
-                  <tr key={p.id}>
-                    <td className="c-num">{money(p.grossMinor)}</td>
-                    <td className="c-num"><b>{money(p.netMinor)}</b></td>
-                    <td>
-                      <span className={`c-chip2 c-chip2--${p.state === 'paid' ? 'good' : p.state === 'on_hold' ? 'warn' : 'navy'}`}>{p.state.replace(/_/g, ' ')}</span>
-                      {p.holdReasonCode && <span className="tg-muted sell__why"> {p.holdReasonCode.replace(/_/g, ' ')}</span>}
-                    </td>
-                    <td className="tg-muted">{p.paidAt ? dateOnly(p.paidAt) : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {payouts.data?.length === 0 && (
+          <p className="tg-muted">Nothing yet. A payout appears when a buyer accepts delivery.</p>
+        )}
+        {(payouts.data ?? []).length > 0 && (
+          <table className="sell__table">
+            <thead>
+              <tr><th>Gross</th><th>Net to you</th><th>State</th><th>Paid</th></tr>
+            </thead>
+            <tbody>
+              {(payouts.data ?? []).map((p) => (
+                <tr key={p.id}>
+                  <td>{money(p.grossMinor)}</td>
+                  <td><strong>{money(p.netMinor)}</strong></td>
+                  <td>
+                    <span className={`tg-badge ${p.state === 'paid' ? 'tg-badge--good' : p.state === 'on_hold' ? 'tg-badge--warn' : ''}`}>
+                      {p.state.replace(/_/g, ' ')}
+                    </span>
+                    {p.holdReasonCode && <span className="tg-muted"> {p.holdReasonCode.replace(/_/g, ' ')}</span>}
+                  </td>
+                  <td className="tg-muted">{p.paidAt ? dateOnly(p.paidAt) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
+      </div>
     </div>
   )
 }
 
+
+/** Escape cancels the discard question, like tapping outside it (TG-144). */
+function EscapeCloses({ onClose }: { onClose: () => void }) {
+  useEscape(onClose)
+  return null
+}

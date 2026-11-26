@@ -1,4 +1,0 @@
-/* The seller's workspace (TG-211) reuses the console shell (StaffShell.css);
-   its group names are headings, not folding buttons. */
-.staff-side__grouplabel--static { cursor: default; margin: 0; }
-.staff-side__grouplabel--static:hover { color: var(--tg-text-muted); }
